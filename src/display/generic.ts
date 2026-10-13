@@ -191,14 +191,43 @@ function issuedMissionLabel(mission: Record<string, unknown>): string {
   return title || id || 'Mission';
 }
 
-function emitIssuedMissionText(missions: Array<Record<string, unknown>>): void {
-  const lines = missions
-    .map((mission) => {
-      const text = issuedMissionText(mission);
-      if (!text) return undefined;
-      return `${issuedMissionLabel(mission)}: ${text}`;
-    })
-    .filter((line): line is string => line !== undefined);
+function playerPostedContractName(mission: Record<string, unknown>): string | undefined {
+  if (typeof mission.faction_name !== 'string') return undefined;
+  const name = mission.faction_name.replace(/\s+/g, ' ').trim();
+  return name.length > 0 ? name : undefined;
+}
+
+function descriptionAlreadyPostsFaction(description: string, name: string): boolean {
+  const haystack = description.replace(/\s+/g, ' ').trim().toLowerCase();
+  const needle = `posted by: ${name.toLowerCase()}`;
+  const boundary = new Set(['(', '[', '.', ',', ';', ':', '!', '?', "'", '"', '`']);
+  let from = 0;
+  while (from < haystack.length) {
+    const at = haystack.indexOf(needle, from);
+    if (at < 0) return false;
+    let index = at + needle.length;
+    while (haystack[index] === ' ') index += 1;
+    const next = haystack[index] ?? '';
+    if (next === '' || boundary.has(next)) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+function emitIssuedMissionText(missions: Array<Record<string, unknown>>, options?: { posters?: boolean }): void {
+  const posters = options?.posters === true;
+  const lines: string[] = [];
+  for (const mission of missions) {
+    const text = issuedMissionText(mission);
+    const name = posters ? playerPostedContractName(mission) : undefined;
+    const posterLine =
+      name !== undefined && (text === undefined || !descriptionAlreadyPostsFaction(text, name))
+        ? `Posted by: ${name} (player-posted contract)`
+        : undefined;
+    if (text === undefined && posterLine === undefined) continue;
+    lines.push(text !== undefined ? `${issuedMissionLabel(mission)}: ${text}` : issuedMissionLabel(mission));
+    if (posterLine !== undefined) lines.push(posterLine);
+  }
   if (!lines.length) return;
   emitLine('');
   for (const line of lines) emitLine(line);
@@ -1488,7 +1517,7 @@ export const genericFormatters = [
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
         maxCellWidth: key === 'items' ? 80 : undefined,
       });
-      if (key === 'missions') emitIssuedMissionText(recordRows);
+      if (key === 'missions') emitIssuedMissionText(recordRows, { posters: true });
       const onlyItem = key === 'items' && recordRows.length === 1 ? recordRows[0] : undefined;
       if (
         onlyItem &&
