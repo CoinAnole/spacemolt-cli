@@ -463,3 +463,210 @@ describe('accounting_pending', () => {
     expect(getRelatedCommands('accounting_pending')).toEqual(['get_action_log']);
   });
 });
+
+describe('target_cloaked', () => {
+  test('is no longer a known code', () => {
+    expect(ERROR_REGISTRY.target_cloaked).toBeUndefined();
+    expect(getErrorSuggestion('target_cloaked')).toBeUndefined();
+    expect(isRetryableError('target_cloaked')).toBe(true);
+    expect(isKnownErrorCode('target_cloaked')).toBe(false);
+    expect(ERROR_CODES).not.toContain('target_cloaked');
+  });
+});
+
+describe('invalid_target', () => {
+  test('stays global, with attack and hunt overlays and no scan suggestion', () => {
+    expect(ERROR_REGISTRY.invalid_target?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.invalid_target?.auth).toBe(false);
+    expect(isRetryableError('invalid_target')).toBe(false);
+    expect(isAuthError('invalid_target')).toBe(false);
+    expect(isKnownErrorCode('invalid_target')).toBe(true);
+    expect(ERROR_CODES).toContain('invalid_target');
+    expect(ERROR_REGISTRY.invalid_target?.message).toBe('Invalid target.');
+    expect(Object.keys(ERROR_REGISTRY.invalid_target?.commandSuggestions ?? {})).toEqual(['attack', 'hunt']);
+
+    const generic = getErrorSuggestion('invalid_target');
+    expect(generic).toContain('get_nearby');
+    expect(generic).not.toContain('scan');
+    expect(getErrorSuggestion('invalid_target', 'repair')).toBe(generic);
+
+    const attack = getErrorSuggestion('invalid_target', 'attack');
+    const hunt = getErrorSuggestion('invalid_target', 'hunt');
+    expect(attack).toBe(hunt);
+    expect(attack).toContain('get_battle_status');
+    expect(attack).not.toContain('scan');
+    expect(hunt).toContain('get_battle_status');
+    expect(hunt).not.toContain('scan');
+    expect(getRelatedCommands('invalid_target')).toEqual(['get_nearby']);
+  });
+});
+
+describe('player_not_found', () => {
+  test('is one global suggestion for every documented caller', () => {
+    expect(ERROR_REGISTRY.player_not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.player_not_found?.auth).toBe(false);
+    expect(isRetryableError('player_not_found')).toBe(false);
+    expect(isAuthError('player_not_found')).toBe(false);
+    expect(isKnownErrorCode('player_not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('player_not_found');
+    expect(ERROR_REGISTRY.player_not_found?.commandSuggestions).toBeUndefined();
+    expect(ERROR_REGISTRY.player_not_found?.message).toBe('Player not found.');
+
+    const suggestion = getErrorSuggestion('player_not_found');
+    expect(suggestion).toContain('unknown name');
+    expect(suggestion).toContain('get_nearby');
+    expect(suggestion).not.toContain('scan');
+    expect(suggestion).not.toContain('attack');
+    for (const command of [
+      'trade_offer',
+      'refuel',
+      'repair',
+      'arena challenge',
+      'fleet invite',
+      'transfer_personnel',
+      'treat_personnel',
+    ]) {
+      expect(getErrorSuggestion('player_not_found', command)).toBe(suggestion);
+    }
+    expect(getErrorSuggestion('player_not_found', 'arena_challenge')).toBe(suggestion);
+    expect(getRelatedCommands('player_not_found')).toEqual(['get_nearby']);
+  });
+});
+
+describe('in_battle', () => {
+  test('is retryable, names cloak, and has no overlays', () => {
+    expect(ERROR_REGISTRY.in_battle?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.in_battle?.auth).toBe(false);
+    expect(isRetryableError('in_battle')).toBe(true);
+    expect(isAuthError('in_battle')).toBe(false);
+    expect(isKnownErrorCode('in_battle')).toBe(true);
+    expect(ERROR_CODES).toContain('in_battle');
+    expect(ERROR_REGISTRY.in_battle?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('in_battle');
+    expect(suggestion).toContain('cloak');
+    expect(suggestion).toContain('get_battle_status');
+    expect(getErrorSuggestion('in_battle', 'cloak')).toBe(suggestion);
+    expect(getRelatedCommands('in_battle')).toEqual(['get_battle_status', 'cloak']);
+  });
+});
+
+describe('wreck_not_found', () => {
+  test('is not retryable and points at wrecks at your POI', () => {
+    expect(ERROR_REGISTRY.wreck_not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.wreck_not_found?.auth).toBe(false);
+    expect(isRetryableError('wreck_not_found')).toBe(false);
+    expect(isAuthError('wreck_not_found')).toBe(false);
+    expect(isKnownErrorCode('wreck_not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('wreck_not_found');
+    expect(ERROR_REGISTRY.wreck_not_found?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('wreck_not_found');
+    expect(suggestion).toContain('wreck_not_found');
+    expect(suggestion).toContain('get_wrecks');
+    expect(suggestion).not.toMatch(/(^|\s)not_found(\s|$)/);
+    expect(suggestion).not.toContain('returns not_found');
+    expect(getRelatedCommands('wreck_not_found')).toEqual(['get_wrecks', 'tow_wreck']);
+  });
+});
+
+describe('not_found', () => {
+  test('generic text does not mention a wreck, and loot and inspect overlays differ', () => {
+    expect(ERROR_REGISTRY.not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.not_found?.auth).toBe(false);
+    expect(isRetryableError('not_found')).toBe(false);
+    expect(isAuthError('not_found')).toBe(false);
+    expect(isKnownErrorCode('not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('not_found');
+    expect(Object.keys(ERROR_REGISTRY.not_found?.commandSuggestions ?? {})).toEqual([
+      'loot_wreck',
+      'storage_loot',
+      'inspect',
+    ]);
+
+    const generic = getErrorSuggestion('not_found');
+    expect(generic).not.toContain('wreck');
+    expect(generic).not.toContain('get_wrecks');
+    expect(getErrorSuggestion('not_found', 'jump')).toBe(generic);
+
+    const loot = getErrorSuggestion('not_found', 'loot_wreck');
+    const storage = getErrorSuggestion('not_found', 'storage loot');
+    expect(loot).toBe(storage);
+    expect(getErrorSuggestion('not_found', 'storage_loot')).toBe(loot);
+    expect(loot).toContain('another POI');
+    expect(loot).toContain('get_wrecks');
+    expect(storage).toContain('another POI');
+    expect(storage).toContain('get_wrecks');
+
+    const inspect = getErrorSuggestion('not_found', 'inspect');
+    expect(inspect).toContain('survey_system');
+    expect(inspect).not.toContain('get_wrecks');
+    expect(getRelatedCommands('not_found')).toEqual([]);
+  });
+});
+
+describe('unknown_system', () => {
+  test('names the charting recipe and get_system', () => {
+    expect(ERROR_REGISTRY.unknown_system?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.unknown_system?.auth).toBe(false);
+    expect(isRetryableError('unknown_system')).toBe(false);
+    expect(isAuthError('unknown_system')).toBe(false);
+    expect(isKnownErrorCode('unknown_system')).toBe(true);
+    expect(ERROR_CODES).toContain('unknown_system');
+    expect(ERROR_REGISTRY.unknown_system?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('unknown_system');
+    expect(suggestion).toContain('survey_system');
+    expect(suggestion).toContain('faction intel');
+    expect(suggestion).toContain('get_system');
+    expect(getRelatedCommands('unknown_system')).toEqual(['get_system', 'jump', 'survey_system']);
+  });
+});
+
+describe('system_not_found', () => {
+  test('names find_route and the charting recipe', () => {
+    expect(ERROR_REGISTRY.system_not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.system_not_found?.auth).toBe(false);
+    expect(isRetryableError('system_not_found')).toBe(false);
+    expect(isAuthError('system_not_found')).toBe(false);
+    expect(isKnownErrorCode('system_not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('system_not_found');
+    expect(ERROR_REGISTRY.system_not_found?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('system_not_found');
+    expect(suggestion).toContain('survey_system');
+    expect(suggestion).toContain('faction intel');
+    expect(suggestion).toContain('find_route');
+    expect(getRelatedCommands('system_not_found')).toEqual(['find_route', 'survey_system', 'get_system']);
+  });
+});
+
+describe('poi_not_found', () => {
+  test('says faction scan_poi, not the flat invocation', () => {
+    expect(ERROR_REGISTRY.poi_not_found?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.poi_not_found?.auth).toBe(false);
+    expect(isRetryableError('poi_not_found')).toBe(false);
+    expect(isAuthError('poi_not_found')).toBe(false);
+    expect(isKnownErrorCode('poi_not_found')).toBe(true);
+    expect(ERROR_CODES).toContain('poi_not_found');
+    expect(ERROR_REGISTRY.poi_not_found?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('poi_not_found');
+    expect(suggestion).toContain('survey_system');
+    expect(suggestion).toContain('faction intel');
+    expect(suggestion).toContain('faction scan_poi');
+    expect(suggestion).not.toContain('spacemolt faction_scan_poi');
+    expect(getRelatedCommands('poi_not_found')).toEqual(['faction_scan_poi', 'survey_system']);
+  });
+});
+
+describe('invalid_poi', () => {
+  test('says an uncharted hidden POI looks like an unknown id', () => {
+    expect(ERROR_REGISTRY.invalid_poi?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.invalid_poi?.auth).toBe(false);
+    expect(isRetryableError('invalid_poi')).toBe(false);
+    expect(isAuthError('invalid_poi')).toBe(false);
+    expect(isKnownErrorCode('invalid_poi')).toBe(true);
+    expect(ERROR_CODES).toContain('invalid_poi');
+    const suggestion = getErrorSuggestion('invalid_poi');
+    expect(suggestion).toContain('uncharted hidden POI');
+    expect(suggestion).toContain('get_system');
+    expect(suggestion).toContain('survey_system');
+    expect(getRelatedCommands('invalid_poi')).toEqual(['get_system', 'survey_system']);
+  });
+});

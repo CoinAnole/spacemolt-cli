@@ -12,6 +12,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `dock` help names `station_under_attack` and the 0.604.0 join rules (armed join; unarmed/wrecked stay out; wildlife hunts unless leviathan).
 - `dock` table output now prints envelope `cargo` when present, so mission cargo handed on arrival is visible without `get_cargo`.
+- `travel`, `jump`, `find_route`, `inspect`, `faction scan_poi`, and `upload_drone` help: an uncharted hidden POI acts like an unknown id. Codes: `invalid_poi` (travel, wormhole mouths included; arriving charts it), `unknown_system` (uncharted wormhole entrance on jump; chart with `survey_system`, by arriving, or through faction intel — that sentence does not use the word travel), `system_not_found` (find_route), `not_found` (inspect), `poi_not_found` (`faction scan_poi`, not the flat `faction_scan_poi` invocation). Drone MOVE is not an upload error: at MOVE time the POI acts like an id that does not exist, and the failure is often silent. `upload_drone` names no code (gameserver 0.618.0). **No parser change.**
 
 ### Observation
 
@@ -43,6 +44,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `service_prize` help now documents that stop, resume, and redirect remain claimant-only, while refuel and repair also accept a faction-mate of the claimant once that faction runs an operational Prize Recovery Yard at any station (gameserver 0.603.0). A yard under construction or damaged does not unlock it. Both ships must still be out of combat at the same POI. **No parser change.**
 - `service_prize` help now documents that repair spends any repair item from your cargo, not only a basic repair kit (gameserver 0.609.2). Pass `item_id=<id>` to choose one; omit it and the cheapest repair item in your cargo is used. On refuel, omit `quantity` or pass 0 to transfer the safe maximum fuel. On repair, omit `quantity` or pass 0 to spend one repair item. Usage lists `item_id=`. Arguments stay `prize_id` and `service_action`. **No parser change.**
 - `get_wrecks` table output prints `Carrion: N` when `carrion` is present on a wreck (age-death leviathan body; amount added to the system each wildlife pass, about 1 minute, while the body lasts; feeds scavengers). Omitted when the field is absent. An explicit `0` prints `Carrion: 0`. Loot is still `loot_wreck`. `--json` / `--yaml` / `--structured` stay pass-through (gameserver 0.614.0). **No parser change.**
+- `loot_wreck` and `storage loot` help: a wreck at another POI returns `not_found`, the same as a wreck that is already gone. `tow_wreck` help: the wreck must be at your POI; elsewhere is `wreck_not_found` (gameserver 0.618.0). Carrion display is unchanged. **No parser change.**
 
 ### Crafting
 
@@ -101,6 +103,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Chat
 
 - `get_chat_history` help lists `emergency` as read-only MAYDAY history (gameserver 0.608.0). Use it to reread distress text. The `mission_id` for `accept_mission` comes from the live emergency broadcast, not from history. **No parser change.**
+- `get_chat_history` help: `emergency` is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call (gameserver 0.618.0). It no longer says the current system. The `mission_id` sentence is unchanged. **No parser change.**
 
 ### Combat
 
@@ -112,6 +115,9 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `reload` table output shows per-weapon success and failure for a bulk reload (gameserver 0.609.0). Mixed batches stay exit 0. Single-weapon text is unchanged. **No parser change.**
 - `reload` ammo display names inside `weapons` resolve like the top-level ammo argument. Weapon instance ids stay literal. **No parser change.**
 - `help reload` documents `weapons=[{weapon_instance_id, ammo_item_id?}]`, max 50, one tick for the batch, omit the single-weapon arguments, ammo display names inside the array resolve, weapon instance ids do not. **No parser change.**
+- `attack` help: starting a battle requires the target at your POI. Joining a battle already running works from anywhere in that system. A target at another POI, in transit, or cloaked is `invalid_target` (Target not found), the same as a missing id. A docked pilot at your POI is `target_docked`. A station at another charted POI is `out_of_range`. Opening fire on a pirate that others already fight joins their side. Your own faction or an ally still comes first. A war with the hunters' faction uses normal side rules (gameserver 0.618.0 and 0.618.3). The armed-faction-station sentence is unchanged. **No parser change.**
+- `hunt` help: the creature must be at your current POI. Elsewhere is `invalid_target` (Target not found). Leviathan wording is unchanged (gameserver 0.618.0). **No parser change.**
+- `cloak` help names `in_battle`. A cloak cannot be engaged during a battle. Attacking or engaging drops an active cloak (gameserver 0.618.0). **No parser change.**
 
 ### Personnel
 
@@ -160,6 +166,11 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - Human API errors print `Limit:` / `Scope:` when present, and `Pending command:` for `action_pending`.
 - Local suggestions for `action_pending` (one mutation per tick; do not resubmit immediately) and `ip_timed_out` (do not keep retrying). `ip_timed_out` is not retryable.
 - `insufficient_credits` now has a local suggestion. On `craft`, it treats the miss as credits (labor/rental), not materials — do not deposit items unless the code is `missing_materials` / `missing_faction_materials` — and points at `dry_run=true` plus `preset=cheap` / `prefer_own` (gameserver 0.601.5 recategorized a treasury miss that used to look like missing materials; the server message still names that path when it applies). On `faction declare_war`, war costs 50,000 from your wallet — check `get_status`; do not `faction_deposit_credits`. On `citizenship apply`, the fee comes from your player balance (balance+fee) — check `get_status`; do not `faction_deposit_credits`. Other commands get a generic credits-wallet suggestion; `faction_deposit_credits` is suggested only if the server names the faction treasury.
+- Removed `target_cloaked` and its scan suggestion. Gameserver 0.618.0 no longer emits it. `player_not_here`, `different_location`, `target_in_transit`, and `not_same_poi` were not in the local registry.
+- `invalid_target` no longer reads as "look only at players at your POI" as the whole story. A missing id and a target you cannot see share the error. `get_nearby` stays the next command. On `attack` and `hunt`, the suggestion adds that joining an in-system battle uses `get_battle_status` and does not return this error. No scan suggestion. The ambiguous storage-bucket `invalid_target` path is unchanged.
+- `player_not_found` now has a local suggestion, shared by trade, refuel, repair, arena challenge, fleet invite, transfer_personnel, and treat_personnel. Same error as an unknown name when the pilot is at another POI, in transit, or cloaked. Not auto-retried. Human output no longer adds "This error may be retryable."
+- `in_battle`, `wreck_not_found`, `unknown_system`, `system_not_found`, and `poi_not_found` now have local suggestions. `unknown_system`, `system_not_found`, and `poi_not_found` name the charting recipe (`survey_system`, arriving, or faction intel). `unknown_system` still points at `get_system` for a connected system the caller already knows. `poi_not_found` says `spacemolt faction scan_poi`, not `spacemolt faction_scan_poi`. `not_found` is command-scoped: the generic line does not mention a wreck; `loot_wreck` and `storage loot` do; `inspect` names an uncharted hidden POI. `not_found` is not auto-retried, and human output no longer adds "This error may be retryable." for it. `invalid_poi` now says an uncharted hidden POI looks like an unknown id and names the same charting recipe.
+- `in_battle` stays retryable in the sense of the existing hint (wait until the battle ends), same as `station_under_attack`. It is not an auto-retry code.
 
 ## 2.9.0 — 2026-09-08
 
