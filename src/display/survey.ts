@@ -53,6 +53,17 @@ function emitDeposits(value: unknown, surveyPower: unknown): void {
   emitSurveyedPoiList('Deposits', rows);
 }
 
+function formatRanchedBy(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  const owners: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const text = entry.trim();
+    if (text !== '') owners.push(text);
+  }
+  return owners.join(', ');
+}
+
 function emitWildlifeCensus(value: unknown): void {
   const rows = Array.isArray(value) ? value.filter(isRecord) : [];
   if (!rows.length) {
@@ -63,6 +74,7 @@ function emitWildlifeCensus(value: unknown): void {
   const projected = rows.map((row) => ({
     ...row,
     ranched_display: finiteNumber(row.ranched) !== undefined ? String(row.ranched) : '',
+    ranched_by_display: formatRanchedBy(row.ranched_by),
   }));
   const columns: Array<[string, string[]]> = [
     ['Species', ['species']],
@@ -71,8 +83,11 @@ function emitWildlifeCensus(value: unknown): void {
     ['Estimate', ['estimate']],
     ['Abundance', ['abundance']],
   ];
-  if (projected.some((row) => row.ranched_display)) columns.push(['Ranched', ['ranched_display']]);
-  printCompactTable('Wildlife', projected, columns, { maxCellWidth: 40 });
+  const showRanched = projected.some((row) => row.ranched_display !== '');
+  const showOwners = projected.some((row) => row.ranched_by_display !== '');
+  if (showRanched || showOwners) columns.push(['Ranched', ['ranched_display']]);
+  if (showOwners) columns.push(['Ranched By', ['ranched_by_display']]);
+  printCompactTable('Wildlife', projected, columns, { maxCellWidth: 64 });
 }
 
 function formatXpGained(value: unknown): string | undefined {

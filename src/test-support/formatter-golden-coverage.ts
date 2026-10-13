@@ -9,6 +9,7 @@ const GOLDEN_COVERAGE_OPT_OUTS: Record<string, string> = {
 };
 
 export const FRIENDLY_FORMATTING_TARGETS = [
+  'attack',
   'captains_log_get',
   'create_faction',
   'faction_get_invites',
@@ -22,6 +23,7 @@ export const FRIENDLY_FORMATTING_TARGETS = [
   'get_map',
   'get_system_agents',
   'get_tax_estimate',
+  'hunt',
   'read_note',
   'reload',
   'scan',

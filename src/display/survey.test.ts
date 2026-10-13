@@ -383,6 +383,118 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
   expect(zero).not.toContain('Skill XP:');
 });
 
+test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: 0,
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).toContain('Ranched');
+  expect(header).not.toContain('Ranched By');
+  expect(lineContaining(stdout, 'ember_grazer')).toMatch(/ 0\s*$/);
+  expect(stdout).not.toContain('Ranched By');
+});
+
+test('survey_system shows Ranched By in server order and a blank cell for an omitted count', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'belt_grazer',
+          name: 'Belt Grazer',
+          role: 'grazer',
+          estimate: 10,
+          abundance: 'common',
+          ranched_by: ['[RNC] Ranchers Co-op'],
+        },
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: 0,
+          ranched_by: ['[SMC] Space Molt Corp', '[RNC] Ranchers Co-op', 4, '  '],
+        },
+      ];
+    }),
+  );
+
+  const wildlife = formatCompactTable(
+    'Wildlife',
+    [
+      {
+        species: 'belt_grazer',
+        name: 'Belt Grazer',
+        role: 'grazer',
+        estimate: 10,
+        abundance: 'common',
+        ranched_display: '',
+        ranched_by_display: '[RNC] Ranchers Co-op',
+      },
+      {
+        species: 'ember_grazer',
+        name: 'Ember Grazer',
+        role: 'grazer',
+        estimate: 42,
+        abundance: 'common',
+        ranched_display: '0',
+        ranched_by_display: '[SMC] Space Molt Corp, [RNC] Ranchers Co-op',
+      },
+    ],
+    [
+      ['Species', ['species']],
+      ['Name', ['name']],
+      ['Role', ['role']],
+      ['Estimate', ['estimate']],
+      ['Abundance', ['abundance']],
+      ['Ranched', ['ranched_display']],
+      ['Ranched By', ['ranched_by_display']],
+    ],
+    { maxCellWidth: 64 },
+  ).join('\n');
+
+  expect(stdout).toContain(wildlife);
+  const belt = lineContaining(stdout, 'belt_grazer');
+  const ember = lineContaining(stdout, 'ember_grazer');
+  expect(belt).not.toMatch(/\b0\b/);
+  expect(ember.indexOf('[SMC] Space Molt Corp')).toBeLessThan(ember.indexOf('[RNC] Ranchers Co-op'));
+  expect(stdout).not.toContain('undefined');
+});
+
+test('survey_system empty or unusable ranched_by does not add Ranched By', () => {
+  for (const ranched_by of [[], [''], ['   '], [1, null]]) {
+    const stdout = stdoutOf(
+      clonePresent((details) => {
+        details.wildlife = [
+          {
+            species: 'ember_grazer',
+            name: 'Ember Grazer',
+            role: 'grazer',
+            estimate: 42,
+            abundance: 'common',
+            ranched_by,
+          },
+        ];
+      }),
+    );
+
+    expect(stdout).not.toContain('Ranched');
+    expect(lineContaining(stdout, 'Species')).not.toContain('Ranched By');
+  }
+});
+
 test('survey_system omits Ranched column when no row has ranched', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

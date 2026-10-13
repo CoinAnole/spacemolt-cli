@@ -9192,7 +9192,7 @@ describe('notification formatting', () => {
         'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
         'Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 140/180 sh 40/60; departed 1: arena-cleaver-old',
         'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
-        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7]; departed 1: creature-starfish-2',
+        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7] - brand smc, cloudbank-ranch; departed 1: creature-starfish-2',
         'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
         'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
       ]);
@@ -9225,6 +9225,46 @@ describe('notification formatting', () => {
       ]);
       expect(preview.details[0]).not.toContain('Reaver');
       expect(preview.details[0]).not.toContain('p5');
+    });
+
+    test('a creature change with no brand fields stays name and id', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_belt',
+          system_id: 'sol',
+          tick: 42,
+          creatures_changed: [{ name: 'Pod 1', creature_id: 'creature-1' }],
+        },
+      });
+
+      expect(preview.details).toEqual(['Creatures — changed 1: Pod 1 [creature-1]']);
+      expect(preview.details[0]).not.toContain(' - brand');
+    });
+
+    test('a branded creature identity does not double the faction tag', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_belt',
+          system_id: 'sol',
+          tick: 42,
+          creatures_changed: [
+            {
+              name: '[RNC] Belt-Grazer',
+              creature_id: 'creature-ember-1',
+              brand_faction: '[RNC] Ranchers Co-op',
+              brand_ranch: 'cloudbank-ranch',
+              branded: true,
+            },
+          ],
+        },
+      });
+
+      const detail = preview.details.join('\n');
+      expect(detail).toContain('[RNC] Belt-Grazer [creature-ember-1] - brand [RNC] Ranchers Co-op, cloudbank-ranch');
+      expect(detail).not.toContain('[[RNC]');
+      expect(detail).not.toContain('[RNC] [RNC]');
     });
 
     test('four creatures_changed records still name three identities and hide the fourth', () => {
@@ -9710,7 +9750,7 @@ describe('notification formatting', () => {
         'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
         'Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 140/180 sh 40/60; departed 1: arena-cleaver-old',
         'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
-        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7]; departed 1: creature-starfish-2',
+        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7] - brand smc, cloudbank-ranch; departed 1: creature-starfish-2',
         'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
         'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
         'offline collapsed 2',

@@ -92,6 +92,73 @@ test('renders creature scan identity, hull, and revealed wildlife details in ord
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('scan branded creature prints Branded, Brand, and Ranch before Revealed', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = true;
+  fixture.brand_faction = '[RNC] Ranchers Co-op';
+  fixture.brand_ranch = 'cloudbank-ranch';
+  const stdout = renderScan(fixture);
+
+  expect(stdout).toContain('Branded: yes');
+  expect(stdout).toContain('Brand: [RNC] Ranchers Co-op');
+  expect(stdout).toContain('Ranch: cloudbank-ranch');
+  expect(stdout).not.toContain('Branded: true');
+  expect(stdout).not.toContain('Branded: false');
+  expect(stdout.indexOf('Description:')).toBeLessThan(stdout.indexOf('Branded: yes'));
+  expect(stdout.indexOf('Branded: yes')).toBeLessThan(stdout.indexOf('Brand:'));
+  expect(stdout.indexOf('Brand:')).toBeLessThan(stdout.indexOf('Ranch:'));
+  expect(stdout.indexOf('Ranch:')).toBeLessThan(stdout.indexOf('Revealed:'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('scan with branded true and no strings prints only Branded: yes', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = true;
+  const stdout = renderScan(fixture);
+
+  expect(stdout).toContain('Branded: yes');
+  expect(stdout).not.toContain('Brand:');
+  expect(stdout).not.toContain('Ranch:');
+  expect(stdout.indexOf('Description:')).toBeLessThan(stdout.indexOf('Branded: yes'));
+  expect(stdout.indexOf('Branded: yes')).toBeLessThan(stdout.indexOf('Revealed:'));
+});
+
+test('scan with branded false and no strings prints no brand lines', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = false;
+  const stdout = renderScan(fixture);
+
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).not.toContain('Brand:');
+  expect(stdout).not.toContain('Ranch:');
+  expect(stdout).toContain('Description:');
+  expect(stdout).toContain('Revealed:');
+});
+
+test.each([1, 'true'])('scan does not print Branded for a non-boolean branded value (%s)', (branded) => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = branded;
+  const stdout = renderScan(fixture);
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).toContain('Revealed:');
+});
+
+test('scan with branded false still prints non-empty Brand and Ranch strings', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = false;
+  fixture.brand_faction = '[RNC] Ranchers Co-op';
+  fixture.brand_ranch = '  ';
+  const stdout = renderScan(fixture);
+
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).toContain('Brand: [RNC] Ranchers Co-op');
+  expect(stdout).not.toContain('Ranch:');
+  expect(stdout.indexOf('Description:')).toBeLessThan(stdout.indexOf('Brand:'));
+  expect(stdout.indexOf('Brand:')).toBeLessThan(stdout.indexOf('Revealed:'));
+});
+
 test('scan omits Description when the lore string is already in revealed_info', () => {
   const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
   const description = fixture.description;
@@ -191,6 +258,8 @@ test('remote poi scan drops top-level ship and branded fields', () => {
     username: 'Ibis',
     ship_class: 'hauler',
     branded: true,
+    brand_faction: '[RNC] Ranchers Co-op',
+    brand_ranch: 'cloudbank-ranch',
     revealed_info: [],
   });
 
@@ -200,6 +269,10 @@ test('remote poi scan drops top-level ship and branded fields', () => {
   expect(stdout).not.toContain('Target: Ibis');
   expect(stdout).not.toContain('Ship:');
   expect(stdout).not.toContain('Branded:');
+  expect(stdout).not.toContain('Brand:');
+  expect(stdout).not.toContain('Ranch:');
+  expect(stdout).not.toContain('cloudbank-ranch');
+  expect(stdout).not.toContain('Ranchers');
   expect(stdout).not.toContain('=== Faction Scan ===');
   expect(stdout).not.toContain('=== Players ===');
   expect(stdout).not.toContain('=== Response ===');
@@ -3618,7 +3691,111 @@ test('get_nearby prints every pirate row beside an uncapped creature list', () =
   expect(stdout).not.toContain('... and');
 });
 
-test('subscribe_observation human output omits creature brand fields', () => {
+test('get_nearby prints a brand suffix only on the branded row and does not double the tag', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-wild-1',
+        name: 'Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        hull: 40,
+        max_hull: 40,
+      },
+      {
+        creature_id: 'creature-brand-2',
+        name: '[RNC] Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        hull: 40,
+        max_hull: 40,
+        in_combat: true,
+        branded: true,
+        brand_faction: '[RNC] Ranchers Co-op',
+        brand_ranch: 'cloudbank-ranch',
+      },
+      {
+        creature_id: 'creature-smc-3',
+        name: '[SMC] Pilot-Whale Pod',
+        species: 'pilot_whale',
+        role: 'grazer',
+        hull: 80,
+        max_hull: 120,
+        branded: true,
+        brand_faction: '[SMC] Space Molt Corp',
+        brand_ranch: 'cloudbank-ranch',
+      },
+    ],
+  });
+
+  const wild = '  Belt-Grazer [creature-wild-1] (belt_grazer) - grazer - hull 40/40';
+  const branded =
+    '  [RNC] Belt-Grazer [creature-brand-2] (belt_grazer) - grazer - hull 40/40 - in combat - brand [RNC] Ranchers Co-op, cloudbank-ranch';
+  const smc =
+    '  [SMC] Pilot-Whale Pod [creature-smc-3] (pilot_whale) - grazer - hull 80/120 - brand [SMC] Space Molt Corp, cloudbank-ranch';
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain(wild);
+  expect(stdout).toContain(branded);
+  expect(stdout).toContain(smc);
+  expect(stdout.indexOf(wild)).toBeLessThan(stdout.indexOf(branded));
+  expect(stdout.indexOf(branded)).toBeLessThan(stdout.indexOf(smc));
+  expect(stdout).not.toContain(`${wild} - brand`);
+  expect(stdout.split('[SMC] Pilot-Whale Pod').length - 1).toBe(1);
+  expect(stdout).not.toContain('[[RNC]');
+  expect(stdout).not.toContain('[[SMC]');
+  expect(stdout).not.toContain('[RNC] [RNC]');
+  expect(stdout).not.toContain('[SMC] [SMC]');
+});
+
+test.each([
+  ['faction only', { brand_faction: 'smc' }, ' - brand smc'],
+  ['ranch only', { brand_ranch: 'cloudbank-ranch' }, ' - brand cloudbank-ranch'],
+  ['padded strings', { brand_faction: '  smc  ', brand_ranch: ' cloudbank ' }, ' - brand smc, cloudbank'],
+] as const)('get_nearby brand suffix (%s) keeps one side and trims', (_label, extra, suffix) => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-1',
+        name: 'Grazer',
+        ...extra,
+      },
+    ],
+  });
+
+  expect(stdout).toContain(`  Grazer [creature-1]${suffix}`);
+  expect(stdout).not.toContain('  smc  ');
+  expect(stdout).not.toContain(' cloudbank ');
+});
+
+test.each([
+  ['branded false', { branded: false }],
+  ['brand keys absent', {}],
+  ['branded true with blank strings', { branded: true, brand_faction: '   ', brand_ranch: '' }],
+  ['branded true with non-strings', { branded: true, brand_faction: 1, brand_ranch: null }],
+] as const)('get_nearby wild row (%s) has no brand suffix', (_label, extra) => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-wild-1',
+        name: 'Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        hull: 40,
+        max_hull: 40,
+        ...extra,
+      },
+    ],
+  });
+
+  expect(stdout).toContain('  Belt-Grazer [creature-wild-1] (belt_grazer) - grazer - hull 40/40');
+  expect(stdout).not.toContain(' - brand');
+});
+
+test('subscribe_observation human output prints creature brand fields', () => {
   const stdout = renderStructuredResult(
     'subscribe_observation',
     structuredClone(subscribeObservationFixture),
@@ -3628,8 +3805,9 @@ test('subscribe_observation human output omits creature brand fields', () => {
 
   expect(stdout).toContain('Creatures (1):');
   expect(stdout).toContain('Pilot-Whale Pod [creature-pilot-whale-7]');
-  expect(stdout).not.toContain('cloudbank-ranch');
-  expect(stdout).not.toContain('branded');
+  expect(stdout).toContain(
+    'Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale) - grazer - hull 80/120 - brand smc, cloudbank-ranch',
+  );
   expect(stdout).not.toContain('=== Response ===');
 });
 

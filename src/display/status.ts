@@ -3,6 +3,7 @@ import { formatOfflineCollapsedText, formatShipCountsLine } from '../notificatio
 import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
+import { formatCreatureLine } from './creatures.ts';
 import {
   c,
   commandNameEquals,
@@ -1172,16 +1173,7 @@ export const statusFormatters = [
       if (showSection) {
         emitLine(`\n${c.green}Creatures (${headerCount}):${c.reset}`);
         for (const creature of creatures) {
-          const name = creature.name || creature.creature_id || creature.species || 'Unknown';
-          const species = creature.species ? ` (${creature.species})` : '';
-          const role = creature.role ? ` - ${creature.role}` : '';
-          const hull =
-            creature.hull !== undefined || creature.max_hull !== undefined
-              ? ` - hull ${creature.hull ?? '?'}/${creature.max_hull ?? '?'}`
-              : '';
-          const combat = creature.in_combat ? ' - in combat' : '';
-          const id = creature.creature_id && creature.creature_id !== name ? ` [${creature.creature_id}]` : '';
-          emitLine(`  ${name}${id}${species}${role}${hull}${combat}`);
+          emitLine(`  ${formatCreatureLine(creature)}`);
         }
         if (finiteCount !== undefined && finiteCount > printed) {
           emitLine(`  ... and ${finiteCount - printed} more`);
@@ -1347,6 +1339,13 @@ export const statusFormatters = [
             : false
         : false;
       if (description && !descriptionAlreadyRevealed) emitLine(`Description: ${description}`);
+      if (r.branded === true) emitLine('Branded: yes');
+      if (typeof r.brand_faction === 'string' && r.brand_faction.trim() !== '') {
+        emitLine(`Brand: ${r.brand_faction}`);
+      }
+      if (typeof r.brand_ranch === 'string' && r.brand_ranch.trim() !== '') {
+        emitLine(`Ranch: ${r.brand_ranch}`);
+      }
       emitScanRevealedInfo(r);
       return true;
     },

@@ -1,5 +1,6 @@
 import { arenaFormatters } from './arena.ts';
 import { citizenshipFormatters } from './citizenship.ts';
+import { combatFormatters } from './combat.ts';
 import { empireFormatters } from './empire.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
@@ -32,5 +33,6 @@ export const resultFormatters: ResultFormatter[] = [
   ...shippingFormatters,
   ...arenaFormatters,
   ...citizenshipFormatters,
+  ...combatFormatters,
   ...genericFormatters,
 ];
