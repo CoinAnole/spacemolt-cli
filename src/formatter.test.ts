@@ -3890,6 +3890,7 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Arrived at Procyon A');
+    expect(stdout).toContain('offline collapsed 0');
     expect(stdout).not.toContain('=== Active Missions ===');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -3949,6 +3950,7 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Arrived at Earth');
+    expect(stdout).toContain('offline collapsed 0');
     expect(stdout).not.toContain('=== Active Missions ===');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -4247,6 +4249,7 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain(expected);
+    if (command === 'travel') expect(stdout).toContain('offline collapsed 0');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -8820,7 +8823,8 @@ describe('structuredContent formatters', () => {
       Arrived at Earth
 
       Players here (1):
-        Ibis"
+        Ibis
+      offline collapsed 0"
       ,
         "base": 
       "
