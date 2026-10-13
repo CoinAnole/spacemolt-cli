@@ -1,5 +1,5 @@
 import { stringifyApiJson } from '../json-number.ts';
-import { formatOfflineCollapsedText } from '../notification-format-shared.ts';
+import { formatOfflineCollapsedText, formatShipCountsLine } from '../notification-format-shared.ts';
 import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
@@ -38,7 +38,6 @@ import {
   nativeScanField,
 } from './scan-contacts.ts';
 
-const NEARBY_TABLE_LIMIT = 10;
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
 
 function formatNumber(value: unknown): string {
@@ -881,11 +880,12 @@ export const statusFormatters = [
       const nearby = r.nearby as Array<Record<string, unknown>> | undefined;
       if (nearby?.length) {
         emitLine(`\n${c.bright}Nearby Players:${c.reset} ${nearby.length}`);
-        for (const player of nearby.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const player of nearby) {
           emitLine(`  - ${formatPlayer(player)}`);
         }
-        if (nearby.length > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${nearby.length - NEARBY_TABLE_LIMIT} more`);
       }
+      const offlineCollapsed = formatOfflineCollapsedText(location?.offline_collapsed);
+      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
       emitNearbyPrizes({
         prizes: location?.nearby_prizes ?? r.nearby_prizes,
         prizeCount: location?.nearby_prize_count ?? r.nearby_prize_count,
@@ -1131,35 +1131,37 @@ export const statusFormatters = [
       if (!players.length) {
         emitLine(`  (No other players at this location)`);
       } else {
-        for (const p of players.slice(0, NEARBY_TABLE_LIMIT)) emitLine(`  ${formatPlayer(p)}`);
-        if (playerCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${playerCount - NEARBY_TABLE_LIMIT} more`);
+        for (const p of players) emitLine(`  ${formatPlayer(p)}`);
       }
+      if (playerCount > players.length) emitLine(`  ... and ${playerCount - players.length} more`);
+      const offlineCollapsed = formatOfflineCollapsedText(r.offline_collapsed);
+      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
 
       if (pirateCount > 0) {
         emitLine(`\n${c.red}Pirates (${pirateCount}):${c.reset}`);
-        for (const p of pirates.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const p of pirates) {
           emitLine(`  ${formatNearbyPirateLine(p)}`);
         }
-        if (pirateCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${pirateCount - NEARBY_TABLE_LIMIT} more`);
+        if (pirateCount > pirates.length) emitLine(`  ... and ${pirateCount - pirates.length} more`);
       }
 
       if (arenaNpcCount > 0) {
         emitLine(`\n${c.magenta}Arena NPCs (${arenaNpcCount}):${c.reset}`);
         emitLine('  (in-match only; cannot be attacked from outside — see: arena status)');
-        for (const npc of arenaNpcs.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const npc of arenaNpcs) {
           emitLine(`  ${formatNearbyArenaNpcLine(npc)}`);
         }
-        if (arenaNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${arenaNpcCount - NEARBY_TABLE_LIMIT} more`);
+        if (arenaNpcCount > arenaNpcs.length) emitLine(`  ... and ${arenaNpcCount - arenaNpcs.length} more`);
       }
 
       if (empireNpcCount > 0) {
         emitLine(`\n${c.dim}Empire NPCs (${empireNpcCount}):${c.reset}`);
-        for (const n of npcs.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const n of npcs) {
           const name = n.name || n.npc_id || 'Unknown';
           const ship = n.ship_class ? ` (${n.ship_class})` : '';
           emitLine(`  ${name}${ship}`);
         }
-        if (empireNpcCount > NEARBY_TABLE_LIMIT) emitLine(`  ... and ${empireNpcCount - NEARBY_TABLE_LIMIT} more`);
+        if (empireNpcCount > npcs.length) emitLine(`  ... and ${empireNpcCount - npcs.length} more`);
       }
 
       const printed = creatures.length;
@@ -1189,6 +1191,10 @@ export const statusFormatters = [
         prizes,
         prizeCount: typeof r.prize_count === 'number' ? r.prize_count : prizes.length,
       });
+      if (commandNameEquals(command, 'subscribe_observation')) {
+        const shipCounts = formatShipCountsLine(r.ship_counts);
+        if (shipCounts !== undefined) emitLine(shipCounts);
+      }
       return true;
     },
     { commands: ['get_nearby', 'subscribe_observation'], shapeFallback: true },
@@ -1277,13 +1283,15 @@ export const statusFormatters = [
       emitLocationResources(loc.resources);
       if (nearbyPlayerCount > 0) {
         emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
-        for (const player of nearbyPlayers.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const player of nearbyPlayers) {
           emitLine(`  ${formatPlayer(player)}`);
         }
-        if (nearbyPlayerCount > NEARBY_TABLE_LIMIT) {
-          emitLine(`  ... and ${nearbyPlayerCount - NEARBY_TABLE_LIMIT} more`);
+        if (nearbyPlayerCount > nearbyPlayers.length) {
+          emitLine(`  ... and ${nearbyPlayerCount - nearbyPlayers.length} more`);
         }
       }
+      const offlineCollapsed = formatOfflineCollapsedText(loc.offline_collapsed);
+      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
       emitNearbyPrizes({
         prizes: loc.nearby_prizes,
         prizeCount: loc.nearby_prize_count,
@@ -1291,11 +1299,11 @@ export const statusFormatters = [
       });
       if (nearbyPirateCount > 0) {
         emitLine(`\n${c.red}Nearby Pirates (${nearbyPirateCount}):${c.reset}`);
-        for (const pirate of nearbyPirates.slice(0, NEARBY_TABLE_LIMIT)) {
+        for (const pirate of nearbyPirates) {
           emitLine(`  ${formatNearbyPirateLine(pirate)}`);
         }
-        if (nearbyPirateCount > NEARBY_TABLE_LIMIT) {
-          emitLine(`  ... and ${nearbyPirateCount - NEARBY_TABLE_LIMIT} more`);
+        if (nearbyPirateCount > nearbyPirates.length) {
+          emitLine(`  ... and ${nearbyPirateCount - nearbyPirates.length} more`);
         }
       }
       emitLeviathanContacts(loc.nearby_leviathans, 'Nearby Leviathans');
