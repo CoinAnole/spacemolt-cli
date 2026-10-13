@@ -2363,6 +2363,123 @@ describe('command metadata', () => {
     expect(help).toContain('faction facility types are accepted');
     expect(help).toContain('package_ids');
     expect(help).not.toContain('Build a player facility at the current base.');
+
+    const required = [
+      'bills rent every cycle even when idle',
+      "none at your own faction's station",
+      'under construction',
+      'dismantling',
+      'existing arrears remain owed',
+      'structuredContent.details.rent_per_cycle',
+      '--structured and --format yaml print details.rent_per_cycle',
+      'poi_id and nearby_players',
+      'Arrived at',
+      'does not print Arrived at',
+      'Rent Per Cycle',
+      'explicit 0',
+      'no credit price and no grace-cycle count',
+      "faction's treasury",
+      'quotes and rent totals for them are 0',
+      'rent-free at once',
+      'any unpaid rent on them is cleared',
+      'tenancies that pay it rent each cycle',
+      'roughly 3 days',
+      'not a property of that notice',
+      'passes to that faction',
+      "tenant's storage there",
+      'cannot cover is forgiven',
+      'base_id, base_name, facilities, faction_id, and message',
+      'faction facility types are accepted',
+      'package_ids',
+    ];
+    const forbidden = [
+      'not an OpenAPI field',
+      "production facility becomes that faction's property",
+      'generic response dump',
+      '=== Build ===',
+      'There is no rent line',
+      'on JSON, YAML, and structured output',
+      'skill_xp',
+      '260',
+      '8600',
+      '8,600',
+      '`',
+    ];
+    for (const text of [config?.description, help]) {
+      for (const phrase of required) expect(text).toContain(phrase);
+      for (const phrase of forbidden) expect(text).not.toContain(phrase);
+      const joinAt = text?.indexOf('faction join') ?? -1;
+      const changelogAt = text?.indexOf('Changelog 0.618.2') ?? -1;
+      const gameserverAt = text?.indexOf('Gameserver 0.618.2') ?? -1;
+      expect(joinAt).toBeGreaterThan(-1);
+      expect(changelogAt).toBeGreaterThan(joinAt);
+      expect(gameserverAt).toBeGreaterThan(joinAt);
+    }
+  });
+
+  test('facility owned help documents outsider rent and lists every facility', () => {
+    const description = COMMERCE_FACILITY_COMMAND_OVERRIDES.facility_owned?.description;
+    expect(description).toBe(CURATED_COMMAND_DESCRIPTIONS.facility_owned);
+    expect(COMMANDS.facility_owned?.description).toBe(description);
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.owned?.config;
+    expect(config?.description).toBe(description);
+
+    const help = captureHelp('facility owned');
+    for (const text of [description, help]) {
+      expect(text).toContain('every facility you own');
+      expect(text).toContain('rent-free at once');
+      expect(text).toContain('tenancies');
+      expect(text).toContain("tenant's storage there");
+      expect(text).toContain('not a property of that notice');
+      expect(text).toContain('explicit 0 prints 0');
+      expect(text).toContain('0cr/cycle');
+      expect(text).not.toContain('production facility you personally own');
+      expect(text).not.toContain('not an OpenAPI field');
+    }
+  });
+
+  test('facility types help documents the docked-station rent quote', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.types?.config;
+    const generatedSummary = 'Manage facilities at stations (production, faction, personal, sales, and more)';
+    expect(config?.description).not.toBe(generatedSummary);
+    expect(CURATED_COMMAND_DESCRIPTIONS.facility_types).toBeUndefined();
+
+    const help = captureHelp('facility types');
+    expect(help).not.toBe(generatedSummary);
+    for (const text of [config?.description, help]) {
+      expect(text).toContain('docked station');
+      expect(text).toContain('100 ticks');
+      expect(text).toContain('no rent quote');
+      expect(text).toContain('rent-free at once');
+      expect(text).toContain('tenancies');
+      expect(text).toContain("tenant's storage there");
+      expect(text).toContain('not a property of that notice');
+      expect(text).toContain('explicit 0');
+      expect(text).not.toContain('not an OpenAPI field');
+    }
+  });
+
+  test('station set_build_policy help states treasury rent without the transfer', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.station?.actions.set_build_policy?.config;
+    expect(config?.usage).toContain('allow_outsiders');
+    const help = captureHelp('station set_build_policy');
+    expect(help).toContain('allow_outsiders');
+    const absent = [
+      'clears unpaid rent',
+      'unpaid rent on them is cleared',
+      'tenancies',
+      'not an OpenAPI field',
+      'roughly 3 days',
+      'docked station',
+      'Notification_facility_reclaimed',
+      "tenant's storage",
+      '0.618.2',
+    ];
+    for (const text of [config?.description, help]) {
+      expect(text).toContain('faction treasury');
+      expect(text).toContain('Outposts do not support');
+      for (const phrase of absent) expect(text).not.toContain(phrase);
+    }
   });
 
   test('facility upgrade and faction facility_upgrade expose package_ids arrays', () => {
