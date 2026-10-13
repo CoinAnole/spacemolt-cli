@@ -877,6 +877,134 @@ function emitFacilityRentSummaries(result: Record<string, unknown>): void {
   }
 }
 
+function mobileBaseCoordinate(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return value;
+  return undefined;
+}
+
+function formatMobileBaseCoordinates(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const x = mobileBaseCoordinate(value.x);
+  const y = mobileBaseCoordinate(value.y);
+  if (x === undefined || y === undefined) return undefined;
+  return `(${x}, ${y})`;
+}
+
+function emitMobileBaseText(indent: string, label: string, value: unknown): void {
+  if (typeof value !== 'string') return;
+  emitLine(`${indent}${label}: ${value === '' ? '(empty)' : value}`);
+}
+
+function emitMobileBaseYesNo(indent: string, label: string, value: unknown): void {
+  const text = formatYesNo(value);
+  if (text === undefined) return;
+  emitLine(`${indent}${label}: ${text}`);
+}
+
+function emitMobileBasePosition(indent: string, label: string, value: unknown): void {
+  const text = formatMobileBaseCoordinates(value);
+  if (text === undefined) return;
+  emitLine(`${indent}${label}: ${text}`);
+}
+
+function emitMobileBaseEndpoint(indent: string, label: string, value: unknown): void {
+  if (!isRecord(value)) return;
+  const tokens: string[] = [];
+  if (typeof value.system_id === 'string') tokens.push(value.system_id === '' ? '(empty)' : value.system_id);
+  const coordinates = formatMobileBaseCoordinates(value.position);
+  if (coordinates) tokens.push(coordinates);
+  if (tokens.length === 0) return;
+  emitLine(`${indent}${label}: ${tokens.join(' ')}`);
+}
+
+function emitMobileBaseTick(indent: string, label: string, value: unknown): void {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return;
+  emitLine(`${indent}${label}: ${String(value)}`);
+}
+
+function mobileBaseEscrowRow(value: unknown): { itemId: string; quantity: number } | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.item_id !== 'string' || value.item_id.length === 0) return undefined;
+  if (typeof value.quantity !== 'number' || !Number.isInteger(value.quantity)) return undefined;
+  return { itemId: value.item_id, quantity: value.quantity };
+}
+
+function emitMobileBaseEscrow(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.flatMap((row) => {
+    const escrow = mobileBaseEscrowRow(row);
+    return escrow ? [escrow] : [];
+  });
+  if (rows.length === 0) {
+    emitLine('Escrow: none');
+    return;
+  }
+  emitLine('Escrow:');
+  for (const row of rows) emitLine(`  ${row.quantity}x ${row.itemId}`);
+}
+
+function mobileBaseInfoHeader(source: Record<string, unknown>): string {
+  const name = typeof source.name === 'string' ? source.name : undefined;
+  const baseId = typeof source.base_id === 'string' ? source.base_id : undefined;
+  if (name !== undefined && baseId !== undefined) return `Mobile base: ${name} (${baseId})`;
+  if (name !== undefined) return `Mobile base: ${name}`;
+  if (baseId !== undefined) return `Mobile base: (${baseId})`;
+  return 'Mobile base:';
+}
+
+function isFactionMobileBaseSnapshot(result: Record<string, unknown>): boolean {
+  if (isAliasCopiedDumpKey(result, 'base_id') || typeof result.base_id !== 'string') return false;
+  if (typeof result.name !== 'string') return false;
+  if (isAliasCopiedDumpKey(result, 'poi_id') || typeof result.poi_id !== 'string') return false;
+  if (!isRecord(result.position) || typeof result.wrecked !== 'boolean') return false;
+  const state = result.mobile_base;
+  return isRecord(state) && typeof state.archetype_id === 'string' && typeof state.lifecycle === 'string';
+}
+
+/** `info` reads MobileBaseInfo. `snapshot` reads FactionMobileBaseResponse. */
+function emitMobileBaseSnapshot(source: Record<string, unknown>, mode: 'info' | 'snapshot'): void {
+  if (mode === 'info') {
+    const indent = '  ';
+    emitLine(mobileBaseInfoHeader(source));
+    emitMobileBaseText(indent, 'Archetype', source.archetype_id);
+    emitMobileBaseText(indent, 'POI', source.poi_id);
+    emitMobileBaseText(indent, 'Lifecycle', source.lifecycle);
+    emitMobileBaseYesNo(indent, 'Wrecked', source.wrecked);
+    emitMobileBaseText(indent, 'System', source.current_system_id);
+    emitMobileBasePosition(indent, 'Position', source.current_position);
+    emitMobileBaseEndpoint(indent, 'Origin', source.origin);
+    emitMobileBaseEndpoint(indent, 'Destination', source.destination);
+    emitMobileBaseTick(indent, 'Started tick', source.state_started_tick);
+    emitMobileBaseTick(indent, 'Complete tick', source.state_complete_tick);
+    return;
+  }
+
+  emitLine(`\n${c.bright}=== Faction Mobile Base: ${source.name} ===${c.reset}`);
+  emitLine(`Base ID: ${source.base_id}`);
+  emitLine(`POI: ${source.poi_id}`);
+  emitMobileBaseYesNo('', 'Wrecked', source.wrecked);
+  // Mutation view models copy the pilot system onto an omitted system_id.
+  if (!isAliasCopiedDumpKey(source, 'system_id')) emitMobileBaseText('', 'System', source.system_id);
+  emitMobileBasePosition('', 'Position', source.position);
+  if (!isRecord(source.mobile_base)) return;
+  const state = source.mobile_base;
+  emitMobileBaseText('', 'Archetype', state.archetype_id);
+  emitMobileBaseText('', 'Lifecycle', state.lifecycle);
+  emitMobileBaseText('', 'Commission', state.commission_id);
+  emitMobileBaseEndpoint('', 'Origin', state.origin);
+  emitMobileBaseEndpoint('', 'Destination', state.destination);
+  emitMobileBaseTick('', 'Started tick', state.state_started_tick);
+  emitMobileBaseTick('', 'Complete tick', state.state_complete_tick);
+  if (Object.hasOwn(state, 'refundable_item_escrow')) emitMobileBaseEscrow(state.refundable_item_escrow);
+}
+
+function emitMobileBaseCommission(source: Record<string, unknown>): void {
+  if (typeof source.commission_id === 'string') emitMobileBaseText('', 'Mobile base commission', source.commission_id);
+  else emitLine('Mobile base commission:');
+  emitMobileBaseText('  ', 'Archetype', source.archetype_id);
+}
+
 function formatChatSender(message: Record<string, unknown>): string | undefined {
   const sender = message.sender ?? message.username ?? message.sender_name ?? message.sender_id;
   const verified = message.empire_official === true ? ' [empire_official]' : '';
@@ -1390,9 +1518,38 @@ export const socialFormatters = [
         ]);
       }
       emitRentSummary('Faction rent bill', 'Faction arrears', r.faction_rent);
+      if (isRecord(r.mobile_base)) emitMobileBaseSnapshot(r.mobile_base, 'info');
+      if (isRecord(r.mobile_base_commission)) emitMobileBaseCommission(r.mobile_base_commission);
       return true;
     },
     { commands: ['faction_info'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (!isFactionMobileBaseSnapshot(r)) return false;
+      emitMobileBaseSnapshot(r, 'snapshot');
+      return true;
+    },
+    {
+      commands: [
+        'faction_get_mobile_base',
+        'faction_move_mobile_base',
+        'faction_jump_mobile_base',
+        'faction_cancel_mobile_base_jump',
+      ],
+    },
+  ),
+
+  formatter(
+    (r) => {
+      if (typeof r.decommissioned !== 'boolean' || typeof r.message !== 'string') return false;
+      emitLine(`\n${c.bright}=== Mobile Base Decommissioned ===${c.reset}`);
+      emitLine(`Decommissioned: ${formatYesNo(r.decommissioned)}`);
+      emitLine(r.message);
+      return true;
+    },
+    { commands: ['faction_decommission_mobile_base'] },
   ),
 
   // Public faction profile (GET /api/factions/{tag})

@@ -36,7 +36,7 @@ import {
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
-import { showCommandHelp, showFullHelp } from './help';
+import { showCommandExplanation, showCommandHelp, showFullHelp } from './help';
 import { schemaRequiredScalarType } from './openapi-metadata';
 import { createCommandConfigDryRunResponse } from './preview';
 
@@ -1996,13 +1996,15 @@ describe('command metadata', () => {
 
   test('faction info help documents faction_rent omit versus zero', () => {
     const description =
-      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.';
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.';
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.info?.config;
     expect(config?.description).toBe(description);
     expect(config?.description).toContain('faction_rent');
     expect(config?.description).toContain('0cr/cycle');
     expect(config?.description).toContain('omitted');
     expect(config?.description).toContain('faction facility_owned');
+    expect(config?.description).toContain('System: (empty)');
+    expect(config?.description).toContain('faction get_mobile_base');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toContain('faction_info');
     expect(config?.description).not.toContain('faction_facility_owned');
@@ -2018,6 +2020,7 @@ describe('command metadata', () => {
       'faction_list',
       'get_faction_achievements',
       'faction_facility_owned',
+      'faction_get_mobile_base',
     ]);
     expect(config?.args).toEqual(['faction_id']);
 
@@ -2028,11 +2031,127 @@ describe('command metadata', () => {
     expect(help).toContain('faction facility_owned');
     expect(help).toContain('See also:');
     expect(help).toContain('faction facility_owned');
+    expect(help).toContain('faction get_mobile_base');
     expect(help).not.toContain('`');
     expect(help).not.toContain('faction_info');
     expect(help).not.toContain('faction_facility_owned');
     expect(help).not.toContain('Estimated rent/day');
     expect(help).not.toContain('faction facility_list');
+  });
+
+  test('faction mobile base commands document member access and ManageBases without a parser change', () => {
+    const get = COMMANDS.faction_get_mobile_base;
+    const move = COMMANDS.faction_move_mobile_base;
+    const jump = COMMANDS.faction_jump_mobile_base;
+    const cancel = COMMANDS.faction_cancel_mobile_base_jump;
+    const decommission = COMMANDS.faction_decommission_mobile_base;
+    expect(get?.description).toContain('member');
+    expect(get?.description).toContain('escrow');
+    expect(get?.description).not.toContain('Frontier capital');
+    expect(get?.description).not.toContain('`');
+    expect(get?.example).toBe('spacemolt faction get_mobile_base');
+    expect(get?.seeAlso).toEqual([
+      'faction_info',
+      'faction_move_mobile_base',
+      'faction_jump_mobile_base',
+      'catalog',
+      'get_mobile_base',
+    ]);
+    expect(get?.route).toEqual({
+      tool: 'spacemolt_faction',
+      action: 'get_mobile_base',
+      method: 'POST',
+    });
+    expect(get?.args ?? []).toEqual([]);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_get_mobile_base?.positionals).toBeUndefined();
+
+    expect(move?.usage).toBe('x=<au> y=<au>');
+    expect(move?.description).toContain('ManageBases');
+    expect(move?.description).toContain('5,000');
+    expect(move?.example).toBe('spacemolt faction move_mobile_base x=3 y=-1');
+    expect(move?.args).toEqual(['x', 'y']);
+    expect(move?.required).toEqual(['x', 'y']);
+    expect(move?.schema?.x?.positionalIndex).toBeUndefined();
+    expect(move?.schema?.y?.positionalIndex).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_move_mobile_base?.positionals).toBeUndefined();
+    expect(move?.route).toEqual({
+      tool: 'spacemolt_faction',
+      action: 'move_mobile_base',
+      method: 'POST',
+    });
+
+    expect(jump?.usage).toBe('<id>');
+    expect(jump?.description).toContain('ManageBases');
+    expect(jump?.description).toContain('faction cancel_mobile_base_jump');
+    expect(jump?.description).not.toContain('dark_matter_cell');
+    expect(jump?.description).not.toContain('`');
+    expect(jump?.example).toBe('spacemolt faction jump_mobile_base neighbor_system');
+    expect(jump?.args).toEqual(['id']);
+    expect(jump?.required).toEqual(['id']);
+    expect(jump?.schema?.id?.positionalIndex).toBe(0);
+    expect(jump?.schema?.system_id).toBeUndefined();
+    expect(jump?.aliases?.system_id).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_jump_mobile_base?.positionals).toBeUndefined();
+    expect(jump?.route).toEqual({
+      tool: 'spacemolt_faction',
+      action: 'jump_mobile_base',
+      method: 'POST',
+    });
+
+    expect(cancel?.description).toContain('ManageBases');
+    expect(cancel?.description).toContain('90-tick');
+    expect(cancel?.example).toBe('spacemolt faction cancel_mobile_base_jump');
+    expect(cancel?.args ?? []).toEqual([]);
+    expect(cancel?.route).toEqual({
+      tool: 'spacemolt_faction',
+      action: 'cancel_mobile_base_jump',
+      method: 'POST',
+    });
+
+    expect(decommission?.description).toContain('ManageBases');
+    expect(decommission?.description).toContain('permanent');
+    expect(decommission?.description).toContain('faction dismantle');
+    expect(decommission?.description).not.toContain('`');
+    expect(decommission?.seeAlso).toEqual(['faction_dismantle', 'faction_get_mobile_base']);
+    expect(decommission?.args ?? []).toEqual([]);
+    expect(decommission?.route).toEqual({
+      tool: 'spacemolt_faction',
+      action: 'decommission_mobile_base',
+      method: 'POST',
+    });
+
+    const factionGet = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.get_mobile_base;
+    expect(factionGet?.command).toBe('faction_get_mobile_base');
+    expect(factionGet).not.toHaveProperty('permission');
+    expect(factionGet?.config).not.toHaveProperty('permission');
+
+    const getHelp = captureHelp('faction get_mobile_base');
+    expect(getHelp).toContain('member');
+    expect(getHelp).toContain('escrow');
+    expect(getHelp).not.toContain('Frontier capital');
+    expect(getHelp).not.toContain('`');
+    expect(getHelp).toContain('faction jump_mobile_base');
+    expect(getHelp).not.toContain('faction_jump_mobile_base');
+
+    const moveHelp = captureHelp('faction move_mobile_base');
+    expect(moveHelp).toContain('x=<au> y=<au>');
+    expect(moveHelp).toContain('x, y');
+
+    const publicStdout: string[] = [];
+    expect(
+      showCommandExplanation('get_mobile_base', {
+        out(message = '') {
+          publicStdout.push(message);
+        },
+        err() {},
+      }),
+    ).toBe(true);
+    const publicHelp = publicStdout.join('\n').replace(ANSI_PATTERN, '');
+    expect(publicHelp).toContain('Frontier mobile capital');
+    expect(publicHelp).toContain('wheres-mobile-base');
+    expect(publicHelp).toContain('faction get_mobile_base');
+    expect(COMMANDS.get_mobile_base?.route.rootPath).toBe('wheres-mobile-base');
+    expect(COMMANDS.get_mobile_base?.seeAlso).toEqual(['get_location', 'get_system', 'faction_get_mobile_base']);
   });
 
   test('view_market help teaches Company Store narrowing', () => {

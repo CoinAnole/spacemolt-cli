@@ -54,7 +54,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_facility_owned: 'List faction facilities across all stations.',
   faction_get_invites: 'View pending faction invitations',
   faction_info:
-    'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.',
+    'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.',
   faction_intel_status: 'View faction intel coverage statistics',
   faction_invite: 'Invite a player to your faction',
   faction_kick: 'Kick a player from your faction',

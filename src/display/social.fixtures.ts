@@ -2157,6 +2157,96 @@ export const listBattlesArenaCaptureFixture = {
   total: 1,
 };
 
+const stationaryFactionMobileBase = {
+  base_id: 'mobile_civitas_example',
+  name: 'Civitas',
+  poi_id: 'mobile_civitas_example_poi',
+  position: { x: 2.5, y: 3.25 },
+  wrecked: false,
+  system_id: 'sol',
+  mobile_base: {
+    archetype_id: 'civitas',
+    lifecycle: 'stationary',
+    origin: { system_id: '', position: { x: 0, y: 0 } },
+    destination: { system_id: '', position: { x: 0, y: 0 } },
+  },
+};
+
+export const factionGetMobileBaseFixture = stationaryFactionMobileBase;
+
+export const factionGetMobileBasePreparingFixture = {
+  base_id: 'mobile_civitas_example',
+  name: 'Civitas',
+  poi_id: 'mobile_civitas_example_poi',
+  position: { x: 2.5, y: 3.25 },
+  wrecked: false,
+  system_id: 'sol',
+  mobile_base: {
+    archetype_id: 'civitas',
+    lifecycle: 'jump_preparing',
+    commission_id: 'comm-9',
+    origin: { system_id: 'sol', position: { x: 1, y: 2 } },
+    destination: { system_id: 'neighbor', position: { x: 0, y: 0 } },
+    state_started_tick: 1000,
+    state_complete_tick: 1090,
+    refundable_item_escrow: [{ item_id: 'dark_matter_cell', quantity: 25 }],
+  },
+};
+
+export const factionGetMobileBaseIsolatedFixture = {
+  base_id: 'mobile_civitas_example',
+  name: 'Civitas',
+  poi_id: 'mobile_civitas_example_poi',
+  position: { x: 1, y: 2 },
+  wrecked: false,
+  mobile_base: {
+    archetype_id: 'civitas',
+    lifecycle: 'jumping',
+    origin: { system_id: 'sol', position: { x: 1, y: 2 } },
+    destination: { system_id: 'neighbor', position: { x: 0, y: 0 } },
+    state_started_tick: 1090,
+    state_complete_tick: 1630,
+  },
+};
+
+export const factionMoveMobileBaseFixture = {
+  location: { system_id: 'pilot_system', poi_id: 'pilot_poi' },
+  details: {
+    base_id: 'mobile_civitas_example',
+    name: 'Civitas',
+    poi_id: 'mobile_civitas_example_poi',
+    position: { x: 4, y: -1 },
+    wrecked: false,
+    system_id: 'sol',
+    mobile_base: {
+      archetype_id: 'civitas',
+      lifecycle: 'in_system_transit',
+      origin: { system_id: 'sol', position: { x: 2.5, y: 3.25 } },
+      destination: { system_id: 'sol', position: { x: 4, y: -1 } },
+      state_started_tick: 500,
+      state_complete_tick: 860,
+    },
+  },
+};
+
+export const factionJumpMobileBaseFixture = {
+  location: { system_id: 'pilot_system', poi_id: 'pilot_poi' },
+  details: structuredClone(factionGetMobileBaseIsolatedFixture),
+};
+
+export const factionCancelMobileBaseJumpFixture = {
+  location: { system_id: 'pilot_system', poi_id: 'pilot_poi' },
+  details: structuredClone(factionGetMobileBaseFixture),
+};
+
+export const factionDecommissionMobileBaseFixture = {
+  location: { system_id: 'sol', poi_id: 'pilot_poi' },
+  details: {
+    decommissioned: true,
+    message: 'The base is gone.',
+  },
+};
+
 export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   chat: { command: 'chat', fixture: chatSentFixture },
   facility_owned: { command: 'facility_owned', fixture: facilityOwnedFixture },
@@ -2246,6 +2336,45 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },
   faction_info_omitted_rent: { command: 'faction_info', fixture: factionInfoOmittedRentFixture },
   faction_info_zero_rent: { command: 'faction_info', fixture: factionInfoZeroRentFixture },
+  faction_get_mobile_base: {
+    command: 'faction_get_mobile_base',
+    fixture: factionGetMobileBaseFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/get_mobile_base',
+  },
+  faction_get_mobile_base_preparing: {
+    command: 'faction_get_mobile_base',
+    fixture: factionGetMobileBasePreparingFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/get_mobile_base',
+  },
+  faction_get_mobile_base_isolated: {
+    command: 'faction_get_mobile_base',
+    fixture: factionGetMobileBaseIsolatedFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/get_mobile_base',
+  },
+  faction_move_mobile_base: {
+    command: 'faction_move_mobile_base',
+    fixture: factionMoveMobileBaseFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/move_mobile_base',
+    schemaTarget: 'details',
+  },
+  faction_jump_mobile_base: {
+    command: 'faction_jump_mobile_base',
+    fixture: factionJumpMobileBaseFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/jump_mobile_base',
+    schemaTarget: 'details',
+  },
+  faction_cancel_mobile_base_jump: {
+    command: 'faction_cancel_mobile_base_jump',
+    fixture: factionCancelMobileBaseJumpFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/cancel_mobile_base_jump',
+    schemaTarget: 'details',
+  },
+  faction_decommission_mobile_base: {
+    command: 'faction_decommission_mobile_base',
+    fixture: factionDecommissionMobileBaseFixture,
+    apiRoute: 'POST /api/v2/spacemolt_faction/decommission_mobile_base',
+    schemaTarget: 'details',
+  },
   faction_profile: { command: 'faction_profile', fixture: publicFactionProfileFixture },
   faction_get_invites: { command: 'faction_get_invites', fixture: factionInvitesFixture },
   faction_intel_status: { command: 'faction_intel_status', fixture: factionIntelStatusFixture },

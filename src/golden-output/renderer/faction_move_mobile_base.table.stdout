@@ -1,0 +1,13 @@
+
+=== Faction Mobile Base: Civitas ===
+Base ID: mobile_civitas_example
+POI: mobile_civitas_example_poi
+Wrecked: no
+System: sol
+Position: (4, -1)
+Archetype: civitas
+Lifecycle: in_system_transit
+Origin: sol (2.5, 3.25)
+Destination: sol (4, -1)
+Started tick: 500
+Complete tick: 860

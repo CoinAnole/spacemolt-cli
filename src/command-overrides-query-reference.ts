@@ -210,7 +210,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'Show the current system of the Frontier mobile capital base. Public endpoint — no login or profile required.',
     example: 'spacemolt get_mobile_base',
-    seeAlso: ['get_location', 'get_system'],
+    seeAlso: ['get_location', 'get_system', 'faction_get_mobile_base'],
     category: 'Query commands',
     // Not present in the v2 OpenAPI; uses a standalone public root endpoint.
     route: {

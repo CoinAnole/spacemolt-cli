@@ -1270,6 +1270,52 @@ describe('runInvocation option isolation', () => {
     expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'sessions'))).toBe(false);
   });
 
+  test('faction get_mobile_base does not open a transient public session without a profile', async () => {
+    const configHome = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-faction-mobile-base-session-'));
+    const env = { XDG_CONFIG_HOME: configHome, SPACEMOLT_URL: 'https://game.test/api/v2' };
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const sessionCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+    const commandCalls: Array<{ url: string; options?: JsonRequestOptions }> = [];
+
+    const exitCode = await runInvocation(
+      ['--plain', 'faction', 'get_mobile_base'],
+      undefined,
+      fakeContext(stdout, stderr, env),
+      {
+        async checkForUpdates() {},
+        createClient(config) {
+          const sessionManager = new SessionManager({
+            apiBase: config.apiBase,
+            env,
+            transport: (async (url: string, requestOptions?: JsonRequestOptions) => {
+              sessionCalls.push({ url, options: requestOptions });
+              throw new Error('faction get_mobile_base must not create a transient session');
+            }) as typeof import('./transport').requestJson,
+          });
+          return new RealSpaceMoltClient({
+            config,
+            sessionStore: sessionManager,
+            transport: {
+              async requestJson(_url: string, requestOptions?: JsonRequestOptions) {
+                commandCalls.push({ url: _url, options: requestOptions });
+                throw new Error('faction get_mobile_base must not call the API without a profile');
+              },
+            },
+          });
+        },
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(stderr.join('\n')).toContain('No default profile set.');
+    expect(sessionCalls).toEqual([]);
+    expect(commandCalls).toEqual([]);
+    expect(getDefaultProfile(undefined, undefined, env)).toBeUndefined();
+    expect(fs.existsSync(path.join(configHome, 'spacemolt-cli', 'sessions'))).toBe(false);
+  });
+
   test('switch_ship resolves cached ship class names and prints API errors', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-runner-ship-cache-'));
     const configHome = path.join(tempDir, 'config');

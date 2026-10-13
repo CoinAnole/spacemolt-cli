@@ -33,9 +33,14 @@ import {
   facilityListSimpleFixture,
   facilityOwnedFixture,
   facilityTypesDetailFixture,
+  factionDecommissionMobileBaseFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
+  factionGetMobileBaseFixture,
+  factionGetMobileBaseIsolatedFixture,
+  factionGetMobileBasePreparingFixture,
   factionInfoFixture,
+  factionJumpMobileBaseFixture,
   factionScanPoiDetails,
   factionScanPoiEmptyFixture,
   factionScanPoiFixture,
@@ -1953,6 +1958,309 @@ test('faction_info json passes faction_rent through without the table summary', 
   expect(parsed.faction_rent.grace_cycles).toBe(1);
   expect(parsed.faction_rent.est_rent_per_day).toBe(7200);
   expect(stdout).not.toContain('Faction rent bill');
+});
+
+const factionInfoMobileBase = {
+  name: 'Civitas',
+  base_id: 'mobile_civitas_example',
+  archetype_id: 'civitas',
+  poi_id: 'mobile_civitas_example_poi',
+  lifecycle: 'stationary',
+  wrecked: false,
+  current_system_id: 'sol',
+  current_position: { x: 2.5, y: 3.25 },
+  origin: { system_id: '', position: { x: 0, y: 0 } },
+  destination: { system_id: '', position: { x: 0, y: 0 } },
+  state_started_tick: 0,
+  state_complete_tick: 0,
+};
+
+const factionInfoMobileBaseLines = [
+  'Mobile base: Civitas (mobile_civitas_example)',
+  '  Archetype: civitas',
+  '  POI: mobile_civitas_example_poi',
+  '  Lifecycle: stationary',
+  '  Wrecked: no',
+  '  System: sol',
+  '  Position: (2.5, 3.25)',
+  '  Origin: (empty) (0, 0)',
+  '  Destination: (empty) (0, 0)',
+  '  Started tick: 0',
+  '  Complete tick: 0',
+];
+
+function factionInfoWithMobileBase(): Record<string, unknown> {
+  const fixture = factionInfoWithRent();
+  fixture.mobile_base = structuredClone(factionInfoMobileBase);
+  return fixture;
+}
+
+function renderCommand(command: string, fixture: Record<string, unknown>, format?: GlobalOptions['format']): string {
+  return renderStructuredResult(command, fixture, format ? { ...options, format } : options, context).stdout.join('\n');
+}
+
+test('faction_info prints the mobile base snapshot after the rent lines', () => {
+  const stdout = renderFactionInfo(factionInfoWithMobileBase());
+  const rentNote = stdout.indexOf('Faction facilities pay rent from the treasury each cycle.');
+  let cursor = rentNote;
+  for (const line of factionInfoMobileBaseLines) {
+    const index = stdout.indexOf(line, cursor);
+    expect(index).toBeGreaterThan(cursor);
+    cursor = index + line.length;
+  }
+  expect(stdout).not.toContain('Escrow');
+  expect(stdout).not.toContain('=== Faction Mobile Base');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info omits mobile base lines when those keys are absent', () => {
+  const stdout = renderFactionInfo(structuredClone(factionInfoFixture) as Record<string, unknown>);
+  expect(stdout).not.toContain('Mobile base');
+  expect(stdout).not.toContain('Archetype:');
+  expect(stdout).not.toContain('Wrecked:');
+  expect(stdout).not.toContain('Started tick:');
+  expect(stdout).not.toContain('Origin:');
+  expect(stdout).toContain('=== Faction:');
+});
+
+test('faction_info prints nothing for null or non-record mobile base values', () => {
+  for (const mobileBase of [null, 'civitas', [factionInfoMobileBase]]) {
+    const fixture = factionInfoWithRent();
+    fixture.mobile_base = mobileBase;
+    fixture.mobile_base_commission = mobileBase;
+    const stdout = renderFactionInfo(fixture);
+    expect(stdout).not.toContain('Mobile base');
+    expect(stdout).not.toContain('Archetype:');
+    expect(stdout).toContain('=== Faction:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('faction_info prints explicit zero ticks and empty endpoints, and drops only a deleted tick', () => {
+  const fixture = factionInfoWithMobileBase();
+  const base = fixture.mobile_base as Record<string, unknown>;
+  let stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('  Started tick: 0');
+  expect(stdout).toContain('  Complete tick: 0');
+  expect(stdout).toContain('  Origin: (empty) (0, 0)');
+  expect(stdout).toContain('  Destination: (empty) (0, 0)');
+
+  delete base.state_complete_tick;
+  stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('  Started tick: 0');
+  expect(stdout).not.toContain('Complete tick:');
+});
+
+test('faction_info prints an empty system without copying the origin system', () => {
+  const fixture = factionInfoWithMobileBase();
+  const base = fixture.mobile_base as Record<string, unknown>;
+  base.current_system_id = '';
+  base.lifecycle = 'jumping';
+  base.origin = { system_id: 'sol', position: { x: 1, y: 2 } };
+  const stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('  System: (empty)');
+  expect(stdout).toContain('  Origin: sol (1, 2)');
+  expect(stdout).not.toContain('System: sol');
+});
+
+test('faction_info prints a commission without a mobile base snapshot', () => {
+  const fixture = factionInfoWithRent();
+  fixture.mobile_base_commission = { commission_id: 'comm-1', archetype_id: 'civitas' };
+  const stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('Mobile base commission: comm-1');
+  expect(stdout).toContain('  Archetype: civitas');
+  expect(stdout).not.toContain('Mobile base:');
+  expect(stdout).not.toContain('Wrecked:');
+  expect(stdout).not.toContain('Escrow');
+});
+
+test('faction_info prints the mobile base snapshot before the commission', () => {
+  const fixture = factionInfoWithMobileBase();
+  fixture.mobile_base_commission = { commission_id: 'comm-1', archetype_id: 'civitas' };
+  const stdout = renderFactionInfo(fixture);
+  const baseIndex = stdout.indexOf('Mobile base: Civitas');
+  const commissionIndex = stdout.indexOf('Mobile base commission: comm-1');
+  expect(baseIndex).toBeGreaterThan(-1);
+  expect(commissionIndex).toBeGreaterThan(baseIndex);
+});
+
+test('faction_info prints partial mobile base headers and skips absent endpoint or tick keys', () => {
+  const nameOnly = factionInfoWithRent();
+  nameOnly.mobile_base = { name: 'Civitas' };
+  const nameLines = renderFactionInfo(nameOnly).split('\n');
+  expect(nameLines).toContain('Mobile base: Civitas');
+  expect(nameLines.some((line) => line.startsWith('Mobile base: Civitas ('))).toBe(false);
+
+  const idOnly = factionInfoWithRent();
+  idOnly.mobile_base = { base_id: 'mobile_civitas_example' };
+  expect(renderFactionInfo(idOnly)).toContain('Mobile base: (mobile_civitas_example)');
+
+  const empty = factionInfoWithRent();
+  empty.mobile_base = {};
+  expect(renderFactionInfo(empty).split('\n')).toContain('Mobile base:');
+
+  const endpoint = factionInfoWithRent();
+  endpoint.mobile_base = {
+    origin: { position: { x: 0, y: 0 } },
+    destination: { position: { x: 0 } },
+  };
+  const stdout = renderFactionInfo(endpoint);
+  expect(stdout).toContain('  Origin: (0, 0)');
+  expect(stdout).not.toContain('Destination:');
+  expect(stdout).not.toContain('Started tick:');
+  expect(stdout).not.toContain('System:');
+});
+
+test('faction_info does not print escrow from a mobile base record', () => {
+  const fixture = factionInfoWithMobileBase();
+  const base = fixture.mobile_base as Record<string, unknown>;
+  base.refundable_item_escrow = [{ item_id: 'dark_matter_cell', quantity: 25 }];
+  const stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('Mobile base: Civitas');
+  expect(stdout).not.toContain('Escrow');
+  expect(stdout).not.toContain('dark_matter_cell');
+});
+
+test('faction_info json passes mobile base objects through without table labels', () => {
+  const fixture = factionInfoWithMobileBase();
+  fixture.mobile_base_commission = { commission_id: '', archetype_id: '' };
+  const stdout = renderFactionInfo(fixture, 'json');
+  const parsed = JSON.parse(stdout) as {
+    mobile_base: { current_system_id: string; state_started_tick: number };
+    mobile_base_commission: { commission_id: string };
+  };
+  expect(parsed.mobile_base.current_system_id).toBe('sol');
+  expect(parsed.mobile_base.state_started_tick).toBe(0);
+  expect(parsed.mobile_base_commission.commission_id).toBe('');
+  expect(stdout).not.toContain('Mobile base:');
+  expect(stdout).not.toContain('Mobile base commission:');
+});
+
+test('faction_info prints empty commission strings', () => {
+  const fixture = factionInfoWithRent();
+  fixture.mobile_base_commission = { commission_id: '', archetype_id: '' };
+  const stdout = renderFactionInfo(fixture);
+  expect(stdout).toContain('Mobile base commission: (empty)');
+  expect(stdout).toContain('  Archetype: (empty)');
+});
+
+test('faction get_mobile_base prints stationary, preparing, and isolated snapshots', () => {
+  const stationary = renderCommand('faction_get_mobile_base', factionGetMobileBaseFixture);
+  expect(stationary).toContain('=== Faction Mobile Base: Civitas ===');
+  expect(stationary).toContain('Base ID: mobile_civitas_example');
+  expect(stationary).toContain('POI: mobile_civitas_example_poi');
+  expect(stationary).toContain('Wrecked: no');
+  expect(stationary).toContain('System: sol');
+  expect(stationary).toContain('Position: (2.5, 3.25)');
+  expect(stationary).toContain('Archetype: civitas');
+  expect(stationary).toContain('Lifecycle: stationary');
+  expect(stationary).toContain('Origin: (empty) (0, 0)');
+  expect(stationary).toContain('Destination: (empty) (0, 0)');
+  expect(stationary).not.toContain('Started tick:');
+  expect(stationary).not.toContain('Complete tick:');
+  expect(stationary).not.toContain('Escrow');
+  expect(stationary).not.toContain('Commission:');
+  expect(stationary).not.toContain('=== Response ===');
+
+  const preparingBody = structuredClone(factionGetMobileBasePreparingFixture);
+  const escrow = (preparingBody.mobile_base as { refundable_item_escrow: unknown[] }).refundable_item_escrow;
+  escrow.push({ item_id: 'spare_cell', quantity: 0 });
+  escrow.push({ item_id: '', quantity: 1 });
+  escrow.push({ item_id: 'bad', quantity: 1.5 });
+  escrow.push(null);
+  const preparing = renderCommand('faction_get_mobile_base', preparingBody);
+  expect(preparing).toContain('Lifecycle: jump_preparing');
+  expect(preparing).toContain('Commission: comm-9');
+  expect(preparing).toContain('Origin: sol (1, 2)');
+  expect(preparing).toContain('Destination: neighbor (0, 0)');
+  expect(preparing).toContain('Started tick: 1000');
+  expect(preparing).toContain('Complete tick: 1090');
+  expect(preparing).toContain('Escrow:\n  25x dark_matter_cell\n  0x spare_cell');
+  expect(preparing).not.toContain('bad');
+  expect(preparing).not.toContain('1.5');
+
+  const isolated = renderCommand('faction_get_mobile_base', factionGetMobileBaseIsolatedFixture);
+  expect(isolated).toContain('Lifecycle: jumping');
+  expect(isolated).toContain('Position: (1, 2)');
+  expect(isolated).toContain('Origin: sol (1, 2)');
+  expect(isolated).not.toContain('System:');
+  expect(isolated).not.toContain('Escrow');
+  expect(isolated).not.toContain('Started tick: 0');
+  expect(isolated).toContain('Started tick: 1090');
+  expect(isolated).toContain('Complete tick: 1630');
+});
+
+test('faction get_mobile_base prints Escrow none only when the escrow key is present', () => {
+  const empty = structuredClone(factionGetMobileBaseFixture);
+  (empty.mobile_base as Record<string, unknown>).refundable_item_escrow = [];
+  expect(renderCommand('faction_get_mobile_base', empty)).toContain('Escrow: none');
+
+  const invalid = structuredClone(factionGetMobileBaseFixture);
+  (invalid.mobile_base as Record<string, unknown>).refundable_item_escrow = [{ item_id: ' ', quantity: '25' }, 4];
+  const invalidStdout = renderCommand('faction_get_mobile_base', invalid);
+  expect(invalidStdout).toContain('Escrow: none');
+  expect(invalidStdout).not.toContain('25x');
+
+  const omitted = renderCommand('faction_get_mobile_base', factionGetMobileBaseFixture);
+  expect(omitted).not.toContain('Escrow');
+});
+
+test('faction get_mobile_base prints an empty system and zero ticks when those keys are present', () => {
+  const fixture = structuredClone(factionGetMobileBaseFixture);
+  fixture.system_id = '';
+  const state = fixture.mobile_base as Record<string, unknown>;
+  state.commission_id = '';
+  state.state_started_tick = 0;
+  state.state_complete_tick = 0;
+  const stdout = renderCommand('faction_get_mobile_base', fixture);
+  expect(stdout).toContain('System: (empty)');
+  expect(stdout).toContain('Commission: (empty)');
+  expect(stdout).toContain('Started tick: 0');
+  expect(stdout).toContain('Complete tick: 0');
+  expect(stdout).not.toContain('System: sol');
+});
+
+test('faction jump_mobile_base does not print an alias-copied pilot system', () => {
+  const stdout = renderCommand('faction_jump_mobile_base', factionJumpMobileBaseFixture);
+  expect(stdout).toContain('=== Faction Mobile Base: Civitas ===');
+  expect(stdout).toContain('Origin: sol (1, 2)');
+  expect(stdout).toContain('Lifecycle: jumping');
+  expect(stdout).not.toContain('pilot_system');
+  expect(stdout).not.toContain('pilot_poi');
+  expect(stdout).not.toContain('System:');
+  expect(stdout).not.toContain('still accessible');
+  expect(stdout).not.toContain('Escrow');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction decommission_mobile_base prints yes, no, and an empty message', () => {
+  const yes = renderCommand('faction_decommission_mobile_base', factionDecommissionMobileBaseFixture);
+  expect(yes).toContain('=== Mobile Base Decommissioned ===');
+  expect(yes).toContain('Decommissioned: yes');
+  expect(yes).toContain('The base is gone.');
+  expect(yes).not.toContain('OK:');
+  expect(yes).not.toContain('Base ID:');
+
+  const no = renderCommand('faction_decommission_mobile_base', {
+    details: { decommissioned: false, message: 'Still there.' },
+  });
+  expect(no).toContain('Decommissioned: no');
+  expect(no).toContain('Still there.');
+  expect(no).not.toContain('OK:');
+
+  const blank = renderCommand('faction_decommission_mobile_base', {
+    details: { decommissioned: false, message: '' },
+  });
+  const lines = blank.split('\n');
+  const index = lines.findIndex((line) => line.includes('Decommissioned: no'));
+  expect(index).toBeGreaterThan(-1);
+  expect(lines[index + 1]).toBe('');
+});
+
+test('public get_mobile_base does not use the faction mobile base title', () => {
+  const stdout = renderCommand('get_mobile_base', factionGetMobileBaseFixture);
+  expect(stdout).not.toContain('=== Faction Mobile Base');
+  expect(stdout).not.toContain('Mobile base location');
 });
 
 test('facility_list prints personal and faction rent bills from separate sources', () => {

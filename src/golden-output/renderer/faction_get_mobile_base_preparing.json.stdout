@@ -1,0 +1,38 @@
+{
+  "base_id": "mobile_civitas_example",
+  "name": "Civitas",
+  "poi_id": "mobile_civitas_example_poi",
+  "position": {
+    "x": 2.5,
+    "y": 3.25
+  },
+  "wrecked": false,
+  "system_id": "sol",
+  "mobile_base": {
+    "archetype_id": "civitas",
+    "lifecycle": "jump_preparing",
+    "commission_id": "comm-9",
+    "origin": {
+      "system_id": "sol",
+      "position": {
+        "x": 1,
+        "y": 2
+      }
+    },
+    "destination": {
+      "system_id": "neighbor",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "state_started_tick": 1000,
+    "state_complete_tick": 1090,
+    "refundable_item_escrow": [
+      {
+        "item_id": "dark_matter_cell",
+        "quantity": 25
+      }
+    ]
+  }
+}

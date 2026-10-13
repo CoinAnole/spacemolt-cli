@@ -1,0 +1,16 @@
+
+=== Faction Mobile Base: Civitas ===
+Base ID: mobile_civitas_example
+POI: mobile_civitas_example_poi
+Wrecked: no
+System: sol
+Position: (2.5, 3.25)
+Archetype: civitas
+Lifecycle: jump_preparing
+Commission: comm-9
+Origin: sol (1, 2)
+Destination: neighbor (0, 0)
+Started tick: 1000
+Complete tick: 1090
+Escrow:
+  25x dark_matter_cell
