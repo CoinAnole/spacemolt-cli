@@ -1940,6 +1940,96 @@ function previewFactionAllianceBroken(
   return headlinePreview('FACTION', preferDiplomacyMessage(data, `${by} broke the alliance`), options);
 }
 
+function mobileBaseEscrowDetail(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const itemId = nonEmptyString(row.item_id);
+    const quantity = row.quantity;
+    if (itemId === undefined || typeof quantity !== 'number' || !Number.isInteger(quantity)) continue;
+    parts.push(`${quantity}x ${itemId}`);
+  }
+  return parts.length > 0 ? `escrow ${parts.join(', ')}` : 'escrow none';
+}
+
+function previewFactionMobileBaseUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const event = nonEmptyString(data.event);
+  const message = safeScalar(data.message);
+  const messageLine = message !== undefined ? firstLine(String(message)) : '';
+  const base = isRecord(data.mobile_base) ? data.mobile_base : undefined;
+  const name = base !== undefined ? nonEmptyString(base.name) : undefined;
+
+  let phrase = 'updated';
+  if (event === 'jump_preparing') phrase = 'is preparing to jump';
+  else if (event === 'jump_cancelled') phrase = 'jump cancelled';
+  else if (event === 'jump_cancelled_combat') phrase = 'jump cancelled by combat';
+  else if (event === 'jump_arrived') phrase = 'arrived';
+
+  let severity: NotificationSeverity = 'info';
+  if (event === 'jump_arrived') severity = 'success';
+  else if (event === 'jump_cancelled') severity = 'warning';
+  else if (event === 'jump_cancelled_combat') severity = 'danger';
+
+  const headline = messageLine
+    ? messageLine
+    : name !== undefined
+      ? `${name} ${phrase}`
+      : data.mobile_base === null
+        ? 'Mobile base unavailable'
+        : 'Mobile base update';
+
+  const details: string[] = [];
+  if (event !== undefined) details.push(`event ${event}`);
+
+  if (base !== undefined) {
+    const baseId = nonEmptyString(base.base_id);
+    if (name !== undefined && baseId !== undefined) {
+      const line = `${name} (${baseId})`;
+      if (!headline.includes(line)) details.push(line);
+    }
+    const state = isRecord(base.mobile_base) ? base.mobile_base : undefined;
+    const lifecycle = state !== undefined ? nonEmptyString(state.lifecycle) : undefined;
+    if (lifecycle !== undefined) {
+      const line = `lifecycle ${lifecycle}`;
+      if (!headline.includes(line)) details.push(line);
+    }
+    const systemId = nonEmptyString(base.system_id);
+    if (systemId !== undefined) {
+      const line = `in ${systemId}`;
+      if (!headline.includes(line)) details.push(line);
+    }
+    const origin = state !== undefined && isRecord(state.origin) ? state.origin : undefined;
+    const originSystem = origin !== undefined ? nonEmptyString(origin.system_id) : undefined;
+    if (originSystem !== undefined) {
+      const line = `from ${originSystem}`;
+      if (!headline.includes(line)) details.push(line);
+    }
+    if (base.wrecked === true && !headline.includes('wrecked')) details.push('wrecked');
+    if (state !== undefined && 'refundable_item_escrow' in state) {
+      const line = mobileBaseEscrowDetail(state.refundable_item_escrow);
+      if (line !== undefined && !headline.includes(line)) details.push(line);
+    }
+  }
+
+  const kept = details
+    .map((line) => truncate(line, options))
+    .filter((line) => line.length > 0)
+    .slice(0, Math.max(0, options.maxDetails - 1));
+  kept.push(truncate('Use: faction get_mobile_base', options));
+
+  return {
+    tag: 'MOBILE BASE',
+    headline: truncate(headline, options),
+    details: kept,
+    severity,
+  };
+}
+
 // Countdown owns the headline so table Message still shows Ns when message is long.
 function previewServerRestartWarning(
   data: Record<string, unknown>,
@@ -3313,6 +3403,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   friend_online: previewFriendOnline,
   friend_offline: previewFriendOffline,
   faction_invite: previewFactionInvite,
+  faction_mobile_base_update: previewFactionMobileBaseUpdate,
   // 0.573.2 ops + diplomacy
   faction_war_declared: previewFactionWarDeclared,
   faction_peace_proposal: previewFactionPeaceProposal,
