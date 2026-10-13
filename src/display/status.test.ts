@@ -3834,3 +3834,120 @@ test('get_nearby does not print a planted ship_counts object', () => {
   expect(stdout).not.toContain('sol_earth=4');
   expect(stdout).not.toContain('sol_belt=0');
 });
+
+function renderArrival(command: 'travel' | 'jump', payload: Record<string, unknown>): string {
+  const rendered = renderStructuredResult(command, payload, options, context);
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  return rendered.stdout.join('\n');
+}
+
+const schemaJumpDetails = {
+  action: 'jumped',
+  system: 'Procyon',
+  system_id: 'procyon',
+  from_system: 'sol',
+  navigation_xp: 1,
+};
+
+test('travel arrival prints every online player, the truncated line, and offline collapsed', () => {
+  const players = Array.from({ length: 11 }, (_, index) => ({
+    username: `Pilot-${String(index + 1).padStart(2, '0')}`,
+  }));
+  const stdout = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: players,
+      online_players_count: 11,
+      online_players_truncated: true,
+      offline_collapsed: 3,
+    },
+  });
+
+  expect(stdout).toContain('Arrived at');
+  expect(stdout).toContain('Players here (11):');
+  for (const player of players) expect(stdout).toContain(`  ${player.username}`);
+  expect(stdout).toContain('  ... and more');
+  expect(stdout).toContain('offline collapsed 3');
+  expect(stdout.indexOf('  Pilot-11')).toBeLessThan(stdout.indexOf('  ... and more'));
+  expect(stdout.indexOf('  ... and more')).toBeLessThan(stdout.indexOf('offline collapsed 3'));
+});
+
+test('arrival omits the offline line when offline_collapsed is absent', () => {
+  const stdout = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: [{ username: 'Ibis' }],
+      online_players_count: 1,
+    },
+  });
+
+  expect(stdout).toContain('Arrived at Earth');
+  expect(stdout).toContain('Players here (1):');
+  expect(stdout).toContain('  Ibis');
+  expect(stdout).not.toContain('offline collapsed');
+});
+
+test('arrival prints offline collapsed 0 after an empty player list', () => {
+  const stdout = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: [],
+      online_players_count: 0,
+      offline_collapsed: 0,
+    },
+  });
+
+  expect(stdout).toContain('Arrived at Earth');
+  expect(stdout).toContain('(No other players here)');
+  expect(stdout).toContain('offline collapsed 0');
+  expect(stdout.indexOf('(No other players here)')).toBeLessThan(stdout.indexOf('offline collapsed 0'));
+  expect(stdout).not.toContain('Players here');
+});
+
+test('enveloped jump prints location players and not location offline_collapsed', () => {
+  const stdout = renderArrival('jump', {
+    details: schemaJumpDetails,
+    location: {
+      poi_id: 'procyon_a',
+      poi_name: 'Procyon A',
+      nearby_players: [{ username: 'Ibis' }],
+      nearby_player_count: 1,
+      offline_collapsed: 4,
+    },
+  });
+
+  expect(stdout).toContain('Arrived at Procyon A');
+  expect(stdout).toContain('Players here (1):');
+  expect(stdout).toContain('  Ibis');
+  expect(stdout).not.toContain('offline collapsed');
+  expect(stdout).not.toContain('=== Jumped ===');
+});
+
+test('flat jump without online_players falls through to Jumped', () => {
+  const stdout = renderArrival('jump', schemaJumpDetails);
+
+  expect(stdout).toContain('=== Jumped ===');
+  expect(stdout).not.toContain('Players here');
+  expect(stdout).not.toContain('offline collapsed');
+});
+
+test('enveloped jump without nearby_players falls through to Jumped', () => {
+  const stdout = renderArrival('jump', {
+    details: schemaJumpDetails,
+    location: {
+      poi_id: 'procyon_a',
+      poi_name: 'Procyon A',
+    },
+  });
+
+  expect(stdout).toContain('=== Jumped ===');
+  expect(stdout).not.toContain('Players here');
+  expect(stdout).not.toContain('offline collapsed');
+});

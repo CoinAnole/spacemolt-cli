@@ -1461,6 +1461,8 @@ export const statusFormatters = [
       } else {
         emitLine(`\n(No other players here)`);
       }
+      const offlineCollapsed = formatOfflineCollapsedText(r.offline_collapsed);
+      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
       return true;
     },
     { commands: ['travel', 'jump'], shapeFallback: true },
