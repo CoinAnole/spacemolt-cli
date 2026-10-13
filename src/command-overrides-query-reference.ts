@@ -30,7 +30,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     clientOnlyFields: ['summary'],
   },
   get_system: {
-    description: 'List current-system POIs and connected systems. Use IDs from this output for travel and jump.',
+    description:
+      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi.',
     example: 'spacemolt get_system',
     seeAlso: ['travel', 'jump', 'get_poi'],
     category: 'Query commands',
@@ -327,6 +328,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_system_agents: {
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_system_agents',
+    seeAlso: ['get_nearby', 'get_system'],
   },
   get_queue: {
     description: 'Show whether you have a queued action pending.',
@@ -378,7 +380,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'Invite a player at your current location to join your fleet. Inviting beyond ordinary capacity while undocked at an arena converts the fleet to an unlimited arena-only fleet, which disbands if the leader leaves the arena.',
     example: 'spacemolt fleet invite <player_id_or_name>',
-    discoverWith: ['get_nearby', 'get_system_agents'],
+    discoverWith: ['get_nearby', 'get_system'],
     seeAlso: ['fleet_status', 'create_fleet'],
     category: 'Fleet',
     apiRoute: 'POST /api/v2/spacemolt_fleet/invite',

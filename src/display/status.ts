@@ -543,6 +543,12 @@ function formatSystemPoiName(poi: Record<string, unknown>): string {
   return `${poi.name} (${poi.type})${classMark}${formatDeepCoreMark(poi.deep_core)}`;
 }
 
+function formatShipCountSuffix(poi: Record<string, unknown>): string {
+  const count = poi.ship_count;
+  if (typeof count !== 'number' || !Number.isFinite(count)) return '';
+  return ` ${c.cyan}(${count} ships)${c.reset}`;
+}
+
 function formatGalacticPosition(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   if (value.x === undefined || value.y === undefined) return undefined;
@@ -929,6 +935,9 @@ export const statusFormatters = [
       if (rowsHaveValue(rows, ['status_message'])) agentColumns.push(['Status', ['status_message']]);
 
       emitLine(`\n${c.bright}=== System Agents: ${r.system_id ?? 'current system'} ===${c.reset}`);
+      if (typeof r.warning === 'string' && r.warning.trim() !== '') {
+        emitLine(`${c.yellow}Warning:${c.reset} ${r.warning}`);
+      }
       printCompactTable('Agents', rows, agentColumns);
       if (r.count !== undefined) emitLine(`${c.dim}count ${r.count}${c.reset}`);
       if (r.offline_collapsed !== undefined) emitLine(`${c.dim}offline collapsed ${r.offline_collapsed}${c.reset}`);
@@ -977,9 +986,8 @@ export const statusFormatters = [
           emitLine(`  - ${poi}`);
           continue;
         }
-        const online = (poi.online as number) > 0 ? ` ${c.cyan}(${poi.online} online)${c.reset}` : '';
         const base = poi.has_base ? ` ${c.green}[station]${c.reset}` : '';
-        emitLine(`  - ${formatSystemPoiName(poi)}${base}${online}  ${c.dim}${poi.id}${c.reset}`);
+        emitLine(`  - ${formatSystemPoiName(poi)}${base}${formatShipCountSuffix(poi)}  ${c.dim}${poi.id}${c.reset}`);
       }
 
       const connections = sys.connections as Array<Record<string, unknown> | string>;
@@ -996,7 +1004,7 @@ export const statusFormatters = [
       const currentPoi = isRecord(r.poi) ? r.poi : undefined;
       if (currentPoi) {
         emitLine(
-          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
+          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}${formatShipCountSuffix(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
         );
       }
       return true;

@@ -113,7 +113,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_notes: 'List all your note documents',
   get_poi: 'Get your current POI details',
   get_skills: 'Get your skill progress.',
-  get_system_agents: 'Get all uncloaked online players in your current system',
+  get_system_agents:
+    'Deprecated and going away. Always returns an empty agent list. Use get_nearby for the ships at your POI, and get_system with a ship scanner for ship counts at the other POIs.',
   get_tax_estimate:
     'See current tax estimates, missed-tax payment guidance, outstanding bounties, and your latest weekly statement. inactivity_exempt means this period will skip income and property tax; existing debt remains. Next assessment uses remaining ticks times current tick duration. pay_bounty settles existing debt; prepay_tax reserves credits for the next assessment.',
   get_trades: 'View pending trade offers',

@@ -99,6 +99,14 @@ function visibleBundledCommandName(command: string): string {
   return command;
 }
 
+function discoverSection(help: string): string {
+  const marker = 'Discover valid IDs/state with:';
+  const start = help.indexOf(marker);
+  const rest = start === -1 ? '' : help.slice(start);
+  const blank = rest.indexOf('\n\n');
+  return blank === -1 ? rest : rest.slice(0, blank);
+}
+
 function captureFullHelp(): string {
   const stdout: string[] = [];
 
@@ -1413,6 +1421,62 @@ describe('command metadata', () => {
     expect(fullHelp).toContain('Current fleet membership and members');
     expect(fullHelp).toContain('Invite a player');
     expect(fullHelp).not.toContain('undocked at an arena');
+  });
+
+  test('get_system help points ship counts and fuel at the replacement commands', () => {
+    const description =
+      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi.';
+    expect(COMMANDS.get_system?.description).toBe(description);
+    expect(description).toContain('ship scanner');
+    expect(description).toContain('ship count');
+    expect(description).toContain('get_poi');
+    expect(description).toContain('Fuel and services');
+    expect(description).toContain(
+      'List current-system POIs and connected systems. Use IDs from this output for travel and jump.',
+    );
+    expect(description).not.toContain('`');
+    expect(description).not.toContain('fuel_reserve');
+    expect(description).not.toContain('(N online)');
+
+    const help = captureHelp('get_system');
+    expect(help).toContain('ship scanner');
+    expect(help).toContain('ship count');
+    expect(help).toContain('get_poi');
+    expect(help).toContain('Fuel and services');
+    expect(help).toContain('See also:');
+    expect(help).toContain('travel, jump, get_poi');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('fuel_reserve');
+    expect(help).not.toContain('fuel_capacity');
+    expect(help).not.toContain('fuel_price');
+    expect(help).not.toContain('Fuel:');
+  });
+
+  test('get_system_agents help is deprecated and Discover-with lists name get_nearby then get_system', () => {
+    const description =
+      'Deprecated and going away. Always returns an empty agent list. Use get_nearby for the ships at your POI, and get_system with a ship scanner for ship counts at the other POIs.';
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_system_agents).toBe(description);
+    expect(COMMANDS.get_system_agents?.description).toBe(description);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.get_system_agents?.description).toBeUndefined();
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.get_system_agents?.seeAlso).toEqual(['get_nearby', 'get_system']);
+
+    const help = captureHelp('get_system_agents');
+    expect(help).toContain('Deprecated');
+    expect(help).toContain('empty');
+    expect(help).toContain('get_nearby');
+    expect(help).toContain('get_system');
+    expect(help).not.toContain('uncloaked online players');
+    expect(help).toContain('See also: get_nearby, get_system');
+
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.fleet_invite?.discoverWith).toEqual(['get_nearby', 'get_system']);
+    expect(CORE_COMMAND_OVERRIDES.subscribe_observation?.discoverWith).toEqual(['get_nearby', 'get_system']);
+
+    for (const command of ['fleet invite', 'subscribe_observation']) {
+      const discover = discoverSection(captureHelp(command));
+      expect(discover.split('\n').filter((line) => line.trim() === 'spacemolt get_nearby')).toHaveLength(1);
+      expect(discover.split('\n').filter((line) => line.trim() === 'spacemolt get_system')).toHaveLength(1);
+      expect(discover).not.toContain('get_system_agents');
+    }
   });
 
   test('unload_passenger help documents all-passenger bulk unload', () => {
