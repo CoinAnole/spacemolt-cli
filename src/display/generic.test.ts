@@ -1058,6 +1058,7 @@ test('renders catalog ships with prestige lock notes when present', () => {
   expect(stdout).toContain('=== Items ===');
   expect(stdout).toContain('Concierge Liner');
   expect(stdout).toContain('Locked: prestige hull reserved');
+  expect(stdout).not.toContain('Mobile base:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -1349,6 +1350,7 @@ test('renders catalog ship Details with a full untruncated loadout for a one-row
   expect(stdout.indexOf('=== Items ===')).toBeLessThan(stdout.indexOf('Details'));
   expect(stdout).toContain(`Default loadout: ${loadout}`);
   expect(catalogShipsHeader(stdout)).toContain('Loadout');
+  expect(stdout).not.toContain('Mobile base:');
 });
 
 test('does not render catalog ship Details for a multi-row list', () => {
@@ -1359,6 +1361,295 @@ test('does not render catalog ship Details for a multi-row list', () => {
   expect(stdout).toContain('Money Pit');
   expect(stdout).toContain('Concierge Liner');
   expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Mobile base:');
+});
+
+const civitasBuiltIn = [
+  { id: 'mobile_base_reactor', name: 'Mobile Base Reactor' },
+  { id: 'mobile_base_life_support', name: 'Mobile Base Life Support' },
+  { id: 'mobile_base_fuel_tank', name: 'Mobile Base Fuel Tank' },
+  { id: 'trade_concourse', name: 'Trade Concourse' },
+  { id: 'refueling_dock', name: 'Refueling Dock' },
+  { id: 'faction_workshop', name: 'Faction Workshop' },
+  { id: 'contract_terminal', name: 'Contract Terminal' },
+  { id: 'locker_bay', name: 'Locker Bay' },
+  { id: 'crew_registry', name: 'Crew Registry' },
+  { id: 'faction_lockbox', name: 'Faction Lockbox' },
+  { id: 'notice_board', name: 'Notice Board' },
+  { id: 'first_aid_ward', name: 'First Aid Ward' },
+];
+
+const civitasWeapons = [
+  { id: 'point_defense_battery', name: 'Point Defense Battery' },
+  { id: 'point_defense_battery', name: 'Point Defense Battery' },
+];
+
+function civitasMobileBase(): Record<string, unknown> {
+  return {
+    built_in_facilities: civitasBuiltIn.map((row) => ({ ...row })),
+    combat_model: 'station',
+    default_weapon_facilities: civitasWeapons.map((row) => ({ ...row })),
+    fuel_capacity: 100000,
+    production_slots: 4,
+    services: [
+      'market',
+      'refuel',
+      'crafting',
+      'missions',
+      'storage',
+      'personnel',
+      'faction_storage',
+      'faction_missions',
+      'medical',
+    ],
+    ship_modules: false,
+    storage_capacity_per_item: 10000,
+    weapon_mounts: 2,
+  };
+}
+
+test('renders catalog mobile base details for a one-row ship', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          base_hull: 2200,
+          base_shield: 1100,
+          base_shield_recharge: 16,
+          build_materials: [{ item_id: 'station_core', quantity: 1 }],
+          class: 'Mobile Base',
+          faction: 'solarian',
+          id: 'civitas',
+          mobile_base: civitasMobileBase(),
+          mobile_base_archetype: 'civitas',
+          name: 'Civitas',
+          tier: 5,
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  const builtIn = civitasBuiltIn.map((row) => `${row.name} (${row.id})`).join(', ');
+  const weapons = civitasWeapons.map((row) => `${row.name} (${row.id})`).join(', ');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Items ===');
+  expect(stdout).toContain('Details');
+  expect(stdout.indexOf('=== Items ===')).toBeLessThan(stdout.indexOf('Details'));
+  expect(stdout.indexOf('Details')).toBeLessThan(stdout.indexOf('Build materials:'));
+  expect(stdout.indexOf('Build materials:')).toBeLessThan(stdout.indexOf('Mobile base:'));
+  expect(stdout.match(/Details/g)?.length).toBe(1);
+  expect(stdout).not.toContain('=== Mobile');
+  expect(stdout).toContain('Class: Mobile Base');
+  expect(stdout).toContain('Hull: 2200');
+  expect(stdout).toContain('Shield: 1100 (+16/tick)');
+  expect(stdout).not.toContain('Speed:');
+  expect(stdout).not.toContain('Fuel:');
+  expect(stdout).not.toContain('Cargo:');
+  expect(stdout).toContain('Mobile base:');
+  expect(stdout).toContain('  Archetype: civitas');
+  expect(stdout).toContain('  Combat: station');
+  expect(stdout).toContain('  Ship modules: no');
+  expect(stdout).toContain('  Production slots: 4');
+  expect(stdout).toContain('  Weapon mounts: 2');
+  expect(stdout).toContain('  Storage per item: 10000');
+  expect(stdout).toContain('  Fuel capacity: 100000');
+  expect(stdout).not.toContain('100,000');
+  expect(stdout).toContain(
+    '  Services: market, refuel, crafting, missions, storage, personnel, faction_storage, faction_missions, medical',
+  );
+  expect(stdout).toContain(`  Built-in: ${builtIn}`);
+  expect(stdout).toContain('First Aid Ward (first_aid_ward)');
+  expect(civitasBuiltIn).toHaveLength(12);
+  expect(stdout).toContain(`  Weapons: ${weapons}`);
+  expect(stdout.match(/point_defense_battery/g)?.length).toBe(2);
+  const order = [
+    'Mobile base:',
+    '  Archetype: civitas',
+    '  Combat: station',
+    '  Ship modules: no',
+    '  Production slots: 4',
+    '  Weapon mounts: 2',
+    '  Storage per item: 10000',
+    '  Fuel capacity: 100000',
+    '  Services:',
+    '  Built-in:',
+    '  Weapons:',
+  ];
+  let previous = -1;
+  for (const line of order) {
+    const index = stdout.indexOf(line);
+    expect(index).toBeGreaterThan(previous);
+    previous = index;
+  }
+});
+
+test('prints Services none, skips an empty archetype, and prints zero production slots', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'Mobile Base',
+          id: 'bare_base',
+          mobile_base: {
+            built_in_facilities: [],
+            combat_model: '',
+            default_weapon_facilities: [
+              { id: 'bare_mount' },
+              { id: '', name: 'Skipped' },
+              { name: 'No Id' },
+              { id: 'named_mount', name: 'Named Mount' },
+              { id: 'named_mount', name: 'Named Mount' },
+            ],
+            production_slots: 0,
+            services: [],
+            weapon_mounts: 0,
+          },
+          mobile_base_archetype: '',
+          name: 'Bare Base',
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Mobile base:');
+  expect(stdout).toContain('  Production slots: 0');
+  expect(stdout).toContain('  Weapon mounts: 0');
+  expect(stdout).toContain('  Services: none');
+  expect(stdout).toContain('  Built-in: none');
+  expect(stdout).toContain('  Weapons: bare_mount, Named Mount (named_mount), Named Mount (named_mount)');
+  expect(stdout).not.toContain('Archetype:');
+  expect(stdout).not.toContain('Combat:');
+  expect(stdout).not.toContain('Ship modules:');
+  expect(stdout).not.toContain('Storage per item:');
+  expect(stdout).not.toContain('Fuel capacity:');
+  expect(stdout).not.toContain('Skipped');
+  expect(stdout).not.toContain('No Id');
+});
+
+test('prints ship modules yes and skips absent or non-array mobile base fields', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          base_speed: 4,
+          class: 'Hauler',
+          id: 'partial_base',
+          mobile_base: {
+            built_in_facilities: { id: 'not_a_list' },
+            combat_model: 3,
+            default_weapon_facilities: null,
+            fuel_capacity: 0,
+            services: [null, 'market', '', 'refuel'],
+            ship_modules: true,
+          },
+          mobile_base_archetype: 'partial',
+          name: 'Partial Base',
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Speed: 4');
+  expect(stdout).toContain('Mobile base:');
+  expect(stdout).toContain('  Archetype: partial');
+  expect(stdout).toContain('  Ship modules: yes');
+  expect(stdout).toContain('  Fuel capacity: 0');
+  expect(stdout).toContain('  Services: market, refuel');
+  expect(stdout).not.toContain('Combat:');
+  expect(stdout).not.toContain('Production slots:');
+  expect(stdout).not.toContain('Built-in:');
+  expect(stdout).not.toContain('Weapons:');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).not.toContain('Ship modules: no');
+});
+
+test('does not print Mobile base when mobile_base is not a record', () => {
+  for (const mobileBase of ['not-a-record', null, [{ id: 'mobile_base_reactor', name: 'Mobile Base Reactor' }]]) {
+    const rendered = renderStructuredResult(
+      'catalog',
+      {
+        items: [
+          {
+            class: 'Shuttle',
+            id: 'blob',
+            mobile_base: mobileBase,
+            mobile_base_archetype: 'should-not-print',
+            name: 'Blob',
+          },
+        ],
+        type: 'ships',
+      },
+      options,
+      context,
+    );
+    const stdout = rendered.stdout.join('\n');
+    expect(rendered.success).toBe(true);
+    expect(stdout).toContain('Blob');
+    expect(stdout).not.toContain('Mobile base:');
+    expect(stdout).not.toContain('should-not-print');
+    expect(stdout).not.toContain('not-a-record');
+    expect(stdout).not.toContain('mobile_base_reactor');
+    expect(stdout).not.toContain('built_in_facilities');
+    expect(stdout).not.toContain('[object Object]');
+  }
+});
+
+test('does not print mobile base details on a multi-row ship list', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          class: 'Mobile Base',
+          id: 'civitas',
+          mobile_base: civitasMobileBase(),
+          mobile_base_archetype: 'civitas',
+          name: 'Civitas',
+        },
+        {
+          class: 'Liner',
+          id: 'comet',
+          name: 'Comet',
+        },
+      ],
+      type: 'ships',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  const header = catalogShipsHeader(stdout) ?? '';
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Civitas');
+  expect(stdout).toContain('Comet');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Mobile base:');
+  expect(stdout).not.toContain('built_in_facilities');
+  expect(stdout).not.toContain('first_aid_ward');
+  expect(stdout).not.toContain('[object Object]');
+  expect(header.indexOf('Name')).toBeLessThan(header.indexOf('ID'));
+  expect(header.indexOf('ID')).toBeLessThan(header.indexOf('Class'));
+  expect(header.indexOf('Class')).toBeLessThan(header.indexOf('Tier'));
+  expect(header).not.toContain('Services');
+  expect(header).not.toContain('Built-in');
 });
 
 test('renders catalog item compression when at least one item declares it', () => {
