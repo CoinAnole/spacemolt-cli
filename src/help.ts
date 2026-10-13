@@ -1105,7 +1105,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Combat:${c.reset}
     attack <target_id>        Start/join persistent system battle
-    scan [target_id]          Scan a nearby actor or sweep for cloaks
+    scan [target_id]          Scan an actor, a charted POI, or sweep
     cloak true/false          Toggle cloaking
 
   ${c.cyan}Personnel:${c.reset}

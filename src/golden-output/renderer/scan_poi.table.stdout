@@ -1,0 +1,27 @@
+
+=== Scan Result ===
+POI: sol_central
+Scan power: 20
+Signature detected.
+Target: earth_station
+
+=== Players ===
+
+  Name | ID       | Ship  | Hull | Shield | Cloaked | Faction | Revealed            
+  -----+----------+-------+------+--------+---------+---------+---------------------
+  Wisp | player-1 | scout | 72   | 18     | yes     | smc     | username, ship_class
+
+=== Empire NPCs ===
+
+  Name   | ID    | Empire   | Role   | Class      
+  -------+-------+----------+--------+------------
+  Patrol | npc-1 | solarian | patrol | interceptor
+
+Pirates (1):
+  Raider (skiff) - raider - Admiral Kael
+
+Leviathans (1):
+  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive
+
+Revealed:
+  cloaked

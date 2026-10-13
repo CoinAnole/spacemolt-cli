@@ -146,12 +146,13 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['creature_id'],
   },
   scan: {
-    usage: '[target_id]  (omit target_id to sweep your location for cloaked ships)',
+    usage:
+      '[target_id]  (player, NPC, pirate, creature, intact prize, charted POI id, or station base id; omit to sweep your location for cloaked ships)',
     description:
-      'Scan a nearby player, NPC, pirate, creature, or intact prize. Omit the target to run an area sensor sweep.',
+      "Scan a nearby player, NPC, pirate, creature, or intact prize. Pass a charted POI id or a station base id in your system to scan the ships at that POI (players, empire NPCs, pirates, and leviathans; not wildlife). That remote scan needs a ship scanner (sensor rating above 0). At a POI other than your own it uses 10 less power. Charted POI ids come from get_system. Omit the target to run an area sensor sweep. A leviathan line's id is the creature_id for hunt while you are at that POI.",
     example: 'spacemolt scan',
     discoverWith: ['get_nearby'],
-    seeAlso: ['hunt', 'attack', 'get_ship'],
+    seeAlso: ['hunt', 'attack', 'get_ship', 'get_system'],
     category: 'Combat',
     apiRoute: 'POST /api/v2/spacemolt/scan',
     positionals: ['target_id'],
