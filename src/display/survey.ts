@@ -42,6 +42,17 @@ function emitSurveyedPoiList(title: string, value: unknown, emptyCopy?: string):
   }
 }
 
+function emitDeposits(value: unknown, surveyPower: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.filter(isRecord);
+  if (!rows.length) {
+    const emptyCopy = finiteNumber(surveyPower) === 0 ? '(none — survey power 0 reads no ore)' : '(none)';
+    emitSurveyedPoiList('Deposits', [], emptyCopy);
+    return;
+  }
+  emitSurveyedPoiList('Deposits', rows);
+}
+
 function emitWildlifeCensus(value: unknown): void {
   const rows = Array.isArray(value) ? value.filter(isRecord) : [];
   if (!rows.length) {
@@ -96,6 +107,7 @@ export const surveyFormatters: ResultFormatter[] = [
       if (typeof r.anomaly_hint === 'string' && r.anomaly_hint) {
         emitLine(`${c.yellow}${r.anomaly_hint}${c.reset}`);
       }
+      emitDeposits(r.deposits, r.survey_power);
       emitSurveyedPoiList('Newly Revealed', r.newly_revealed, '(none)');
       emitSurveyedPoiList('Already Known', r.already_revealed);
       const faint = Array.isArray(r.faint_signatures) ? r.faint_signatures.filter(isRecord) : [];

@@ -79,9 +79,27 @@ test('survey_system prints present-field sections and 4-space ResourceInfo bulle
   expect(iron.slice(2)).toBe(lineContaining(poiStdout, 'Iron Ore'));
 
   const knownIron = lineContaining(stdout, '750/1000');
+  expect(knownIron).toContain('Iron Ore');
   expect(knownIron).toContain('supports power 12');
   expect(knownIron).not.toContain('lock min');
   expect(knownIron).not.toContain('too sparse');
+
+  expect(stdout.indexOf('A faint resonance west of the belt.')).toBeLessThan(stdout.indexOf('Deposits:'));
+  expect(stdout.indexOf('Deposits:')).toBeLessThan(stdout.indexOf('Newly Revealed:'));
+  expect(stdout.indexOf('Sol Inner Belt')).toBeLessThan(stdout.indexOf('Sol Ice Field'));
+  expect(stdout).toContain('Sol Inner Belt (sol_inner_belt)  asteroid_belt [common]');
+  expect(stdout).toContain('Charted ore in the inner belt.');
+  expect(stdout).toContain('Sol Ice Field (sol_ice_field)  ice_field');
+  const nickel = lineContaining(stdout, 'Nickel Ore');
+  expect(nickel).toContain('richness 4, 640/800 (80.00% remaining), supports power 8');
+  expect(nickel).not.toContain('lock min');
+  expect(nickel).not.toContain('too sparse');
+  const waterIce = lineContaining(stdout, 'Water Ice');
+  expect(waterIce).toContain('supports power 20');
+  expect(waterIce).toContain('100.00% remaining');
+  expect(waterIce).not.toContain('lock min');
+  expect(waterIce).not.toContain('too sparse');
+  expect(stdout).toContain('Kaiser Vein');
 
   expect(stdout).toContain('  - deep_core: Need more survey power (difficulty 24)');
   expect(stdout).toContain('Skill XP: scanning +12, deep_core_mining +8');
@@ -143,6 +161,9 @@ test('survey_system no-hits prints empty newly-revealed and wildlife copy', () =
   expect(stdout).toContain('Survey power: 8');
   expect(stdout).toContain('Bloom: none (intensity 0)');
   expect(stdout).toContain('Survey complete. No hidden deposits resolved.');
+  expect(stdout).toContain('Deposits:\n  (none)');
+  expect(stdout).not.toContain('survey power 0 reads no ore');
+  expect(stdout.indexOf('Deposits:')).toBeLessThan(stdout.indexOf('Newly Revealed:'));
   expect(stdout).toContain('Newly Revealed:\n  (none)');
   expect(stdout).toContain('Wildlife:\n  (none)');
   expect(stdout).not.toContain('Already Known');
@@ -150,6 +171,136 @@ test('survey_system no-hits prints empty newly-revealed and wildlife copy', () =
   expect(stdout).not.toContain('Skill XP:');
   expect(stdout).not.toContain('A faint resonance');
   expect(stdout).not.toContain('=== Wildlife ===');
+});
+
+test('survey_system empty deposits at survey power 0 print the no-ore sentence', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.survey_power = 0;
+      details.deposits = [];
+    }),
+  );
+
+  expect(stdout).toContain('Survey power: 0');
+  expect(stdout).toContain('Deposits:\n  (none — survey power 0 reads no ore)');
+  expect(stdout).toContain('Newly Revealed:');
+  expect(stdout).toContain('Kaiser Vein (sol_kaiser_vein)');
+  expect(stdout).toContain('=== Wildlife ===');
+  expect(stdout).toContain('ember_grazer');
+});
+
+test('survey_system prints deposit rows when survey power is 0', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.survey_power = 0;
+    }),
+  );
+
+  expect(stdout).toContain('Survey power: 0');
+  expect(stdout).toContain('Sol Inner Belt (sol_inner_belt)');
+  expect(stdout).toContain('Nickel Ore');
+  expect(stdout).toContain('Sol Ice Field (sol_ice_field)');
+  expect(stdout).not.toContain('survey power 0 reads no ore');
+});
+
+test('survey_system omits the Deposits heading when the key is missing', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      delete details.deposits;
+    }),
+  );
+
+  expect(stdout).not.toContain('Deposits:');
+  expect(stdout).toContain('=== Survey: Sol (sol) ===');
+  expect(stdout).toContain('Newly Revealed:');
+  expect(stdout).toContain('Kaiser Vein (sol_kaiser_vein)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('survey_system omits the Deposits heading when deposits is not an array', () => {
+  const objectValue = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = { not: 'an array' };
+    }),
+  );
+  const nullValue = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = null;
+    }),
+  );
+
+  for (const stdout of [objectValue, nullValue]) {
+    expect(stdout).not.toContain('Deposits:');
+    expect(stdout).toContain('=== Survey:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('survey_system treats a deposits array with no records as empty', () => {
+  const withPower = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = [null, 'nope', 1];
+    }),
+  );
+  const powerZero = stdoutOf(
+    clonePresent((details) => {
+      details.survey_power = 0;
+      details.deposits = [null, 1, 'nope'];
+    }),
+  );
+
+  expect(withPower).toContain('Deposits:\n  (none)');
+  expect(withPower).not.toContain('survey power 0 reads no ore');
+  expect(powerZero).toContain('Deposits:\n  (none — survey power 0 reads no ore)');
+  expect(powerZero).not.toContain('Sol Inner Belt');
+});
+
+test('survey_system partial deposit rows omit resource lines', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = [
+        { id: 'sol_bare_rock', name: 'Bare Rock', type: 'asteroid' },
+        { id: 'sol_empty_vein', name: 'Empty Vein', type: 'asteroid', resources: [] },
+      ];
+    }),
+  );
+
+  expect(stdout).toContain('Bare Rock (sol_bare_rock)');
+  expect(stdout).toContain('Empty Vein (sol_empty_vein)');
+  const deposits = stdout.slice(stdout.indexOf('Deposits:'), stdout.indexOf('Newly Revealed:'));
+  expect(deposits.split('\n').some((line) => line.startsWith('    - '))).toBe(false);
+  expect(stdout).not.toContain('Resources:');
+});
+
+test('survey_system prints deposit rows in server order', () => {
+  const first = 'Zeta Belt';
+  const second = 'Alpha Field';
+  expect(first.localeCompare(second)).toBeGreaterThan(0);
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = [
+        { id: 'zeta_belt', name: first, type: 'asteroid_belt' },
+        { id: 'alpha_field', name: second, type: 'ice_field' },
+      ];
+    }),
+  );
+
+  expect(stdout.indexOf(first)).toBeGreaterThanOrEqual(0);
+  expect(stdout.indexOf(first)).toBeLessThan(stdout.indexOf(second));
+});
+
+test('survey_system appends [deep core] on a deposit row', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      const deposits = details.deposits;
+      if (!Array.isArray(deposits) || !deposits[0] || typeof deposits[0] !== 'object') {
+        throw new Error('expected deposit row');
+      }
+      (deposits[0] as Record<string, unknown>).deep_core = true;
+    }),
+  );
+
+  expect(stdout).toContain('Sol Inner Belt (sol_inner_belt)  asteroid_belt [common] [deep core]');
 });
 
 test('survey_system empty resources on a hit omit resource lines', () => {

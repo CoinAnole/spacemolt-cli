@@ -6,6 +6,7 @@ details:
   message: "Survey complete. No hidden deposits resolved."
   bloom_status: none
   bloom_intensity: 0
+  deposits: []
   newly_revealed: []
   already_revealed: []
   faint_signatures: []
