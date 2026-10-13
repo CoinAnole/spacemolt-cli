@@ -148,19 +148,19 @@ function text(value: unknown): string | undefined {
   return undefined;
 }
 
-function emitCatalogOptional(label: string, value: unknown): void {
+function emitCatalogOptional(label: string, value: unknown, indent = ''): void {
   if (value === undefined || value === null || value === '') return;
-  emitLine(`${label}: ${String(value)}`);
+  emitLine(`${indent}${label}: ${String(value)}`);
 }
 
 export function emitCatalogFlag(label: string, value: unknown): void {
   if (value === true) emitLine(`${label}: yes`);
 }
 
-export function emitCatalogNumber(label: string, value: unknown): void {
+export function emitCatalogNumber(label: string, value: unknown, indent = ''): void {
   const number = finiteNumber(value);
   if (number === undefined) return;
-  emitLine(`${label}: ${number}`);
+  emitLine(`${indent}${label}: ${number}`);
 }
 
 export function emitCatalogBonus(label: string, value: unknown): void {
@@ -368,6 +368,44 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
 
   const materials = summarizeBuildMaterials(entry.build_materials);
   if (materials) emitLine(`Build materials: ${materials}`);
+
+  emitCatalogMobileBase(entry);
+}
+
+function emitCatalogNamedRows(label: string, value: unknown, indent: string): void {
+  if (!Array.isArray(value)) return;
+  const parts: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const id = row.id;
+    if (typeof id !== 'string' || id === '') continue;
+    const name = row.name;
+    parts.push(typeof name === 'string' && name !== '' ? `${name} (${id})` : id);
+  }
+  emitLine(`${indent}${label}: ${parts.length === 0 ? 'none' : parts.join(', ')}`);
+}
+
+function emitCatalogMobileBase(entry: Record<string, unknown>): void {
+  const base = entry.mobile_base;
+  if (!isRecord(base)) return;
+  const indent = '  ';
+  emitLine('Mobile base:');
+  emitCatalogOptional('Archetype', entry.mobile_base_archetype, indent);
+  if (typeof base.combat_model === 'string') emitCatalogOptional('Combat', base.combat_model, indent);
+  const shipModules = formatCatalogYesNo(base.ship_modules);
+  if (shipModules) emitLine(`${indent}Ship modules: ${shipModules}`);
+  emitCatalogNumber('Production slots', base.production_slots, indent);
+  emitCatalogNumber('Weapon mounts', base.weapon_mounts, indent);
+  emitCatalogNumber('Storage per item', base.storage_capacity_per_item, indent);
+  emitCatalogNumber('Fuel capacity', base.fuel_capacity, indent);
+  if (Array.isArray(base.services)) {
+    const services = base.services.filter(
+      (service): service is string => typeof service === 'string' && service !== '',
+    );
+    emitLine(`${indent}Services: ${services.length === 0 ? 'none' : services.join(', ')}`);
+  }
+  emitCatalogNamedRows('Built-in', base.built_in_facilities, indent);
+  emitCatalogNamedRows('Weapons', base.default_weapon_facilities, indent);
 }
 
 export function summarizeBonusPerLevel(value: unknown): string | undefined {

@@ -511,6 +511,7 @@ test('inspect catalog skill uses the skill table and untruncated Details', () =>
   expect(stdout).not.toContain('Max level:');
   expect(stdout).not.toContain('Size:');
   expect(stdout).not.toContain('Base value:');
+  expect(stdout).not.toContain('Mobile base:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -871,6 +872,7 @@ test('ship-class inspect prints full loadout, Achievement, and Lock verbatim', (
   expect(stdout).not.toContain('prismatic_lens');
   expect(stdout).not.toContain('Faction: nebula');
   expect(stdout).not.toContain('Achievement: galactic_concierge)');
+  expect(stdout).not.toContain('Mobile base:');
   expect(stdout.match(/galactic_concierge/g)?.length).toBe(1);
 });
 
@@ -929,6 +931,7 @@ test('ship-class inspect keeps an untruncated default loadout and gated acquisit
   expect(stdout).toContain('Price: 0');
   expect(stdout).toContain('Required items: 3x Steel Plate');
   expect(stdout).toContain('Passive recipes: refine_steel, smelt_lead_ingot');
+  expect(stdout).not.toContain('Mobile base:');
 });
 
 test('boarding module inspect prints dedicated personnel and boarding lines without leftover Bonuses', () => {
@@ -999,6 +1002,94 @@ test('ship-class inspect still emits details when default_modules is missing', (
   expect(stdout).toContain('Hull: 450');
   expect(stdout).toContain('Shield: 160 (+3/tick)');
   expect(stdout).not.toContain('Default loadout');
+  expect(stdout).not.toContain('Mobile base:');
+});
+
+test('ship-class inspect prints the mobile base block and keeps the short ship table', () => {
+  const builtIn = [
+    ['Mobile Base Reactor', 'mobile_base_reactor'],
+    ['Mobile Base Life Support', 'mobile_base_life_support'],
+    ['Mobile Base Fuel Tank', 'mobile_base_fuel_tank'],
+    ['Trade Concourse', 'trade_concourse'],
+    ['Refueling Dock', 'refueling_dock'],
+    ['Faction Workshop', 'faction_workshop'],
+    ['Contract Terminal', 'contract_terminal'],
+    ['Locker Bay', 'locker_bay'],
+    ['Crew Registry', 'crew_registry'],
+    ['Faction Lockbox', 'faction_lockbox'],
+    ['Notice Board', 'notice_board'],
+    ['First Aid Ward', 'first_aid_ward'],
+  ];
+  const stdout = renderCatalogInspect({
+    type: 'ships',
+    items: [
+      {
+        id: 'civitas',
+        name: 'Civitas',
+        class: 'Mobile Base',
+        tier: 5,
+        faction: 'solarian',
+        base_hull: 2200,
+        base_shield: 1100,
+        base_shield_recharge: 16,
+        build_materials: [{ item_id: 'station_core', quantity: 1 }],
+        mobile_base_archetype: 'civitas',
+        mobile_base: {
+          combat_model: 'station',
+          ship_modules: false,
+          production_slots: 4,
+          weapon_mounts: 2,
+          storage_capacity_per_item: 10000,
+          fuel_capacity: 100000,
+          services: [
+            'market',
+            'refuel',
+            'crafting',
+            'missions',
+            'storage',
+            'personnel',
+            'faction_storage',
+            'faction_missions',
+            'medical',
+          ],
+          built_in_facilities: builtIn.map(([name, id]) => ({ id, name })),
+          default_weapon_facilities: [
+            { id: 'point_defense_battery', name: 'Point Defense Battery' },
+            { id: 'point_defense_battery', name: 'Point Defense Battery' },
+          ],
+        },
+      },
+    ],
+  });
+  const header = inspectEntryHeader(stdout) ?? '';
+
+  expect(stdout).toContain('Catalog (ships)');
+  expect(stdout.indexOf('Catalog (ships)')).toBeLessThan(stdout.indexOf('Details'));
+  expect(stdout.indexOf('Details')).toBeLessThan(stdout.indexOf('Build materials:'));
+  expect(stdout.indexOf('Build materials:')).toBeLessThan(stdout.indexOf('Mobile base:'));
+  expect(stdout).toContain('Hull: 2200');
+  expect(stdout).toContain('Shield: 1100 (+16/tick)');
+  expect(stdout).not.toContain('Speed:');
+  expect(stdout).toContain('  Ship modules: no');
+  expect(stdout).toContain('  Weapon mounts: 2');
+  expect(stdout).toContain(
+    '  Services: market, refuel, crafting, missions, storage, personnel, faction_storage, faction_missions, medical',
+  );
+  expect(stdout).toContain(`  Built-in: ${builtIn.map(([name, id]) => `${name} (${id})`).join(', ')}`);
+  expect(stdout).toContain('First Aid Ward (first_aid_ward)');
+  expect(stdout).toContain(
+    '  Weapons: Point Defense Battery (point_defense_battery), Point Defense Battery (point_defense_battery)',
+  );
+  expect(header).toContain('Name');
+  expect(header).toContain('ID');
+  expect(header).toContain('Class');
+  expect(header).toContain('Tier');
+  expect(header).toContain('Empire');
+  expect(header.indexOf('Name')).toBeLessThan(header.indexOf('ID'));
+  expect(header.indexOf('ID')).toBeLessThan(header.indexOf('Class'));
+  expect(header).not.toContain('Services');
+  expect(header).not.toContain('Yard');
+  expect(stdout).not.toContain('=== Mobile');
 });
 
 test('renders ammo catalog effect without [object Object]', () => {
@@ -1040,6 +1131,7 @@ test('renders ammo catalog effect without [object Object]', () => {
   expect(stdout).toContain('damage');
   expect(stdout).toContain('splash');
   expect(stdout).not.toContain('[object Object]');
+  expect(stdout).not.toContain('Mobile base:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
