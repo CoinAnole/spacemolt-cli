@@ -816,6 +816,29 @@ export const scanFixture = {
   revealed_info: ['Cargo: 20/200', 'Weapons: 1'],
 };
 
+const brandedAttackWarning =
+  'Branded livestock of [RNC] Ranchers Co-op at Cloudbank Ranch. The kill is legal. The owners are told who killed it. It gives no hunt mission credit.';
+
+export const attackBrandedFixture = {
+  details: {
+    action: 'attack',
+    kind: 'npc',
+    target: 'creature-ember-1',
+    target_type: 'creature',
+    target_name: '[RNC] Belt-Grazer',
+    warning: brandedAttackWarning,
+  },
+  location: {
+    poi_id: 'sol_belt',
+    poi_name: 'Belt',
+    nearby_players: [{ username: 'Ibis' }],
+    nearby_player_count: 1,
+  },
+  ship: { fuel: 10, max_fuel: 20 },
+};
+
+export const huntBrandedFixture = attackBrandedFixture;
+
 export const scanCreatureFixture = {
   success: true,
   target_id: 'creature-ember-grazer-1',
@@ -1084,6 +1107,7 @@ export const getCommandsFixture = {
 
 export const statusFixtureCases = {
   arrival: { command: 'travel', fixture: arrivalFixture },
+  attack: { command: 'attack', fixture: attackBrandedFixture },
   nearby: { command: 'get_nearby', fixture: nearbyFixture },
   poi_info: { command: 'get_poi', fixture: poiInfoFixture },
   system_info: { command: 'get_system', fixture: systemInfoFixture },
@@ -1170,6 +1194,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_commands: { command: 'get_commands', fixture: getCommandsFixture },
   get_queue: { command: 'get_queue', fixture: getQueueFixture },
   get_queue_empty: { command: 'get_queue', fixture: getQueueEmptyFixture },
+  attack: { command: 'attack', fixture: attackBrandedFixture, schemaTarget: 'details' },
+  hunt: { command: 'hunt', fixture: huntBrandedFixture, schemaTarget: 'details' },
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   scan_creature: { command: 'scan', fixture: scanCreatureFixture, schemaTarget: 'details' },
   scan_poi: { command: 'scan', fixture: scanPoiFixture, schemaTarget: 'details' },

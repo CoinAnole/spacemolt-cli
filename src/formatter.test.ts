@@ -5416,7 +5416,9 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Empire NPCs (1):');
     expect(stdout).toContain('Solarian Patrol (interceptor)');
     expect(stdout).toContain('Creatures (1):');
-    expect(stdout).toContain('Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale)');
+    expect(stdout).toContain(
+      'Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale) - grazer - hull 80/120 - brand smc, cloudbank-ranch',
+    );
     expect(stdout).toContain('Unknown cloaked signature detected');
     expect(stdout).toContain('Active scan: true');
     expect(stdout).not.toContain('Ibis');
@@ -9139,6 +9141,14 @@ describe('structuredContent formatters', () => {
       Players here (1):
         Ibis
       offline collapsed 0"
+      ,
+        "attack": 
+      "
+      === Attack ===
+      Target: [RNC] Belt-Grazer (creature-ember-1)
+      Type: creature
+      Kind: npc
+      Warning: Branded livestock of [RNC] Ranchers Co-op at Cloudbank Ranch. The kill is legal. The owners are told who killed it. It gives no hunt mission credit."
       ,
         "base": 
       "

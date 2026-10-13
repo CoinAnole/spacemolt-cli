@@ -1,0 +1,17 @@
+
+details:
+  action: attack
+  kind: npc
+  target: "creature-ember-1"
+  target_type: creature
+  target_name: "[RNC] Belt-Grazer"
+  warning: "Branded livestock of [RNC] Ranchers Co-op at Cloudbank Ranch. The kill is legal. The owners are told who killed it. It gives no hunt mission credit."
+location:
+  poi_id: sol_belt
+  poi_name: Belt
+  nearby_players:
+    - username: Ibis
+  nearby_player_count: 1
+ship:
+  fuel: 10
+  max_fuel: 20

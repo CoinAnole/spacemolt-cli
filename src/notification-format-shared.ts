@@ -1,4 +1,5 @@
 import { normalizeCaptorKind } from './display/captor-kind.ts';
+import { formatCreatureBrandSuffix } from './display/creatures.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
 import { formatIntegerText } from './display/helpers.ts';
 import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
@@ -2433,6 +2434,7 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
   const name = nameKeys.map((key) => observationText(record[key])).find(Boolean);
   const id = idKeys.map((key) => observationText(record[key])).find(Boolean);
   let identity = name && id && name !== id ? `${name} [${id}]` : (name ?? id ?? domain);
+  if (domain === 'creature') identity += formatCreatureBrandSuffix(record);
 
   if (domain === 'pirate') {
     const crew = observationText(record.faction_name) ?? observationText(record.faction);

@@ -8,6 +8,11 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+### Wildlife
+
+- `get_nearby` and `subscribe_observation` creature lines append `brand <faction>, <ranch>` when the server sends `brand_faction` or `brand_ranch`. The creature name is printed as sent, including a faction tag the server already put there. `survey_system` Wildlife adds `Ranched By` from `ranched_by`. An explicit `ranched` of 0 still shows the Ranched column. A creature `scan` prints `Branded: yes` when `branded` is true, and `Brand` and `Ranch` when those strings are present, before Revealed. A remote POI scan does not print them. `--follow` creature identities append the same owner and ranch. `--json` output is unchanged. `--format text` uses the same lines as table output. Gameserver 0.619.0. **No parser change.**
+- `attack` and `hunt` table output prints the server `warning` on its own line, prints `Auto-docked` / `Auto-undocked` as yes or no when those details booleans are present, and prints the target name as sent. A location on the same envelope no longer replaces that block with an arrival. A details-only auto-undock flag does not print the cyan `[AUTO-UNDOCKED]` banner. When `docked_at` is present, the existing dock-state line still follows the block. Help states that a branded kill is legal, the owners are told who killed it, and it does not count toward a hunt mission. **No parser change.**
+
 ### Navigation
 
 - `dock` help names `station_under_attack` and the 0.604.0 join rules (armed join; unarmed/wrecked stay out; wildlife hunts unless leviathan).

@@ -540,6 +540,9 @@ describe('command metadata', () => {
     expect(config?.description).toContain('station base id');
     expect(config?.description).toContain('ship scanner');
     expect(config?.description).toContain('10 less power');
+    expect(config?.description).toContain('Branded');
+    expect(config?.description).toContain('the ranch');
+    expect(config?.description).toContain('See hunt');
     expect(config?.discoverWith).toEqual(['get_nearby']);
     expect(config?.seeAlso).toEqual(['hunt', 'attack', 'get_ship', 'get_system']);
     expect(config?.example).toBe('spacemolt scan');
@@ -554,6 +557,9 @@ describe('command metadata', () => {
     expect(help).toContain('station base id');
     expect(help).toContain('ship scanner');
     expect(help).toContain('10 less power');
+    expect(help).toContain('Branded');
+    expect(help).toContain('the ranch');
+    expect(help).toContain('See hunt');
   });
 
   test('dock help names station_under_attack and faction-station join rules', () => {
@@ -666,6 +672,10 @@ describe('command metadata', () => {
     );
     expect(config?.description).toContain('Rows still print when the server sends them.');
     expect(config?.description).not.toContain('When survey power is 0 it prints');
+    expect(config?.description).toContain('Ranched By');
+    expect(config?.description).toContain('omitted when no row');
+    expect(config?.description).toContain('explicit 0');
+    expect(config?.description).toContain('blank cell');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
     expect(config?.seeAlso).toEqual(
@@ -692,6 +702,10 @@ describe('command metadata', () => {
     );
     expect(help).toContain('Rows still print when the server sends them.');
     expect(help).not.toContain('When survey power is 0 it prints');
+    expect(help).toContain('Ranched By');
+    expect(help).toContain('omitted when no row');
+    expect(help).toContain('explicit 0');
+    expect(help).toContain('blank cell');
     expect(help).not.toContain('`');
   });
 
@@ -986,6 +1000,11 @@ describe('command metadata', () => {
     expect(config?.description).toContain('out_of_range');
     expect(config?.description).toContain('joins their side');
     expect(config?.description).toContain('normal side rules');
+    expect(config?.description).toContain('Killing it is legal');
+    expect(config?.description).toContain('The owners are told who killed it');
+    expect(config?.description).toContain('does not count toward a hunt mission');
+    expect(config?.description).toContain('Loot is unchanged');
+    expect(config?.description).toContain('[RNC] Belt-Grazer');
     expect(config?.description).not.toContain('other targets only need to be in the same system');
     expect(config?.seeAlso).toEqual(
       expect.arrayContaining(['get_nearby', 'get_battle_status', 'battle_target', 'battle_stance']),
@@ -1014,6 +1033,11 @@ describe('command metadata', () => {
     expect(help).toContain('out_of_range');
     expect(help).toContain('joins their side');
     expect(help).toContain('normal side rules');
+    expect(help).toContain('Killing it is legal');
+    expect(help).toContain('The owners are told who killed it');
+    expect(help).toContain('does not count toward a hunt mission');
+    expect(help).toContain('Loot is unchanged');
+    expect(help).toContain('[RNC] Belt-Grazer');
     expect(help).not.toContain('other targets only need to be in the same system');
   });
 
@@ -1126,6 +1150,11 @@ describe('command metadata', () => {
     expect(hunt?.description).toContain('young leviathans flee');
     expect(hunt?.description).toContain('Cloudwhales do not attack first');
     expect(hunt?.description).toContain('does not join a fight already in progress');
+    expect(hunt?.description).toContain('Killing it is legal');
+    expect(hunt?.description).toContain('The owners are told who killed it');
+    expect(hunt?.description).toContain('does not count toward a hunt mission');
+    expect(hunt?.description).toContain('Loot is unchanged');
+    expect(hunt?.description).toContain('[RNC] Belt-Grazer');
     expect(hunt?.description).not.toContain('leviathan_id=');
     expect(hunt?.description).not.toContain('target_id');
     expect(hunt?.description).not.toContain('`');
@@ -1154,6 +1183,11 @@ describe('command metadata', () => {
     expect(help).toContain('young leviathans flee');
     expect(help).toContain('Cloudwhales do not attack first');
     expect(help).toContain('does not join a fight already in progress');
+    expect(help).toContain('Killing it is legal');
+    expect(help).toContain('The owners are told who killed it');
+    expect(help).toContain('does not count toward a hunt mission');
+    expect(help).toContain('Loot is unchanged');
+    expect(help).toContain('[RNC] Belt-Grazer');
     expect(help).not.toContain('leviathan_id=');
     expect(help).not.toContain('target_id');
     expect(help).not.toContain('`');
@@ -1168,6 +1202,8 @@ describe('command metadata', () => {
     expect(nearby?.description).toContain('creature_id');
     expect(nearby?.description).toContain('stops at 30');
     expect(nearby?.description).toContain('creature_count');
+    expect(nearby?.description).toContain('branded livestock');
+    expect(nearby?.description).toContain('already includes the faction tag');
     expect(nearby?.description).not.toContain('`');
     expect(nearby?.seeAlso).toEqual(expect.arrayContaining(['scan', 'hunt', 'attack', 'claim_prize']));
     const help = captureHelp('get_nearby');
@@ -1175,6 +1211,8 @@ describe('command metadata', () => {
     expect(help).toContain('creature_id');
     expect(help).toContain('stops at 30');
     expect(help).toContain('creature_count');
+    expect(help).toContain('branded livestock');
+    expect(help).toContain('already includes the faction tag');
     expect(help).toContain('primary_color');
     expect(help).toContain('secondary_color');
     expect(help).not.toContain('captor_kind');
@@ -1198,6 +1236,8 @@ describe('command metadata', () => {
     expect(observationHelp).toContain('three');
     expect(observationHelp).toContain('get_nearby');
     expect(observationHelp).toContain('not a field of this snapshot');
+    expect(observationHelp).toContain('owner and ranch');
+    expect(observationHelp).toContain('at most three');
     expect(observationHelp).not.toContain('`');
     expect(observationHelp).toContain('[active_scan=true/false]');
     expect(observationHelp).not.toContain('<args...>');
@@ -1212,6 +1252,8 @@ describe('command metadata', () => {
     expect(COMMANDS.subscribe_observation?.description).toContain('three');
     expect(COMMANDS.subscribe_observation?.description).toContain('get_nearby');
     expect(COMMANDS.subscribe_observation?.description).toContain('not a field of this snapshot');
+    expect(COMMANDS.subscribe_observation?.description).toContain('owner and ranch');
+    expect(COMMANDS.subscribe_observation?.description).toContain('at most three');
     expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
 
     expect(captureHelp('get_battle_summary')).toContain('captor_kind');
