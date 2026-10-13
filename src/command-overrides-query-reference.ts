@@ -313,9 +313,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   survey_system: {
     description:
-      "Scan the current system for hidden POIs plus a wildlife species census and bloom status. In the Wildlife table, Estimate is a rounded population estimate for ordinary wildlife, and an exact head count for a leviathan species (eggs are not counted). Survey mission stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in.",
+      "Scan the current system for hidden POIs, ore at every charted POI, a wildlife species census, and bloom status. Table output prints Deposits before Newly Revealed. With survey power above 0, deposits is the ore at every charted POI that has deposits, using the same resource lines as an already-known hidden POI and get_poi. Hidden POIs stay in Newly Revealed and Already Known. An empty deposits array prints Deposits: (none), or Deposits: (none — survey power 0 reads no ore) when survey power is 0. Rows still print when the server sends them. An anomaly detector alone (survey power 0) finds wormholes only: no ore and no faint signatures. Fit a survey scanner for those. Survey power counts operational modules only; disabled modules do not count. Each extra module adds 50% of the one before. Two 60-power survey scanners give 90, not 120. Integrated survey scanner, survey probe, and navigation beacon bonuses are included, then Scanning scales the total by 1% per level. In the Wildlife table, Estimate is a rounded population estimate for ordinary wildlife, and an exact head count for a leviathan species (eggs are not counted). Survey mission stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in.",
     example: 'spacemolt survey_system',
-    seeAlso: ['get_nearby', 'hunt', 'get_system', 'get_active_missions'],
+    seeAlso: ['get_nearby', 'hunt', 'get_system', 'get_poi', 'get_active_missions'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/survey_system',
   },

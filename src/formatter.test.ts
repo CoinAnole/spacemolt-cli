@@ -9251,6 +9251,13 @@ describe('structuredContent formatters', () => {
       Survey complete. Hidden deposits resolved.
       A faint resonance west of the belt.
 
+      Deposits:
+        - Sol Inner Belt (sol_inner_belt)  asteroid_belt [common]
+          Charted ore in the inner belt.
+          - Nickel Ore: richness 4, 640/800 (80.00% remaining), supports power 8
+        - Sol Ice Field (sol_ice_field)  ice_field
+          - Water Ice: richness 2, 400/400 (100.00% remaining), supports power 20
+
       Newly Revealed:
         - Kaiser Vein (sol_kaiser_vein)  asteroid_belt
           A dense iron-gold plug beneath the main belt.

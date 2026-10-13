@@ -173,7 +173,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage_jettison: 'Jettison items via spacemolt_storage/jettison.',
   supply_commission:
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
-  survey_system: 'Scan for hidden deep core deposits in the current system',
+  survey_system: 'Read ore at charted POIs and scan the current system for hidden POIs',
   switch_ship: 'Switch to a different ship stored at this station',
   tow_wreck: 'Attach a tow line to a wreck for hauling',
   transfer_personnel: 'Transfer fit or injured crew and marines to an allied ship at the same POI',

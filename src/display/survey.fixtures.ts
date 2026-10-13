@@ -32,6 +32,46 @@ export const surveySystemDetails = {
       resources: poiWorkabilityResources,
     },
   ],
+  deposits: [
+    {
+      id: 'sol_inner_belt',
+      name: 'Sol Inner Belt',
+      type: 'asteroid_belt',
+      class: 'common',
+      description: 'Charted ore in the inner belt.',
+      resources: [
+        {
+          resource_id: 'ore_nickel',
+          name: 'Nickel Ore',
+          richness: 4,
+          remaining: 640,
+          remaining_display: '640 units',
+          max_remaining: 800,
+          depletion_percent: 20,
+          supported_power: 8,
+          // lock_minimum_stock and too_sparse omitted: absence-is-silent
+        },
+      ],
+    },
+    {
+      id: 'sol_ice_field',
+      name: 'Sol Ice Field',
+      type: 'ice_field',
+      resources: [
+        {
+          resource_id: 'ice_water',
+          name: 'Water Ice',
+          richness: 2,
+          remaining: 400,
+          remaining_display: '400 units',
+          max_remaining: 400,
+          depletion_percent: 0,
+          supported_power: 20,
+          too_sparse: false,
+        },
+      ],
+    },
+  ],
   already_revealed: [
     {
       id: 'sol_outer_cache',
@@ -123,6 +163,7 @@ export const surveySystemNoHitsFixture = {
     message: 'Survey complete. No hidden deposits resolved.',
     bloom_status: 'none',
     bloom_intensity: 0,
+    deposits: [],
     newly_revealed: [],
     already_revealed: [],
     faint_signatures: [],

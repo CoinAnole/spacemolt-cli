@@ -652,20 +652,46 @@ describe('command metadata', () => {
     expect(config?.description).toContain('exact head count');
     expect(config?.description).toContain('eggs are not counted');
     expect(config?.description).toContain('rounded population estimate');
+    expect(config?.description).toContain('Deposits');
+    expect(config?.description).toContain('charted');
+    expect(config?.description).toContain('50%');
+    expect(config?.description).toContain('disabled modules do not count');
+    expect(config?.description).toContain('90, not 120');
+    expect(config?.description).toContain('anomaly detector');
+    expect(config?.description).toContain('wormholes only');
+    expect(config?.description).toContain('no ore and no faint signatures');
+    expect(config?.description).toContain('survey power 0');
+    expect(config?.description).toContain(
+      'An empty deposits array prints Deposits: (none), or Deposits: (none — survey power 0 reads no ore) when survey power is 0.',
+    );
+    expect(config?.description).toContain('Rows still print when the server sends them.');
+    expect(config?.description).not.toContain('When survey power is 0 it prints');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
     expect(config?.seeAlso).toEqual(
-      expect.arrayContaining(['get_nearby', 'hunt', 'get_system', 'get_active_missions']),
+      expect.arrayContaining(['get_nearby', 'hunt', 'get_system', 'get_poi', 'get_active_missions']),
     );
 
     const help = captureHelp('survey_system');
     expect(help).toContain('Survey mission stops count in any order');
     expect(help).toContain('jump out and back');
     expect(help).toContain('get_active_missions');
+    expect(help).toContain('get_poi');
     expect(help).toContain('Estimate');
     expect(help).toContain('exact head count');
     expect(help).toContain('eggs are not counted');
     expect(help).toContain('rounded population estimate');
+    expect(help).toContain('disabled modules do not count');
+    expect(help).toContain('Each extra module adds 50% of the one before');
+    expect(help).toContain('90, not 120');
+    expect(help).toContain('anomaly detector');
+    expect(help).toContain('wormholes only');
+    expect(help).toContain('no ore and no faint signatures');
+    expect(help).toContain(
+      'An empty deposits array prints Deposits: (none), or Deposits: (none — survey power 0 reads no ore) when survey power is 0.',
+    );
+    expect(help).toContain('Rows still print when the server sends them.');
+    expect(help).not.toContain('When survey power is 0 it prints');
     expect(help).not.toContain('`');
   });
 
