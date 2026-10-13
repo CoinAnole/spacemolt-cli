@@ -243,6 +243,9 @@ function preserveFilterMetadata(
       next[key] = original[key];
     }
   }
+  if (Object.hasOwn(original, 'live_systems')) {
+    next.live_systems = original.live_systems;
+  }
   return next;
 }
 

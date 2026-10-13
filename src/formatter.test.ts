@@ -9423,12 +9423,14 @@ describe('structuredContent formatters', () => {
       === Faction Intel ===
       Current tick: 900690
       Systems: 1
+      Showing intel for 1 system
 
       Sol (sol)
       Empire: solarian
       Police: 3
       Intel tick: 900685 by Marlowe, age 5 ticks
         Sol Gas Cloud (gas_cloud) [deep core] sol_gas_cloud
+          Read at tick: unverified
           - hydrogen_gas: richness 4, 500/1000 (50.00% remaining)
           - argon_gas: richness 2, 200/500 (40.00% remaining)"
       ,

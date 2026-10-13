@@ -813,6 +813,21 @@ function formatCommissionQuote(r: Record<string, unknown>): boolean {
   return true;
 }
 
+function exactTick(value: unknown): bigint | undefined {
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number' && Number.isSafeInteger(value)) return BigInt(value);
+  return undefined;
+}
+
+function tickAgeSuffix(current: unknown, earlier: unknown): string {
+  const now = exactTick(current);
+  const then = exactTick(earlier);
+  if (now === undefined || then === undefined) return '';
+  const age = now - then;
+  if (age < 0n) return '';
+  return `, age ${age.toString()} ticks`;
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -1379,6 +1394,17 @@ export const marketFormatters = [
       emitLine(`\n${c.bright}=== Faction Intel ===${c.reset}`);
       if (r.current_tick !== undefined) emitLine(`Current tick: ${r.current_tick}`);
       if (r.count !== undefined) emitLine(`Systems: ${r.count}`);
+      if (typeof r.message === 'string') {
+        const message = r.message.trim();
+        if (message !== '') emitLine(message);
+      }
+      const liveSystemIds = Array.isArray(r.live_systems)
+        ? r.live_systems.filter((id): id is string => typeof id === 'string')
+        : undefined;
+      if (liveSystemIds) {
+        emitLine(liveSystemIds.length === 0 ? 'Live systems: (none)' : `Live systems: ${liveSystemIds.join(', ')}`);
+      }
+      const liveIds = new Set(liveSystemIds ?? []);
 
       for (const entry of entries) {
         const systemName = String(entry.name ?? entry.system_id ?? 'unknown');
@@ -1388,12 +1414,7 @@ export const marketFormatters = [
         if (entry.police_level !== undefined) emitLine(`Police: ${entry.police_level}`);
         if (entry.submitted_at_tick !== undefined) {
           const submitter = entry.submitter_name ?? entry.submitted_by;
-          const age =
-            r.current_tick !== undefined &&
-            typeof r.current_tick !== 'bigint' &&
-            typeof entry.submitted_at_tick !== 'bigint'
-              ? `, age ${Number(r.current_tick) - Number(entry.submitted_at_tick)} ticks`
-              : '';
+          const age = tickAgeSuffix(r.current_tick, entry.submitted_at_tick);
           emitLine(`Intel tick: ${entry.submitted_at_tick}${submitter ? ` by ${submitter}` : ''}${age}`);
         }
 
@@ -1403,6 +1424,24 @@ export const marketFormatters = [
           const poiType = poi.type ? ` (${poi.type})` : '';
           const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
           emitLine(`  ${poiName}${poiType}${formatDeepCoreMark(poi.deep_core)}${poiId}`);
+          const readAt = poi.read_at_tick;
+          if (readAt === undefined || readAt === null || readAt === '') {
+            emitLine('    Read at tick: unverified');
+          } else {
+            const read = exactTick(readAt);
+            if (read === undefined) {
+              emitLine(`    Read at tick: ${String(readAt)}`);
+            } else {
+              const current = exactTick(r.current_tick);
+              const listed =
+                current !== undefined &&
+                read === current &&
+                typeof entry.system_id === 'string' &&
+                liveIds.has(entry.system_id);
+              const status = listed ? 'live' : `snapshot${tickAgeSuffix(r.current_tick, readAt)}`;
+              emitLine(`    Read at tick: ${read.toString()}, ${status}`);
+            }
+          }
 
           const resources = Array.isArray(poi.resources) ? poi.resources.filter(isRecord) : [];
           for (const resource of resources) {
