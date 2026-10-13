@@ -1,8 +1,4 @@
-/**
- * Trailing brand clause from brand_faction and brand_ranch.
- * Empty when both are missing or blank after trim.
- * Prints the trimmed text. Does not read `name` and does not add a [TAG] prefix.
- */
+/** A blank or non-string side is omitted; the kept text is trimmed. */
 export function formatCreatureBrandSuffix(creature: Record<string, unknown>): string {
   const faction = trimmedBrandText(creature.brand_faction);
   const ranch = trimmedBrandText(creature.brand_ranch);
@@ -12,7 +8,6 @@ export function formatCreatureBrandSuffix(creature: Record<string, unknown>): st
   return '';
 }
 
-/** Full get_nearby / observation-snapshot line, including the brand suffix. */
 export function formatCreatureLine(creature: Record<string, unknown>): string {
   const name = creature.name || creature.creature_id || creature.species || 'Unknown';
   const species = creature.species ? ` (${creature.species})` : '';

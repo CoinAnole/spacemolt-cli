@@ -19,7 +19,6 @@ const PRINTED_ATTACK_KEYS = new Set([
 
 const SHIP_ALIAS_KEYS = new Set(['fuel_now', 'fuel_max']);
 
-/** Details and the later view-model pass share this formatter; only an attack reply matches. */
 function isAttackReply(result: Record<string, unknown>): boolean {
   if (result.action !== 'attack') return false;
   if (result.kind !== 'npc' && result.kind !== 'player') return false;
@@ -29,12 +28,6 @@ function isAttackReply(result: Record<string, unknown>): boolean {
 function presentText(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   return value;
-}
-
-function formatYesNoBoolean(value: unknown): string | undefined {
-  if (value === true) return 'yes';
-  if (value === false) return 'no';
-  return undefined;
 }
 
 function labelForScalarKey(key: string): string {
@@ -58,8 +51,8 @@ function emitSide(value: unknown): void {
 }
 
 function emitYesNo(label: string, value: unknown): void {
-  const text = formatYesNoBoolean(value);
-  if (text) emitLine(`${label}: ${text}`);
+  if (value !== true && value !== false) return;
+  emitLine(`${label}: ${value ? 'yes' : 'no'}`);
 }
 
 function emitAttackLeftovers(result: Record<string, unknown>): void {
@@ -94,9 +87,8 @@ function formatAttackReply(result: Record<string, unknown>, command?: string): b
   if (zone) emitLine(`Zone: ${zone}`);
   emitYesNo('Auto-docked', result.auto_docked);
   emitYesNo('Auto-undocked', result.auto_undocked);
-  if (typeof result.warning === 'string' && result.warning.trim() !== '') {
-    emitLine(`${c.yellow}Warning:${c.reset} ${result.warning}`);
-  }
+  const warning = presentText(result.warning);
+  if (warning) emitLine(`${c.yellow}Warning:${c.reset} ${warning}`);
   const message = presentText(result.message);
   if (message && message !== result.warning) emitLine(message);
   emitAttackLeftovers(result);

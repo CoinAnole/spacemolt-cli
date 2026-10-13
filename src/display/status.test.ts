@@ -135,6 +135,16 @@ test('scan with branded false and no strings prints no brand lines', () => {
   expect(stdout).toContain('Revealed:');
 });
 
+test.each([1, 'true'])('scan does not print Branded for a non-boolean branded value (%s)', (branded) => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.branded = branded;
+  const stdout = renderScan(fixture);
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).toContain('Revealed:');
+});
+
 test('scan with branded false still prints non-empty Brand and Ranch strings', () => {
   const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
   fixture.branded = false;
@@ -3737,6 +3747,27 @@ test('get_nearby prints a brand suffix only on the branded row and does not doub
   expect(stdout).not.toContain('[[SMC]');
   expect(stdout).not.toContain('[RNC] [RNC]');
   expect(stdout).not.toContain('[SMC] [SMC]');
+});
+
+test.each([
+  ['faction only', { brand_faction: 'smc' }, ' - brand smc'],
+  ['ranch only', { brand_ranch: 'cloudbank-ranch' }, ' - brand cloudbank-ranch'],
+  ['padded strings', { brand_faction: '  smc  ', brand_ranch: ' cloudbank ' }, ' - brand smc, cloudbank'],
+] as const)('get_nearby brand suffix (%s) keeps one side and trims', (_label, extra, suffix) => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-1',
+        name: 'Grazer',
+        ...extra,
+      },
+    ],
+  });
+
+  expect(stdout).toContain(`  Grazer [creature-1]${suffix}`);
+  expect(stdout).not.toContain('  smc  ');
+  expect(stdout).not.toContain(' cloudbank ');
 });
 
 test.each([

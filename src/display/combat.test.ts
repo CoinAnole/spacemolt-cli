@@ -175,6 +175,19 @@ test('details auto_undocked true prints yes and the dock-state line, not the cya
   expect(stdout).toContain(`Warning: ${warning}`);
 });
 
+test.each([
+  [true, 'yes'],
+  [false, 'no'],
+] as const)('details auto_docked %s prints %s without the banner or scalar dump', (flag, text) => {
+  const stdout = renderCombat('attack', {
+    details: { ...attackBrandedFixture.details, auto_docked: flag },
+  });
+
+  expect(stdout).toContain(`Auto-docked: ${text}`);
+  expect(stdout).not.toContain('Auto Docked:');
+  expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
 test('details auto_undocked false prints no and does not append the dock-state line', () => {
   const stdout = renderCombat('attack', {
     details: { ...attackBrandedFixture.details, auto_undocked: false },
