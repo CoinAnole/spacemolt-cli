@@ -499,7 +499,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('get_nearby          Nearby players, NPCs, creatures, and intact prizes');
     expect(output).not.toContain('get_nearby          Other players at your POI');
-    expect(output).toContain('scan [target_id]          Scan a nearby actor or sweep for cloaks');
+    expect(output).toContain('scan [target_id]          Scan an actor, a charted POI, or sweep');
     expect(output).not.toContain('scan <player_id>          Scan player for info');
     expect(output).toContain('attack <target_id>        Start/join persistent system battle');
     expect(output).toContain('facility repair <id>      Repair a damaged facility');

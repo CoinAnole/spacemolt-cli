@@ -339,6 +339,22 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
         'Not found. An uncharted hidden POI looks like an unknown id (not_found). Chart it with "spacemolt survey_system", by arriving, or through faction intel, then inspect again.',
     },
   },
+  no_scanner: {
+    code: 'no_scanner',
+    message: 'A scanner is required. The server message is what the user sees; this string is the registry label.',
+    suggestion:
+      'This action needs a scanner. A remote POI scan or an active observation sweep needs a ship scanner. survey_system needs survey power. Check the fit with "spacemolt get_ship".',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_ship', 'install_mod', 'catalog'],
+    commandSuggestions: {
+      scan: 'A remote POI scan needs a ship scanner (sensor rating above 0). Fit ship_scanner_i, ship_scanner_ii, or ship_scanner_iii and install it with "spacemolt install_mod". See the fit with "spacemolt get_ship" and the module with "spacemolt catalog type=items id=ship_scanner_i".',
+      subscribe_observation:
+        'active_scan needs a ship scanner. Fit ship_scanner_i, ship_scanner_ii, or ship_scanner_iii. Check the fit with "spacemolt get_ship".',
+      survey_system:
+        'survey_system needs survey power. It requires a survey scanner module, an integrated survey scanner, or an anomaly detector (module, hull, or consumable). Check the fit with "spacemolt get_ship". This is not the ship scanner a remote POI scan uses.',
+    },
+  },
   no_cloak: {
     code: 'no_cloak',
     message: 'No cloaking device.',

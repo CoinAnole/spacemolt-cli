@@ -536,6 +536,13 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
     expect(config?.description).toContain('creature');
     expect(config?.description).toContain('intact prize');
+    expect(config?.description).toContain('charted POI');
+    expect(config?.description).toContain('station base id');
+    expect(config?.description).toContain('ship scanner');
+    expect(config?.description).toContain('10 less power');
+    expect(config?.discoverWith).toEqual(['get_nearby']);
+    expect(config?.seeAlso).toEqual(['hunt', 'attack', 'get_ship', 'get_system']);
+    expect(config?.example).toBe('spacemolt scan');
 
     const help = captureHelp('scan');
     expect(help).toContain('spacemolt scan');
@@ -543,6 +550,10 @@ describe('command metadata', () => {
     expect(help).toContain('area sensor sweep');
     expect(help).toContain('creature');
     expect(help).toContain('intact prize');
+    expect(help).toContain('charted POI');
+    expect(help).toContain('station base id');
+    expect(help).toContain('ship scanner');
+    expect(help).toContain('10 less power');
   });
 
   test('dock help names station_under_attack and faction-station join rules', () => {

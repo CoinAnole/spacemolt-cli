@@ -670,3 +670,28 @@ describe('invalid_poi', () => {
     expect(getRelatedCommands('invalid_poi')).toEqual(['get_system', 'survey_system']);
   });
 });
+
+describe('no_scanner', () => {
+  test('is not retryable and suggests a scanner for the command that failed', () => {
+    expect(isKnownErrorCode('no_scanner')).toBe(true);
+    expect(isRetryableError('no_scanner')).toBe(false);
+    expect(ERROR_REGISTRY.no_scanner?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.no_scanner?.auth).toBe(false);
+    expect(getErrorSuggestion('no_scanner')).toContain('get_ship');
+
+    const scan = getErrorSuggestion('no_scanner', 'scan');
+    expect(scan).toContain('ship_scanner_i');
+    expect(scan).toContain('install_mod');
+
+    const observation = getErrorSuggestion('no_scanner', 'subscribe_observation');
+    expect(observation).not.toContain('survey_system');
+    expect(observation?.startsWith('survey_system needs a ship scanner')).toBe(false);
+
+    const survey = getErrorSuggestion('no_scanner', 'survey_system');
+    expect(survey).toContain('module, hull, or consumable');
+    expect(survey).not.toContain('ship_scanner_i');
+
+    expect(ERROR_REGISTRY.target_cloaked).toBeUndefined();
+    expect(getErrorSuggestion('target_cloaked')).toBeUndefined();
+  });
+});

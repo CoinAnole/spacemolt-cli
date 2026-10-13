@@ -28,6 +28,14 @@ import {
 import { emitLeviathanContacts } from './leviathans.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
 import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
+import {
+  emitFactionScanContacts,
+  emitFactionScanHeader,
+  emitFactionScanNpcs,
+  emitFactionScanPirates,
+  nativeRemotePoiId,
+  nativeScanField,
+} from './scan-contacts.ts';
 
 const NEARBY_TABLE_LIMIT = 10;
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
@@ -575,6 +583,31 @@ function emitMapSystemInfo(result: Record<string, unknown>): void {
   if (connections.length) {
     emitLine(`\n${c.bright}Connections:${c.reset}`);
     for (const connection of connections) emitLine(`  - ${connection}`);
+  }
+}
+
+function emitRemoteScanTargetLine(result: Record<string, unknown>): void {
+  const targetId = nativeScanField(result, 'target_id');
+  const poiId = nativeRemotePoiId(result);
+  if (typeof targetId !== 'string' || targetId === '' || targetId === poiId) return;
+  emitLine(`Target: ${targetId}`);
+}
+
+function emitScanRevealedInfo(result: Record<string, unknown>): void {
+  if (Array.isArray(result.revealed_info)) {
+    const revealed = result.revealed_info
+      .filter((value) => value !== undefined && value !== null && !isRecord(value) && !Array.isArray(value))
+      .map(String);
+    if (revealed.length) {
+      emitLine(`\n${c.bright}Revealed:${c.reset}`);
+      for (const value of revealed) emitLine(`  ${value}`);
+    }
+  } else if (isRecord(result.revealed_info)) {
+    emitLine(`\n${c.bright}Revealed:${c.reset}`);
+    for (const [key, value] of Object.entries(result.revealed_info)) {
+      if (value === undefined || value === null || isRecord(value) || Array.isArray(value)) continue;
+      emitLine(`  ${key}: ${value}`);
+    }
   }
 }
 
@@ -1274,6 +1307,18 @@ export const statusFormatters = [
 
   formatter(
     (r) => {
+      if (nativeRemotePoiId(r) !== undefined) {
+        emitLine(`\n${c.bright}=== Scan Result ===${c.reset}`);
+        emitFactionScanHeader(r);
+        emitRemoteScanTargetLine(r);
+        emitFactionScanContacts(r);
+        emitFactionScanNpcs(r);
+        emitFactionScanPirates(r);
+        emitLeviathanContacts(nativeScanField(r, 'leviathans'), 'Leviathans');
+        emitScanRevealedInfo(r);
+        if (r.success === false) emitLine('Success: false');
+        return true;
+      }
       if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) return false;
       emitLine(`\n${c.bright}=== Scan Result ===${c.reset}`);
       if (r.username) emitLine(`Target: ${r.username}${r.target_id ? ` (${r.target_id})` : ''}`);
@@ -1292,21 +1337,7 @@ export const statusFormatters = [
             : false
         : false;
       if (description && !descriptionAlreadyRevealed) emitLine(`Description: ${description}`);
-      if (Array.isArray(r.revealed_info)) {
-        const revealed = r.revealed_info
-          .filter((value) => value !== undefined && value !== null && !isRecord(value) && !Array.isArray(value))
-          .map(String);
-        if (revealed.length) {
-          emitLine(`\n${c.bright}Revealed:${c.reset}`);
-          for (const value of revealed) emitLine(`  ${value}`);
-        }
-      } else if (isRecord(r.revealed_info)) {
-        emitLine(`\n${c.bright}Revealed:${c.reset}`);
-        for (const [key, value] of Object.entries(r.revealed_info)) {
-          if (value === undefined || value === null || isRecord(value) || Array.isArray(value)) continue;
-          emitLine(`  ${key}: ${value}`);
-        }
-      }
+      emitScanRevealedInfo(r);
       return true;
     },
     { commands: ['scan'] },

@@ -29,6 +29,9 @@ import {
   poiInfoFixture,
   poiWorkabilityFixture,
   scanCreatureFixture,
+  scanFixture,
+  scanPoiEmptyFixture,
+  scanPoiFixture,
   stationPoiInfoFixture,
   subscribeObservationArenaFixture,
   subscribeObservationFixture,
@@ -105,6 +108,238 @@ test('scan formatter declines a malformed shape without a target identity', () =
   const rendered = renderStructuredResult('scan', malformed, options, context);
 
   expect(rendered.stdout.join('\n')).toContain('=== Response ===');
+});
+
+function renderScan(fixture: Record<string, unknown>, renderOptions: GlobalOptions = options): string {
+  const rendered = renderStructuredResult('scan', structuredClone(fixture), renderOptions, context);
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  return rendered.stdout.join('\n');
+}
+
+const scanColorOptions: GlobalOptions = { ...options, plain: false };
+
+test('remote poi scan prints the contact layout under Scan Result', () => {
+  const stdout = renderScan(scanPoiFixture);
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).not.toContain('=== Faction Scan ===');
+  expect(stdout).toContain('POI: sol_central');
+  expect(stdout).toContain('Scan power: 20');
+  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain('Target: earth_station');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).toContain('Wisp');
+  expect(stdout).toContain('player-1');
+  expect(stdout).toContain('=== Empire NPCs ===');
+  expect(stdout).toContain('Patrol');
+  expect(stdout).toContain('Pirates (1):');
+  expect(stdout).toContain('  Raider (skiff) - raider - Admiral Kael');
+  expect(stdout).toContain('Leviathans (1):');
+  expect(stdout).toContain('  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive');
+  expect(stdout).toContain('Revealed:');
+  expect(stdout).toContain('  cloaked');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('Ship:');
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).not.toContain('Target Id:');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout.indexOf('Signature detected.')).toBeLessThan(stdout.indexOf('Target: earth_station'));
+  expect(stdout.indexOf('Target: earth_station')).toBeLessThan(stdout.indexOf('=== Players ==='));
+  expect(stdout.indexOf('=== Players ===')).toBeLessThan(stdout.indexOf('=== Empire NPCs ==='));
+  expect(stdout.indexOf('=== Empire NPCs ===')).toBeLessThan(stdout.indexOf('Pirates (1):'));
+  expect(stdout.indexOf('Pirates (1):')).toBeLessThan(stdout.indexOf('Leviathans (1):'));
+  expect(stdout.indexOf('Leviathans (1):')).toBeLessThan(stdout.indexOf('Revealed:'));
+  expect(stdout.split('\n').find((line) => line.includes('Signature detected.'))).toBe('Signature detected.');
+  expect(stdout).not.toContain('\x1b');
+});
+
+test('remote poi scan with omitted lists prints only the header', () => {
+  const stdout = renderScan(scanPoiEmptyFixture);
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).toContain('POI: sol_belt_4');
+  expect(stdout).toContain('Scan power: 45');
+  expect(stdout).not.toContain('Target:');
+  expect(stdout).not.toContain('=== Players ===');
+  expect(stdout).not.toContain('=== Empire NPCs ===');
+  expect(stdout).not.toContain('Pirates (');
+  expect(stdout).not.toContain('Leviathans');
+  expect(stdout).not.toContain('Revealed:');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('Signature detected.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('remote poi scan treats empty contact arrays like omitted keys', () => {
+  const emptyLists = {
+    ...structuredClone(scanPoiEmptyFixture),
+    contacts: [],
+    npcs: [],
+    pirates: [],
+    leviathans: [],
+  };
+
+  expect(renderScan(emptyLists)).toBe(renderScan(scanPoiEmptyFixture));
+});
+
+test('remote poi scan drops top-level ship and branded fields', () => {
+  const stdout = renderScan({
+    success: true,
+    target_id: 'earth_station',
+    poi_id: 'sol_central',
+    username: 'Ibis',
+    ship_class: 'hauler',
+    branded: true,
+    revealed_info: [],
+  });
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).toContain('POI: sol_central');
+  expect(stdout).toContain('Target: earth_station');
+  expect(stdout).not.toContain('Target: Ibis');
+  expect(stdout).not.toContain('Ship:');
+  expect(stdout).not.toContain('Branded:');
+  expect(stdout).not.toContain('=== Faction Scan ===');
+  expect(stdout).not.toContain('=== Players ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('scan ignores a location-aliased poi_id', () => {
+  const stdout = renderScan({
+    details: structuredClone(scanFixture),
+    location: { poi_id: 'sol_earth', poi_name: 'Earth', system_id: 'elsewhere' },
+  });
+
+  expect(stdout).toContain('Target: Ibis');
+  expect(stdout).toContain('Ship: hauler');
+  expect(stdout).not.toContain('POI:');
+  expect(stdout).not.toContain('Earth');
+  expect(stdout).not.toContain('sol_earth');
+  expect(stdout).not.toContain('elsewhere');
+  expect(stdout).not.toContain('=== Players ===');
+  expect(stdout).not.toContain('System:');
+});
+
+test('remote poi scan keeps the native poi when location names a different poi', () => {
+  const stdout = renderScan({
+    details: structuredClone(scanPoiFixture),
+    location: { poi_id: 'sol_earth', poi_name: 'Earth', system_id: 'elsewhere' },
+  });
+
+  expect(stdout).toContain('POI: sol_central');
+  expect(stdout).toContain('Target: earth_station');
+  expect(stdout).toContain('=== Players ===');
+  expect(stdout).not.toContain('sol_earth');
+  expect(stdout).not.toContain('Earth');
+  expect(stdout).not.toContain('elsewhere');
+  expect(stdout).not.toContain('System:');
+});
+
+test('remote poi scan prints signature only when it is exactly true', () => {
+  const hidden = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  hidden.signature_detected = false;
+  const omitted = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  delete omitted.signature_detected;
+
+  expect(renderScan(hidden)).not.toContain('Signature detected.');
+  expect(renderScan(omitted)).not.toContain('Signature detected.');
+
+  const colored = renderScan(scanPoiFixture, scanColorOptions);
+  const line = colored.split('\n').find((entry) => entry.includes('Signature detected.'));
+  expect(line).toContain('Signature detected.');
+  expect(line).toContain('\x1b[33m');
+});
+
+test('remote poi scan prints a native message and skips an empty or omitted one', () => {
+  const withMessage = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  withMessage.message = 'Cloak margin held.';
+  const printed = renderScan(withMessage);
+  expect(printed.split('\n')).toContain('Cloak margin held.');
+  expect(printed).not.toContain('Message:');
+
+  const omitted = renderScan(scanPoiEmptyFixture);
+  expect(omitted).not.toContain('Cloak margin held.');
+  expect(omitted).not.toContain('Message:');
+
+  const emptyMessage = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  emptyMessage.message = '';
+  expect(renderScan(emptyMessage)).toBe(omitted);
+});
+
+test('remote poi scan prints Success only when success is false', () => {
+  const failed = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  failed.success = false;
+  const failedStdout = renderScan(failed);
+  expect(failedStdout).toContain('Success: false');
+  expect(failedStdout.indexOf('Scan power: 45')).toBeLessThan(failedStdout.indexOf('Success: false'));
+
+  expect(renderScan(scanPoiEmptyFixture)).not.toContain('Success:');
+  expect(renderScan(scanPoiFixture)).not.toContain('Success:');
+
+  const targetFailed = structuredClone(scanFixture) as Record<string, unknown>;
+  targetFailed.success = false;
+  expect(renderScan(targetFailed)).not.toContain('Success:');
+});
+
+test('remote poi scan prints scan power 0 and still formats when power is omitted', () => {
+  const zero = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  zero.scan_power = 0;
+  expect(renderScan(zero)).toContain('Scan power: 0');
+
+  const omitted = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  delete omitted.scan_power;
+  const stdout = renderScan(omitted);
+  expect(stdout).toContain('POI: sol_belt_4');
+  expect(stdout).not.toContain('Scan power:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('scan with contacts and no native poi_id does not print players', () => {
+  const withContacts = {
+    ...structuredClone(scanFixture),
+    contacts: [{ target_id: 'player-9', username: 'Ghost', revealed_info: ['username'], cloaked: true }],
+  };
+  const stdout = renderScan(withContacts);
+  expect(stdout).toContain('Target: Ibis');
+  expect(stdout).toContain('Ship: hauler');
+  expect(stdout).not.toContain('=== Players ===');
+  expect(stdout).not.toContain('Ghost');
+
+  const sweep = renderScan({
+    success: true,
+    target_id: 'player-2',
+    revealed_info: [],
+    contacts: [{ target_id: 'player-9', username: 'Ghost', revealed_info: ['username'] }],
+  });
+  expect(sweep).toContain('Target: player-2');
+  expect(sweep).not.toContain('=== Players ===');
+  expect(sweep).not.toContain('Ghost');
+});
+
+test('empty poi_id stays on the target scan branch', () => {
+  const stdout = renderScan({ ...structuredClone(scanFixture), poi_id: '' });
+
+  expect(stdout).toContain('Target: Ibis (player-2)');
+  expect(stdout).toContain('Ship: hauler');
+  expect(stdout).not.toContain('POI:');
+  expect(stdout).not.toContain('=== Players ===');
+});
+
+test('non-string poi_id stays on the target scan branch and whitespace does not', () => {
+  const numeric = renderScan({ ...structuredClone(scanFixture), poi_id: 12 });
+  expect(numeric).toContain('Ship: hauler');
+  expect(numeric).not.toContain('POI:');
+
+  const missing = renderScan({ ...structuredClone(scanFixture), poi_id: null });
+  expect(missing).toContain('Target: Ibis (player-2)');
+  expect(missing).not.toContain('POI:');
+
+  const whitespace = renderScan({ ...structuredClone(scanFixture), poi_id: ' ' });
+  expect(whitespace).toContain('POI:');
+  expect(whitespace).toContain('Target: player-2');
+  expect(whitespace).not.toContain('Target: Ibis');
+  expect(whitespace).not.toContain('Ship:');
 });
 
 test('get_status shows towing ship and release hint when towing_ship_id is set', () => {

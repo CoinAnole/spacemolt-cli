@@ -824,6 +824,56 @@ export const scanCreatureFixture = {
   revealed_info: ['Species: Ember Grazer', 'Role: grazer', 'Danger: low', 'Ranchable: yes'],
 };
 
+export const scanPoiFixture = {
+  success: true,
+  target_id: 'earth_station',
+  poi_id: 'sol_central',
+  revealed_info: ['cloaked'],
+  scan_power: 20,
+  signature_detected: true,
+  contacts: [
+    {
+      target_id: 'player-1',
+      username: 'Wisp',
+      faction_id: 'smc',
+      ship_class: 'scout',
+      hull: 72,
+      shield: 18,
+      cloaked: true,
+      revealed_info: ['username', 'ship_class'],
+    },
+  ],
+  npcs: [
+    {
+      id: 'npc-1',
+      name: 'Patrol',
+      empire: 'solarian',
+      role: 'patrol',
+      ship_class: 'interceptor',
+    },
+  ],
+  pirates: [
+    {
+      id: 'pirate-1',
+      name: 'Raider',
+      role: 'raider',
+      ship_class: 'skiff',
+      faction_name: 'Admiral Kael',
+      primary_color: '#112233',
+      secondary_color: '#445566',
+    },
+  ],
+  leviathans: [adultLeviathanContact],
+};
+
+export const scanPoiEmptyFixture = {
+  success: true,
+  target_id: 'sol_belt_4',
+  poi_id: 'sol_belt_4',
+  revealed_info: [],
+  scan_power: 45,
+};
+
 export const completedMissionDetailFixture = {
   template_id: 'mission-ore-run',
   title: 'Ore Run',
@@ -1122,6 +1172,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_queue_empty: { command: 'get_queue', fixture: getQueueEmptyFixture },
   scan: { command: 'scan', fixture: scanFixture, schemaTarget: 'details' },
   scan_creature: { command: 'scan', fixture: scanCreatureFixture, schemaTarget: 'details' },
+  scan_poi: { command: 'scan', fixture: scanPoiFixture, schemaTarget: 'details' },
+  scan_poi_empty: { command: 'scan', fixture: scanPoiEmptyFixture, schemaTarget: 'details' },
   view_completed_mission: { command: 'view_completed_mission', fixture: completedMissionDetailFixture },
   view_completed_mission_bounty: { command: 'view_completed_mission', fixture: completedMissionBountyFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
