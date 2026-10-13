@@ -1425,7 +1425,7 @@ export const marketFormatters = [
           const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
           emitLine(`  ${poiName}${poiType}${formatDeepCoreMark(poi.deep_core)}${poiId}`);
           const readAt = poi.read_at_tick;
-          if (readAt === undefined || readAt === null || readAt === '') {
+          if (isMissingDisplayValue(readAt)) {
             emitLine('    Read at tick: unverified');
           } else {
             const read = exactTick(readAt);
