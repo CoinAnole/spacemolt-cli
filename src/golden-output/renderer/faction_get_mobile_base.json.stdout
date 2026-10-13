@@ -1,0 +1,29 @@
+{
+  "base_id": "mobile_civitas_example",
+  "name": "Civitas",
+  "poi_id": "mobile_civitas_example_poi",
+  "position": {
+    "x": 2.5,
+    "y": 3.25
+  },
+  "wrecked": false,
+  "system_id": "sol",
+  "mobile_base": {
+    "archetype_id": "civitas",
+    "lifecycle": "stationary",
+    "origin": {
+      "system_id": "",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "destination": {
+      "system_id": "",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  }
+}

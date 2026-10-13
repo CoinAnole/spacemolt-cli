@@ -1261,6 +1261,11 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     faction post_mission <title> <description> <type> <objectives> <rewards>
     faction cancel_mission <template_id>  Cancel faction mission
     faction list_missions              Faction missions at current station
+    faction get_mobile_base                         Your faction mobile base (any member)
+    faction move_mobile_base x=<au> y=<au>          Move inside the current system (ManageBases)
+    faction jump_mobile_base <id>                   Prepare an adjacent-system jump (ManageBases)
+    faction cancel_mobile_base_jump                 Cancel jump preparation (ManageBases)
+    faction decommission_mobile_base                Permanently remove an empty base (ManageBases)
 
   ${c.cyan}Faction Intel & Trade:${c.reset}
     faction submit_intel <systems>     Submit system data (JSON array)

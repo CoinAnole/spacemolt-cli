@@ -54,10 +54,55 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_info: {
     category: 'Factions',
     description:
-      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned.',
-    seeAlso: ['faction_profile', 'faction_list', 'get_faction_achievements', 'faction_facility_owned'],
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.',
+    seeAlso: [
+      'faction_profile',
+      'faction_list',
+      'get_faction_achievements',
+      'faction_facility_owned',
+      'faction_get_mobile_base',
+    ],
     apiRoute: 'POST /api/v2/spacemolt_faction/info',
     positionals: ['faction_id'],
+  },
+  faction_get_mobile_base: {
+    category: 'Factions',
+    description:
+      'Any faction member can inspect the faction mobile base. This is not get_mobile_base. Table output prints the live system, position, lifecycle, and endpoints, plus ticks when sent and escrow when sent. An omitted system_id means an isolated jump or an unavailable POI, and Origin is the departure system. An omitted tick or escrow prints nothing. An explicit 0 and an empty endpoint print as zero or empty.',
+    example: 'spacemolt faction get_mobile_base',
+    seeAlso: ['faction_info', 'faction_move_mobile_base', 'faction_jump_mobile_base', 'catalog', 'get_mobile_base'],
+    apiRoute: 'POST /api/v2/spacemolt_faction/get_mobile_base',
+  },
+  faction_move_mobile_base: {
+    category: 'Factions',
+    usage: 'x=<au> y=<au>',
+    description:
+      'Move the faction mobile base to new coordinates in its current system. Requires ManageBases. x and y are AU, within 10 AU of system center. Movement takes three real hours per AU and prepays 5,000 shared station fuel per AU, rounded up. The base stays dockable while moving. Mutation, 1 per tick.',
+    example: 'spacemolt faction move_mobile_base x=3 y=-1',
+    apiRoute: 'POST /api/v2/spacemolt_faction/move_mobile_base',
+  },
+  faction_jump_mobile_base: {
+    category: 'Factions',
+    usage: '<id>',
+    description:
+      'Prepare an inter-system jump for the faction mobile base. Requires ManageBases. id is an adjacent system the commander personally knows. The base must be fully repaired and stationary. A 90-tick preparation is followed by a 540-tick isolated jump. The archetype resource is escrowed from faction storage and consumed when isolation starts. Combat during preparation cancels the jump and refunds escrow. Cancel with faction cancel_mobile_base_jump only during preparation. During isolation, docking and navigation to or from the base stop, docked ships ride, and other ships go to the nearest static origin POI.',
+    example: 'spacemolt faction jump_mobile_base neighbor_system',
+    apiRoute: 'POST /api/v2/spacemolt_faction/jump_mobile_base',
+  },
+  faction_cancel_mobile_base_jump: {
+    category: 'Factions',
+    description:
+      'Cancel a faction mobile-base jump during preparation. Requires ManageBases. Cancellation is only available during the 90-tick preparation window and refunds escrow. An isolated jump cannot be cancelled.',
+    example: 'spacemolt faction cancel_mobile_base_jump',
+    apiRoute: 'POST /api/v2/spacemolt_faction/cancel_mobile_base_jump',
+  },
+  faction_decommission_mobile_base: {
+    category: 'Factions',
+    description:
+      'Permanently remove an empty faction mobile base. Requires ManageBases. The base must be stationary, out of combat, and empty of pilots, ships, storage, fuel, jobs, commissions, listings, orders, rooms, and missions. Dismantle weapons and production with faction dismantle first. Decommissioning is permanent and refunds nothing.',
+    example: 'spacemolt faction decommission_mobile_base',
+    seeAlso: ['faction_dismantle', 'faction_get_mobile_base'],
+    apiRoute: 'POST /api/v2/spacemolt_faction/decommission_mobile_base',
   },
   faction_profile: {
     description:

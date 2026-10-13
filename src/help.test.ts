@@ -1196,6 +1196,61 @@ describe('help output branches', () => {
     expect(cancelOutput).not.toContain('faction_list_missions');
   });
 
+  test('full help lists faction mobile base commands after faction list_missions', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    const lines = [
+      'faction get_mobile_base                         Your faction mobile base (any member)',
+      'faction move_mobile_base x=<au> y=<au>          Move inside the current system (ManageBases)',
+      'faction jump_mobile_base <id>                   Prepare an adjacent-system jump (ManageBases)',
+      'faction cancel_mobile_base_jump                 Cancel jump preparation (ManageBases)',
+      'faction decommission_mobile_base                Permanently remove an empty base (ManageBases)',
+    ];
+    const listIndex = output.indexOf('faction list_missions');
+    let cursor = listIndex;
+    for (const line of lines) {
+      const index = output.indexOf(line, cursor);
+      expect(index).toBeGreaterThan(cursor);
+      cursor = index;
+    }
+    const generatedIndex = output.indexOf('Generated API Commands');
+    expect(generatedIndex).toBeGreaterThan(cursor);
+    expect(output.slice(generatedIndex)).not.toContain('faction get_mobile_base');
+  });
+
+  test('help faction lists get_mobile_base without a permission gate', () => {
+    const capture = captureWriter();
+    expect(showCommandGroup('faction', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('faction get_mobile_base');
+    expect(output).toContain('member');
+    expect(output).toContain('escrow');
+    const action = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.get_mobile_base;
+    expect(action?.command).toBe('faction_get_mobile_base');
+    expect(action).not.toHaveProperty('permission');
+    expect(action?.config).not.toHaveProperty('permission');
+  });
+
+  test('help distinguishes public get_mobile_base from the faction command', () => {
+    const publicHelp = captureWriter();
+    const factionHelp = captureWriter();
+    expect(
+      showCommandExplanation('get_mobile_base', publicHelp.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+    expect(
+      showCommandExplanation('faction get_mobile_base', factionHelp.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+    const publicOutput = publicHelp.stdout.join('\n');
+    const factionOutput = factionHelp.stdout.join('\n');
+    expect(publicOutput).toContain('Frontier');
+    expect(publicOutput).toContain('wheres-mobile-base');
+    expect(factionOutput).toContain('member');
+    expect(factionOutput).toContain('escrow');
+    expect(factionOutput).not.toContain('Frontier capital');
+    expect(factionOutput).toContain('POST /api/v2/spacemolt_faction/get_mobile_base');
+  });
+
   test('related metadata translates grouped flat command names to nested names', () => {
     const capture = captureWriter();
 
