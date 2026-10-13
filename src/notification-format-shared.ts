@@ -2297,7 +2297,6 @@ const OBSERVATION_IDENTITY_LIMIT = 3;
 
 type ObservationIdentityDomain =
   | 'nearby player'
-  | 'system agent'
   | 'pirate'
   | 'empire NPC'
   | 'creature'
@@ -2322,7 +2321,7 @@ function observationRatioSuffix(label: string, current: unknown, max: unknown): 
 
 function observationIdentity(record: Record<string, unknown>, domain: ObservationIdentityDomain): string {
   const nameKeys =
-    domain === 'nearby player' || domain === 'system agent' || domain === 'cloaked contact'
+    domain === 'nearby player' || domain === 'cloaked contact'
       ? (['username', 'name', 'ship_name'] as const)
       : domain === 'creature'
         ? (['name', 'species'] as const)
@@ -2330,7 +2329,7 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
           ? (['ship_name', 'name'] as const)
           : (['name', 'ship_name'] as const);
   const idKeys =
-    domain === 'nearby player' || domain === 'system agent'
+    domain === 'nearby player'
       ? (['player_id', 'id'] as const)
       : domain === 'pirate'
         ? (['pirate_id', 'id'] as const)
@@ -2411,8 +2410,6 @@ function previewObservationUpdate(
 ): NotificationPreview {
   const nearbyChanged = records(data.nearby_changed);
   const nearbyDeparted = observationDepartures(data.nearby_departed);
-  const systemChanged = records(data.system_changed);
-  const systemDeparted = observationDepartures(data.system_departed);
   const piratesChanged = records(data.pirates_changed);
   const piratesDeparted = observationDepartures(data.pirates_departed);
   const arenaNpcsChanged = records(data.arena_npcs_changed);
@@ -2428,7 +2425,6 @@ function previewObservationUpdate(
 
   const changedCount =
     nearbyChanged.length +
-    systemChanged.length +
     piratesChanged.length +
     arenaNpcsChanged.length +
     empireNpcsChanged.length +
@@ -2437,7 +2433,6 @@ function previewObservationUpdate(
     cloakedResolved.length;
   const departedCount =
     nearbyDeparted.length +
-    systemDeparted.length +
     piratesDeparted.length +
     arenaNpcsDeparted.length +
     empireNpcsDeparted.length +
@@ -2455,7 +2450,6 @@ function previewObservationUpdate(
 
   const details = [
     observationDomainDetail('Nearby players', 'nearby player', nearbyChanged, nearbyDeparted, options),
-    observationDomainDetail('System agents', 'system agent', systemChanged, systemDeparted, options),
     observationDomainDetail('Pirates', 'pirate', piratesChanged, piratesDeparted, options),
     observationDomainDetail('Arena NPCs', 'arena NPC', arenaNpcsChanged, arenaNpcsDeparted, options),
     observationDomainDetail('Empire NPCs', 'empire NPC', empireNpcsChanged, empireNpcsDeparted, options),
@@ -2463,6 +2457,11 @@ function previewObservationUpdate(
     observationDomainDetail('Prizes', 'prize', prizesChanged, prizesDeparted, options),
     observationDomainDetail('Cloaked contacts', 'cloaked contact', cloakedResolved, cloakedLost, options),
   ].filter((detail): detail is string => detail !== undefined);
+
+  const offlineCollapsed = formatOfflineCollapsedText(data.offline_collapsed);
+  if (offlineCollapsed !== undefined) details.push(truncate(offlineCollapsed, options));
+  const shipCounts = formatShipCountsLine(data.ship_counts);
+  if (shipCounts !== undefined) details.push(truncate(shipCounts, options));
 
   return {
     tag: 'OBSERVATION',

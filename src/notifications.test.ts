@@ -9171,16 +9171,15 @@ describe('notification formatting', () => {
       expect(NOTIFICATION_TYPES).toContain('observation_update');
     });
 
-    test('summarizes all eight contact domains in stable order', () => {
+    test('summarizes all seven contact domains in stable order', () => {
       const preview = formatNotificationPreview(observationNotification);
 
       expect(preview.tag).toBe('OBSERVATION');
       expect(preview.headline).toBe(
-        'Observation at sol_cloudbank in sol (tick 901500): 9 changed, 8 departed; unknown signature; active scan: true',
+        'Observation at sol_cloudbank in sol (tick 901500): 8 changed, 7 departed; unknown signature; active scan: true',
       );
       expect(preview.details).toEqual([
         'Nearby players — changed 1: Marlowe [player-marlowe]; departed 1: player-ibis',
-        'System agents — changed 1: Oriole [player-oriole]; departed 1: player-wren',
         'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
         'Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 140/180 sh 40/60; departed 1: arena-cleaver-old',
         'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
@@ -9188,6 +9187,7 @@ describe('notification formatting', () => {
         'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
         'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
       ]);
+      expect(JSON.stringify(preview)).not.toContain('System agents');
       expectNoDiagnosticTokens(JSON.stringify(preview));
       expectNoNestedJsonDump(JSON.stringify(preview));
     });
@@ -9568,11 +9568,12 @@ describe('notification formatting', () => {
     test('inline and notification-table layouts consume the same typed preview', () => {
       const inline = stripAnsi(formatNotification(observationNotification).join('\n'));
       expect(inline).toContain('[OBSERVATION]');
-      expect(inline).toContain('Observation at sol_cloudbank in sol (tick 901500): 9 changed, 8 departed');
+      expect(inline).toContain('Observation at sol_cloudbank in sol (tick 901500): 8 changed, 7 departed');
       expect(inline).toContain('Nearby players — changed 1');
       expect(inline).toContain('Arena NPCs — changed 1');
       expect(inline).toContain('Prizes — changed 1');
       expect(inline).toContain('Cloaked contacts — changed 1');
+      expect(inline).not.toContain('System agents');
 
       const compactNotification = {
         type: 'observation',
@@ -9591,6 +9592,164 @@ describe('notification formatting', () => {
       );
       expectNoDiagnosticTokens(inline);
       expectNoNestedJsonDump(tableMessage);
+    });
+
+    test('prints ship counts on a count-only tick without counting them as changes', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+          ship_counts: { sol_earth: 4, sol_belt: 1 },
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.details).toEqual(['Ship counts: sol_belt=1, sol_earth=4']);
+      expect(JSON.stringify(preview)).not.toContain('System agents');
+    });
+
+    test('prints Ship counts: (cleared) when the map is empty', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+          ship_counts: {},
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.details).toEqual(['Ship counts: (cleared)']);
+    });
+
+    test('omits ship counts when ship_counts is absent', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+        },
+      });
+
+      expect(preview.details).toEqual([]);
+      expect(JSON.stringify(preview)).not.toContain('Ship counts');
+    });
+
+    test('prints a zero ship count in the full map, not a diff', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+          ship_counts: { sol_belt: 0, sol_earth: 3 },
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.details).toEqual(['Ship counts: sol_belt=0, sol_earth=3']);
+    });
+
+    test('prints offline collapsed 0 when no domains changed', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+          offline_collapsed: 0,
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.details).toEqual(['offline collapsed 0']);
+    });
+
+    test('omits the offline line when offline_collapsed is absent', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+        },
+      });
+
+      expect(preview.details).toEqual([]);
+      expect(JSON.stringify(preview)).not.toContain('offline collapsed');
+    });
+
+    test('appends offline collapsed and ship counts after unchanged domain lines', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          ...observationNotification.data,
+          offline_collapsed: 2,
+          ship_counts: { sol_earth: 4, sol_belt: 1 },
+        },
+      });
+
+      expect(preview.headline).toBe(
+        'Observation at sol_cloudbank in sol (tick 901500): 8 changed, 7 departed; unknown signature; active scan: true',
+      );
+      expect(preview.details).toEqual([
+        'Nearby players — changed 1: Marlowe [player-marlowe]; departed 1: player-ibis',
+        'Pirates — changed 2: Corsair [pirate-corsair-7] (Admiral Kael), Raider [pirate-raider-8] (Captain Voss); departed 1: pirate-raider-6',
+        'Arena NPCs — changed 1: Ring Cleaver [arena-cleaver-1] hull 140/180 sh 40/60; departed 1: arena-cleaver-old',
+        'Empire NPCs — changed 1: Solarian Patrol [npc-patrol-7]; departed 1: npc-freighter-2',
+        'Creatures — changed 1: Pilot-Whale Pod [creature-pilot-whale-7]; departed 1: creature-starfish-2',
+        'Prizes — changed 1: Dust Devil [prize-dust-1] (available); departed 1: prize-old-1',
+        'Cloaked contacts — changed 1: Wisp [player-cloaked-1]; departed 1: player-cloaked-old',
+        'offline collapsed 2',
+        'Ship counts: sol_belt=1, sol_earth=4',
+      ]);
+      expect(JSON.stringify(preview)).not.toContain('System agents');
+    });
+
+    test('ignores stale system_changed without headlining system agents', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 12,
+          system_changed: [
+            { username: 'Oriole', player_id: 'player-oriole' },
+            { username: 'Wren', player_id: 'player-wren' },
+          ],
+          system_departed: ['player-ibis'],
+        },
+      });
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.headline).not.toContain('2 changed');
+      expect(preview.headline).not.toContain('1 departed');
+      expect(preview.details).toEqual([]);
+      expect(JSON.stringify(preview)).not.toContain('System agents');
+      expect(JSON.stringify(preview)).not.toContain('Oriole');
+    });
+
+    test('truncates a long ship counts detail to maxLineLength', () => {
+      const ship_counts: Record<string, number> = {};
+      for (let i = 0; i < 40; i += 1) ship_counts[`poi_${String(i).padStart(2, '0')}`] = i;
+      const preview = formatNotificationPreview(
+        {
+          msg_type: 'observation_update',
+          data: { poi_id: 'sol_earth', system_id: 'sol', tick: 1, ship_counts },
+        },
+        { maxLineLength: 200 },
+      );
+
+      expect(preview.headline).toContain('0 changed, 0 departed');
+      expect(preview.details).toHaveLength(1);
+      const line = preview.details[0] ?? '';
+      expect(line.length).toBe(200);
+      expect(line.startsWith('Ship counts: poi_00=0')).toBe(true);
+      expect(line.endsWith('…')).toBe(true);
     });
   });
 
