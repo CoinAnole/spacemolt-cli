@@ -1,4 +1,5 @@
 import { stringifyApiJson } from '../json-number.ts';
+import { formatOfflineCollapsedText } from '../notification-format-shared.ts';
 import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
@@ -973,7 +974,8 @@ export const statusFormatters = [
       }
       printCompactTable('Agents', rows, agentColumns);
       if (r.count !== undefined) emitLine(`${c.dim}count ${r.count}${c.reset}`);
-      if (r.offline_collapsed !== undefined) emitLine(`${c.dim}offline collapsed ${r.offline_collapsed}${c.reset}`);
+      const offlineCollapsed = formatOfflineCollapsedText(r.offline_collapsed);
+      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
       return true;
     },
     { commands: ['get_system_agents'] },

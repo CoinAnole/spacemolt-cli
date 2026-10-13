@@ -2974,6 +2974,58 @@ test('get_system_agents table lists mixed Docked true/false from the golden fixt
   expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('false');
   expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
   expect(stdout).not.toContain('[DOCKED]');
+  expect(stdout.indexOf('count 2')).toBeLessThan(stdout.indexOf('offline collapsed 4'));
+});
+
+test('get_system_agents prints offline collapsed for finite numbers without rounding', () => {
+  const zero = cloneSystemAgents();
+  zero.offline_collapsed = 0;
+  expect(renderSystemAgents(zero)).toContain('offline collapsed 0');
+
+  const negative = cloneSystemAgents();
+  negative.offline_collapsed = -1;
+  expect(renderSystemAgents(negative)).toContain('offline collapsed -1');
+
+  const fractional = cloneSystemAgents();
+  fractional.offline_collapsed = 4.5;
+  const fractionalOut = renderSystemAgents(fractional);
+  expect(fractionalOut).toContain('offline collapsed 4.5');
+  expect(fractionalOut).not.toContain('offline collapsed 5');
+});
+
+test('get_system_agents omits offline collapsed when the value is absent or not a finite number', () => {
+  const absent = cloneSystemAgents();
+  delete absent.offline_collapsed;
+  const absentOut = renderSystemAgents(absent);
+  expect(absentOut).toContain('count 2');
+  expect(absentOut).toContain('Marlowe');
+  expect(absentOut).not.toContain('offline collapsed');
+
+  for (const value of [null, '', '4', Number.NaN, Number.POSITIVE_INFINITY, { count: 4 }, ['4'], true, 4n]) {
+    const fixture = cloneSystemAgents();
+    fixture.offline_collapsed = value;
+    const stdout = renderSystemAgents(fixture);
+    expect(stdout).toContain('=== System Agents: sol ===');
+    expect(stdout).toContain('count 2');
+    expect(stdout).not.toContain('offline collapsed');
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('Infinity');
+  }
+});
+
+test('get_system_agents does not print warning or ship counts', () => {
+  const fixture = cloneSystemAgents();
+  fixture.warning = 'scanner-degraded-token';
+  fixture.ship_counts = { sol_earth: 4, sol_belt: 0 };
+  const stdout = renderSystemAgents(fixture);
+
+  expect(stdout).toContain('offline collapsed 4');
+  expect(stdout).not.toContain('scanner-degraded-token');
+  expect(stdout).not.toContain('warning');
+  expect(stdout).not.toContain('Ship counts');
+  expect(stdout).not.toContain('sol_earth=4');
+  expect(stdout).not.toContain('sol_belt=0');
 });
 
 test('get_system_agents omits Docked when every agent omits the field', () => {

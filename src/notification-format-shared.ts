@@ -62,6 +62,28 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
   return `${preview}${suffix}`;
 }
 
+/** Finite numbers only, including 0 and negatives. No string coercion. */
+export function formatOfflineCollapsedText(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return `offline collapsed ${value}`;
+}
+
+export function formatShipCountsLine(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const keys = Object.keys(value)
+    .filter((key) => key.trim() !== '')
+    .sort((a, b) => a.localeCompare(b));
+  const pairs: string[] = [];
+  for (const key of keys) {
+    const count = value[key];
+    if (typeof count !== 'number' || !Number.isFinite(count)) continue;
+    pairs.push(`${key}=${count}`);
+  }
+  if (Object.keys(value).length === 0) return 'Ship counts: (cleared)';
+  if (pairs.length === 0) return undefined;
+  return `Ship counts: ${pairs.join(', ')}`;
+}
+
 /** Keys that may nest an item list inside an inventory-like bag. */
 const INVENTORY_NEST_KEYS = ['items', 'cargo', 'loot', 'inventory', 'contents', 'looted'] as const;
 
