@@ -1532,14 +1532,22 @@ describe('command metadata', () => {
     expect(commission?.description).toContain('required_reputation');
     expect(commission?.description).toContain("your faction's own station");
     expect(commission?.description).toContain('Piloting');
+    expect(commission?.description).not.toContain('Piloting, shipyard tier, and materials still apply.');
+    expect(commission?.description).toContain('Piloting still applies to flyable hulls');
+    expect(commission?.description).toContain('do not apply to those mobile-base blueprints');
+    expect(commission?.description).toContain('mobile_base');
+    expect(commission?.description).toContain('not a new route');
+    expect(commission?.description).toContain('faction jump_mobile_base');
+    expect(commission?.description).not.toContain('`');
     expect(commission?.example).toBe('spacemolt commission_ship viper source_missing_materials=true');
     expect(commission?.seeAlso).toEqual(['commission_quote', 'commission_status', 'catalog', 'buy_ship_license']);
     expect(commission?.args).toEqual(['ship_class', 'provide_materials']);
     expect(commission?.schema?.bare_hull?.type).toBe('boolean');
     expect(commission?.schema?.source_missing_materials?.type).toBe('boolean');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).toBe(
-      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies.",
+      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station at a tier-four faction yard; ship modules and piloting do not apply, and the arguments are unchanged.",
     );
+    expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).not.toBe(commission?.description);
 
     const licenseHelp = captureHelp('buy_ship_license');
     expect(licenseHelp).toContain('ship_class');
@@ -1556,6 +1564,10 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('If true, commission only the hull without its default module loadout.');
     expect(commissionHelp).toContain('Do not combine with provide_materials.');
     expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
+    expect(commissionHelp).toContain('Piloting still applies to flyable hulls');
+    expect(commissionHelp).toContain('do not apply to those mobile-base blueprints');
+    expect(commissionHelp).not.toContain('Piloting, shipyard tier, and materials still apply.');
+    expect(commissionHelp).not.toContain('`');
     expect(commissionHelp).toMatch(/Arguments:\n {2}ship_class, provide_materials\n/);
     expect(commissionHelp).toContain('buy_ship_license');
     expect(commissionHelp).toContain('required_reputation');
@@ -1643,6 +1655,14 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Default quotes a fitted hull');
     expect(config?.description).toContain('faction yards do not market-source missing materials');
     expect(config?.description).toContain('same bare_hull and source_missing_materials choices');
+    expect(config?.description).toContain(
+      'The same ship_class quotes a mobile-base blueprint; the quote is the construction bill; it is not the jump resource.',
+    );
+    expect(config?.description).not.toContain('`');
+    expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).toBe(
+      'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource.',
+    );
+    expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).not.toBe(config?.description);
     expect(config?.example).toBe('spacemolt commission_quote viper source_missing_materials=true');
     expect(config?.seeAlso).toEqual(['commission_ship', 'commission_status']);
     expect(config?.args).toEqual(['ship_class']);
@@ -1655,6 +1675,9 @@ describe('command metadata', () => {
       'Preview the materials you can contribute, the remaining deficit, and partial-sourcing total.',
     );
     expect(help).toContain('spacemolt commission_quote viper source_missing_materials=true');
+    expect(help).toContain('The same ship_class quotes a mobile-base blueprint');
+    expect(help).toContain('it is not the jump resource');
+    expect(help).not.toContain('`');
     expect(help).toContain('Default quotes a fitted hull');
     expect(help).toContain('faction yards do not market-source missing materials');
     expect(help).not.toContain('provide_materials');
