@@ -1413,7 +1413,7 @@ test('get_location prints a pirate heading with no rows when count is set and th
 
   expect(stdout).toContain('Nearby Pirates (3):');
   expect(stdout).not.toContain('Raider');
-  expect(stdout).not.toContain('... and');
+  expect(stdout).toContain('... and 3 more');
 });
 
 test('get_location falls back to nearby_pirates.length when nearby_pirate_count is omitted', () => {
@@ -1425,7 +1425,7 @@ test('get_location falls back to nearby_pirates.length when nearby_pirate_count 
   expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
 });
 
-test('get_location caps pirate rows at NEARBY_TABLE_LIMIT', () => {
+test('get_location prints every pirate row when the count matches the array', () => {
   const fixture = structuredClone(getLocationFixture) as {
     location: { nearby_pirate_count: number; nearby_pirates: Array<Record<string, unknown>> };
   };
@@ -1438,11 +1438,11 @@ test('get_location caps pirate rows at NEARBY_TABLE_LIMIT', () => {
   const pirateLines = stdout.split('\n').filter((line) => /^ {2}P\d+ \(skiff\)$/.test(line));
 
   expect(stdout).toContain('Nearby Pirates (12):');
-  expect(pirateLines).toHaveLength(10);
+  expect(pirateLines).toHaveLength(12);
   expect(stdout).toContain('  P1 (skiff)');
-  expect(stdout).toContain('  P10 (skiff)');
-  expect(stdout).not.toContain('P11');
-  expect(stdout).toContain('  ... and 2 more');
+  expect(stdout).toContain('  P11 (skiff)');
+  expect(stdout).toContain('  P12 (skiff)');
+  expect(stdout).not.toContain('... and');
 });
 
 test('get_location still overflows when count exceeds the cap and the array is already 10', () => {
@@ -1465,7 +1465,7 @@ test('get_location still overflows when count exceeds the cap and the array is a
   expect(stdout).toContain('  ... and 2 more');
 });
 
-test('get_location does not overflow when count is 2 and the array has 1 pirate', () => {
+test('get_location prints a remainder when count is 2 and the array has 1 pirate', () => {
   const fixture = structuredClone(getLocationFixture) as {
     location: { nearby_pirate_count: number };
   };
@@ -1474,7 +1474,7 @@ test('get_location does not overflow when count is 2 and the array has 1 pirate'
 
   expect(stdout).toContain('Nearby Pirates (2):');
   expect(stdout).toContain('  Raider (skiff) - Admiral Kael - hostile');
-  expect(stdout).not.toContain('... and');
+  expect(stdout).toContain('... and 1 more');
 });
 
 test('get_location uses faction when faction_name is missing', () => {
@@ -1657,7 +1657,7 @@ test('get_nearby leaves the flees token uncolored after a colored arena NPC name
   );
 });
 
-test('get_nearby falls back to arena_npcs length and truncates past the table limit', () => {
+test('get_nearby falls back to arena_npcs length and prints every returned row', () => {
   const extra = Array.from({ length: 11 }, (_, index) => ({
     npc_id: `arena-extra-${index + 1}`,
     name: `Shard ${index + 1}`,
@@ -1685,8 +1685,9 @@ test('get_nearby falls back to arena_npcs length and truncates past the table li
   expect(stdout).toContain('Arena NPCs (11):');
   expect(stdout).toContain('  Shard 1 [arena-extra-1] (Fighter) - hull 10/10 - shield 0/0 - battle btl-swarm');
   expect(stdout).toContain('  Shard 10 [arena-extra-10] (Fighter) - hull 10/10 - shield 0/0 - battle btl-swarm');
-  expect(stdout).not.toContain('Shard 11');
-  expect(stdout).toContain('  ... and 1 more');
+  expect(stdout).toContain('Shard 11');
+  expect(stdout).not.toContain('... and 1 more');
+  expect(stdout).not.toContain('... and');
 });
 
 test('subscribe_observation prefixes Boss when a pirate is_boss is true', () => {
@@ -3594,7 +3595,7 @@ test('get_nearby shows a positive creature_count when creatures is not an array'
   expect(stdout).not.toContain('[');
 });
 
-test('get_nearby keeps the pirate row cap beside an uncapped creature list', () => {
+test('get_nearby prints every pirate row beside an uncapped creature list', () => {
   const pirates = Array.from({ length: 12 }, (_, index) => ({
     pirate_id: `pirate-${index + 1}`,
     name: `Corsair ${index + 1}`,
@@ -3609,13 +3610,12 @@ test('get_nearby keeps the pirate row cap beside an uncapped creature list', () 
   expectNearbyFormatterEngaged(stdout);
   expect(stdout).toContain('Pirates (12):');
   expect(stdout).toContain('Corsair 10');
-  expect(stdout).not.toContain('Corsair 11');
-  expect(stdout).not.toContain('Corsair 12');
+  expect(stdout).toContain('Corsair 11');
+  expect(stdout).toContain('Corsair 12');
   expect(stdout).toContain('Creatures (12):');
   expect(stdout).toContain('[creature-11]');
   expect(stdout).toContain('[creature-12]');
-  expect(stdout.match(/\.\.\. and/g)).toEqual(['... and']);
-  expect(stdout).toContain('... and 2 more');
+  expect(stdout).not.toContain('... and');
 });
 
 test('subscribe_observation human output omits creature brand fields', () => {
@@ -3631,4 +3631,206 @@ test('subscribe_observation human output omits creature brand fields', () => {
   expect(stdout).not.toContain('cloudbank-ranch');
   expect(stdout).not.toContain('branded');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_nearby prints every player row when count matches the array', () => {
+  const nearby = Array.from({ length: 11 }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+  const stdout = renderNearbyTable('get_nearby', { nearby, count: 11 });
+
+  expect(stdout).toContain('Players (11):');
+  expect(stdout.split('\n').some((line) => line.trim() === 'Pilot 11')).toBe(true);
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby prints offline collapsed for a finite number, including 0, between players and pirates', () => {
+  for (const offline_collapsed of [4, 0]) {
+    const stdout = renderNearbyTable('get_nearby', {
+      nearby: [{ username: 'Marlowe' }],
+      count: 1,
+      pirates: [{ pirate_id: 'pirate-1', name: 'Raider' }],
+      pirate_count: 1,
+      offline_collapsed,
+    });
+    const line = `offline collapsed ${offline_collapsed}`;
+
+    expect(stdout).toContain(line);
+    expect(stdout.indexOf('Players (')).toBeLessThan(stdout.indexOf(line));
+    expect(stdout.indexOf(line)).toBeLessThan(stdout.indexOf('Pirates ('));
+  }
+});
+
+test('get_nearby omits offline collapsed when the field is absent or a string', () => {
+  const absent = renderNearbyTable('get_nearby', { nearby: [{ username: 'Marlowe' }], count: 1 });
+  const stringValue = renderNearbyTable('get_nearby', {
+    nearby: [{ username: 'Marlowe' }],
+    count: 1,
+    offline_collapsed: '4',
+  });
+
+  expect(absent).toContain('Marlowe');
+  expect(absent).not.toContain('offline collapsed');
+  expect(stringValue).toContain('Marlowe');
+  expect(stringValue).not.toContain('offline collapsed');
+});
+
+test('get_nearby prints every empire NPC row when the header is the array length', () => {
+  const empire_npcs = Array.from({ length: 11 }, (_, index) => ({
+    npc_id: `npc-${index + 1}`,
+    name: `Patrol ${index + 1}`,
+  }));
+  const stdout = renderNearbyTable('get_nearby', { nearby: [], empire_npcs });
+
+  expect(stdout).toContain('Empire NPCs (11):');
+  expect(stdout.split('\n').some((line) => line.trim() === 'Patrol 11')).toBe(true);
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_location prints every nearby player row when the count matches the array', () => {
+  const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_player_count = 11;
+  fixture.location.nearby_players = Array.from({ length: 11 }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Players (11):');
+  expect(stdout.split('\n').some((line) => line.trim() === 'Pilot 11')).toBe(true);
+  expect(stdout).not.toContain('... and');
+});
+
+test('get_location prints location.offline_collapsed including 0 before prizes and pirates', () => {
+  const positive = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  positive.location.offline_collapsed = 4;
+  const positiveOut = renderStructuredResult('get_location', positive, options, context).stdout.join('\n');
+  expect(positiveOut).toContain('offline collapsed 4');
+  expect(positiveOut.indexOf('Nearby Players')).toBeLessThan(positiveOut.indexOf('offline collapsed 4'));
+  expect(positiveOut.indexOf('offline collapsed 4')).toBeLessThan(positiveOut.indexOf('Nearby Prizes'));
+  expect(positiveOut.indexOf('offline collapsed 4')).toBeLessThan(positiveOut.indexOf('Nearby Pirates'));
+
+  const zero = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  zero.location.offline_collapsed = 0;
+  expect(renderStructuredResult('get_location', zero, options, context).stdout.join('\n')).toContain(
+    'offline collapsed 0',
+  );
+
+  const omitted = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  delete omitted.location.offline_collapsed;
+  expect(renderStructuredResult('get_location', omitted, options, context).stdout.join('\n')).not.toContain(
+    'offline collapsed',
+  );
+});
+
+test('get_location prints offline collapsed when the player section is skipped', () => {
+  const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_player_count = 0;
+  fixture.location.nearby_players = [];
+  fixture.location.offline_collapsed = 2;
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('Nearby Players');
+  expect(stdout).toContain('offline collapsed 2');
+  expect(stdout.indexOf('offline collapsed 2')).toBeLessThan(stdout.indexOf('Nearby Prizes'));
+  expect(stdout.indexOf('offline collapsed 2')).toBeLessThan(stdout.indexOf('Nearby Pirates'));
+});
+
+test.each([
+  'get_status',
+  'get_state',
+] as const)('%s reads location.offline_collapsed and prints every copied nearby player', (command) => {
+  const positive = structuredClone(getStatusFixture) as {
+    location: Record<string, unknown>;
+    offline_collapsed?: unknown;
+    nearby?: unknown;
+  };
+  positive.location.nearby_players = Array.from({ length: 11 }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+  positive.location.offline_collapsed = 4;
+  positive.offline_collapsed = 99;
+  delete positive.nearby;
+  const positiveOut = renderStructuredResult(command, positive, options, context).stdout.join('\n');
+
+  expect(positiveOut).toContain('Nearby Players: 11');
+  expect(positiveOut).toContain('  - Pilot 11');
+  expect(positiveOut).toContain('offline collapsed 4');
+  expect(positiveOut).not.toContain('offline collapsed 99');
+  expect(positiveOut).not.toContain('... and');
+  expect(positiveOut.indexOf('Nearby Players:')).toBeLessThan(positiveOut.indexOf('offline collapsed 4'));
+  expect(positiveOut.indexOf('offline collapsed 4')).toBeLessThan(positiveOut.indexOf('Nearby Prizes'));
+
+  const zero = structuredClone(getStatusFixture) as { location: Record<string, unknown>; offline_collapsed?: unknown };
+  zero.location.offline_collapsed = 0;
+  zero.offline_collapsed = 7;
+  const zeroOut = renderStructuredResult(command, zero, options, context).stdout.join('\n');
+  expect(zeroOut).toContain('offline collapsed 0');
+  expect(zeroOut).not.toContain('offline collapsed 7');
+
+  const omitted = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  delete omitted.location.offline_collapsed;
+  const omittedOut = renderStructuredResult(command, omitted, options, context).stdout.join('\n');
+  expect(omittedOut).toContain('  - Ibis');
+  expect(omittedOut).not.toContain('offline collapsed');
+});
+
+test('get_status prints offline collapsed when nearby players are empty and before prizes', () => {
+  const fixture = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_players = [];
+  fixture.location.offline_collapsed = 3;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('offline collapsed 3');
+  expect(stdout).not.toContain('Nearby Players:');
+  expect(stdout.indexOf('offline collapsed 3')).toBeLessThan(stdout.indexOf('Nearby Prizes'));
+});
+
+test('subscribe_observation prints every nearby row', () => {
+  const nearby = Array.from({ length: 11 }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+  const stdout = renderNearbyTable('subscribe_observation', { nearby, count: 11 });
+
+  expect(stdout).toContain('Players (11):');
+  expect(stdout.split('\n').some((line) => line.trim() === 'Pilot 11')).toBe(true);
+  expect(stdout).not.toContain('... and');
+});
+
+test('subscribe_observation prints offline collapsed from the snapshot', () => {
+  const stdout = renderNearbyTable('subscribe_observation', {
+    nearby: [{ username: 'Marlowe' }],
+    pirates: [{ pirate_id: 'pirate-1', name: 'Raider' }],
+    offline_collapsed: 2,
+  });
+
+  expect(stdout).toContain('offline collapsed 2');
+  expect(stdout.indexOf('Players (')).toBeLessThan(stdout.indexOf('offline collapsed 2'));
+  expect(stdout.indexOf('offline collapsed 2')).toBeLessThan(stdout.indexOf('Pirates ('));
+});
+
+test('subscribe_observation prints the full ship_counts map', () => {
+  const stdout = renderNearbyTable('subscribe_observation', {
+    nearby: [],
+    prizes: [{ prize_id: 'prize-1', actor_id: 'actor-1', ship_class: 'frigate', status: 'available' }],
+    ship_counts: { sol_earth: 4, sol_belt: 0 },
+  });
+
+  expect(stdout).toContain('Ship counts: sol_belt=0, sol_earth=4');
+  expect(stdout.indexOf('Prizes')).toBeLessThan(stdout.indexOf('Ship counts:'));
+});
+
+test('subscribe_observation prints Ship counts: (cleared) for an empty map', () => {
+  const stdout = renderNearbyTable('subscribe_observation', { nearby: [], ship_counts: {} });
+
+  expect(stdout).toContain('Ship counts: (cleared)');
+});
+
+test('subscribe_observation omits Ship counts when ship_counts is absent', () => {
+  const stdout = renderNearbyTable('subscribe_observation', { nearby: [] });
+
+  expect(stdout).not.toContain('Ship counts');
+});
+
+test('get_nearby does not print a planted ship_counts object', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    ship_counts: { sol_earth: 4, sol_belt: 0 },
+  });
+
+  expect(stdout).toContain('=== Nearby ===');
+  expect(stdout).not.toContain('Ship counts');
+  expect(stdout).not.toContain('sol_earth=4');
+  expect(stdout).not.toContain('sol_belt=0');
 });

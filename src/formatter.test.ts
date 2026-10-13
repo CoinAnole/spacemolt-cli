@@ -5496,7 +5496,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
-  test('nearby pirate rows use the shared NPC row limit', () => {
+  test('nearby pirate rows print every returned pirate', () => {
     const pirates = Array.from({ length: 12 }, (_, index) => ({
       pirate_id: `pirate-${index + 1}`,
       name: `Corsair ${index + 1}`,
@@ -5505,9 +5505,10 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).toContain('Pirates (12):');
-    expect(stdout).toContain('Corsair 10');
-    expect(stdout).not.toContain('Corsair 11');
-    expect(stdout).toContain('... and 2 more');
+    for (let index = 1; index <= 12; index += 1) {
+      expect(stdout.split('\n').some((line) => line.trim() === `Corsair ${index}`)).toBe(true);
+    }
+    expect(stdout).not.toContain('... and');
   });
 
   test('view_completed_mission includes pirate_faction on pirate rep rewards', () => {
