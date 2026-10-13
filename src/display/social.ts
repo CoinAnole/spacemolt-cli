@@ -2,6 +2,7 @@ import { battleLabels, battleRulesetFromCategory, battleRulesetFromLogEntries } 
 import { battleLogAttackRows, battleLogCombatantRows } from './battle-log.ts';
 import { formatBoardingEvent, formatBoardingReason } from './boarding-event.ts';
 import { normalizeCaptorKind } from './captor-kind.ts';
+import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
   c,
   commandNameEquals,
@@ -91,17 +92,21 @@ function formatCredits(value: unknown): string | undefined {
 
 const ACTION_LOG_CREDIT_DIGITS = /^[+-]?\d+$/;
 
-function formatActionLogCredits(value: unknown): string | undefined {
+function formatActionLogGroupedInteger(value: unknown): string | undefined {
   if (typeof value === 'bigint' || (typeof value === 'number' && Number.isSafeInteger(value))) {
-    const text = formatIntegerText(value);
-    return text === undefined ? undefined : `${text}cr`;
+    return formatIntegerText(value);
   }
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!ACTION_LOG_CREDIT_DIGITS.test(trimmed)) return undefined;
-    return `${BigInt(trimmed).toLocaleString()}cr`;
+    return BigInt(trimmed).toLocaleString();
   }
   return undefined;
+}
+
+function formatActionLogCredits(value: unknown): string | undefined {
+  const text = formatActionLogGroupedInteger(value);
+  return text === undefined ? undefined : `${text}cr`;
 }
 
 const ACTION_LOG_INTEGER_DIGITS = /^[+-]?\d+$/;
@@ -1398,6 +1403,15 @@ export const socialFormatters = [
         const pirateDestroyed = eventType === 'combat.pirate_destroyed';
         const creditsEarned = pirateDestroyed ? scalarFrom('credits_earned') : undefined;
         const creditsDisplay = formatActionLogCredits(creditsEarned);
+        // credits_owed, missed_cycles, grace_cycles, and facilities_behind are generic
+        // keys; only the two rent-warning event types lift them.
+        const rentWarning = eventType === 'other.rent_warning' || eventType === 'faction.rent_warning';
+        const owedDisplay = rentWarning ? formatActionLogCredits(scalarFrom('credits_owed')) : undefined;
+        const missedDisplay = rentWarning ? formatActionLogGroupedInteger(scalarFrom('missed_cycles')) : undefined;
+        const graceDisplay = rentWarning ? formatActionLogGroupedInteger(scalarFrom('grace_cycles')) : undefined;
+        const facilitiesDisplay = rentWarning
+          ? formatActionLogGroupedInteger(scalarFrom('facilities_behind'))
+          : undefined;
         const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1433,6 +1447,10 @@ export const socialFormatters = [
         if (stationPaidDisplay !== undefined) row.station_paid_display = stationPaidDisplay;
         if (shortfallDisplay !== undefined) row.shortfall_display = shortfallDisplay;
         if (creditsDisplay !== undefined) row.credits_display = creditsDisplay;
+        if (owedDisplay !== undefined) row.owed_display = owedDisplay;
+        if (missedDisplay !== undefined) row.missed_display = missedDisplay;
+        if (graceDisplay !== undefined) row.grace_display = graceDisplay;
+        if (facilitiesDisplay !== undefined) row.facilities_display = facilitiesDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1462,6 +1480,10 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['station_paid_display'])) columns.push(['Station paid', ['station_paid_display']]);
       if (hasAnyField(rows, ['shortfall_display'])) columns.push(['Shortfall', ['shortfall_display']]);
       if (hasAnyField(rows, ['credits_display'])) columns.push(['Credits', ['credits_display']]);
+      if (hasAnyField(rows, ['owed_display'])) columns.push(['Owed', ['owed_display']]);
+      if (hasAnyField(rows, ['missed_display'])) columns.push(['Missed', ['missed_display']]);
+      if (hasAnyField(rows, ['grace_display'])) columns.push(['Grace', ['grace_display']]);
+      if (hasAnyField(rows, ['facilities_display'])) columns.push(['Facilities', ['facilities_display']]);
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
       }
