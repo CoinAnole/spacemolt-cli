@@ -1991,6 +1991,9 @@ describe('command metadata', () => {
     expect(actionLogHelp).toContain('Fuel');
     expect(actionLogHelp).toContain('combat.pirate_destroyed');
     expect(actionLogHelp).toContain('Credits');
+    expect(actionLogHelp).toContain('other.rent_warning');
+    expect(actionLogHelp).toContain('faction.rent_warning');
+    expect(actionLogHelp).toContain('Owed');
   });
 
   test('get_wrecks help documents age-death carrion', () => {
@@ -3731,9 +3734,9 @@ describe('command metadata', () => {
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {
     const description =
-      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount — table columns Pilot, Base, Fuel when data carries them). event_type=faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet movements (service fee, insurance premium kept after an accepted contract ends, claim paid from that wallet, and freight debt repaid — station manager, or the owning faction treasury at a player station; pass faction_id= when reading the faction log, the same way as faction.refuel); event_type=shipping.claim_paid for the shipper insurance claim (table columns Station paid and Shortfall when data carries station_paid and shortfall; the shipper still receives the full covered value; not ShipmentContract.claim_paid and not a deliver/return/cancel field); event_type=trading.escrow_refunded for the difference plus extra sales tax returned when modify_order raises a buy over a cheaper sell (that amount is not on the modify_order response). event_type=combat.pirate_destroyed for a pirate kill whose logged bounty includes the bounty-skill bonus (table column Credits only on that event when data carries credits_earned; 0 prints 0cr; the summary is not parsed). Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll. If next_since_id is absent, keep the current cursor. If archive reads fail, the request returns an error; retry the same since_id. Table output prints an ID column for each entry id: entry id 1500 prints 1500, not 1,500; 0 prints 0; a negative id keeps its minus sign. A missing or non-integer id is left blank, and the column is omitted when no entry has an integer id.";
+      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount — table columns Pilot, Base, Fuel when data carries them). event_type=faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet movements (service fee, insurance premium kept after an accepted contract ends, claim paid from that wallet, and freight debt repaid — station manager, or the owning faction treasury at a player station; pass faction_id= when reading the faction log, the same way as faction.refuel); event_type=shipping.claim_paid for the shipper insurance claim (table columns Station paid and Shortfall when data carries station_paid and shortfall; the shipper still receives the full covered value; not ShipmentContract.claim_paid and not a deliver/return/cancel field); event_type=trading.escrow_refunded for the difference plus extra sales tax returned when modify_order raises a buy over a cheaper sell (that amount is not on the modify_order response). event_type=combat.pirate_destroyed for a pirate kill whose logged bounty includes the bounty-skill bonus (table column Credits only on that event when data carries credits_earned; 0 prints 0cr; the summary is not parsed). event_type=other.rent_warning and event_type=faction.rent_warning for missed-rent warnings (gameserver 0.620.1; personal facilities log other.rent_warning, faction-owned facilities log faction.rent_warning; pass faction_id= when reading the faction log). Table columns Owed, Missed, Grace, and Facilities appear only on those two events when data carries credits_owed, missed_cycles, grace_cycles, and facilities_behind. Owed uses the same credit formatting as the Credits column, and 0 prints 0cr. Missed, Grace, and Facilities print grouped integers, and 0 prints 0. Grace is the missed-cycle count at which the station repossesses. Base stays the existing column filled from base_name or base_id. The summary sentence is not parsed. Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll. If next_since_id is absent, keep the current cursor. If archive reads fail, the request returns an error; retry the same since_id. Table output prints an ID column for each entry id: entry id 1500 prints 1500, not 1,500; 0 prints 0; a negative id keeps its minus sign. A missing or non-integer id is left blank, and the column is omitted when no entry has an integer id.";
     const eventTypeDescription =
-      'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts; faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet receipts — pass faction_id= when reading the faction log; shipping.claim_paid for a shipper insurance claim (columns Station paid and Shortfall); trading.escrow_refunded for a modify_order buy-cross refund; combat.pirate_destroyed for a pirate-kill bounty (column Credits only on that event)). Comma-separated on the CLI or --payload-json.';
+      'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts; faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet receipts — pass faction_id= when reading the faction log; shipping.claim_paid for a shipper insurance claim (columns Station paid and Shortfall); trading.escrow_refunded for a modify_order buy-cross refund; combat.pirate_destroyed for a pirate-kill bounty (column Credits only on that event); other.rent_warning and faction.rent_warning for missed-rent warnings (columns Owed, Missed, Grace, and Facilities only on those two events)). Comma-separated on the CLI or --payload-json.';
     expect(COMMANDS.get_action_log).toMatchObject({
       usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
       example:
@@ -3751,6 +3754,17 @@ describe('command metadata', () => {
     expect(COMMANDS.get_action_log?.description).toContain('Fuel');
     expect(COMMANDS.get_action_log?.description).toContain('combat.pirate_destroyed');
     expect(COMMANDS.get_action_log?.description).toContain('Credits');
+    expect(COMMANDS.get_action_log?.description).toContain('other.rent_warning');
+    expect(COMMANDS.get_action_log?.description).toContain('faction.rent_warning');
+    expect(COMMANDS.get_action_log?.description).toContain('Owed');
+    expect(COMMANDS.get_action_log?.description).toContain('Missed');
+    expect(COMMANDS.get_action_log?.description).toContain('Grace');
+    expect(COMMANDS.get_action_log?.description).toContain('Facilities');
+    expect(COMMANDS.get_action_log?.description).toContain('credits_owed');
+    expect(COMMANDS.get_action_log?.description).toContain('missed_cycles');
+    expect(COMMANDS.get_action_log?.description).toContain('grace_cycles');
+    expect(COMMANDS.get_action_log?.description).toContain('facilities_behind');
+    expect(COMMANDS.get_action_log?.description).toContain('0 prints 0cr');
     expect(COMMANDS.get_action_log?.description).not.toContain('`');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('page_size');
     expect(COMMANDS.get_action_log?.schema).toHaveProperty('since_id');
@@ -3765,6 +3779,12 @@ describe('command metadata', () => {
     expect(eventTypeSchema?.description).toContain('faction.refuel');
     expect(eventTypeSchema?.description).toContain('combat.pirate_destroyed');
     expect(eventTypeSchema?.description).toContain('Credits');
+    expect(eventTypeSchema?.description).toContain('other.rent_warning');
+    expect(eventTypeSchema?.description).toContain('faction.rent_warning');
+    expect(eventTypeSchema?.description).toContain('Owed');
+    expect(eventTypeSchema?.description).toContain('Missed');
+    expect(eventTypeSchema?.description).toContain('Grace');
+    expect(eventTypeSchema?.description).toContain('Facilities');
     expect(eventTypeSchema?.description).not.toContain('`');
   });
 

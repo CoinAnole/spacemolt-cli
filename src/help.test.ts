@@ -903,6 +903,13 @@ describe('help output branches', () => {
     expect(output).toContain('Fuel');
     expect(output).toContain('combat.pirate_destroyed');
     expect(output).toContain('Credits');
+    expect(output).toContain('other.rent_warning');
+    expect(output).toContain('faction.rent_warning');
+    expect(output).toContain('Owed');
+    expect(output).toContain('Missed');
+    expect(output).toContain('Grace');
+    expect(output).toContain('Facilities');
+    expect(output).toContain('credits_owed');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');
     expect(output).toContain('faction.freight_claim_paid');

@@ -232,6 +232,22 @@ function pirateEntry(
   };
 }
 
+function rentEntry(
+  eventType: string,
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 601,
+    created_at: '2026-10-12T08:00:00.000Z',
+    event_type: eventType,
+    category: eventType.startsWith('faction.') ? 'faction' : 'other',
+    summary: 'Rent overdue at Earth Station.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function expectNoPrizeOrLocation(header: string | undefined): void {
   expect(header).toBeDefined();
   expect(header).not.toContain('Prize');
@@ -672,11 +688,20 @@ test('omits Pilot, Fuel, Station paid, and Shortfall when existing action-log fi
     expect(columns).not.toContain('Station paid');
     expect(columns).not.toContain('Shortfall');
     expect(columns).not.toContain('Credits');
+    expect(columns).not.toContain('Owed');
+    expect(columns).not.toContain('Missed');
+    expect(columns).not.toContain('Grace');
+    expect(columns).not.toContain('Facilities');
   }
 
   for (const fixture of [actionLogFactionRefuelFixture, actionLogFreightEscrowFixture]) {
     const stdout = renderActionLog(structuredClone(fixture));
-    expect(actionLogHeaderColumns(stdout)).not.toContain('Credits');
+    const columns = actionLogHeaderColumns(stdout);
+    expect(columns).not.toContain('Credits');
+    expect(columns).not.toContain('Owed');
+    expect(columns).not.toContain('Missed');
+    expect(columns).not.toContain('Grace');
+    expect(columns).not.toContain('Facilities');
   }
 
   const personnel = renderActionLog(structuredClone(actionLogPersonnelCaptureFixture));
@@ -996,6 +1021,365 @@ test('inserts Credits after Shortfall and before Base', () => {
   const columns = actionLogHeaderColumns(stdout);
   const cost = columns.indexOf('Cost');
   expect(columns.slice(cost, cost + 5)).toEqual(['Cost', 'Station paid', 'Shortfall', 'Credits', 'Base']);
+});
+
+const rentCounters = {
+  credits_owed: 12000,
+  missed_cycles: 3,
+  grace_cycles: 260,
+  facilities_behind: 2,
+};
+
+test('lifts missed-rent counters for other.rent_warning and faction.rent_warning', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      rentEntry('other.rent_warning', {
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        credits_owed: 12000,
+        missed_cycles: 3,
+        grace_cycles: 260,
+        facilities_behind: 2,
+        message: 'DETAIL_MESSAGE_TOKEN',
+        faction_id: 'fac_personal_should_not_print',
+      }),
+      rentEntry(
+        'faction.rent_warning',
+        {
+          base_id: 'haven_exchange',
+          credits_owed: 45000,
+          missed_cycles: 8,
+          grace_cycles: 260,
+          facilities_behind: 4,
+          faction_id: 'fac_wardens_token',
+          message: 'FACTION_MESSAGE_TOKEN',
+        },
+        { id: 602 },
+      ),
+    ]),
+  );
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Owed', 'Missed', 'Grace', 'Facilities', 'Base']);
+  const columns = actionLogHeaderColumns(stdout);
+  const owed = columns.indexOf('Owed');
+  expect(columns.slice(owed, owed + 5)).toEqual(['Owed', 'Missed', 'Grace', 'Facilities', 'Base']);
+  expect(columns).not.toContain('Fuel');
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Owed')).toBe('12,000cr');
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Missed')).toBe('3');
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Grace')).toBe('260');
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Facilities')).toBe('2');
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Base')).toBe('Earth Station');
+  expect(actionLogCell(stdout, 'faction.rent_warning', 'Owed')).toBe('45,000cr');
+  expect(actionLogCell(stdout, 'faction.rent_warning', 'Missed')).toBe('8');
+  expect(actionLogCell(stdout, 'faction.rent_warning', 'Grace')).toBe('260');
+  expect(actionLogCell(stdout, 'faction.rent_warning', 'Facilities')).toBe('4');
+  expect(actionLogCell(stdout, 'faction.rent_warning', 'Base')).toBe('haven_exchange');
+  expect(stdout.match(/Rent overdue at Earth Station\./g)?.length).toBe(2);
+  expect(stdout).not.toContain('DETAIL_MESSAGE_TOKEN');
+  expect(stdout).not.toContain('FACTION_MESSAGE_TOKEN');
+  expect(stdout).not.toContain('fac_wardens_token');
+  expect(stdout).not.toContain('fac_personal_should_not_print');
+});
+
+test('does not lift rent counters off a non-rent event', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [
+        rentEntry('crafting.completed', {
+          credits_owed: 12000,
+          missed_cycles: 3,
+          grace_cycles: 260,
+          facilities_behind: 2,
+        }),
+      ],
+      'crafting',
+    ),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).not.toContain('Owed');
+  expect(columns).not.toContain('Missed');
+  expect(columns).not.toContain('Grace');
+  expect(columns).not.toContain('Facilities');
+  expect(stdout).not.toContain('12,000cr');
+  expect(actionLogCell(stdout, 'crafting.completed', 'Event')).toBe('crafting.completed');
+});
+
+test('does not treat a prefix, different case, data event_type, or losing type as a rent warning', () => {
+  const rejected = [
+    rentEntry('other.rent_warning.extra', rentCounters),
+    rentEntry('OTHER.RENT_WARNING', rentCounters),
+    rentEntry('faction.rent_warning.extra', rentCounters),
+    rentEntry('FACTION.RENT_WARNING', rentCounters),
+    rentEntry('other.rent_warning', rentCounters, {
+      event_type: 'crafting.completed',
+      data: { event_type: 'other.rent_warning', ...rentCounters },
+    }),
+    rentEntry('faction.rent_warning', rentCounters, {
+      event_type: 'crafting.completed',
+      type: 'faction.rent_warning',
+    }),
+  ];
+  for (const entry of rejected) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    const columns = actionLogHeaderColumns(stdout);
+    expect(columns, JSON.stringify(entry.event_type)).not.toContain('Owed');
+    expect(columns, JSON.stringify(entry.event_type)).not.toContain('Missed');
+    expect(columns, JSON.stringify(entry.event_type)).not.toContain('Grace');
+    expect(columns, JSON.stringify(entry.event_type)).not.toContain('Facilities');
+    expect(stdout, JSON.stringify(entry.event_type)).not.toContain('12,000cr');
+  }
+});
+
+test('lifts rent warnings from type when event_type is absent', () => {
+  for (const eventType of ['other.rent_warning', 'faction.rent_warning'] as const) {
+    const entry = rentEntry(eventType, {
+      credits_owed: 12000,
+      missed_cycles: 1,
+      grace_cycles: 260,
+      facilities_behind: 1,
+    });
+    delete entry.event_type;
+    entry.type = eventType;
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expect(actionLogCell(stdout, eventType, 'Event')).toBe(eventType);
+    expect(actionLogCell(stdout, eventType, 'Owed')).toBe('12,000cr');
+  }
+});
+
+test('lifts a trimmed rent-warning event type', () => {
+  const stdout = renderActionLog(actionLogPage([rentEntry(' other.rent_warning ', { credits_owed: 5 })]));
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Owed')).toBe('5cr');
+});
+
+test('prints zero rent-warning counters', () => {
+  const zeros = renderActionLog(
+    actionLogPage([
+      rentEntry('other.rent_warning', {
+        credits_owed: 0,
+        missed_cycles: 0,
+        grace_cycles: 0,
+        facilities_behind: 0,
+      }),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(zeros);
+  expect(columns).toContain('Owed');
+  expect(columns).toContain('Missed');
+  expect(columns).toContain('Grace');
+  expect(columns).toContain('Facilities');
+  expect(actionLogCell(zeros, 'other.rent_warning', 'Owed')).toBe('0cr');
+  expect(actionLogCell(zeros, 'other.rent_warning', 'Missed')).toBe('0');
+  expect(actionLogCell(zeros, 'other.rent_warning', 'Grace')).toBe('0');
+  expect(actionLogCell(zeros, 'other.rent_warning', 'Facilities')).toBe('0');
+
+  const zeroBigint = renderActionLog(
+    actionLogPage([
+      rentEntry('other.rent_warning', {
+        credits_owed: 0n,
+        missed_cycles: 0,
+        grace_cycles: 0,
+        facilities_behind: 0n,
+      }),
+    ]),
+  );
+  expect(actionLogCell(zeroBigint, 'other.rent_warning', 'Owed')).toBe('0cr');
+  expect(actionLogCell(zeroBigint, 'other.rent_warning', 'Missed')).toBe('0');
+  expect(actionLogCell(zeroBigint, 'other.rent_warning', 'Grace')).toBe('0');
+  expect(actionLogCell(zeroBigint, 'other.rent_warning', 'Facilities')).toBe('0');
+});
+
+test('omits rent-warning columns when their keys are missing', () => {
+  const bare = renderActionLog(actionLogPage([rentEntry('other.rent_warning', {})]));
+  const bareColumns = actionLogHeaderColumns(bare);
+  expect(actionLogCell(bare, 'other.rent_warning', 'Event')).toBe('other.rent_warning');
+  expect(bareColumns).not.toContain('Owed');
+  expect(bareColumns).not.toContain('Missed');
+  expect(bareColumns).not.toContain('Grace');
+  expect(bareColumns).not.toContain('Facilities');
+
+  const owedOnly = renderActionLog(actionLogPage([rentEntry('other.rent_warning', { credits_owed: 0 })]));
+  const owedColumns = actionLogHeaderColumns(owedOnly);
+  expect(actionLogCell(owedOnly, 'other.rent_warning', 'Owed')).toBe('0cr');
+  expect(owedColumns).not.toContain('Missed');
+  expect(owedColumns).not.toContain('Grace');
+  expect(owedColumns).not.toContain('Facilities');
+
+  const missedOnly = renderActionLog(actionLogPage([rentEntry('other.rent_warning', { missed_cycles: 3 })]));
+  const missedColumns = actionLogHeaderColumns(missedOnly);
+  expect(actionLogCell(missedOnly, 'other.rent_warning', 'Missed')).toBe('3');
+  expect(missedColumns).not.toContain('Owed');
+  expect(missedColumns).not.toContain('Grace');
+  expect(missedColumns).not.toContain('Facilities');
+});
+
+test('prefers entry-level rent counters over data', () => {
+  const stdout = renderActionLog(
+    actionLogPage([rentEntry('other.rent_warning', { credits_owed: 99 }, { credits_owed: 10 })]),
+  );
+  expect(actionLogCell(stdout, 'other.rent_warning', 'Owed')).toBe('10cr');
+  expect(stdout).not.toContain('99');
+
+  const blocked = renderActionLog(
+    actionLogPage([rentEntry('other.rent_warning', { credits_owed: 1500 }, { credits_owed: '   ' })]),
+  );
+  expect(actionLogHeaderColumns(blocked)).not.toContain('Owed');
+  expect(blocked).not.toContain('1,500cr');
+});
+
+test('formats rent-warning int64 and digit strings with the shared integer policy', () => {
+  const bigintOwed = renderActionLog(
+    actionLogPage([rentEntry('other.rent_warning', { credits_owed: 9007199254740993n })]),
+  );
+  const owedCell = actionLogCell(bigintOwed, 'other.rent_warning', 'Owed');
+  expect(owedCell).toBe(`${(9007199254740993n).toLocaleString()}cr`);
+  expect(owedCell?.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(owedCell).not.toContain('9007199254740992');
+
+  const stringOwed = renderActionLog(
+    actionLogPage([rentEntry('faction.rent_warning', { credits_owed: '9007199254740993' })]),
+  );
+  const stringCell = actionLogCell(stringOwed, 'faction.rent_warning', 'Owed');
+  expect(stringCell).toBe(`${BigInt('9007199254740993').toLocaleString()}cr`);
+  expect(stringCell?.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(stringCell).not.toContain('9007199254740992');
+
+  const cases: Array<{ raw: unknown; expected: string }> = [
+    { raw: '0', expected: '0cr' },
+    { raw: '+1500', expected: '1,500cr' },
+    { raw: '007', expected: '7cr' },
+    { raw: '-1500', expected: `${BigInt('-1500').toLocaleString()}cr` },
+    { raw: '  1500  ', expected: '1,500cr' },
+  ];
+  for (const { raw, expected } of cases) {
+    const stdout = renderActionLog(actionLogPage([rentEntry('other.rent_warning', { credits_owed: raw })]));
+    expect(actionLogCell(stdout, 'other.rent_warning', 'Owed'), String(raw)).toBe(expected);
+  }
+
+  const missed = renderActionLog(
+    actionLogPage([rentEntry('other.rent_warning', { missed_cycles: 9007199254740993n })]),
+  );
+  const missedCell = actionLogCell(missed, 'other.rent_warning', 'Missed');
+  expect(missedCell).toBe(9007199254740993n.toLocaleString());
+  expect(missedCell).not.toContain('cr');
+  expect(missedCell?.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(missedCell).not.toContain('9007199254740992');
+});
+
+test('omits rent-warning cells for rejected scalars', () => {
+  const badValues: unknown[] = [
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    true,
+    false,
+    'nope',
+    '1e3',
+    Number('9007199254740993'),
+    { amount: 1 },
+  ];
+  for (const key of ['credits_owed', 'missed_cycles'] as const) {
+    const header = key === 'credits_owed' ? 'Owed' : 'Missed';
+    for (const value of badValues) {
+      const label = `${key}=${String(value)}`;
+      const stdout = renderActionLog(actionLogPage([rentEntry('other.rent_warning', { [key]: value })]));
+      expect(actionLogHeaderColumns(stdout), label).not.toContain(header);
+      expect(stdout, label).not.toContain('1.5');
+      expect(stdout, label).not.toContain('NaN');
+      expect(stdout, label).not.toContain('[object Object]');
+      expect(stdout, label).not.toContain('9007199254740992');
+    }
+  }
+});
+
+test('does not parse rent counters out of the summary', () => {
+  const summary = 'Owed 9999 credits, 7 cycles, 4 facilities.';
+  const summaryOnly = renderActionLog(actionLogPage([rentEntry('other.rent_warning', undefined, { summary })]));
+  const summaryColumns = actionLogHeaderColumns(summaryOnly);
+  expect(summaryColumns).not.toContain('Owed');
+  expect(summaryColumns).not.toContain('Missed');
+  expect(summaryColumns).not.toContain('Grace');
+  expect(summaryColumns).not.toContain('Facilities');
+  expect(summaryOnly).toContain(summary);
+  expect(summaryOnly).not.toContain('9,999');
+
+  const withField = renderActionLog(
+    actionLogPage([
+      rentEntry('other.rent_warning', undefined, { summary, id: 601 }),
+      rentEntry('other.rent_warning', { credits_owed: 1500 }, { summary: 'Rent warning with owed.', id: 602 }),
+    ]),
+  );
+  expect(withField).toContain(summary);
+  expect(withField).toContain('Rent warning with owed.');
+  expect(actionLogCell(withField, summary, 'Owed')).toBe('');
+  expect(actionLogCell(withField, 'Rent warning with owed.', 'Owed')).toBe('1,500cr');
+  expect(actionLogHeaderColumns(withField)).not.toContain('Missed');
+  expect(actionLogHeaderColumns(withField)).not.toContain('Grace');
+  expect(actionLogHeaderColumns(withField)).not.toContain('Facilities');
+  expect(withField).not.toContain('9,999');
+});
+
+test('keeps rent columns beside Credits on a mixed action-log page', () => {
+  const refuel = structuredClone(actionLogFactionRefuelFixture);
+  const marlowe = refuel.entries[0];
+  if (!marlowe) throw new Error('expected refuel row');
+  const stdout = renderActionLog(
+    actionLogPage([
+      pirateEntry({ credits_earned: 1500 }),
+      marlowe,
+      rentEntry('other.rent_warning', {
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        ...rentCounters,
+      }),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  for (const header of ['Credits', 'Owed', 'Missed', 'Grace', 'Facilities', 'Pilot', 'Base', 'Fuel']) {
+    expect(columns).toContain(header);
+  }
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Credits', 'Owed', 'Missed', 'Grace', 'Facilities', 'Base']);
+  const credits = columns.indexOf('Credits');
+  expect(columns.slice(credits, credits + 6)).toEqual(['Credits', 'Owed', 'Missed', 'Grace', 'Facilities', 'Base']);
+  for (const header of ['Owed', 'Missed', 'Grace', 'Facilities', 'Pilot', 'Base', 'Fuel']) {
+    expect(actionLogCell(stdout, 'Corsair', header)).toBe('');
+  }
+  expect(actionLogCell(stdout, 'Marlowe', 'Credits')).toBe('');
+  expect(actionLogCell(stdout, 'Marlowe', 'Owed')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Credits')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Pilot')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Fuel')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Owed')).toBe('12,000cr');
+});
+
+test('keeps rent-warning data on json output', () => {
+  const fixture = actionLogPage([
+    rentEntry('other.rent_warning', {
+      credits_owed: 12000,
+      missed_cycles: 3,
+      grace_cycles: 260,
+      facilities_behind: 2,
+      message: 'DETAIL_MESSAGE_TOKEN',
+      faction_id: 'fac_personal_should_not_print',
+    }),
+  ]);
+  const rendered = renderStructuredResult('get_action_log', fixture, { ...options, format: 'json' }, context);
+  expect(rendered.success).toBe(true);
+  const parsed = JSON.parse(rendered.stdout.join('\n')) as {
+    entries: Array<{ data: Record<string, unknown> }>;
+  };
+  expect(parsed.entries[0]?.data).toEqual({
+    credits_owed: 12000,
+    missed_cycles: 3,
+    grace_cycles: 260,
+    facilities_behind: 2,
+    message: 'DETAIL_MESSAGE_TOKEN',
+    faction_id: 'fac_personal_should_not_print',
+  });
+  expect(rendered.stdout.join('\n')).not.toContain('owed_display');
+  expect(rendered.stdout.join('\n')).not.toContain('missed_display');
+  expect(rendered.stdout.join('\n')).not.toContain('grace_display');
+  expect(rendered.stdout.join('\n')).not.toContain('facilities_display');
+  const human = renderActionLog(fixture);
+  expect(actionLogCell(human, 'other.rent_warning', 'Owed')).toBe('12,000cr');
 });
 
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
