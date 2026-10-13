@@ -57,6 +57,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
 
+### Factions
+
+- `faction_mobile_base_update` previews print the jump event, base name, lifecycle, system, origin, wrecked when true, and escrow, and suggest `faction get_mobile_base` (gameserver 0.622.0). Severity follows the event. A null `mobile_base` prints `Mobile base unavailable` and does not change severity. **No parser change.**
+
 ### Facilities
 
 - `faction_facility_owned` table output reads `faction_rent` instead of top-level rent fields, prints `Facilities: N`, and still prints the top-level `hint` (gameserver 0.606.2). **No parser change.**

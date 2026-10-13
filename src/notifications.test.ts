@@ -468,6 +468,15 @@ describe('notification formatting', () => {
       snippets: ['[FACTION]', 'Wardens', 'join_faction faction_id=fac_1', 'faction decline_invite faction_id=fac_1'],
     },
     {
+      msgType: 'faction_mobile_base_update',
+      data: {
+        event: 'jump_arrived',
+        message: 'Civitas has arrived in sol.',
+        mobile_base: null,
+      },
+      snippets: ['MOBILE BASE', 'Use: faction get_mobile_base'],
+    },
+    {
       msgType: 'faction_peace_accepted',
       data: {
         faction_id: 'fac_1',
@@ -9997,6 +10006,302 @@ describe('notification formatting', () => {
       const row = rows.find((entry) => entry.id === 'notif-emergency-omitted-1');
       if (!row) throw new Error('expected emergency omitted-fields fixture row');
       expect(formatNotificationMessage(row)).toBe('Marlowe: MAYDAY: need fuel.');
+    });
+  });
+
+  describe('faction_mobile_base_update', () => {
+    const suggestion = 'Use: faction get_mobile_base';
+
+    function note(data: Record<string, unknown>) {
+      return {
+        type: 'system',
+        msg_type: 'faction_mobile_base_update',
+        timestamp: '2026-10-13T12:00:00.000Z',
+        data,
+      };
+    }
+
+    function base(overrides: Record<string, unknown> = {}, state: Record<string, unknown> = {}) {
+      return {
+        name: 'Civitas',
+        base_id: 'mobile_civitas_example',
+        wrecked: false,
+        mobile_base: {
+          archetype_id: 'civitas',
+          lifecycle: 'stationary',
+          origin: { system_id: '', position: { x: 0, y: 0 } },
+          destination: { system_id: '', position: { x: 0, y: 0 } },
+          ...state,
+        },
+        poi_id: 'mobile_civitas_example_poi',
+        position: { x: 2.5, y: 3.25 },
+        ...overrides,
+      };
+    }
+
+    test.each([
+      ['jump_preparing', 'info'],
+      ['jump_cancelled', 'warning'],
+      ['jump_cancelled_combat', 'danger'],
+      ['jump_arrived', 'success'],
+    ] as const)('null mobile_base keeps %s severity and the suggestion', (event, severity) => {
+      const notification = note({ event, mobile_base: null });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.tag).toBe('MOBILE BASE');
+      expect(preview.headline).toBe('Mobile base unavailable');
+      expect(preview.severity).toBe(severity);
+      expect(preview.details.at(-1)).toBe(suggestion);
+      expect(preview.details).not.toContain('escrow none');
+      expect(formatNotificationMessage(notification)).toBe(`Mobile base unavailable; event ${event}`);
+      expect(formatNotificationMessage(notification)).not.toContain('Use:');
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).toContain('[MOBILE BASE]');
+      expect(output).toContain(suggestion);
+      expect(output).not.toContain('get_faction_mobile_base');
+      expect(output).not.toContain('Use: get_mobile_base');
+      expect(output).not.toContain('[object Object]');
+      expect(output).not.toContain('{');
+    });
+
+    test('server message wins as the headline even when the snapshot is null', () => {
+      const notification = note({
+        event: 'jump_arrived',
+        message: 'Civitas has arrived in sol.\nDock when ready.',
+        mobile_base: null,
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Civitas has arrived in sol.');
+      expect(preview.severity).toBe('success');
+      expect(preview.details).toEqual(['event jump_arrived', suggestion]);
+      expect(formatNotificationMessage(notification)).toBe('Civitas has arrived in sol.; event jump_arrived');
+      expect(formatNotificationMessage(notification)).not.toContain('Use:');
+    });
+
+    test.each([
+      ['jump_preparing', 'info', 'Civitas is preparing to jump'],
+      ['jump_cancelled', 'warning', 'Civitas jump cancelled'],
+      ['jump_cancelled_combat', 'danger', 'Civitas jump cancelled by combat'],
+      ['jump_arrived', 'success', 'Civitas arrived'],
+      ['jump_other', 'info', 'Civitas updated'],
+    ] as const)('no message uses the %s name fallback', (event, severity, headline) => {
+      const preview = formatNotificationPreview(note({ event, mobile_base: base() }));
+      expect(preview.headline).toBe(headline);
+      expect(preview.severity).toBe(severity);
+      expect(preview.details[0]).toBe(`event ${event}`);
+      expect(preview.details.at(-1)).toBe(suggestion);
+    });
+
+    test('missing event and a nameless record is a generic update', () => {
+      const notification = note({ mobile_base: { wrecked: false } });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Mobile base update');
+      expect(preview.severity).toBe('info');
+      expect(preview.details).toEqual([suggestion]);
+      expect(formatNotificationMessage(notification)).toContain('Use:');
+    });
+
+    test('rich snapshot keeps the suggestion at the default cap and at maxDetails 1', () => {
+      const data = {
+        event: 'jump_preparing',
+        mobile_base: base(
+          { system_id: 'sol', wrecked: false },
+          {
+            lifecycle: 'jump_preparing',
+            origin: { system_id: 'departure', position: { x: 1, y: 2 } },
+            refundable_item_escrow: [{ item_id: 'dark_matter_cell', quantity: 25 }],
+          },
+        ),
+      };
+      const preview = formatNotificationPreview(note(data));
+      expect(preview.details).toEqual([
+        'event jump_preparing',
+        'Civitas (mobile_civitas_example)',
+        'lifecycle jump_preparing',
+        'in sol',
+        'from departure',
+        suggestion,
+      ]);
+      expect(preview.details.at(-1)).toBe(suggestion);
+      expect(preview.headline).toBe('Civitas is preparing to jump');
+      const text = `${preview.headline}\n${preview.details.join('\n')}`;
+      expect(text).not.toContain('mobile_civitas_example_poi');
+      expect(text).not.toContain('2.5');
+      expect(text).not.toContain('archetype');
+      expect(text).not.toContain('[object Object]');
+      expect(text).not.toContain('{');
+
+      const roomy = formatNotificationPreview(note(data), { maxDetails: 7 });
+      expect(roomy.details).toEqual([
+        'event jump_preparing',
+        'Civitas (mobile_civitas_example)',
+        'lifecycle jump_preparing',
+        'in sol',
+        'from departure',
+        'escrow 25x dark_matter_cell',
+        suggestion,
+      ]);
+
+      const capped = formatNotificationPreview(note(data), { maxDetails: 1 });
+      expect(capped.details).toEqual([suggestion]);
+      expect(formatNotificationPreview(note(data), { maxDetails: 0 }).details).toEqual([suggestion]);
+    });
+
+    test('a headline that already names the suggestion still keeps that detail', () => {
+      const preview = formatNotificationPreview(
+        note({
+          event: 'jump_arrived',
+          message: 'Check status. Use: faction get_mobile_base',
+          mobile_base: base({ system_id: 'sol' }),
+        }),
+      );
+      expect(preview.headline).toBe('Check status. Use: faction get_mobile_base');
+      expect(preview.details.at(-1)).toBe(suggestion);
+      expect(preview.details.filter((line) => line === suggestion)).toEqual([suggestion]);
+    });
+
+    test('arrival message may drop in sol and still keeps the event line', () => {
+      const notification = note({
+        event: 'jump_arrived',
+        message: 'Civitas has arrived in sol.',
+        mobile_base: base({ system_id: 'sol' }),
+      });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Civitas has arrived in sol.');
+      expect(preview.details).toContain('event jump_arrived');
+      expect(preview.details).not.toContain('in sol');
+      expect(preview.details).not.toContain('from sol');
+      expect(preview.details.at(-1)).toBe(suggestion);
+      expect(formatNotificationMessage(notification)).toBe('Civitas has arrived in sol.; event jump_arrived');
+      expect(formatNotificationMessage(notification)).not.toContain('Use:');
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).not.toContain('get_faction_mobile_base');
+      expect(output).not.toContain('Use: get_mobile_base');
+      expect(output).toContain(suggestion);
+    });
+
+    test('omitted system_id does not invent a system; origin still prints', () => {
+      const preview = formatNotificationPreview(
+        note({
+          event: 'jump_arrived',
+          message: 'Isolated jump finished.',
+          mobile_base: base({}, { lifecycle: 'stationary', origin: { system_id: 'sol', position: { x: 1, y: 2 } } }),
+        }),
+      );
+      expect(preview.details).toContain('from sol');
+      expect(preview.details.some((line) => line.startsWith('in '))).toBe(false);
+      expect(preview.details.join('\n')).not.toContain('pilot_system');
+    });
+
+    test('empty origin system_id does not print from', () => {
+      const preview = formatNotificationPreview(
+        note({
+          event: 'jump_arrived',
+          message: 'Stationary.',
+          mobile_base: base({ system_id: 'sol' }, { origin: { system_id: '' } }),
+        }),
+      );
+      expect(preview.details).toContain('in sol');
+      expect(preview.details.some((line) => line.startsWith('from '))).toBe(false);
+    });
+
+    test('wrecked false prints nothing and wrecked true prints wrecked', () => {
+      const quiet = formatNotificationPreview(
+        note({
+          event: 'jump_arrived',
+          message: 'Arrived.',
+          mobile_base: base({ wrecked: false }),
+        }),
+      );
+      expect(quiet.details).not.toContain('wrecked');
+
+      const wrecked = formatNotificationPreview(
+        note({
+          event: 'jump_arrived',
+          message: 'Arrived.',
+          mobile_base: base({ wrecked: true }),
+        }),
+      );
+      expect(wrecked.details).toContain('wrecked');
+    });
+
+    test('empty escrow prints escrow none; omitted and null snapshots do not', () => {
+      const empty = formatNotificationPreview(
+        note({
+          event: 'jump_preparing',
+          message: 'Preparing.',
+          mobile_base: base({}, { refundable_item_escrow: [] }),
+        }),
+      );
+      expect(empty.details).toContain('escrow none');
+
+      const omitted = formatNotificationPreview(
+        note({
+          event: 'jump_preparing',
+          message: 'Preparing.',
+          mobile_base: base(),
+        }),
+      );
+      expect(omitted.details.join('\n')).not.toContain('escrow');
+
+      const unavailable = formatNotificationPreview(
+        note({ event: 'jump_preparing', message: 'Preparing.', mobile_base: null }),
+      );
+      expect(unavailable.details.join('\n')).not.toContain('escrow');
+    });
+
+    test('escrow keeps server order, a zero quantity, and drops invalid rows', () => {
+      const preview = formatNotificationPreview(
+        note({
+          event: 'jump_preparing',
+          message: 'Preparing.',
+          mobile_base: base(
+            {},
+            {
+              refundable_item_escrow: [
+                { item_id: 'dark_matter_cell', quantity: 25 },
+                { item_id: 'bulkhead', quantity: 0 },
+                { item_id: 'dark_matter_cell', quantity: 25 },
+                { item_id: '', quantity: 4 },
+                { item_id: 'ore_iron', quantity: 1.5 },
+                'not-a-row',
+                { quantity: 3 },
+              ],
+            },
+          ),
+        }),
+        { maxDetails: 8 },
+      );
+      expect(preview.details).toContain('escrow 25x dark_matter_cell, 0x bulkhead, 25x dark_matter_cell');
+
+      const none = formatNotificationPreview(
+        note({
+          event: 'jump_preparing',
+          message: 'Preparing.',
+          mobile_base: base({}, { refundable_item_escrow: [{ item_id: ' ', quantity: 1 }, null] }),
+        }),
+      );
+      expect(none.details).toContain('escrow none');
+
+      const notArray = formatNotificationPreview(
+        note({
+          event: 'jump_preparing',
+          message: 'Preparing.',
+          mobile_base: base({}, { refundable_item_escrow: { item_id: 'dark_matter_cell', quantity: 25 } }),
+        }),
+      );
+      expect(notArray.details.join('\n')).not.toContain('escrow');
+    });
+
+    test('a non-record snapshot is not dumped and still suggests the faction command', () => {
+      const notification = note({ event: 'jump_preparing', mobile_base: 'civitas' });
+      const preview = formatNotificationPreview(notification);
+      expect(preview.headline).toBe('Mobile base update');
+      expect(preview.severity).toBe('info');
+      expect(preview.details).toEqual(['event jump_preparing', suggestion]);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      expect(output).not.toContain('get_faction_mobile_base');
+      expect(output).not.toContain('Use: get_mobile_base');
+      expect(output).not.toContain('{');
     });
   });
 
