@@ -6622,6 +6622,320 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('...');
   });
 
+  function playerFactionMission(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      mission_id: 'faction-haul-1',
+      title: 'Faction Haul',
+      type: 'delivery',
+      difficulty: 2,
+      description: 'Deliver 50 iron ore to the issuer.',
+      ...overrides,
+    };
+  }
+
+  function playerFactionBoard(missions: Array<Record<string, unknown>>): Record<string, unknown> {
+    return {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      missions,
+    };
+  }
+
+  function posterLine(name: string): string {
+    return `Posted by: ${name} (player-posted contract)`;
+  }
+
+  test('get_missions prints a poster line for a player-faction contract', () => {
+    const factionId = 'fac_9c8913b2poster';
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([
+        playerFactionMission({
+          faction_name: 'Iron Syndicate',
+          faction_id: factionId,
+        }),
+      ]),
+    );
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Title'));
+    const lines = stdout.split('\n');
+    const descriptionAt = lines.indexOf('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+
+    expect(stderr).toBe('');
+    expect(descriptionAt).toBeGreaterThanOrEqual(0);
+    expect(lines[descriptionAt + 1]).toBe(posterLine('Iron Syndicate'));
+    expect(lines.filter((line) => line === posterLine('Iron Syndicate'))).toEqual([posterLine('Iron Syndicate')]);
+    expect(stdout).not.toContain(factionId);
+    expect(header).toBeDefined();
+    expect(cells(header ?? '')).not.toContain('Faction');
+    expect(cells(header ?? '')).not.toContain('Posted by');
+  });
+
+  test('get_missions prints the poster only on the player-faction row of a mixed board', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([
+        {
+          mission_id: 'pirate_sweep',
+          title: 'Pirate Sweep',
+          type: 'combat',
+          difficulty: 3,
+          description: 'Clear pirate contacts harassing local shipping lanes.',
+        },
+        playerFactionMission({ faction_name: 'Iron Syndicate', faction_id: 'fac_iron_syndicate' }),
+      ]),
+    );
+    const lines = stdout.split('\n');
+    const empire = 'Pirate Sweep (pirate_sweep): Clear pirate contacts harassing local shipping lanes.';
+    const faction = 'Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.';
+    const start = lines.indexOf(empire);
+
+    expect(stderr).toBe('');
+    expect(lines[start - 1]).toBe('');
+    expect(lines[start - 2]).not.toBe('');
+    expect(lines.slice(start, start + 3)).toEqual([empire, faction, posterLine('Iron Syndicate')]);
+    expect(lines.filter((line) => line.startsWith('Posted by:'))).toEqual([posterLine('Iron Syndicate')]);
+  });
+
+  test('get_missions omits the poster when faction_name is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_missions', playerFactionBoard([playerFactionMission()]));
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+    expect(stdout).not.toContain('Posted by');
+    expect(stdout).not.toContain('(player-posted contract)');
+  });
+
+  test.each(['', '   ', '\n'])('get_missions omits the poster for blank faction_name %j', (factionName) => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ faction_name: factionName })]),
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+    expect(stdout).not.toContain('Posted by');
+    expect(stdout).not.toContain('(player-posted contract)');
+  });
+
+  test.each([
+    ['number', 404040],
+    ['object', { secret_faction_blob: 'not-a-name' }],
+    ['array', ['Iron Syndicate']],
+    ['boolean', true],
+    ['null', null],
+  ])('get_missions ignores non-string faction_name (%s)', (_label, factionName) => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ faction_name: factionName })]),
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+    expect(stdout).not.toContain('Posted by');
+    expect(stdout).not.toContain('(player-posted contract)');
+    expect(stdout).not.toContain('404040');
+    expect(stdout).not.toContain('secret_faction_blob');
+    expect(stdout).not.toContain('not-a-name');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test('get_missions does not print a poster from faction_id alone', () => {
+    const factionId = 'fac_9c8913b2poster';
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ faction_id: factionId })]),
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+    expect(stdout).not.toContain('Posted by');
+    expect(stdout).not.toContain('(player-posted contract)');
+    expect(stdout).not.toContain(factionId);
+  });
+
+  test.each([
+    [
+      'exact parenthetical',
+      'Deliver ore. Posted by: Same (player-posted contract)',
+      'Same',
+      'Faction Haul (faction-haul-1): Deliver ore. Posted by: Same (player-posted contract)',
+    ],
+    [
+      'irregular case and space',
+      'Deliver ore. pOsTeD bY:   sAmE.',
+      'Same',
+      'Faction Haul (faction-haul-1): Deliver ore. pOsTeD bY: sAmE.',
+    ],
+    [
+      'collapsed multi-word name',
+      'Deliver ore. posted by:   iron   syndicate.',
+      'Iron Syndicate',
+      'Faction Haul (faction-haul-1): Deliver ore. posted by: iron syndicate.',
+    ],
+    [
+      'end of description',
+      'Deliver ore. Posted by: Same',
+      'Same',
+      'Faction Haul (faction-haul-1): Deliver ore. Posted by: Same',
+    ],
+    [
+      'earlier longer name then an exact post',
+      'Posted by: Iron Syndicate West. Posted by: Iron Syndicate.',
+      'Iron Syndicate',
+      'Faction Haul (faction-haul-1): Posted by: Iron Syndicate West. Posted by: Iron Syndicate.',
+    ],
+  ])('get_missions does not repeat a poster the description already contains (%s)', (_label, description, factionName, expectedLine) => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ description, faction_name: factionName })]),
+    );
+    const sentence = posterLine(String(factionName));
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(expectedLine);
+    expect(stdout.split('\n').filter((line) => line === sentence)).toEqual([]);
+    if (_label === 'exact parenthetical') {
+      expect(stdout.split(sentence).length - 1).toBe(1);
+    } else {
+      expect(stdout).not.toContain(sentence);
+    }
+  });
+
+  test.each([
+    [
+      'names the faction without Posted by',
+      'Deliver ore for Iron Syndicate.',
+      'Iron Syndicate',
+      'Faction Haul (faction-haul-1): Deliver ore for Iron Syndicate.',
+    ],
+    [
+      'longer name',
+      'Posted by: Iron Syndicate West',
+      'Iron Syndicate',
+      'Faction Haul (faction-haul-1): Posted by: Iron Syndicate West',
+    ],
+    ['name prefix', 'Posted by: Ironworks', 'Iron', 'Faction Haul (faction-haul-1): Posted by: Ironworks'],
+    [
+      'different faction',
+      'Posted by: Other Faction (player-posted contract)',
+      'Iron Syndicate',
+      'Faction Haul (faction-haul-1): Posted by: Other Faction (player-posted contract)',
+    ],
+  ])('get_missions still prints the poster when the description does not post this faction (%s)', (_label, description, factionName, expectedLine) => {
+    const name = String(factionName);
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ description, faction_name: name })]),
+    );
+    const lines = stdout.split('\n');
+    const at = lines.indexOf(expectedLine);
+
+    expect(stderr).toBe('');
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(lines[at + 1]).toBe(posterLine(name));
+    expect(lines.filter((line) => line === posterLine(name))).toEqual([posterLine(name)]);
+  });
+
+  test('get_missions prints the poster under a label when description is omitted', () => {
+    const mission = playerFactionMission({ faction_name: 'Iron Syndicate' });
+    delete mission.description;
+    const { stdout, stderr } = captureStructuredOutput('get_missions', playerFactionBoard([mission]));
+    const lines = stdout.split('\n');
+    const at = lines.indexOf('Faction Haul (faction-haul-1)');
+
+    expect(stderr).toBe('');
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(lines[at + 1]).toBe(posterLine('Iron Syndicate'));
+    expect(stdout).not.toContain('Faction Haul (faction-haul-1):');
+  });
+
+  test('get_missions collapses whitespace in faction_name onto one poster line', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([playerFactionMission({ faction_name: '  Iron\nSyndicate  ' })]),
+    );
+
+    expect(stderr).toBe('');
+    expect(
+      stdout.split('\n').filter((line) => line.includes('Syndicate') || line.includes('player-posted contract')),
+    ).toEqual([posterLine('Iron Syndicate')]);
+  });
+
+  test('get_missions skips a row with no description and no poster', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_missions',
+      playerFactionBoard([
+        {
+          mission_id: 'silent-1',
+          title: 'Silent Empire',
+          type: 'combat',
+          difficulty: 1,
+        },
+        playerFactionMission({ faction_name: 'Iron Syndicate' }),
+      ]),
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toMatch(/^Silent Empire \(silent-1\)$/m);
+    expect(stdout).toContain('Faction Haul (faction-haul-1): Deliver 50 iron ore to the issuer.');
+    expect(stdout.split('\n').filter((line) => line === posterLine('Iron Syndicate'))).toEqual([
+      posterLine('Iron Syndicate'),
+    ]);
+  });
+
+  test('get_active_missions does not print a player-faction poster', () => {
+    const active = activeMissionsFixture.missions.active;
+    const first = active[0];
+    if (first === undefined) throw new Error('activeMissionsFixture has no rows');
+    const fixture = {
+      ...activeMissionsFixture,
+      missions: {
+        ...activeMissionsFixture.missions,
+        active: [{ ...first, faction_name: 'Iron Syndicate', faction_id: 'fac_iron_syndicate' }, ...active.slice(1)],
+      },
+    };
+    const { stdout, stderr } = captureStructuredOutput('get_active_missions', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(
+      'Distress Call: CombatDummy6 (mission-distress-combatdummy6): Rescue CombatDummy6 in Markab before the distress signal expires.',
+    );
+    expect(stdout).not.toContain('Posted by:');
+    expect(stdout).not.toContain('(player-posted contract)');
+    expect(stdout).not.toContain('fac_iron_syndicate');
+  });
+
+  test('faction_list_missions keeps the officer Posted by column without a player-posted contract line', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_list_missions', factionListMissionsFixture);
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Posted by'));
+    const officerRow = stdout.split('\n').find((line) => line.includes('Deliver Iron Ore'));
+
+    expect(stderr).toBe('');
+    expect(header).toBeDefined();
+    expect(cells(officerRow ?? '')[cells(header ?? '').indexOf('Posted by')]).toBe('FactionOfficer');
+    expect(stdout).toContain('Marlowe');
+    expect(stdout).not.toContain('(player-posted contract)');
+    expect(stdout).not.toContain('=== Missions ===');
+  });
+
+  test('get_missions json output keeps faction fields and does not synthesize a poster', () => {
+    const fixture = playerFactionBoard([
+      playerFactionMission({
+        faction_name: 'Iron Syndicate',
+        faction_id: 'fac_iron_syndicate',
+      }),
+    ]);
+    const { stdout, stderr } = captureStructuredOutput('get_missions', fixture, { json: true });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual(fixture);
+    expect(stdout).not.toContain('=== Missions ===');
+    expect(stdout).not.toContain('Posted by:');
+    expect(stdout).not.toContain('(player-posted contract)');
+  });
+
   test('faction_list_missions mixed board prints officer columns and bounty targets', () => {
     const { stdout, stderr } = captureStructuredOutput('faction_list_missions', factionListMissionsFixture);
 
