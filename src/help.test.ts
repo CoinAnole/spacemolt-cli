@@ -1024,6 +1024,13 @@ describe('help output branches', () => {
     expect(output).toContain('already be docked');
     expect(output).toContain('source=storage');
     expect(output).toContain('No credits, ships, packages, or quest items');
+    expect(output).toContain('empire alias target, including an empire: prefix');
+    expect(output).toContain('no empire ship uses');
+    expect(output).toContain("sold on that station's market");
+    expect(output).toContain('gameserver 0.621.0');
+    expect(output).toContain('Only those unused materials are sold.');
+    expect(output).toContain('This sale does not apply to a station material gift');
+    expect(output).not.toContain('donate to an empire treasury');
     expect(output).toContain(
       'target - Target: self, faction, faction:TAG, empire alias, player name/ID, or station:<base-or-POI-ID>',
     );

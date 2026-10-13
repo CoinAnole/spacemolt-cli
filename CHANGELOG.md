@@ -155,6 +155,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Storage
 
+- `storage deposit` help states that materials donated to an empire (an empire alias target, including an `empire:` prefix) that no empire ship uses are passed to the manager of the station you donated at and sold on that station's market (gameserver 0.621.0). Only those unused materials are sold. The sale does not apply to a station material gift (`target=station:<base-or-POI-ID>`). **No parser change.**
 - `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**
 - `dock` table output lists durable gifts after trade fills: `Gifts: N`, the trade-fill truncated suffix when `gifts_truncated` is true, `gifts_note` when non-empty, then one block per returned `StorageGift` row. Rows print `ships` with the same ship line as `storage view` when the server sends them (gameserver 0.612.4; `DockResponse.gifts[]` is `StorageGift`). An omitted `ships` key and an explicit empty array print no Ships heading. `base_id` is still omitted on dock because `StorageGift` does not include it. `gift_received` previews still print `base_id`. **No parser change.**
 

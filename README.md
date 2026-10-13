@@ -282,6 +282,8 @@ Related top-level helpers (unchanged): `jettison`, `loot_wreck`, `faction_deposi
 
 **Station donations (gameserver 0.574):** `spacemolt storage deposit steel_plate 20 target=station:grand_exchange_station` while docked at that NPC empire station. Cargo is the default source and works if storage service is offline. Do not send credits, ships, packages, or quest items. Gameserver/docs `send_gift recipient=station:…` maps here.
 
+**Empire donations (gameserver 0.621.0):** `storage deposit` with an empire alias target, including an `empire:` prefix (not `target=station:…`). Materials no empire ship uses are passed to the manager of the station you donated at and sold on that station's market. Other donations are not sold this way. Details: `spacemolt help storage deposit`.
+
 #### Migration from multi-action `storage`
 
 | Old | New / result |
