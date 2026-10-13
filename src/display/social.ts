@@ -962,7 +962,7 @@ function isFactionMobileBaseSnapshot(result: Record<string, unknown>): boolean {
   return isRecord(state) && typeof state.archetype_id === 'string' && typeof state.lifecycle === 'string';
 }
 
-/** `info` reads MobileBaseInfo. `snapshot` reads FactionMobileBaseResponse. */
+// info reads current_system_id; snapshot skips an alias-copied system_id.
 function emitMobileBaseSnapshot(source: Record<string, unknown>, mode: 'info' | 'snapshot'): void {
   if (mode === 'info') {
     const indent = '  ';
@@ -984,7 +984,6 @@ function emitMobileBaseSnapshot(source: Record<string, unknown>, mode: 'info' | 
   emitLine(`Base ID: ${source.base_id}`);
   emitLine(`POI: ${source.poi_id}`);
   emitMobileBaseYesNo('', 'Wrecked', source.wrecked);
-  // Mutation view models copy the pilot system onto an omitted system_id.
   if (!isAliasCopiedDumpKey(source, 'system_id')) emitMobileBaseText('', 'System', source.system_id);
   emitMobileBasePosition('', 'Position', source.position);
   if (!isRecord(source.mobile_base)) return;
