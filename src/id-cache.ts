@@ -719,7 +719,7 @@ function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {
     poi: ['get_system', 'get_status'],
     system: ['get_system', 'get_map'],
     item: ['get_cargo', 'view_market', 'catalog type=items'],
-    player: ['get_nearby', 'get_system_agents'],
+    player: ['get_nearby'],
     ship: ['list_ships', 'storage view'],
     faction: ['faction_list', 'faction_info'],
     drone: ['list_drones'],

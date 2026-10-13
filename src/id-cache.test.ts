@@ -896,6 +896,38 @@ describe('id cache', () => {
     expect(output).not.toContain('faction garages');
   });
 
+  test('empty player ID cache suggests get_nearby only', () => {
+    const sessionPath = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-player-empty-')),
+      'pilot.json',
+    );
+    const stdout: string[] = [];
+
+    printIds('player', sessionPath, { out: (message = '') => stdout.push(message), err() {} });
+
+    const output = stdout.join('\n');
+    expect(output).toContain('get_nearby');
+    expect(output).not.toContain('get_system_agents');
+    expect(output).not.toContain('get_system');
+  });
+
+  test('extractIdHints still caches player ids from get_system_agents agents', () => {
+    const hints = extractIdHints(
+      'get_system_agents',
+      { agents: [{ player_id: 'player-1', username: 'Marlowe' }] },
+      '2026-05-18T00:00:00.000Z',
+    );
+
+    expect(hints).toContainEqual(
+      expect.objectContaining({
+        kind: 'player',
+        id: 'player-1',
+        name: 'Marlowe',
+        sourceCommand: 'get_system_agents',
+      }),
+    );
+  });
+
   test('printWhereCanI supports explicit plain output', async () => {
     const sessionPath = path.join(
       fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-where-test-')),

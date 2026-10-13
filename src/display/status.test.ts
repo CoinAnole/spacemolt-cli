@@ -2441,8 +2441,10 @@ test('get_system prints class on list and Current POI', () => {
     '\n',
   );
 
-  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
-  expect(stdout).toContain('Current POI: Earth (planet) [garden]');
+  expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+  expect(stdout).not.toContain('(2 online)');
+  expect(stdout).not.toContain(' online)');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -2454,7 +2456,7 @@ test('get_system omits class when missing', () => {
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [station]  sol_earth');
   expect(stdout).not.toContain('[garden]');
   expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
   expect(stdout).not.toContain('=== Response ===');
@@ -2469,7 +2471,7 @@ test('get_system omits class when empty or whitespace-only', () => {
       context,
     ).stdout.join('\n');
 
-    expect(stdout).toContain('Earth (planet) [station] (2 online)');
+    expect(stdout).toContain('Earth (planet) [station]  sol_earth');
     expect(stdout).not.toContain('[]');
     expect(stdout).not.toContain('[garden]');
     expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
@@ -2485,7 +2487,7 @@ test('get_system prints unknown class tokens', () => {
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [black_hole_v2] [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [black_hole_v2] [station]  sol_earth');
   expect(stdout).toContain('Current POI: Earth (planet) [black_hole_v2]');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -2495,7 +2497,7 @@ test('get_system omits non-string class', () => {
     '\n',
   );
 
-  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [station]  sol_earth');
   expect(stdout).not.toContain('[1]');
   expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
   expect(stdout).not.toContain('[1]');
@@ -2507,7 +2509,7 @@ test('get_system prints class on the list when Current POI omits it', () => {
   delete (fixture.poi as Record<string, unknown>).class;
   const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
   expect(stdout).toContain('Current POI: Earth (planet)  sol_earth');
   expect(stdout).not.toMatch(/Current POI:.*\[garden\]/);
   expect(stdout).not.toContain('=== Response ===');
@@ -2518,7 +2520,7 @@ test('get_system prints class on Current POI when the list omits it', () => {
   delete (fixture.system.pois[0] as Record<string, unknown>).class;
   const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [station]  sol_earth');
   expect(stdout).not.toMatch(/- Earth \(planet\) \[garden\]/);
   expect(stdout).toContain('Current POI: Earth (planet) [garden]');
   expect(stdout).not.toContain('=== Response ===');
@@ -2545,6 +2547,7 @@ test('get_system prints class without station when has_base is false', () => {
 
   expect(stdout).toContain('Sol (star) [G2V]  sol');
   expect(stdout).not.toContain('[station]');
+  expect(stdout).not.toContain('(0 ships)');
   expect(stdout).toContain('Current POI: Sol (star) [G2V]  sol');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -2583,7 +2586,7 @@ test('get_system appends [deep core] on list and Current POI when overlaid', () 
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station]  sol_earth');
   expect(stdout).toContain('Current POI: Earth (planet) [garden] [deep core]');
   expect(stdout).not.toContain('Deep core: yes');
   expect(stdout).not.toContain('=== Response ===');
@@ -2597,7 +2600,7 @@ test('get_system prints [deep core] on the list when Current POI omits it', () =
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [garden] [deep core] [station]  sol_earth');
   expect(stdout).not.toMatch(/Current POI:.*\[deep core\]/);
   expect(stdout).toContain('Current POI: Earth (planet) [garden]');
 });
@@ -2610,7 +2613,7 @@ test('get_system prints [deep core] on Current POI when the list omits it', () =
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('Earth (planet) [garden] [station] (2 online)');
+  expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
   expect(stdout).not.toMatch(/- Earth \(planet\) \[garden\] \[deep core\]/);
   expect(stdout).toContain('Current POI: Earth (planet) [garden] [deep core]');
 });
@@ -2634,6 +2637,68 @@ test('get_system omits [deep core] when false or non-boolean', () => {
     expect(stdout).not.toContain('[deep core]');
     expect(stdout).not.toContain('Deep core:');
   }
+});
+
+function withListShipCount(value: unknown | undefined) {
+  const next = structuredClone(systemInfoFixture);
+  const poi = next.system.pois[0] as Record<string, unknown>;
+  if (value === undefined) delete poi.ship_count;
+  else poi.ship_count = value;
+  return next;
+}
+
+test('get_system prints (N ships) when ship_count is a finite number', () => {
+  const positive = renderStructuredResult('get_system', withListShipCount(2), options, context).stdout.join('\n');
+  expect(positive).toContain('Earth (planet) [garden] [station] (2 ships)  sol_earth');
+  expect(positive).not.toContain('=== Response ===');
+  expect(positive).not.toContain('(2 online)');
+
+  const zero = renderStructuredResult('get_system', withListShipCount(0), options, context).stdout.join('\n');
+  expect(zero).toContain('Earth (planet) [garden] [station] (0 ships)  sol_earth');
+  expect(zero).not.toContain('Ships:');
+
+  const absent = renderStructuredResult('get_system', withListShipCount(undefined), options, context).stdout.join('\n');
+  expect(absent).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(absent).not.toContain('(0 ships)');
+  expect(absent).not.toContain('ships)');
+
+  for (const value of ['2', null, true, Number.NaN]) {
+    const stdout = renderStructuredResult('get_system', withListShipCount(value), options, context).stdout.join('\n');
+    expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
+    expect(stdout).not.toContain('(0 ships)');
+    expect(stdout).not.toContain('ships)');
+  }
+});
+
+test('get_system ship counts stay on the POI that sent them', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  const earth = fixture.system.pois[0] as Record<string, unknown>;
+  const counted: Record<string, unknown> = { ...earth, id: 'sol_counted', name: 'Counted', ship_count: 3 };
+  const omitted: Record<string, unknown> = { ...earth, id: 'sol_omitted', name: 'Omitted' };
+  delete omitted.ship_count;
+  const empty: Record<string, unknown> = { ...earth, id: 'sol_empty', name: 'Empty', ship_count: 0 };
+  (fixture.system as { pois: unknown }).pois = [counted, omitted, empty];
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Counted (planet) [garden] [station] (3 ships)  sol_counted');
+  expect(stdout).toContain('Omitted (planet) [garden] [station]  sol_omitted');
+  expect(stdout).not.toMatch(/Omitted \(planet\).*ships/);
+  expect(stdout).toContain('Empty (planet) [garden] [station] (0 ships)  sol_empty');
+});
+
+test('get_system current POI uses its own ship_count', () => {
+  const both = structuredClone(systemInfoFixture);
+  (both.system.pois[0] as Record<string, unknown>).ship_count = 2;
+  (both.poi as Record<string, unknown>).ship_count = 4;
+  const bothOut = renderStructuredResult('get_system', both, options, context).stdout.join('\n');
+  expect(bothOut).toContain('Current POI: Earth (planet) [garden] (4 ships)  sol_earth');
+  expect(bothOut).toContain('Earth (planet) [garden] [station] (2 ships)  sol_earth');
+
+  const listOnly = withListShipCount(2);
+  const listOut = renderStructuredResult('get_system', listOnly, options, context).stdout.join('\n');
+  expect(listOut).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+  expect(listOut).not.toMatch(/Current POI:.*\(2 ships\)/);
+  expect(listOut).toContain('Earth (planet) [garden] [station] (2 ships)  sol_earth');
 });
 
 function agentsHeader(stdout: string): string | undefined {
@@ -2720,6 +2785,67 @@ test('get_system_agents leaves Docked blank when only some agents report it', ()
   expect(agentsHeader(stdout)).toContain('Docked');
   expect(agentsCell(stdout, 'Ibis', 'Docked')).toBe('true');
   expect(agentsCell(stdout, 'Marlowe', 'Docked')).toBe('');
+});
+
+test('get_system_agents prints a server warning above an empty agents table', () => {
+  const warning = 'get_system_agents is deprecated and always empty. Use get_nearby for ships at your POI.';
+  const stdout = renderSystemAgents({
+    system_id: 'sol',
+    count: 0,
+    agents: [],
+    warning,
+  });
+
+  expect(stdout).toContain('=== System Agents: sol ===');
+  expect(stdout.split(`Warning: ${warning}`).length - 1).toBe(1);
+  expect(stdout.indexOf('=== System Agents:')).toBeLessThan(stdout.indexOf('Warning:'));
+  expect(stdout.indexOf('Warning:')).toBeLessThan(stdout.indexOf('=== Agents ==='));
+  expect(stdout).toContain('=== Agents ===');
+  expect(stdout).toContain('(None)');
+  expect(stdout).toContain('count 0');
+});
+
+test('get_system_agents omits Warning when warning is missing or blank', () => {
+  for (const warning of [undefined, '', '   '] as const) {
+    const fixture = cloneSystemAgents();
+    if (warning === undefined) delete fixture.warning;
+    else fixture.warning = warning;
+    expect(renderSystemAgents(fixture)).not.toContain('Warning:');
+  }
+});
+
+test('get_system and get_system_agents JSON stay pass-through', () => {
+  const jsonOptions = { ...options, json: true };
+  const withCount = withListShipCount(0);
+  const counted = renderStructuredResult('get_system', withCount, jsonOptions, context);
+  const countedStdout = counted.stdout.join('\n');
+  expect(counted.success).toBe(true);
+  expect(counted.stderr).toEqual([]);
+  expect(countedStdout).toContain('"ship_count": 0');
+  expect(countedStdout).toContain('"online": 2');
+  expect(countedStdout).not.toContain('=== System');
+
+  const deleted = withListShipCount(0);
+  delete (deleted.system.pois[0] as Record<string, unknown>).ship_count;
+  const omittedStdout = renderStructuredResult('get_system', deleted, jsonOptions, context).stdout.join('\n');
+  expect(omittedStdout).not.toContain('ship_count');
+  expect(omittedStdout).toContain('"online": 2');
+  expect(omittedStdout).toContain('Birthplace system');
+
+  const warning = 'get_system_agents is deprecated and always empty.';
+  const agents = renderStructuredResult(
+    'get_system_agents',
+    { system_id: 'sol', count: 0, agents: [], warning },
+    jsonOptions,
+    context,
+  );
+  const agentsStdout = agents.stdout.join('\n');
+  expect(agents.success).toBe(true);
+  expect(agentsStdout).toContain('"warning"');
+  expect(agentsStdout).toContain(warning);
+  expect(agentsStdout).toContain('"agents": []');
+  expect(agentsStdout).not.toContain('"online"');
+  expect(agentsStdout).not.toContain('=== System Agents');
 });
 
 const adultLeviathanLine = '  Adult Molt Leviathan [lev-molt-1] (molt_leviathan) - adult - hull 800/1200 - aggressive';
