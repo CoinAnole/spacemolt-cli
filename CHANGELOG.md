@@ -143,6 +143,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Ship
 
 - `refit_ship` help now says to dock at a shipyard, that installed modules and cargo go to station storage (not destroyed), that the refit is free and irreversible, and that a response message of already_current means the ship already matches current class stats and the default-loadout version so nothing is applied. **No parser change.**
+- `commission_ship` and `commission_quote` help document mobile-base blueprints (gameserver 0.622.0). A catalog ship whose entry has mobile_base (class Mobile Base: Civitas, Siege Foundry, Foundation, Here to Stay, Emanation) is a faction station commissioned with commission_ship at a tier-four faction shipyard, not a new route. Piloting still applies to flyable hulls. Ship modules, piloting, speed, cargo, and ship fuel do not apply to those blueprints. Hull, shields, armor, and shield recharge are station combat stats. fund_from_faction=true still applies, and construction also needs ManageBases. commission_quote is the construction bill, not the jump resource. Jump resources are escrowed later by faction jump_mobile_base. Usage, positionals, and the viper example are unchanged. **No parser change.**
 
 ### Storage
 

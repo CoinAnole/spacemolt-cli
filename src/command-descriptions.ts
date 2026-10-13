@@ -19,9 +19,10 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
   cloak:
     'Toggle the cloaking device. You cannot engage a cloak during a battle (in_battle). Attacking or engaging drops an active cloak.',
-  commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
+  commission_quote:
+    'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource.',
   commission_ship:
-    "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies.",
+    "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station at a tier-four faction yard; ship modules and piloting do not apply, and the arguments are unchanged.",
   commission_status: 'Check the status of your ship commissions',
   complete_mission: 'Complete a mission and claim rewards',
   completed_missions: 'List all missions you have completed',
