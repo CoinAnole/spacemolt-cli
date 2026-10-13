@@ -17,6 +17,8 @@ import {
   formatActionResultDetails,
   formatInventoryPreview,
   formatNotificationPreview,
+  formatOfflineCollapsedText,
+  formatShipCountsLine,
   hasPreviewHandler,
   tableMessageFromPreview,
 } from './notification-format-shared';
@@ -11061,5 +11063,50 @@ describe('notification formatting', () => {
       expect(blankStation.headline).toBe('Gift from Alice — 1500 credits');
       expect(blankStation.headline).not.toContain(' at ');
     });
+  });
+});
+
+describe('shared offline collapsed and ship count lines', () => {
+  test('formatOfflineCollapsedText prints finite numbers only, including 0 and negatives', () => {
+    expect(formatOfflineCollapsedText(undefined)).toBeUndefined();
+    expect(formatOfflineCollapsedText(null)).toBeUndefined();
+    expect(formatOfflineCollapsedText('')).toBeUndefined();
+    expect(formatOfflineCollapsedText('4')).toBeUndefined();
+    expect(formatOfflineCollapsedText(Number.NaN)).toBeUndefined();
+    expect(formatOfflineCollapsedText(Number.POSITIVE_INFINITY)).toBeUndefined();
+    expect(formatOfflineCollapsedText(Number.NEGATIVE_INFINITY)).toBeUndefined();
+    expect(formatOfflineCollapsedText({ count: 4 })).toBeUndefined();
+    expect(formatOfflineCollapsedText([4])).toBeUndefined();
+    expect(formatOfflineCollapsedText(true)).toBeUndefined();
+    expect(formatOfflineCollapsedText(4n)).toBeUndefined();
+
+    expect(formatOfflineCollapsedText(0)).toBe('offline collapsed 0');
+    expect(formatOfflineCollapsedText(4)).toBe('offline collapsed 4');
+    expect(formatOfflineCollapsedText(-1)).toBe('offline collapsed -1');
+    expect(formatOfflineCollapsedText(4.5)).toBe('offline collapsed 4.5');
+    expect(formatOfflineCollapsedText(1000)).toBe('offline collapsed 1000');
+  });
+
+  test('formatShipCountsLine sorts finite counts and does not treat a non-empty bad map as cleared', () => {
+    expect(formatShipCountsLine(undefined)).toBeUndefined();
+    expect(formatShipCountsLine(null)).toBeUndefined();
+    expect(formatShipCountsLine('sol_earth')).toBeUndefined();
+    expect(formatShipCountsLine(4)).toBeUndefined();
+    expect(formatShipCountsLine(['sol_earth'])).toBeUndefined();
+    expect(formatShipCountsLine([{ sol_earth: 4 }])).toBeUndefined();
+
+    expect(formatShipCountsLine({})).toBe('Ship counts: (cleared)');
+    expect(formatShipCountsLine({ sol_earth: 4, sol_belt: 0 })).toBe('Ship counts: sol_belt=0, sol_earth=4');
+    expect(formatShipCountsLine({ sol_earth: 4.5, sol_belt: -1 })).toBe('Ship counts: sol_belt=-1, sol_earth=4.5');
+    expect(formatShipCountsLine({ poi: 1000 })).toBe('Ship counts: poi=1000');
+    expect(formatShipCountsLine({ g: 1, f: 2, e: 3, d: 4, c: 5, b: 6, a: 0 })).toBe(
+      'Ship counts: a=0, b=6, c=5, d=4, e=3, f=2, g=1',
+    );
+
+    expect(formatShipCountsLine({ sol_earth: '4' })).toBeUndefined();
+    expect(formatShipCountsLine({ sol_earth: Number.NaN, sol_belt: Number.POSITIVE_INFINITY })).toBeUndefined();
+    expect(formatShipCountsLine({ sol_earth: null, sol_belt: { n: 1 } })).toBeUndefined();
+    expect(formatShipCountsLine({ '  ': 4 })).toBeUndefined();
+    expect(formatShipCountsLine({ sol_earth: 4, bad: 'x', nan: Number.NaN, '  ': 9 })).toBe('Ship counts: sol_earth=4');
   });
 });
