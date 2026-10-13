@@ -173,10 +173,38 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
   invalid_poi: {
     code: 'invalid_poi',
     message: 'Invalid POI.',
-    suggestion: 'POI not found. Run "spacemolt get_system" to see valid POIs.',
+    suggestion:
+      'POI not found. An uncharted hidden POI returns the same error as an id that does not exist. Run "spacemolt get_system" for charted POIs. Chart a hidden POI with "spacemolt survey_system", by arriving, or through faction intel.',
     retryable: false,
     auth: false,
-    relatedCommands: ['get_system'],
+    relatedCommands: ['get_system', 'survey_system'],
+  },
+  unknown_system: {
+    code: 'unknown_system',
+    message: 'Unknown system.',
+    suggestion:
+      'Unknown system. An uncharted wormhole entrance returns unknown_system, the same as an unknown system id. Chart it with "spacemolt survey_system", by arriving, or through faction intel. Run "spacemolt get_system" for connected systems you already know.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_system', 'jump', 'survey_system'],
+  },
+  system_not_found: {
+    code: 'system_not_found',
+    message: 'System not found.',
+    suggestion:
+      'Not found. An uncharted hidden POI returns system_not_found from find_route, the same as an unknown id. Chart it with "spacemolt survey_system", by arriving, or through faction intel, then run "spacemolt find_route" again.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['find_route', 'survey_system', 'get_system'],
+  },
+  poi_not_found: {
+    code: 'poi_not_found',
+    message: 'POI not found.',
+    suggestion:
+      'POI not found. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with "spacemolt survey_system", by arriving, or through faction intel, then run "spacemolt faction scan_poi".',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['faction_scan_poi', 'survey_system'],
   },
   wrong_system: {
     code: 'wrong_system',
@@ -257,18 +285,59 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
   invalid_target: {
     code: 'invalid_target',
     message: 'Invalid target.',
-    suggestion: 'Target not found. Run "spacemolt get_nearby" to see players at your POI.',
+    suggestion:
+      'Target not found. A missing id and a target you cannot see use this same error. Run "spacemolt get_nearby" for ships at your POI.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_nearby'],
+    commandSuggestions: {
+      attack:
+        'Target not found. attack and hunt return this for a missing id and for a target you cannot see (another POI, in transit, or cloaked). Run "spacemolt get_nearby" for ships at your POI. Joining a battle already running in this system uses a participant from "spacemolt get_battle_status" and does not return this error.',
+      hunt: 'Target not found. attack and hunt return this for a missing id and for a target you cannot see (another POI, in transit, or cloaked). Run "spacemolt get_nearby" for ships at your POI. Joining a battle already running in this system uses a participant from "spacemolt get_battle_status" and does not return this error.',
+    },
+  },
+  player_not_found: {
+    code: 'player_not_found',
+    message: 'Player not found.',
+    suggestion:
+      'No pilot by that name, or that pilot is not visible. A pilot at another POI, in transit, or cloaked returns the same error as an unknown name. Meet at the same POI. Run "spacemolt get_nearby" for pilots at your POI.',
     retryable: false,
     auth: false,
     relatedCommands: ['get_nearby'],
   },
-  target_cloaked: {
-    code: 'target_cloaked',
-    message: 'Target is cloaked.',
-    suggestion: 'Target is cloaked. Use "scan" with high scan power to reveal them.',
+  in_battle: {
+    code: 'in_battle',
+    message: 'You are in a battle.',
+    suggestion:
+      'You are in a battle, so the cloak stays off. Attacking or engaging also drops an active cloak. Leave the battle, then retry "spacemolt cloak". Run "spacemolt get_battle_status" to see the fight.',
     retryable: true,
     auth: false,
-    relatedCommands: ['scan'],
+    relatedCommands: ['get_battle_status', 'cloak'],
+  },
+  wreck_not_found: {
+    code: 'wreck_not_found',
+    message: 'Wreck not found.',
+    suggestion:
+      'That wreck was not found. It must be at your POI; a wreck elsewhere returns wreck_not_found. Run "spacemolt get_wrecks" for wrecks at your POI.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_wrecks', 'tow_wreck'],
+  },
+  not_found: {
+    code: 'not_found',
+    message: 'Not found.',
+    suggestion: 'Not found. Check the id. This code does not say whether the id is missing or not visible to you.',
+    retryable: false,
+    auth: false,
+    relatedCommands: [],
+    commandSuggestions: {
+      loot_wreck:
+        'That wreck was not found. A wreck at another POI returns not_found, the same as a wreck that is already gone. Run "spacemolt get_wrecks" for wrecks at your POI. Omit wreck_id while you are towing.',
+      storage_loot:
+        'That wreck was not found. A wreck at another POI returns not_found, the same as a wreck that is already gone. Run "spacemolt get_wrecks" for wrecks at your POI. Omit wreck_id while you are towing.',
+      inspect:
+        'Not found. An uncharted hidden POI looks like an unknown id (not_found). Chart it with "spacemolt survey_system", by arriving, or through faction intel, then inspect again.',
+    },
   },
   no_cloak: {
     code: 'no_cloak',

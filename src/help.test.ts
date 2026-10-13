@@ -2749,6 +2749,100 @@ describe('help output branches', () => {
     expect(output).not.toContain('Target not found');
   });
 
+  test('displayError gives attack invalid_target a nearby and battle suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'attack',
+      { code: 'invalid_target', message: 'Target not found' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [invalid_target]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('get_nearby');
+    expect(output).toContain('get_battle_status');
+    expect(output).not.toContain('scan');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives repair player_not_found a shared unseen-pilot suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'repair',
+      { code: 'player_not_found', message: 'Player not found.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [player_not_found]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('unknown name');
+    expect(output).not.toContain('scan');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives cloak in_battle a retryable cloak suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'cloak',
+      { code: 'in_battle', message: 'You are in a battle.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [in_battle]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('cloak');
+    expect(output).toContain('This error may be retryable.');
+  });
+
+  test('displayError gives tow_wreck wreck_not_found a get_wrecks suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'tow_wreck',
+      { code: 'wreck_not_found', message: 'Wreck not found.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [wreck_not_found]');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('get_wrecks');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError scopes not_found to wreck loot and inspect', () => {
+    const loot = captureWriter();
+    displayError(
+      'loot_wreck',
+      { code: 'not_found', message: 'Not found.' },
+      { context: displayErrorContext(loot.writer) },
+    );
+    expect(loot.stderr.join('\n')).toContain('get_wrecks');
+    expect(loot.stderr.join('\n')).not.toContain('This error may be retryable.');
+
+    const storage = captureWriter();
+    displayError(
+      'storage loot',
+      { code: 'not_found', message: 'Not found.' },
+      { context: displayErrorContext(storage.writer) },
+    );
+    expect(storage.stderr.join('\n')).toContain('get_wrecks');
+    expect(storage.stderr.join('\n')).not.toContain('This error may be retryable.');
+
+    const inspect = captureWriter();
+    displayError(
+      'inspect',
+      { code: 'not_found', message: 'Not found.' },
+      { context: displayErrorContext(inspect.writer) },
+    );
+    const inspectOutput = inspect.stderr.join('\n');
+    expect(inspectOutput).toContain('Suggestion:');
+    expect(inspectOutput).not.toContain('get_wrecks');
+    expect(inspectOutput).not.toContain('This error may be retryable.');
+  });
+
   test('displayError prints a missing-materials table on stderr for facility upgrade', () => {
     const capture = captureWriter();
     const context = missingMaterialsContext(capture.writer);

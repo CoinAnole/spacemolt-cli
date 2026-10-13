@@ -23,7 +23,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     usage:
       '<channel> [limit] [before] [target_id=...]  (channels: local, system, faction, private, emergency; emergency is read-only MAYDAY history)',
     description:
-      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for your current system; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0).',
+      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0).',
     example: 'spacemolt get_chat_history local 20; spacemolt get_chat_history emergency',
     seeAlso: ['chat'],
     category: 'Chat - rest captures remaining args as content',
@@ -362,7 +362,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_scan_poi: {
     usage: '<poi_id>  (for a station: station base ID or station POI ID)',
     description:
-      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.",
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.",
     example: 'spacemolt faction_scan_poi <poi_id>',
     discoverWith: ['get_system', 'faction_intel_status'],
     seeAlso: ['faction_intel_status', 'faction_query_intel'],

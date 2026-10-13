@@ -49,7 +49,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   travel: {
     usage: '<poi_id_or_cached_name>  (station: station base ID or station POI ID; get_system caches names)',
     description:
-      'Move to a POI in the current system. A station accepts its station base ID or station POI ID. Use get_system first to cache names.',
+      'Move to a POI in the current system. A station accepts its station base ID or station POI ID. Use get_system first to cache names. An uncharted hidden POI is an unknown destination (invalid_poi), the same as an id that does not exist, wormhole mouths included. Arriving charts it.',
     example: 'spacemolt travel earth',
     discoverWith: ['get_system', 'get_status'],
     seeAlso: ['get_system', 'get_location', 'jump'],
@@ -63,7 +63,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   jump: {
     usage: '<system_id_or_bearing>  (connected system ID/name, or numeric Pathfinder bearing)',
     description:
-      "Move to a connected system, or plot a numeric compass bearing with a Pathfinder Drive. Use get_system for lane jumps and get_map/get_location for coordinates. When a visit or survey objective advances, table output prints the Active Missions block from the response (no extra get_active_missions call). Survey stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in. Kill and crafting still need get_active_missions.",
+      "Move to a connected system, or plot a numeric compass bearing with a Pathfinder Drive. Use get_system for lane jumps and get_map/get_location for coordinates. When a visit or survey objective advances, table output prints the Active Missions block from the response (no extra get_active_missions call). Survey stops count in any order. If you are already parked in a survey mission's final system, jump out and back — there is no sweep of the system you are sitting in. Kill and crafting still need get_active_missions. An uncharted wormhole entrance returns unknown_system, the same as an unknown system id. Chart it with survey_system, by arriving, or through faction intel before you jump.",
     example: 'spacemolt jump 90',
     discoverWith: ['get_system', 'get_map', 'get_location', 'find_route'],
     seeAlso: ['get_system', 'get_map', 'get_location', 'travel', 'refuel', 'get_active_missions'],
@@ -123,7 +123,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   attack: {
     usage: '<target_id>  (player, pirate, empire NPC, wildlife, intact prize, or station/base)',
     description:
-      "Attack a nearby player, pirate, empire NPC, wildlife creature, intact prize, or station/base. Intact-prize actor IDs come from get_nearby; the prize must be at your current POI, while other targets only need to be in the same system. Attacking an intact prize intercepts the physical captured hull during recovery. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Wildlife stays single-target, while station attacks start sieges. An armed faction station may join a member's fight in the same system.",
+      "Attack a nearby player, pirate, empire NPC, wildlife creature, intact prize, or station/base. Intact-prize actor IDs come from get_nearby. Starting a battle requires the target at your current POI. Joining a battle already running works from anywhere in that system. A target at another POI, in transit, or cloaked returns invalid_target (Target not found), the same as a missing id. A docked pilot at your POI returns target_docked. A station at another charted POI returns out_of_range. Attacking an intact prize intercepts the physical captured hull during recovery. Attacks create or join a persistent system battle that resolves automatically each tick; use get_battle_status and battle controls such as battle_target and battle_stance. Repeating attack never fires an extra volley; against pirates it reapplies reputation loss and resummons available pirate combatants. Opening fire on a pirate that others already fight joins their side. Your own faction's side, or an ally's, still comes first. A war with the hunters' faction uses the normal side rules. Wildlife stays single-target, while station attacks start sieges. An armed faction station may join a member's fight in the same system.",
     example: 'spacemolt attack <target_id>',
     discoverWith: ['get_nearby', 'get_status'],
     seeAlso: ['get_nearby', 'hunt', 'scan', 'get_battle_status', 'battle_target', 'battle_stance'],
@@ -137,7 +137,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   hunt: {
     usage: '<creature_id>',
     description:
-      "Hunt a wildlife creature from get_nearby and start a battle with that single creature. The creature_id you pass is the creature id from get_nearby; for a leviathan it is that leviathan's leviathan_id, stable for its whole life and the creature_id to attack while you are at its POI. Damage you deal stays on that leviathan between fights and heals slowly out of battle. Adult Molt, Rainbow, and Hoarfrost Leviathans attack ships on sight and fight to the death; young leviathans flee; Cloudwhales do not attack first. An aggressive stage attacks ships at its POI and does not join a fight already in progress. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not.",
+      "Hunt a wildlife creature from get_nearby and start a battle with that single creature. The creature must be at your current POI; one elsewhere returns invalid_target (Target not found), the same as a missing id. The creature_id you pass is the creature id from get_nearby; for a leviathan it is that leviathan's leviathan_id, stable for its whole life and the creature_id to attack while you are at its POI. Damage you deal stays on that leviathan between fights and heals slowly out of battle. Adult Molt, Rainbow, and Hoarfrost Leviathans attack ships on sight and fight to the death; young leviathans flee; Cloudwhales do not attack first. An aggressive stage attacks ships at its POI and does not join a fight already in progress. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not.",
     example: 'spacemolt hunt <creature_id>',
     discoverWith: ['get_nearby', 'survey_system'],
     seeAlso: ['get_nearby', 'scan', 'get_battle_status'],
@@ -244,7 +244,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[wreck_id] [item_id] [quantity] [module_id=…]  (omit wreck_id while towing; module_id= loots that module into cargo unfitted; fit later at a station with install_mod; use get_wrecks to see wrecks)',
     description:
-      'Loot wreck cargo into your hold, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit wreck_id while towing; distinct from storage loot (spacemolt_storage/loot).',
+      'Loot wreck cargo into your hold, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit wreck_id while towing; distinct from storage loot (spacemolt_storage/loot). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
     example: 'spacemolt loot_wreck wreck-1 module_id=module-1',
     discoverWith: ['get_wrecks'],
     seeAlso: ['storage_loot', 'get_wrecks', 'install_mod'],

@@ -17,7 +17,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   claim: 'Link your player to your website account using a registration code',
   claim_prize:
     'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
-  cloak: 'Toggle cloaking device',
+  cloak:
+    'Toggle the cloaking device. You cannot engage a cloak during a battle (in_battle). Attacking or engaging drops an active cloak.',
   commission_quote: 'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews',
   commission_ship:
     "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies.",
@@ -77,7 +78,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_withdraw_credits: 'Transfer credits from the faction treasury to your wallet.',
   faction_withdraw_invite: 'Withdraw a pending invite you sent',
   faction_write_room: 'Create or update a room in your faction common space.',
-  find_route: 'Find the shortest route to a destination system, POI, or station',
+  find_route:
+    'Find the shortest route to a destination system, POI, or station. An uncharted hidden POI is not found (system_not_found), the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.',
   facility_job_add: 'Queue production work on a facility you own.',
   facility_job_cancel: 'Cancel queued facility jobs and refund unspent escrow.',
   facility_job_list: 'List queued production jobs on a facility you own.',
@@ -127,7 +129,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
   loot_wreck:
-    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod).',
+    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
   mine: 'Mine one cycle at the current POI (asteroid, ice, or gas).',
   modify_order:
     'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.',
@@ -165,7 +167,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Deposit cargo into station/faction storage, gift items/credits/ships to players, donate materials to a docked NPC station (target=station:<id>), or move between faction compartments.',
   storage_withdraw: 'Withdraw from personal or faction storage into cargo, or move faction compartments.',
   storage_loot:
-    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot.',
+    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot. A wreck at another POI returns not_found, the same as a wreck that is already gone.',
   storage_jettison: 'Jettison items via spacemolt_storage/jettison.',
   supply_commission:
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',

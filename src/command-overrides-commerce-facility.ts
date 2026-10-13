@@ -292,7 +292,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   storage_loot: {
     usage: '[wreck_id] [item_id] [quantity] [module_id=…]',
     description:
-      'Loot wreck cargo into your hold via spacemolt_storage/loot, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit wreck_id while towing; distinct from loot_wreck (spacemolt_salvage/loot).',
+      'Loot wreck cargo into your hold via spacemolt_storage/loot, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit wreck_id while towing; distinct from loot_wreck (spacemolt_salvage/loot). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
     example: 'spacemolt storage_loot wreck-1 module_id=module-1',
     category: 'Wrecks',
     apiRoute: 'POST /api/v2/spacemolt_storage/loot',
@@ -509,7 +509,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   upload_drone: {
     usage: '<drone_id> <script>',
     description:
-      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only).",
+      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only). At MOVE time, an uncharted hidden POI acts like an id that does not exist. That failure is often silent, and this upload does not report it.",
     example: 'spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"',
     discoverWith: ['list_drones', 'get_drone'],
     seeAlso: ['get_drone', 'deploy_drone'],

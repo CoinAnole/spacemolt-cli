@@ -587,6 +587,12 @@ describe('command metadata', () => {
     expect(config?.description).toContain('jump out and back');
     expect(config?.description).toContain('no sweep of the system you are sitting in');
     expect(config?.description).toContain('Kill and crafting still need get_active_missions');
+    expect(config?.description).toContain('unknown_system');
+    expect(config?.description).toContain('survey_system');
+    expect(config?.description).toContain('faction intel');
+    expect(config?.description).toContain('arriving');
+    expect(config?.description).toContain('before you jump');
+    expect(config?.description).not.toContain('invalid_poi');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
     expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_active_missions']));
@@ -597,7 +603,24 @@ describe('command metadata', () => {
     expect(help).toContain('jump out and back');
     expect(help).toContain('Kill and crafting still need get_active_missions');
     expect(help).toContain('get_active_missions');
+    expect(help).toContain('unknown_system');
+    expect(help).toContain('survey_system');
+    expect(help).toContain('faction intel');
+    expect(help).not.toContain('invalid_poi');
     expect(help).not.toContain('`');
+  });
+
+  test('travel, find_route, and cloak help name hidden-POI and battle cloak rules', () => {
+    expect(COMMANDS.travel?.description).toContain('invalid_poi');
+    expect(COMMANDS.travel?.description).toContain('uncharted hidden POI');
+    expect(COMMANDS.find_route?.description).toContain('system_not_found');
+    expect(COMMANDS.find_route?.description).toContain('survey_system');
+    expect(COMMANDS.find_route?.description).toContain('faction intel');
+    expect(COMMANDS.find_route?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.find_route);
+    expect(COMMANDS.cloak?.description).toContain('in_battle');
+    expect(COMMANDS.cloak?.description).not.toContain('scan');
+    expect(COMMANDS.cloak?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.cloak);
+    expect(CORE_COMMAND_OVERRIDES.cloak?.description).toBeUndefined();
   });
 
   test('survey_system help documents any-order survey stops and parked-system jump-out', () => {
@@ -835,6 +858,8 @@ describe('command metadata', () => {
     expect(config.description).toContain('live emergency broadcast');
     expect(config.description).toContain('not from this history');
     expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).toContain('within 5 jumps');
+    expect(config.description).not.toContain('current system');
     expect(config.description).not.toContain('\n');
 
     expect(config.usage).toContain('emergency');
@@ -908,6 +933,15 @@ describe('command metadata', () => {
     expect(config?.description).toContain('get_nearby');
     expect(config?.description).toContain('current POI');
     expect(config?.description).toContain('intercepts the physical captured hull');
+    expect(config?.description).toContain('Starting a battle requires the target at your current POI');
+    expect(config?.description).toContain('Joining a battle already running');
+    expect(config?.description).toContain('invalid_target');
+    expect(config?.description).toContain('Target not found');
+    expect(config?.description).toContain('target_docked');
+    expect(config?.description).toContain('out_of_range');
+    expect(config?.description).toContain('joins their side');
+    expect(config?.description).toContain('normal side rules');
+    expect(config?.description).not.toContain('other targets only need to be in the same system');
     expect(config?.seeAlso).toEqual(
       expect.arrayContaining(['get_nearby', 'get_battle_status', 'battle_target', 'battle_stance']),
     );
@@ -927,6 +961,15 @@ describe('command metadata', () => {
     expect(help).toContain('Prize actor IDs come from get_nearby');
     expect(help).toContain('shelling an empire station is a serious crime');
     expect(help).toContain('get_nearby');
+    expect(help).toContain('Starting a battle requires the target at your current POI');
+    expect(help).toContain('Joining a battle already running');
+    expect(help).toContain('invalid_target');
+    expect(help).toContain('Target not found');
+    expect(help).toContain('target_docked');
+    expect(help).toContain('out_of_range');
+    expect(help).toContain('joins their side');
+    expect(help).toContain('normal side rules');
+    expect(help).not.toContain('other targets only need to be in the same system');
   });
 
   test('battle_engage help only offers joining an existing battle', () => {
@@ -1025,6 +1068,9 @@ describe('command metadata', () => {
     expect(hunt?.required).toEqual(['creature_id']);
     expect(hunt?.usage).toContain('<creature_id>');
     expect(hunt?.description).toContain('wildlife creature');
+    expect(hunt?.description).toContain('must be at your current POI');
+    expect(hunt?.description).toContain('invalid_target');
+    expect(hunt?.description).toContain('Target not found');
     expect(hunt?.description).toContain('leviathan');
     expect(hunt?.description).not.toContain('carrion');
     expect(hunt?.description).toContain('armed faction station');
@@ -1050,6 +1096,9 @@ describe('command metadata', () => {
     const help = captureHelp('hunt');
     expect(help).toContain('spacemolt hunt <creature_id>');
     expect(help).toContain('wildlife creature');
+    expect(help).toContain('must be at your current POI');
+    expect(help).toContain('invalid_target');
+    expect(help).toContain('Target not found');
     expect(help).toContain('leviathan');
     expect(help).toContain('get_nearby');
     expect(help).toContain('armed faction station');
@@ -2149,6 +2198,8 @@ describe('command metadata', () => {
     const tow = COMMANDS.tow_wreck;
     expect(tow?.description).toContain('storage deposit');
     expect(tow?.description).toContain('equal or smaller class scale');
+    expect(tow?.description).toContain('wreck_not_found');
+    expect(tow?.description).toContain('at your POI');
     expect(tow?.description).not.toContain('smaller-scale');
     expect(tow?.seeAlso).toContain('storage_deposit');
     const release = COMMANDS.release_tow;
@@ -2348,7 +2399,7 @@ describe('command metadata', () => {
 
   test('inspect help points skills, recipes, and facilities at catalog', () => {
     const description =
-      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base, including per-input buy order: yes or no. Sell only buy order: yes rows through the public market; check view_market for depth.';
+      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint shortage report as get_base, including per-input buy order: yes or no. Sell only buy order: yes rows through the public market; check view_market for depth. An uncharted hidden POI in this system is not found (not_found), the same as an unknown id.';
 
     expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.description).toBe(description);
     expect(COMMANDS.inspect?.description).toBe(description);
@@ -2725,8 +2776,11 @@ describe('command metadata', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.upload_drone;
     expect(config?.usage).toBe('<drone_id> <script>');
     expect(config?.description).toBe(
-      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only).",
+      "Upload a DroneLang script to a drone. MOVE and at() accept a POI ID or that station's base ID (same system only). At MOVE time, an uncharted hidden POI acts like an id that does not exist. That failure is often silent, and this upload does not report it.",
     );
+    expect(config?.description).not.toContain('rejected');
+    expect(config?.description).not.toContain('invalid_poi');
+    expect(config?.description).not.toContain('not_found');
     expect(config?.example).toBe('spacemolt upload_drone <drone_id> "IF enemy_nearby() THEN MOVE"');
     expect(config?.schema?.text?.description).toContain('max 2000 chars');
     expect(config?.schema?.text?.description).toContain('Pass empty string to clear');
@@ -3084,6 +3138,8 @@ describe('command metadata', () => {
     expect(COMMANDS.loot_wreck?.usage).not.toContain('onto your ship');
     expect(COMMANDS.loot_wreck?.description).toContain('unfitted');
     expect(COMMANDS.loot_wreck?.description).toContain('install_mod');
+    expect(COMMANDS.loot_wreck?.description).toContain('not_found');
+    expect(COMMANDS.loot_wreck?.description).toContain('another POI');
     expect(COMMANDS.loot_wreck?.description).not.toContain('fit a module onto your ship');
     expect(COMMANDS.loot_wreck?.description).not.toContain('onto your ship');
     expect(COMMANDS.loot_wreck?.description).not.toContain('withdrawn');
@@ -3097,6 +3153,8 @@ describe('command metadata', () => {
     expect(COMMANDS.storage_loot?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
     expect(COMMANDS.storage_loot?.description).toContain('unfitted');
     expect(COMMANDS.storage_loot?.description).toContain('install_mod');
+    expect(COMMANDS.storage_loot?.description).toContain('not_found');
+    expect(COMMANDS.storage_loot?.description).toContain('another POI');
     expect(COMMANDS.storage_loot?.description).not.toContain('from a wreck into cargo via');
     expect(COMMANDS.storage_loot?.description).not.toContain('fit a module onto your ship');
     expect(COMMANDS.storage_loot?.description).not.toContain('onto your ship');
@@ -3110,9 +3168,13 @@ describe('command metadata', () => {
 
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('unfitted');
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('install_mod');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('not_found');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('another POI');
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).not.toContain('onto your ship');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('unfitted');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('install_mod');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('not_found');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('another POI');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).not.toContain('onto your ship');
   });
 
@@ -4517,12 +4579,18 @@ describe('command metadata', () => {
     const state =
       'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.';
     const scan =
-      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.";
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.";
     const status = 'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.';
 
     expect(COMMANDS.get_location?.description).toBe(location);
     expect(COMMANDS.get_state?.description).toBe(state);
     expect(COMMANDS.faction_scan_poi?.description).toBe(scan);
+    expect(scan).toContain('poi_not_found');
+    expect(scan).toContain('survey_system');
+    expect(scan).toContain('faction intel');
+    expect(scan).not.toContain('faction_scan_poi');
+    expect(COMMANDS.get_location?.description).not.toContain('poi_not_found');
+    expect(COMMANDS.get_state?.description).not.toContain('poi_not_found');
     expect(COMMANDS.get_status?.description).toBe(status);
     expect(COMMANDS.get_status?.description).not.toContain('leviathan');
     expect(COMMANDS.get_status?.description).not.toContain('creature_id for hunt');
