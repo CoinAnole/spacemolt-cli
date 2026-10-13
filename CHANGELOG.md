@@ -17,7 +17,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Observation
 
 - `get_nearby`, `get_status`, `get_state`, `get_location`, and the `subscribe_observation` snapshot print every ship row the server returned. They no longer stop at 10. `offline collapsed N` prints when that field is present, including 0. The snapshot prints `Ship counts: …` for `ship_counts`, including `Ship counts: (cleared)` when the map is empty.
-- Travel arrival prints `offline collapsed N` when details include that number, including 0. Jump still prints players copied from `location.nearby_players` when details omit `online_players`. Jump prints `offline collapsed N` only when `details.offline_collapsed` is present, not when the count exists only on `location`.
+- Travel and jump arrival print `offline collapsed N` when details include that number, including 0.
 - Observation `--follow` headlines and `subscribe_observation` snapshots now always print `active_scan` as true or false (gameserver 0.599.5). If you subscribed with `active_scan=true`, `active scan: false` on an update is the sweep shutting down.
 - Observation `--follow` headlines now count arena challenge enemies and intact prizes (`arena_npcs_changed` / `arena_npcs_departed`, `prizes_changed` / `prizes_departed`; gameserver 0.601.0). A knocked-out arena enemy is a hull 0 change, not a departure — enemies leave the feed only when the match ends. Help documents the live arena watch.
 - `subscribe_observation` snapshots of a running NPC challenge are golden'd (`subscribe_observation_arena`).
