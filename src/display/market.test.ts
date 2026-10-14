@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { factionQueryIntelFixture, supplyCommissionFixture } from './market.fixtures.ts';
+import { factionCreateSellOrderFixture, factionQueryIntelFixture, supplyCommissionFixture } from './market.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -152,6 +152,163 @@ test('create_sell_order prints a bigint quantity_listed instead of a zero remain
   expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
   expect(stdout).not.toContain('9007199254740992');
   expect(stdout).not.toContain('Remaining listed: 0');
+});
+
+const singleSellBody = {
+  action: 'create_sell_order',
+  kind: 'single',
+  item: 'Void Salt',
+  item_id: 'void_salt',
+  quantity: 20,
+  price_each: 500,
+  quantity_filled: 20,
+  quantity_listed: 0,
+  total_earned: 10000,
+  listing_fee: 100,
+  order_id: 'order-salt-1',
+  message: 'Created sell order.',
+};
+
+test('create_sell_order prints smuggling XP and level-up when present', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    { ...singleSellBody, smuggling_xp: 50, smuggling_level_up: true },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Sell Order Created ===');
+  expect(stdout).toContain('Instant fills: 20 (earned: 10,000 cr)');
+  expect(stdout.endsWith('Order ID: order-salt-1\nSmuggling XP: 50\nSmuggling level up: yes')).toBe(true);
+  expect(stdout).not.toContain('Created sell order');
+});
+
+test('create_sell_order omits smuggling lines when both fields are absent', () => {
+  const stdout = renderStructuredResult('create_sell_order', singleSellBody, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Sell Order Created ===');
+  expect(stdout.endsWith('Order ID: order-salt-1')).toBe(true);
+  expect(stdout).not.toContain('Smuggling');
+});
+
+test('create_sell_order prints explicit smuggling XP 0 and skips a false level-up', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    { ...singleSellBody, smuggling_xp: 0, smuggling_level_up: false },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.endsWith('Order ID: order-salt-1\nSmuggling XP: 0')).toBe(true);
+  expect(stdout).not.toContain('Smuggling level up');
+});
+
+test('create_sell_order prints a bigint smuggling_xp without rounding', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity: 1,
+      order_id: 'order-1',
+      smuggling_xp: 9007199254740993n,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const rounded = Number(9007199254740993n).toLocaleString();
+
+  expect(stdout).toContain('Order ID: order-1');
+  expect(stdout).toContain('Smuggling XP:');
+  expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain(rounded);
+});
+
+const directSellBody = {
+  action: 'sell',
+  item: 'Void Salt',
+  item_id: 'void_salt',
+  quantity_sold: 8,
+  total_earned: 4000,
+  unsold: 2,
+  fills: [{ quantity: 8, price_each: 500, subtotal: 4000, counterparty: 'Mara' }],
+  smuggling_xp: 40,
+  level_up: false,
+  message: 'Sold items.',
+};
+
+test('sell prints smuggling XP without a level-up line', () => {
+  const stdout = renderStructuredResult('sell', directSellBody, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Sell Complete ===');
+  expect(stdout).toContain('Item: Void Salt (void_salt)');
+  expect(stdout).toContain('Sold: 8');
+  expect(stdout).toContain('Instant fills: 8 (earned: 4,000 cr) from Mara');
+  expect(stdout.endsWith('Unsold: 2\nSmuggling XP: 40')).toBe(true);
+  expect(stdout).not.toContain('Smuggling level up');
+  expect(stdout).not.toContain('Sold items.');
+  expect(stdout).not.toContain('Level up');
+  expect(stdout).not.toContain('XP gained');
+  expect(stdout).not.toContain('Skill level');
+});
+
+test('sell does not print trading level_up as smuggling', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    { ...directSellBody, level_up: true, skill_level: 4, xp_gained: 12 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Smuggling XP: 40');
+  expect(stdout).not.toContain('Smuggling level up');
+  expect(stdout).not.toContain('Level up');
+  expect(stdout).not.toContain('XP gained');
+  expect(stdout).not.toContain('Skill level');
+  expect(stdout).not.toContain('Sold items.');
+});
+
+test('faction_create_sell_order does not print player smuggling lines', () => {
+  const fixture = structuredClone(factionCreateSellOrderFixture);
+  Object.assign(fixture.details, { smuggling_xp: 50, smuggling_level_up: true });
+  const stdout = renderStructuredResult('faction_create_sell_order', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Sell Order Created ===');
+  expect(stdout).toContain('Order ID: faction-sell-1');
+  expect(stdout).not.toContain('Smuggling XP');
+  expect(stdout).not.toContain('Smuggling level up');
+});
+
+test('single create_buy_order still prints delivery lines and no smuggling', () => {
+  const stdout = renderStructuredResult(
+    'create_buy_order',
+    {
+      action: 'create_buy_order',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity: 10,
+      price_each: 5,
+      quantity_filled: 4,
+      quantity_listed: 6,
+      total_spent: 20,
+      delivered_to_cargo: 4,
+      delivered_to_storage: 3,
+      order_id: 'order-buy-1',
+      smuggling_xp: 50,
+      smuggling_level_up: true,
+      message: 'Created buy order.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Buy Order Created ===');
+  expect(stdout).toContain('Delivered to cargo: 4');
+  expect(stdout).toContain('Delivered to storage: 3');
+  expect(stdout).not.toContain('Smuggling');
+  expect(stdout).not.toContain('Created buy order.');
 });
 
 test('faction_query_intel appends [deep core] when the POI is tagged', () => {
