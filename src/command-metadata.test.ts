@@ -3435,19 +3435,75 @@ describe('command metadata', () => {
   });
 
   test('buy help advertises storage delivery as the default and cargo as an override', () => {
+    const hazmatInstantFill =
+      'A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.';
     const config = BUNDLED_COMMAND_REGISTRY.commands.buy;
     expect(config?.route.defaults).toMatchObject({ deliver_to: 'storage' });
     expect(config?.usage).toContain('[delivery=cargo|storage]');
     expect(config?.aliases).toMatchObject({ delivery: 'deliver_to' });
+    expect(COMMANDS.buy?.description).toContain(hazmatInstantFill);
+    expect(COMMANDS.buy?.description).toContain('delivery=cargo');
+    expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('CLI default is storage');
+    expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('delivery=cargo');
+    expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain(hazmatInstantFill);
     expect(config?.schema?.deliver_to?.description).toContain('CLI default is storage');
 
     const help = captureHelp('buy');
     expect(help).toContain('delivery -> deliver_to');
     expect(help).toContain('deliver_to (cargo|storage)');
     expect(help).toContain('CLI default is storage');
+    expect(help).toContain('delivery=cargo');
     expect(help).toContain('deliver_to=storage');
+    expect(help).toContain(hazmatInstantFill);
     expect(help).toContain('storage');
     expect(help).not.toContain('view_storage');
+    for (const text of [COMMANDS.buy?.description ?? '', COMMANDS.buy?.schema?.deliver_to?.description ?? '']) {
+      expect(text).not.toContain('not the hold');
+      expect(text).not.toContain('not your cargo');
+    }
+  });
+
+  test('create_buy_order help states a hazardous instant fill goes to station storage', () => {
+    const hazmatInstantFill =
+      'A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.';
+    const config = COMMANDS.create_buy_order;
+    const generatedDeliverTo =
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_market/create_buy_order']?.schema?.deliver_to?.description ?? '';
+    const fieldDescription = config?.schema?.deliver_to?.description ?? '';
+
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.create_buy_order?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.create_buy_order).toBe(config?.description);
+    expect(config?.description?.startsWith('Place a buy offer on the station exchange')).toBe(true);
+    expect(config?.description).toContain(hazmatInstantFill);
+    expect(generatedDeliverTo).toContain("'cargo' (default)");
+    expect(fieldDescription.startsWith(generatedDeliverTo)).toBe(true);
+    expect(fieldDescription).toContain("'cargo' (default)");
+    expect(fieldDescription).toContain(hazmatInstantFill);
+    expect(config?.schema?.deliver_to?.type).toBe('string');
+    expect(config?.schema?.deliver_to?.enum).toEqual(['cargo', 'storage']);
+    expect(config?.route.defaults?.deliver_to).toBeUndefined();
+    expect(config?.usage).toBe(
+      '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=cargo|storage]  (place a buy offer)',
+    );
+
+    const help = captureHelp('create_buy_order');
+    expect(help).toContain(hazmatInstantFill);
+    expect(help).toContain("'cargo' (default)");
+
+    for (const text of [
+      config?.description ?? '',
+      fieldDescription,
+      COMMANDS.buy?.description ?? '',
+      COMMANDS.buy?.schema?.deliver_to?.description ?? '',
+    ]) {
+      expect(text).toContain(hazmatInstantFill);
+      expect(text).not.toContain('not the hold');
+      expect(text).not.toContain('not your cargo');
+    }
+
+    expect(COMMANDS.faction_create_buy_order?.description).not.toContain('hazmat');
+    expect(COMMANDS.create_sell_order?.description).not.toContain('hazmat');
+    expect(COMMANDS.sell?.description).not.toContain('hazmat');
   });
 
   test('deploy_drone help advertises bulk deploy mode', () => {
