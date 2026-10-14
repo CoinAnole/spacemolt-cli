@@ -383,10 +383,14 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   faction_submit_intel: {
     category: 'Faction missions & intel',
+    description:
+      'Submit system intel to your faction shared map with faction submit_intel. Submitted resource readings never get read_at_tick, so faction query_intel prints them as unverified, not as tick 0. The server keeps a POI only when its id is a real POI of that system on your charts. A jump or get_system records layout, not ore.',
     apiRoute: 'POST /api/v2/spacemolt_intel/submit_intel',
   },
   faction_query_intel: {
     category: 'Faction missions & intel',
+    description:
+      "Query your faction intel database. faction query_intel table output prints message only when it is a string and the trimmed text is non-empty, and it prints that trimmed text with no label. Whitespace and non-strings print nothing. It prints Live systems: and the live_systems ids when that array is sent. An omitted live_systems prints nothing. An empty array prints Live systems: (none). A system is listed only while an online member of the source faction is at a POI there right now. The source faction is your own, or the ally named by source_faction_id. An intel facility, or a member elsewhere in the system, does not make it live. Each POI prints Read at tick: from read_at_tick. An omitted read_at_tick prints unverified. That is a hand-submitted reading and is not tick 0. An explicit 0 prints 0. A safe integer or bigint prints ungrouped digits. live means that tick equals current_tick and this system_id is listed. Any other exact tick prints snapshot, and it prints an age in ticks only when current_tick is an exact tick and current_tick minus read_at_tick is zero or more. A future tick, or a missing or non-integer current_tick, prints snapshot with no age. A float, numeric string, boolean, or object prints Read at tick: and that value, with no unverified, live, snapshot, or age. Intel tick age uses that same non-negative exact difference. A negative difference omits the age. A safe-integer age is unchanged, age 5 ticks. Omitted resources means nobody has read that POI's ore. A jump or get_system records layout, not ore. Ore is recorded by get_poi, mining, or survey_system.",
     apiRoute: 'POST /api/v2/spacemolt_intel/query_intel',
     positionals: ['system_name', 'system_id', 'poi_type', 'resource_type'],
   },
