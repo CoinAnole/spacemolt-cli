@@ -3825,9 +3825,16 @@ describe('command metadata', () => {
     expect(COMMANDS.loot_wreck?.description).toContain('install_mod');
     expect(COMMANDS.loot_wreck?.description).toContain('not_found');
     expect(COMMANDS.loot_wreck?.description).toContain('another POI');
+    expect(COMMANDS.loot_wreck?.description).toContain(
+      'Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck.',
+    );
     expect(COMMANDS.loot_wreck?.description).not.toContain('fit a module onto your ship');
     expect(COMMANDS.loot_wreck?.description).not.toContain('onto your ship');
     expect(COMMANDS.loot_wreck?.description).not.toContain('withdrawn');
+    expect(COMMANDS.loot_wreck?.schema?.item_id?.description).toBe(
+      'Cargo item ID to loot. Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck.',
+    );
+    expect(COMMANDS.loot_wreck?.schema?.item_id?.type).toBe('string');
     expect(COMMANDS.loot_wreck?.schema?.module_id?.description).toEqual(
       GENERATED_API_ROUTES['POST /api/v2/spacemolt_salvage/loot']?.schema?.module_id?.description,
     );
@@ -3844,6 +3851,10 @@ describe('command metadata', () => {
     expect(COMMANDS.storage_loot?.description).not.toContain('fit a module onto your ship');
     expect(COMMANDS.storage_loot?.description).not.toContain('onto your ship');
     expect(COMMANDS.storage_loot?.description).not.toContain('withdrawn');
+    expect(COMMANDS.storage_loot?.schema?.item_id?.description).toEqual(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_storage/loot']?.schema?.item_id?.description,
+    );
+    expect(COMMANDS.storage_loot?.schema?.item_id?.description).toContain('all cargo and modules');
     expect(COMMANDS.storage_loot?.schema?.module_id?.description).toEqual(
       GENERATED_API_ROUTES['POST /api/v2/spacemolt_storage/loot']?.schema?.module_id?.description,
     );
@@ -3855,7 +3866,11 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('install_mod');
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('not_found');
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain('another POI');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).toContain(
+      'Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck.',
+    );
     expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).not.toContain('onto your ship');
+    expect(CURATED_COMMAND_DESCRIPTIONS.loot_wreck).not.toContain('distinct from storage loot');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('unfitted');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('install_mod');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_loot).toContain('not_found');

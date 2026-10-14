@@ -134,7 +134,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
   loot_wreck:
-    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
+    'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod). Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck. A wreck at another POI returns not_found, the same as a wreck that is already gone.',
   mine: 'Mine one cycle at the current POI (asteroid, ice, or gas).',
   modify_order:
     'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.',

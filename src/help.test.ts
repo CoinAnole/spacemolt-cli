@@ -1769,6 +1769,11 @@ describe('help output branches', () => {
     expect(output).toContain('unfitted');
     expect(output).toContain('install_mod');
     expect(output).toContain('cargo hold');
+    expect(output).toContain(
+      'Cargo item ID to loot. Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck.',
+    );
+    expect(output).not.toContain('loot everything');
+    expect(output).not.toContain('all cargo and modules');
     expect(output).not.toContain('onto your ship');
     expect(output).not.toContain('fit a module onto your ship');
   });
@@ -1783,6 +1788,9 @@ describe('help output branches', () => {
     expect(output).toContain('install_mod');
     expect(output).not.toContain('from a wreck into cargo via');
     expect(output).toContain('spacemolt storage loot wreck-1 module_id=module-1');
+    expect(output).toContain(
+      'Specific cargo item ID to loot. Omit to loot everything (all cargo and modules go to cargo hold).',
+    );
     expect(output).not.toContain('onto your ship');
     expect(output).not.toContain('fit a module onto your ship');
   });

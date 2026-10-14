@@ -253,13 +253,20 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[wreck_id] [item_id] [quantity] [module_id=…]  (omit wreck_id while towing; module_id= loots that module into cargo unfitted; fit later at a station with install_mod; use get_wrecks to see wrecks)',
     description:
-      'Loot wreck cargo into your hold, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit wreck_id while towing; distinct from storage loot (spacemolt_storage/loot). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
+      'Loot wreck cargo into your hold, or loot a wreck module into cargo as an unfitted item with module_id=. Fit it later at a station with install_mod. Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck. Omit wreck_id while towing; distinct from storage loot (spacemolt_storage/loot). A wreck at another POI returns not_found, the same as a wreck that is already gone.',
     example: 'spacemolt loot_wreck wreck-1 module_id=module-1',
     discoverWith: ['get_wrecks'],
     seeAlso: ['storage_loot', 'get_wrecks', 'install_mod'],
     category: 'Wrecks',
     apiRoute: 'POST /api/v2/spacemolt_salvage/loot',
     positionals: ['wreck_id', 'item_id', 'quantity', 'module_id'],
+    schemaExtensions: {
+      // OpenAPI item_id still says omit-to-loot-everything. Gameserver 0.628.3 does not.
+      item_id: {
+        description:
+          'Cargo item ID to loot. Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck.',
+      },
+    },
   },
   name_ship: {
     usage: '<name>  (set ship name, empty to clear)',
