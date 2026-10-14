@@ -2701,9 +2701,18 @@ describe('command metadata', () => {
       if (group === 'facility') {
         expect(config?.description).toContain('other personal facilities');
         expect(help).toContain('other personal facilities');
+        expect(config?.description).not.toContain('wild population');
+        expect(config?.description).not.toContain('ranch');
+        expect(help).not.toContain('wild population');
+        expect(help).not.toContain('ranch');
       } else {
         expect(config?.description).toContain('Faction Storage');
         expect(help).toContain('Faction Storage');
+        expect(config?.description).toContain('wild population');
+        expect(config?.description).toContain('Dismantling a ranch releases its herd');
+        expect(help).toContain('wild population');
+        expect(config?.description).not.toContain('ordinary packages');
+        expect(config?.description).not.toContain('manage_facilities');
       }
     }
   });
@@ -2720,6 +2729,14 @@ describe('command metadata', () => {
     expect(config?.description).toContain('ManageBases');
     expect(config?.description).toContain('Outpost Kit');
     expect(config?.description).toContain('fuel bunkers cannot be dismantled alone');
+    expect(config?.description).toContain('The server refuses while the outpost has a ranch');
+    expect(config?.description).toContain('while any of its facilities is still dismantling');
+    expect(config?.description).toContain('faction dismantle');
+    expect(config?.description).toContain('wait until its packages finish');
+    expect(config?.description).toContain('then run dismantle_outpost');
+    expect(config?.description).toContain('which this command still requires to be empty');
+    expect(config?.description).not.toContain('faction_dismantle');
+    expect(config?.description).not.toContain('`');
     expect(config?.example).toBe('spacemolt dismantle_outpost');
     expect(config?.seeAlso).toEqual(
       expect.arrayContaining(['build_outpost', 'facility_dismantle', 'faction_dismantle', 'storage_view']),
@@ -2737,6 +2754,8 @@ describe('command metadata', () => {
     expect(help).toContain('ManageBases');
     expect(help).toContain('Outpost Kit');
     expect(help).toContain('fuel bunkers');
+    expect(help).toContain('The server refuses while the outpost has a ranch');
+    expect(help).not.toContain('faction_dismantle');
 
     expect(COMMANDS.build_outpost?.seeAlso).toContain('dismantle_outpost');
   });
