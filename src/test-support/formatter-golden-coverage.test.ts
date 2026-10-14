@@ -20,6 +20,8 @@ describe('formatter golden coverage', () => {
     expect(report.highValueFixtureLabels).toContain('catalog_recipes');
     expect(report.requiredCoverageKeys).toContain('faction_create_buy_order_bulk');
     expect(report.highValueFixtureLabels).toContain('faction_create_buy_order_bulk');
+    expect(report.requiredCoverageKeys).toContain('create_buy_order_bulk');
+    expect(report.highValueFixtureLabels).toContain('create_buy_order_bulk');
     expect(report.requiredCoverageKeys).toContain('faction_create_sell_order_bulk');
     expect(report.highValueFixtureLabels).toContain('faction_create_sell_order_bulk');
     expect(report.requiredCoverageKeys).toContain('create_sell_order_bulk');

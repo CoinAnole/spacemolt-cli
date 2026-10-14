@@ -1,0 +1,10 @@
+
+=== Buy Orders ===
+2 requested | 1 succeeded | 1 failed
+
+=== Results ===
+
+  # | Status  | Item                    | Qty | Filled/Listed | Price | Financial                                        | Order / Error                            
+  --+---------+-------------------------+-----+---------------+-------+--------------------------------------------------+------------------------------------------
+  0 | created | Nickel Ore (nickel_ore) | 25  | 10/15         | 2 cr  | spent 20 cr; escrow 30 cr; refund 0 cr; fee 1 cr | order-buy-1                              
+  1 | failed  | Fuel (fuel)             | 4   |               | 3 cr  |                                                  | insufficient_credits: Not enough credits.

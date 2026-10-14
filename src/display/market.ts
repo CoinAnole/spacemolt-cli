@@ -580,6 +580,78 @@ function renderPlayerBulkSellOrders(result: Record<string, unknown>, command?: s
   return true;
 }
 
+function isPlayerBulkBuyShape(result: Record<string, unknown>): boolean {
+  return (
+    result.action === 'create_buy_order' &&
+    result.kind === 'bulk' &&
+    result.mode === 'bulk' &&
+    Array.isArray(result.results)
+  );
+}
+
+function renderPlayerBulkBuyOrders(result: Record<string, unknown>, command?: string): boolean {
+  if (!commandNameEquals(command, 'create_buy_order')) return false;
+  if (result.action !== 'create_buy_order' || result.kind !== 'bulk' || result.mode !== 'bulk') return false;
+  const summary = result.summary;
+  const resultsValue = result.results;
+  if (!isRecord(summary) || !Array.isArray(resultsValue)) return false;
+
+  const total = bulkInteger(summary.total);
+  const succeeded = bulkInteger(summary.succeeded);
+  const failed = bulkInteger(summary.failed);
+  if (total === undefined || succeeded === undefined || failed === undefined) return false;
+  if (
+    !resultsValue.every(
+      (entry) => isRecord(entry) && bulkInteger(entry.index) !== undefined && typeof entry.success === 'boolean',
+    )
+  ) {
+    return false;
+  }
+
+  const results = resultsValue as Array<Record<string, unknown>>;
+  emitLine(`\n${c.bright}=== Buy Orders ===${c.reset}`);
+  emitLine(
+    `${total.toLocaleString()} requested | ${succeeded.toLocaleString()} succeeded | ${failed.toLocaleString()} failed`,
+  );
+  if (results.length === 0) {
+    emitLine('No order results.');
+    return true;
+  }
+
+  const rows = results.map((entry) => ({
+    index: (entry.index as number).toLocaleString(),
+    status: entry.success ? 'created' : 'failed',
+    item_display: bulkItem(entry),
+    quantity_display: bulkInteger(entry.quantity)?.toLocaleString() ?? '',
+    filled_listed: bulkFilledListed(entry),
+    price_display:
+      typeof entry.price_each === 'bigint'
+        ? formatCredits(entry.price_each)
+        : bulkNumber(entry.price_each) === undefined
+          ? ''
+          : formatCredits(entry.price_each as number),
+    financial_display: bulkFinancial(entry, 'buy'),
+    outcome_display: bulkOrderOrError(entry),
+  }));
+
+  printCompactTable(
+    'Results',
+    rows,
+    [
+      ['#', ['index']],
+      ['Status', ['status']],
+      ['Item', ['item_display']],
+      ['Qty', ['quantity_display']],
+      ['Filled/Listed', ['filled_listed']],
+      ['Price', ['price_display']],
+      ['Financial', ['financial_display']],
+      ['Order / Error', ['outcome_display']],
+    ],
+    { maxCellWidth: 64 },
+  );
+  return true;
+}
+
 function formatYesNoBoolean(value: unknown): string | undefined {
   if (value === true) return 'yes';
   if (value === false) return 'no';
@@ -1115,6 +1187,10 @@ export const marketFormatters = [
     commands: ['create_sell_order'],
     suppressShapeFallbackOnDecline: true,
   }),
+  namedFormatter('player_bulk_buy_orders', ['kind', 'results', 'summary'], renderPlayerBulkBuyOrders, {
+    commands: ['create_buy_order'],
+    suppressShapeFallbackOnDecline: true,
+  }),
 
   namedFormatter(
     'create_market_order',
@@ -1464,7 +1540,7 @@ export const marketFormatters = [
         return true;
       }
 
-      if (isPlayerBulkSellShape(r)) return false;
+      if (isPlayerBulkSellShape(r) || isPlayerBulkBuyShape(r)) return false;
 
       const intel = firstArray(r, ['intel', 'results', 'trade_intel']);
       if (!intel) return false;
