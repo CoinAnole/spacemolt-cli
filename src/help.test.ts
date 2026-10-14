@@ -2051,6 +2051,70 @@ describe('help output branches', () => {
     expect(output).toContain('public liquidity');
   });
 
+  test('analyze_market and faction query_trade_intel help state 0.618.0 book limits', () => {
+    const analyzeDescription =
+      "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.";
+    const queryDescription =
+      "Search your faction's market price database, or an allied faction's with source_faction_id. base_id accepts a station base ID or station POI ID. Auto-synced entries come from an online member docked at that station. They show no other faction's private orders, no fuel sell orders, and no contraband that member could not trade. Offline members do not refresh those entries. Contraband that member could trade is kept, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.";
+
+    const analyze = captureWriter();
+    expect(showCommandHelp('analyze_market', analyze.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const analyzeHelp = analyze.stdout.join('\n');
+    expect(analyzeHelp).toContain(analyzeDescription);
+    expect(analyzeHelp).toContain('(no args)');
+    expect(analyzeHelp).not.toContain('[item_id] [page]');
+    expect(analyzeHelp).not.toContain('top 10');
+    expect(analyzeHelp).not.toContain('detailed single item');
+    expect(analyzeHelp).not.toContain('the way view_market shows');
+    expect(analyzeHelp).not.toContain('Fuel is excluded from the feed');
+    expect(analyzeHelp).not.toContain('Arguments:');
+    expect(analyzeHelp).not.toContain('Fields:');
+
+    const query = captureWriter();
+    expect(showCommandHelp('faction query_trade_intel', query.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+    const queryHelp = query.stdout.join('\n');
+    expect(queryHelp).toContain('Offline members do not refresh');
+    expect(queryHelp).toContain('source_faction_id');
+    expect(queryHelp).toContain('station base ID or station POI ID');
+    expect(queryHelp).toContain('not a full view_market snapshot');
+    expect(queryHelp).not.toContain('what view_market showed');
+    expect(queryHelp).not.toContain('Private Company Store orders are excluded');
+    expect(queryHelp).toMatch(/Arguments:\n {2}base_id, item_id, station_name\n/);
+    const fieldsIndex = queryHelp.indexOf('\nFields:\n');
+    expect(fieldsIndex).toBeGreaterThan(-1);
+    const serverHelpIndex = queryHelp.indexOf('\nServer help:');
+    const fields =
+      serverHelpIndex === -1 ? queryHelp.slice(fieldsIndex) : queryHelp.slice(fieldsIndex, serverHelpIndex);
+    expect(fields).toContain('Filter by station name');
+    expect(fields).toContain('limit');
+    expect(fields).toContain('offset');
+    expect(fields).toContain('source_faction_id');
+    expect(fields).toContain('ally_intel_opt_out');
+    expect(fields).toContain('base_id');
+    expect(fields).toContain('item_id');
+    expect(fields).toContain('station_name');
+    expect(fields).toContain('requires L2 Commerce Terminal');
+    expect(queryHelp).toContain(queryDescription);
+
+    const full = captureWriter();
+    showFullHelp(full.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const fullHelp = full.stdout.join('\n');
+    expect(fullHelp).toContain(`analyze_market${' '.repeat(21)}Trading insights at current station`);
+    expect(fullHelp).toContain('faction query_trade_intel [base_id=.. item_id=.. station_name=..]');
+    expect(fullHelp).not.toContain('no fuel sell orders');
+    expect(fullHelp).not.toContain('Offline members do not refresh');
+
+    const market = captureWriter();
+    expect(showCommandGroup('market', market.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(market.stdout.join('\n')).toContain('no fuel sell orders');
+
+    const faction = captureWriter();
+    expect(showCommandGroup('faction', faction.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(faction.stdout.join('\n')).toContain('Offline members do not refresh');
+  });
+
   test('full help Ship Exchange lists buy-order commands', () => {
     const capture = captureWriter();
     showFullHelp(capture.writer);

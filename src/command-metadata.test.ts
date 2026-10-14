@@ -42,11 +42,7 @@ import { createCommandConfigDryRunResponse } from './preview';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
-const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set([
-  'trade_offer.credits',
-  'analyze_market.item_id',
-  'analyze_market.page',
-]);
+const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set(['trade_offer.credits']);
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
 const internalCommandRegistry = { commands: COMMANDS };
@@ -2304,6 +2300,147 @@ describe('command metadata', () => {
     );
     expect(subscribeHelp).not.toContain('fuel, contraband, and Company Store excluded');
     expect(subscribeHelp).not.toContain('incremental diff');
+  });
+
+  test('analyze_market help teaches 0.618.0 insight limits and drops item_id and page', () => {
+    const description =
+      "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.";
+    const rejected = [
+      'the way view_market shows',
+      'what view_market showed',
+      'what view_market shows',
+      'Fuel is excluded from the feed',
+      'Contraband is excluded except',
+      'Private Company Store orders are excluded',
+      'fuel, contraband, and Company Store excluded',
+      'incremental diff',
+      'Offline members',
+      '`',
+    ];
+    const analyze = COMMERCE_FACILITY_COMMAND_OVERRIDES.analyze_market;
+    expect(analyze?.description).toBeUndefined();
+    expect(analyze?.positionals).toBeUndefined();
+    expect(analyze?.clientOnlyFields).toBeUndefined();
+    expect(analyze?.schemaExtensions).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.analyze_market).toBe(description);
+    expect(COMMANDS.analyze_market?.description).toBe(description);
+    expect(COMMANDS.analyze_market?.usage).toBe('(no args)');
+    expect(COMMANDS.analyze_market?.args).toEqual([]);
+    expect(COMMANDS.analyze_market?.schema).toEqual({});
+    expect(POSITIONAL_SCHEMA_GAP_EXEMPTIONS.has('analyze_market.item_id')).toBe(false);
+    expect(POSITIONAL_SCHEMA_GAP_EXEMPTIONS.has('analyze_market.page')).toBe(false);
+    expect(POSITIONAL_SCHEMA_GAP_EXEMPTIONS.has('trade_offer.credits')).toBe(true);
+    expect(parseArgs(['analyze_market'])).toEqual({ ok: true, command: 'analyze_market', payload: {} });
+    expect(parseArgs(['analyze_market', 'item_id=ore_iron'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'item_id',
+          message: 'Unknown field "item_id" for "analyze_market". Use --allow-unknown or --raw to pass it through.',
+          code: 'unknown_field',
+        },
+      ],
+    });
+    expect(parseArgs(['analyze_market', 'page=2'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'page',
+          message: 'Unknown field "page" for "analyze_market". Use --allow-unknown or --raw to pass it through.',
+          code: 'unknown_field',
+        },
+      ],
+    });
+    expect(parseArgs(['analyze_market', 'ore_iron'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'id',
+          message: 'Unknown field "id" for "analyze_market". Use --allow-unknown or --raw to pass it through.',
+          code: 'unknown_field',
+        },
+      ],
+    });
+    for (const phrase of [
+      "no other faction's private orders",
+      'no fuel sell orders',
+      'no contraband you cannot trade',
+      'Company Store can still appear',
+      'contraband-friendly station',
+      'pirate strongholds',
+      'Outer Rim stations',
+      'Treasure Cache',
+      'systems you have visited',
+      'not a full view_market snapshot',
+      'since rule',
+      'not the subscribe_market feed',
+    ]) {
+      expect(description).toContain(phrase);
+    }
+    for (const phrase of rejected) expect(description).not.toContain(phrase);
+
+    const help = captureHelp('analyze_market');
+    expect(help).toContain(description);
+    expect(help).toContain('(no args)');
+    for (const phrase of rejected) expect(help).not.toContain(phrase);
+  });
+
+  test('faction query_trade_intel help teaches 0.618.0 auto-synced limits', () => {
+    const description =
+      "Search your faction's market price database, or an allied faction's with source_faction_id. base_id accepts a station base ID or station POI ID. Auto-synced entries come from an online member docked at that station. They show no other faction's private orders, no fuel sell orders, and no contraband that member could not trade. Offline members do not refresh those entries. Contraband that member could trade is kept, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.";
+    const usage = '[base_id] [item_id] [station_name]  (base_id: station base ID or station POI ID)';
+    const positionals = ['base_id', 'item_id', 'station_name'];
+    const rejected = [
+      'the way view_market shows',
+      'what view_market showed',
+      'what view_market shows',
+      'Fuel is excluded from the feed',
+      'Contraband is excluded except',
+      'Private Company Store orders are excluded',
+      'fuel, contraband, and Company Store excluded',
+      'incremental diff',
+      '`',
+    ];
+    const override = FACTION_SOCIAL_COMMAND_OVERRIDES.faction_query_trade_intel;
+    const grouped = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.query_trade_intel?.config;
+    expect(override?.description).toBe(description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.faction_query_trade_intel).toBeUndefined();
+    expect(COMMANDS.faction_query_trade_intel?.description).toBe(description);
+    expect(COMMANDS.faction_query_trade_intel?.description).toContain('station base ID or station POI ID');
+    expect(override?.positionals).toEqual(positionals);
+    expect(COMMANDS.faction_query_trade_intel?.args).toEqual(positionals);
+    expect(grouped?.args).toEqual(positionals);
+    expect(override?.usage).toBe(usage);
+    expect(COMMANDS.faction_query_trade_intel?.usage).toBe(usage);
+    expect(grouped?.usage).toBe(usage);
+    for (const phrase of [
+      "or an allied faction's",
+      'source_faction_id',
+      'Auto-synced entries',
+      'online member',
+      'Offline members do not refresh',
+      "no other faction's private orders",
+      'no fuel sell orders',
+      'no contraband that member could not trade',
+      'Contraband that member could trade is kept',
+      'not a full view_market snapshot',
+      'since rule',
+      'not the subscribe_market feed',
+    ]) {
+      expect(description).toContain(phrase);
+    }
+    for (const phrase of rejected) expect(description).not.toContain(phrase);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.faction_query_trade_intel).toBeUndefined();
+    expect(grouped?.description).toBe(description);
+
+    const help = captureHelp('faction query_trade_intel');
+    expect(help).toContain(description);
+    expect(help).toContain(usage);
+    expect(help).toContain('ally_intel_opt_out');
+    expect(CURATED_COMMAND_DESCRIPTIONS.faction_submit_trade_intel).toBe(
+      'Submit market price observations to your faction trade ledger.',
+    );
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.faction_submit_trade_intel?.description).toBeUndefined();
   });
 
   test('faction order help advertises private Company Store listings', () => {

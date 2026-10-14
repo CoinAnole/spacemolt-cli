@@ -1085,8 +1085,14 @@ describe('shell completion generation', () => {
     const fish = generateCompletion('fish');
     const bash = generateCompletion('bash');
 
-    expect(fish).toContain('__fish_seen_subcommand_from analyze_market" -a page=');
-    expect(bashCommandCaseBody(bash, 'analyze_market')).toContain('page=');
+    const analyzeFish = fishCommandLines(fish, 'analyze_market').join('\n');
+    const analyzeBash = bashCommandCaseBody(bash, 'analyze_market');
+    expect(analyzeFish).not.toContain('page=');
+    expect(analyzeFish).not.toContain('item_id=');
+    expect(analyzeBash).not.toContain('page=');
+    expect(analyzeBash).not.toContain('item_id=');
+    expect(fish).not.toContain('__fish_seen_subcommand_from analyze_market" -a page=');
+    expect(fish).not.toContain('__fish_seen_subcommand_from analyze_market" -a item_id=');
     // storage is a grouped command; nested deposit fields and action names come from group machinery
     const storageBody = bashCommandCaseBody(bash, 'storage');
     expect(storageBody.length).toBeGreaterThan(0);

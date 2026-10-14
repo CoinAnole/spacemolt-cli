@@ -433,10 +433,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['item_id', 'quantity'],
   },
   analyze_market: {
-    usage: '[item_id] [page]  (no args = top 10 insights; item_id = detailed single item)',
+    usage: '(no args)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/analyze_market',
-    positionals: ['item_id', 'page'],
   },
   list_drones: {
     description: 'List loaded and deployed drones.',

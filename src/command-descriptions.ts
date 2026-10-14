@@ -2,7 +2,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   abandon_mission: 'Abandon an active mission',
   accept_mission:
     "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours.",
-  analyze_market: 'Get actionable trading insights at your current station',
+  analyze_market:
+    "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.",
   browse_ships: 'Browse ships listed for sale at a station',
   buy_insurance: 'Purchase ship insurance',
   buy_listed_ship: 'Purchase a ship from the exchange',
@@ -67,7 +68,6 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_propose_ally: 'Propose an alliance with another faction',
   faction_propose_peace: 'Propose peace to a faction you are at war with.',
   faction_query_intel: 'Query your faction intel database.',
-  faction_query_trade_intel: 'Search your faction market price database.',
   faction_remove_ally: 'Dissolve an alliance with another faction',
   faction_remove_enemy: 'Return an enemy faction to neutral standing',
   faction_rooms: 'List rooms in your faction common space at the current station.',
