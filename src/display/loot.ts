@@ -1,3 +1,4 @@
+import { isAliasCopiedDumpKey } from './dock-state.ts';
 import {
   c,
   emitLine,
@@ -108,8 +109,62 @@ function emitRecordTable(
   if (unreadable > 0) emitLine(`${c.dim}Unreadable ${title} rows: ${unreadable}${c.reset}`);
 }
 
-function formatLootWreckAll(result: Record<string, unknown>): boolean {
-  if (!isLootWreckAll(result)) return false;
+function labelForScalarKey(key: string): string {
+  return key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function titleForScalarAction(action: unknown): string {
+  if (typeof action !== 'string' || action.trim() === '') return 'Result';
+  return labelForScalarKey(action);
+}
+
+function formatSingleLootWithXp(result: Record<string, unknown>, command?: string): boolean {
+  if (result.action !== 'loot_wreck' || !isRecord(result.xp_gained)) return false;
+
+  const entries = Object.entries(result).filter(
+    ([key, value]) =>
+      key !== 'xp_gained' &&
+      value !== undefined &&
+      value !== null &&
+      value !== '' &&
+      !isAliasCopiedDumpKey(result, key),
+  );
+  const maxEntries = 16;
+  if (!entries.length || entries.length > maxEntries) return false;
+  if (
+    entries.some(([, value]) => {
+      const scalar = value === null || ['string', 'number', 'boolean'].includes(typeof value);
+      return !scalar && !Array.isArray(value);
+    })
+  ) {
+    return false;
+  }
+  const hasActionMarker =
+    typeof result.action === 'string' ||
+    typeof result.success === 'boolean' ||
+    typeof result.message === 'string' ||
+    entries.some(([key]) => key.endsWith('_id') || key === 'id');
+  if (!hasActionMarker) return false;
+
+  emitLine(`\n${c.bright}=== ${titleForScalarAction(result.action ?? command)} ===${c.reset}`);
+  for (const [key, value] of entries) {
+    if (Array.isArray(value)) {
+      emitLine(`${labelForScalarKey(key)}: ${value.length} item(s)`);
+    } else {
+      emitLine(`${labelForScalarKey(key)}: ${String(value)}`);
+    }
+  }
+  if (entries.length === 1 && result.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
+  const xp = formatLootSkillXp(result.xp_gained);
+  if (xp) emitLine(xp);
+  return true;
+}
+
+function formatLootWreckAll(result: Record<string, unknown>, command?: string): boolean {
+  if (!isLootWreckAll(result)) return formatSingleLootWithXp(result, command);
 
   emitLine(`\n${c.bright}=== Wreck Loot ===${c.reset}`);
   emitYesNo('Wreck empty', result.wreck_empty);

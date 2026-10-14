@@ -8,6 +8,7 @@ import {
   lootWreckAllModulesFixture,
   lootWreckAllXpFixture,
 } from './loot.fixtures.ts';
+import { lootFormatters } from './loot.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -403,6 +404,8 @@ test('single-item loot without xp stays on the scalar printer', () => {
     },
     ship: { fuel: 10, max_fuel: 40 },
   };
+  expect(lootFormatters[0]?.(item.details, 'loot_wreck')).toBe(false);
+  expect(lootFormatters[0]?.(item.details, 'storage loot')).toBe(false);
   const stdout = stdoutOf('loot_wreck', item);
   const grouped = stdoutOf('storage loot', item);
 
@@ -436,6 +439,223 @@ test('single-item loot without xp stays on the scalar printer', () => {
     '=== Loot Wreck ===\nAction: loot_wreck\nModule Id: mod-shield-1\nModule Type Id: adaptive_shield_i\nQuantity: 1\nWreck Empty: false',
   );
   expect(moduleStdout).not.toContain('=== Wreck Loot ===');
+});
+
+test('single-item xp prints Skill XP under the scalar lines for items and modules', () => {
+  const item = {
+    details: {
+      action: 'loot_wreck',
+      item_id: 'adamant_tooth',
+      quantity: 4,
+      wreck_empty: false,
+      xp_gained: { armor: 1 },
+    },
+    ship: { fuel: 10, max_fuel: 40 },
+    location: structuredClone(storageDepositAutoDockedFixture.location as Record<string, unknown>),
+    player: { username: 'should-not-print' },
+  };
+  expect(lootFormatters[0]?.(item, 'loot_wreck')).toBe(false);
+
+  const salvage = stdoutOf('loot_wreck', item);
+  const grouped = stdoutOf('storage loot', item);
+  expect(grouped).toBe(salvage);
+  expect(salvage).toContain(
+    '=== Loot Wreck ===\nAction: loot_wreck\nItem Id: adamant_tooth\nQuantity: 4\nWreck Empty: false\nFuel Now: 10\nFuel Max: 40\nSkill XP: armor +1',
+  );
+  expect(salvage.split('=== Loot Wreck ===').length - 1).toBe(1);
+  expect(salvage).not.toContain('\nOK');
+  expect(salvage).not.toContain('=== Wreck Loot ===');
+  expect(salvage).not.toContain('=== Response ===');
+  expect(salvage).not.toContain('Wreck empty:');
+  expect(salvage).not.toContain('1,500');
+  expect(salvage).not.toContain('System Id:');
+  expect(salvage).not.toContain('Online Players');
+  expect(salvage).not.toContain('earth_station');
+  expect(salvage).not.toContain('solarian');
+  expect(salvage).not.toContain('should-not-print');
+  expect(salvage).not.toContain('Xp Gained:');
+
+  const bigQty = structuredClone(item) as { details: Record<string, unknown> };
+  bigQty.details.quantity = 1500;
+  const big = stdoutOf('loot_wreck', bigQty);
+  expect(big).toContain('Quantity: 1500\nWreck Empty: false\nFuel Now: 10\nFuel Max: 40\nSkill XP: armor +1');
+  expect(big).not.toContain('1,500');
+
+  const signed = stdoutOf('loot_wreck', {
+    details: {
+      action: 'loot_wreck',
+      item_id: 'adamant_tooth',
+      quantity: 4,
+      wreck_empty: false,
+      message: 'took the tooth',
+      tags: ['rare', 'quest'],
+      xp_gained: { scanning: 2, armor: -1200 },
+    },
+  });
+  expect(signed).toContain(
+    '=== Loot Wreck ===\nAction: loot_wreck\nItem Id: adamant_tooth\nQuantity: 4\nWreck Empty: false\nMessage: took the tooth\nTags: 2 item(s)\nSkill XP: scanning +2, armor -1,200',
+  );
+  expect(signed).not.toContain('\nOK');
+  expect(signed).not.toContain('=== Response ===');
+
+  const moduleBody = {
+    details: {
+      action: 'loot_wreck',
+      module_id: 'mod-shield-1',
+      module_type_id: 'adaptive_shield_i',
+      quantity: 1,
+      wreck_empty: false,
+      xp_gained: { armor: 1200, scanning: 0 },
+    },
+  };
+  const moduleStdout = stdoutOf('loot_wreck', moduleBody);
+  expect(stdoutOf('storage loot', moduleBody)).toBe(moduleStdout);
+  expect(moduleStdout).toContain(
+    '=== Loot Wreck ===\nAction: loot_wreck\nModule Id: mod-shield-1\nModule Type Id: adaptive_shield_i\nQuantity: 1\nWreck Empty: false\nSkill XP: armor +1,200',
+  );
+  expect(moduleStdout).not.toContain('scanning');
+  expect(moduleStdout).not.toContain('=== Wreck Loot ===');
+  expect(moduleStdout).not.toContain('=== Response ===');
+  expect(moduleStdout).not.toContain('Wreck empty:');
+
+  for (const body of [item, moduleBody]) {
+    const json = stdoutOf('loot_wreck', body, { format: 'json' });
+    expect(JSON.parse(json)).toEqual(body);
+    expect(json).not.toContain('Skill XP:');
+    expect(json).not.toContain('=== Loot Wreck ===');
+  }
+});
+
+test('empty and zero xp maps claim single-item scalar lines without Skill XP', () => {
+  const base = {
+    action: 'loot_wreck',
+    item_id: 'adamant_tooth',
+    quantity: 4,
+    wreck_empty: false,
+  };
+  const emptyMap = stdoutOf('loot_wreck', { details: { ...base, xp_gained: {} } });
+  const zeros = stdoutOf('storage loot', { details: { ...base, xp_gained: { armor: 0 } } });
+  const wreckTrue = stdoutOf('loot_wreck', {
+    details: { ...base, wreck_empty: true, xp_gained: { armor: 0, scanning: 0 } },
+  });
+
+  for (const stdout of [emptyMap, zeros]) {
+    expect(stdout).toContain(
+      '=== Loot Wreck ===\nAction: loot_wreck\nItem Id: adamant_tooth\nQuantity: 4\nWreck Empty: false',
+    );
+    expect(stdout).not.toContain('Skill XP:');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Wreck Loot ===');
+    expect(stdout).not.toContain('Xp Gained:');
+  }
+  expect(wreckTrue).toContain('Wreck Empty: true');
+  expect(wreckTrue).not.toContain('Wreck empty:');
+  expect(wreckTrue).not.toContain('Skill XP:');
+  expect(wreckTrue).not.toContain('=== Response ===');
+
+  const onlyAction = stdoutOf('loot_wreck', {
+    details: { action: 'loot_wreck', item_id: '', quantity: null, xp_gained: { armor: 1 } },
+  });
+  expect(onlyAction).toContain('=== Loot Wreck ===\nAction: loot_wreck\nOK\nSkill XP: armor +1');
+  expect(onlyAction).not.toContain('Item Id:');
+  expect(onlyAction).not.toContain('Quantity:');
+  expect(onlyAction).not.toContain('=== Response ===');
+
+  const onlyActionEmpty = stdoutOf('storage loot', {
+    details: { action: 'loot_wreck', xp_gained: {} },
+  });
+  expect(onlyActionEmpty).toContain('=== Loot Wreck ===\nAction: loot_wreck\nOK');
+  expect(onlyActionEmpty).not.toContain('Skill XP:');
+  expect(onlyActionEmpty).not.toContain('=== Response ===');
+});
+
+test('number and array xp_gained stay on the shared scalar printer', () => {
+  const base = {
+    action: 'loot_wreck',
+    item_id: 'adamant_tooth',
+    quantity: 4,
+    wreck_empty: false,
+  };
+  expect(lootFormatters[0]?.({ ...base, xp_gained: 8 }, 'loot_wreck')).toBe(false);
+  expect(lootFormatters[0]?.({ ...base, xp_gained: [8, 9] }, 'storage loot')).toBe(false);
+
+  const numberXp = stdoutOf('loot_wreck', { details: { ...base, xp_gained: 8 } });
+  expect(numberXp).toContain(
+    '=== Loot Wreck ===\nAction: loot_wreck\nItem Id: adamant_tooth\nQuantity: 4\nWreck Empty: false\nXp Gained: 8',
+  );
+  expect(numberXp).not.toContain('Skill XP:');
+  expect(numberXp).not.toContain('=== Response ===');
+  expect(numberXp).not.toContain('=== Wreck Loot ===');
+
+  const arrayXp = stdoutOf('storage loot', { details: { ...base, xp_gained: [8, 9] } });
+  expect(arrayXp).toContain('Xp Gained: 2 item(s)');
+  expect(arrayXp).toContain('Quantity: 4');
+  expect(arrayXp).toContain('Wreck Empty: false');
+  expect(arrayXp).not.toContain('Skill XP:');
+  expect(arrayXp).not.toContain('=== Response ===');
+});
+
+test('single-item xp declines non-scalars and overlong bodies before any heading', () => {
+  const nested = {
+    action: 'loot_wreck',
+    item_id: 'adamant_tooth',
+    quantity: 4,
+    wreck_empty: false,
+    note: { text: 'hidden' },
+    xp_gained: { armor: 1 },
+  };
+  expect(lootFormatters[0]?.(nested, 'loot_wreck')).toBe(false);
+  const nestedStdout = stdoutOf('loot_wreck', { details: nested });
+  expect(nestedStdout).toContain('=== Response ===');
+  expect(nestedStdout).not.toContain('=== Loot Wreck ===');
+  expect(nestedStdout).not.toContain('Item Id:');
+  expect(nestedStdout).not.toContain('Skill XP:');
+
+  const overlong: Record<string, unknown> = {
+    action: 'loot_wreck',
+    item_id: 'adamant_tooth',
+    quantity: 4,
+    wreck_empty: false,
+    xp_gained: { armor: 1 },
+  };
+  for (let index = 1; index <= 13; index += 1) overlong[`extra_${index}`] = index;
+  expect(lootFormatters[0]?.(overlong, 'loot_wreck')).toBe(false);
+  const overlongStdout = stdoutOf('storage loot', { details: overlong });
+  expect(overlongStdout).toContain('=== Response ===');
+  expect(overlongStdout).not.toContain('=== Loot Wreck ===');
+  expect(overlongStdout).not.toContain('Extra 1:');
+  expect(overlongStdout).not.toContain('Skill XP:');
+
+  const atCap: Record<string, unknown> = {
+    action: 'loot_wreck',
+    item_id: 'adamant_tooth',
+    quantity: 4,
+    wreck_empty: false,
+    xp_gained: { armor: 1 },
+  };
+  for (let index = 1; index <= 12; index += 1) atCap[`extra_${index}`] = index;
+  const atCapStdout = stdoutOf('loot_wreck', { details: atCap });
+  expect(atCapStdout).toContain('=== Loot Wreck ===');
+  expect(atCapStdout).toContain('Extra 12: 12');
+  expect(atCapStdout).toContain('Skill XP: armor +1');
+  expect(atCapStdout).not.toContain('=== Response ===');
+  expect(atCapStdout.indexOf('Extra 12: 12')).toBeLessThan(atCapStdout.indexOf('Skill XP:'));
+});
+
+test('storage_deposit with an xp object still falls through to the raw response', () => {
+  const stdout = stdoutOf('storage_deposit', {
+    details: {
+      action: 'deposit_items',
+      item_id: 'ore_iron',
+      quantity: 4,
+      xp_gained: { armor: 1 },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Loot Wreck ===');
+  expect(stdout).not.toContain('=== Deposit Items ===');
+  expect(stdout).not.toContain('Skill XP:');
 });
 
 test('json, yaml, structured, compact, and text modes keep or use the human tables', () => {
