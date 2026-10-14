@@ -2449,6 +2449,19 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('before deposit validation');
     expect(deposit?.description).toContain('failed deposit may still leave you docked');
     expect(deposit?.description).toContain('Player gifts, empire donations, and faction:TAG donations');
+    expect(deposit?.description).toContain('empire alias target, including an empire: prefix');
+    expect(deposit?.description).toContain('no empire ship uses');
+    expect(deposit?.description).toContain("sold on that station's market");
+    expect(deposit?.description).toContain('gameserver 0.621.0');
+    expect(deposit?.description).toContain('Only those unused materials are sold.');
+    expect(deposit?.description).toContain('This sale does not apply to a station material gift');
+    expect(deposit?.description).toContain('No credits, ships, packages, or quest items.');
+    expect(deposit?.description).not.toContain('`');
+    expect(deposit?.description).not.toContain('trash');
+    expect(deposit?.description).not.toContain('donation box');
+    expect(deposit?.description).not.toContain('every donation');
+    expect(deposit?.description).not.toContain('empire reserves');
+    expect(deposit?.description).not.toContain('ore_');
     expect(deposit?.description).toContain('station:');
     expect(deposit?.description).toContain('send_gift');
     expect(deposit?.description).toContain('already be docked');
@@ -2461,6 +2474,11 @@ describe('command metadata', () => {
     expect(withdraw?.description).toContain('towed own ship');
     expect(withdraw?.description).toContain('must be at the same station');
     expect(withdraw?.description).toContain('local path can auto-dock first');
+    expect(withdraw?.description).not.toContain("sold on that station's market");
+    expect(deposit?.schema?.target?.description).toContain(
+      'Items enter manager station inventory, not empire reserves',
+    );
+    expect(deposit?.schema?.target?.description).not.toContain("sold on that station's market");
     expect(deposit?.aliases?.ship_id).toBe('item_id');
     expect(withdraw?.aliases?.ship_id).toBe('item_id');
     expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
@@ -2477,6 +2495,12 @@ describe('command metadata', () => {
     expect(depositHelp).toContain('send_gift');
     expect(depositHelp).toContain('they do not auto-dock');
     expect(depositHelp).toContain('station:<base-or-POI-ID>');
+    expect(depositHelp).toContain('empire alias target, including an empire: prefix');
+    expect(depositHelp).toContain('no empire ship uses');
+    expect(depositHelp).toContain("sold on that station's market");
+    expect(depositHelp).toContain('gameserver 0.621.0');
+    expect(depositHelp).toContain('Only those unused materials are sold.');
+    expect(depositHelp).toContain('This sale does not apply to a station material gift');
 
     const withdrawHelp = captureHelp('storage withdraw');
     expect(withdrawHelp).toContain("auto-dock at the current POI's base");
