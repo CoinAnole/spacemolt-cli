@@ -828,6 +828,18 @@ function tickAgeSuffix(current: unknown, earlier: unknown): string {
   return `, age ${age.toString()} ticks`;
 }
 
+function trimmedIntelText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text === '' ? undefined : text;
+}
+
+function emitIntelDescription(value: unknown, indent: string, printedMessage: string | undefined): void {
+  const text = trimmedIntelText(value);
+  if (text === undefined || text === printedMessage) return;
+  emitLine(`${indent}Description: ${text}`);
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -1394,9 +1406,13 @@ export const marketFormatters = [
       emitLine(`\n${c.bright}=== Faction Intel ===${c.reset}`);
       if (r.current_tick !== undefined) emitLine(`Current tick: ${r.current_tick}`);
       if (r.count !== undefined) emitLine(`Systems: ${r.count}`);
+      let printedMessage: string | undefined;
       if (typeof r.message === 'string') {
         const message = r.message.trim();
-        if (message !== '') emitLine(message);
+        if (message !== '') {
+          printedMessage = message;
+          emitLine(message);
+        }
       }
       const liveSystemIds = Array.isArray(r.live_systems)
         ? r.live_systems.filter((id): id is string => typeof id === 'string')
@@ -1417,6 +1433,7 @@ export const marketFormatters = [
           const age = tickAgeSuffix(r.current_tick, entry.submitted_at_tick);
           emitLine(`Intel tick: ${entry.submitted_at_tick}${submitter ? ` by ${submitter}` : ''}${age}`);
         }
+        emitIntelDescription(entry.description, '', printedMessage);
 
         const pois = entry.pois as Array<Record<string, unknown>>;
         for (const poi of pois) {
@@ -1424,6 +1441,7 @@ export const marketFormatters = [
           const poiType = poi.type ? ` (${poi.type})` : '';
           const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
           emitLine(`  ${poiName}${poiType}${formatDeepCoreMark(poi.deep_core)}${poiId}`);
+          emitIntelDescription(poi.description, '    ', printedMessage);
           const readAt = poi.read_at_tick;
           if (isMissingDisplayValue(readAt)) {
             emitLine('    Read at tick: unverified');
