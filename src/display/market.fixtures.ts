@@ -302,6 +302,60 @@ export const createSellOrderFixture = {
   },
 };
 
+export const createSellOrderBulkFixture = {
+  details: {
+    action: 'create_sell_order',
+    mode: 'bulk',
+    kind: 'bulk',
+    results: [
+      {
+        index: 0,
+        success: true,
+        item: 'Void Salt',
+        item_id: 'void_salt',
+        quantity: 20,
+        price_each: 500,
+        quantity_filled: 20,
+        quantity_listed: 0,
+        total_earned: 10000,
+        listing_fee: 100,
+        order_id: 'order-salt-1',
+        smuggling_xp: 50,
+        smuggling_level_up: true,
+        from_cargo: 20,
+        message: 'Created sell order.',
+        fills: [{ quantity: 20, price_each: 500, subtotal: 10000, counterparty: 'Mara' }],
+      },
+      {
+        index: 1,
+        success: true,
+        item: 'Iron Ore',
+        item_id: 'ore_iron',
+        quantity: 10,
+        price_each: 15,
+        quantity_filled: 0,
+        quantity_listed: 10,
+        listing_fee: 2,
+        order_id: 'order-iron-1',
+      },
+      {
+        index: 2,
+        success: false,
+        item: 'Fuel',
+        item_id: 'fuel',
+        quantity: 4,
+        price_each: 3,
+        error_code: 'insufficient_items',
+        error: 'Not enough Fuel.',
+      },
+    ],
+    summary: { total: 3, succeeded: 2, failed: 1 },
+  },
+  player: { username: 'Marlowe', credits: 198040 },
+  ship: { id: 'ship-wayfarer', name: 'Wayfarer', cargo_used: 0, cargo_capacity: 500 },
+  cargo: [],
+};
+
 export const createBuyOrderFixture = {
   details: {
     action: 'create_buy_order',
@@ -787,6 +841,12 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   sell: { command: 'sell', fixture: sellFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
+  create_sell_order_bulk: {
+    command: 'create_sell_order',
+    fixture: createSellOrderBulkFixture,
+    apiRoute: 'POST /api/v2/spacemolt_market/create_sell_order',
+    schemaTarget: 'details',
+  },
   subscribe_market: { command: 'subscribe_market', fixture: subscribeMarketFixture },
   view_market: { command: 'view_market', fixture: viewMarketFixture },
   // Case id `storage` kept for golden path stability; command is storage_view.

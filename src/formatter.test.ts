@@ -22,6 +22,7 @@ import {
   completedMissionDetailFixture,
   completedMissionsFixture,
   completeMissionFixture,
+  createSellOrderBulkFixture,
   createSellOrderFixture,
   declineMissionFixture,
   distressSignalFixture,
@@ -165,6 +166,10 @@ const namedFormatterFixtureCases = {
   faction_bulk_orders: {
     command: 'faction_create_buy_order',
     fixture: factionCreateBuyOrderBulkFixture,
+  },
+  player_bulk_sell_orders: {
+    command: 'create_sell_order',
+    fixture: createSellOrderBulkFixture,
   },
   faction_scan_poi: {
     command: 'faction_scan_poi',
@@ -3360,6 +3365,386 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Response ===');
     expect(stdout).not.toContain('=== Faction Buy Orders ===');
     expect(stdout).not.toContain('=== Buy Order Created ===');
+  });
+
+  test('formats player bulk sell orders with summary, smuggling, and mixed outcomes', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', createSellOrderBulkFixture);
+    const headerLine = stdout.split('\n').find((line) => line.includes('Smuggling XP') && line.includes('Level up'));
+    const headers = headerLine?.split('|').map((cell) => cell.trim()) ?? [];
+    const xpIndex = headers.indexOf('Smuggling XP');
+    const levelIndex = headers.indexOf('Level up');
+    const cells = (item: string) => {
+      const line = stdout.split('\n').find((entry) => entry.includes(item));
+      expect(line, item).toBeDefined();
+      return line?.split('|').map((cell) => cell.trim()) ?? [];
+    };
+    const salt = cells('Void Salt');
+    const iron = cells('Iron Ore');
+    const fuel = cells('Fuel (fuel)');
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Orders ===');
+    expect(stdout).toContain('3 requested | 2 succeeded | 1 failed');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Mara');
+    expect(stdout).not.toContain('Created sell order.');
+    expect(stdout).not.toContain('from_cargo');
+    expect(stdout).not.toContain('Bucket');
+    expect(stdout).not.toContain('Smuggling XP:');
+    expect(stdout).not.toContain('Smuggling level up');
+    expect(headers).not.toContain('Bucket');
+    expect(xpIndex).toBeGreaterThan(0);
+    expect(levelIndex).toBeGreaterThan(xpIndex);
+    expect(salt).toContain('created');
+    expect(salt).toContain('20/0');
+    expect(salt).toContain('500 cr');
+    expect(salt).toContain('earned 10,000 cr; fee 100 cr');
+    expect(salt[xpIndex]).toBe('50');
+    expect(salt[levelIndex]).toBe('yes');
+    expect(salt).toContain('order-salt-1');
+    expect(iron).toContain('fee 2 cr');
+    expect(iron).toContain('0/10');
+    expect(iron).toContain('order-iron-1');
+    expect(iron[xpIndex]).toBe('');
+    expect(iron[levelIndex]).toBe('');
+    expect(fuel).toContain('failed');
+    expect(fuel).toContain('3 cr');
+    expect(fuel).toContain('insufficient_items: Not enough Fuel.');
+    expect(fuel[xpIndex]).toBe('');
+    expect(fuel[levelIndex]).toBe('');
+    expect(stdout.indexOf('Void Salt')).toBeLessThan(stdout.indexOf('Iron Ore'));
+    expect(stdout.indexOf('Iron Ore')).toBeLessThan(stdout.indexOf('Fuel (fuel)'));
+  });
+
+  test('player bulk sell leaves smuggling cells blank when the fields are absent', () => {
+    const fixture = structuredClone(createSellOrderBulkFixture);
+    const iron = fixture.details.results[1];
+    if (!iron) throw new Error('Expected the iron ore bulk sell row.');
+    iron.index = 0;
+    fixture.details.results = [iron];
+    fixture.details.summary = { total: 1, succeeded: 1, failed: 0 };
+
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Orders ===');
+    expect(stdout).toContain('1 requested | 1 succeeded | 0 failed');
+    expect(stdout).toContain('Smuggling XP');
+    expect(stdout).toContain('Level up');
+    expect(stdout).toContain('Iron Ore (ore_iron)');
+    expect(stdout).toContain('fee 2 cr');
+    expect(stdout).toContain('order-iron-1');
+    expect(stdout).toContain('=== Results ===');
+    expect(stdout).not.toContain('yes');
+    expect(stdout).not.toContain('Smuggling XP:');
+    expect(stdout).not.toContain('Smuggling XP: 0');
+    expect(stdout).not.toContain('=== Intel ===');
+  });
+
+  test('player bulk sell with no result rows prints the summary and no table', () => {
+    const fixture = structuredClone(createSellOrderBulkFixture);
+    fixture.details.results = [];
+    fixture.details.summary = { total: 0, succeeded: 0, failed: 0 };
+
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Orders ===');
+    expect(stdout).toContain('0 requested | 0 succeeded | 0 failed');
+    expect(stdout).toContain('No order results.');
+    expect(stdout).not.toContain('=== Results ===');
+    expect(stdout).not.toContain('=== Intel ===');
+  });
+
+  test('declines malformed player bulk sell to raw fallback instead of Intel', () => {
+    const fixture = structuredClone(createSellOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a player bulk sell fixture result.');
+    firstResult.success = 'yes';
+
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Results ===');
+    expect(stdout).not.toContain('=== Sell Order Created ===');
+    expect(stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('declines player bulk sell with single-order bait to raw fallback', () => {
+    const fixture = structuredClone(createSellOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a player bulk sell fixture result.');
+    firstResult.success = 'yes';
+    details.order_id = 'single-order-bait';
+    details.listing_fee = 1;
+
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Sell Order Created ===');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('player bulk sell --json deep-equals smuggling fields', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', createSellOrderBulkFixture, { json: true });
+    const parsed = JSON.parse(stdout) as {
+      details?: {
+        results?: Array<Record<string, unknown>>;
+      };
+    };
+    const first = parsed.details?.results?.[0];
+
+    expect(stderr).toBe('');
+    expect(parsed).toEqual(createSellOrderBulkFixture);
+    expect(first?.smuggling_xp).toBe(50);
+    expect(first?.smuggling_level_up).toBe(true);
+    expect(first?.from_cargo).toBe(20);
+    expect(first?.message).toBe('Created sell order.');
+    expect(first?.fills).toEqual([{ quantity: 20, price_each: 500, subtotal: 10000, counterparty: 'Mara' }]);
+    expect(stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('player bulk sell --quiet matches the table and omits the auto-dock banner', () => {
+    const fixture = { ...structuredClone(createSellOrderBulkFixture), auto_docked: true };
+    const quiet = captureStructuredOutput('create_sell_order', fixture, { quiet: true });
+    const loud = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(quiet.stderr).toBe('');
+    expect(loud.stderr).toBe('');
+    expect(quiet.stdout).toContain('=== Sell Orders ===');
+    expect(quiet.stdout).not.toContain('[AUTO-DOCKED]');
+    expect(loud.stdout).toContain('=== Sell Orders ===');
+    expect(loud.stdout).toContain('[AUTO-DOCKED] Automatically docked at station (instant / same tick; no extra tick)');
+  });
+
+  test('player bulk sell --format text matches the table lines', () => {
+    const text = captureStructuredOutput('create_sell_order', createSellOrderBulkFixture, { format: 'text' });
+    const table = captureStructuredOutput('create_sell_order', createSellOrderBulkFixture, { format: 'table' });
+
+    expect(text.stderr).toBe('');
+    expect(text.stdout).toBe(table.stdout);
+    expect(text.stdout).toContain('=== Sell Orders ===');
+    expect(text.stdout).toContain('Smuggling XP');
+  });
+
+  test('v2_create_sell_order renders the player bulk sell table', () => {
+    const { stdout, stderr } = captureStructuredOutput('v2_create_sell_order', createSellOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Orders ===');
+    expect(stdout).toContain('3 requested | 2 succeeded | 1 failed');
+    expect(stdout).not.toContain('=== Intel ===');
+  });
+
+  test('faction bulk sell does not gain smuggling columns', () => {
+    const fixture = structuredClone(factionCreateSellOrderBulkFixture);
+    const row = fixture.details.results[1];
+    if (!row) throw new Error('Expected a faction bulk sell fixture result.');
+    Object.assign(row, { smuggling_xp: 50, smuggling_level_up: true });
+
+    const { stdout, stderr } = captureStructuredOutput('faction_create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Sell Orders ===');
+    expect(stdout).toContain('Sales (consolidated)');
+    expect(stdout).not.toContain('Smuggling XP');
+    expect(stdout).not.toContain('Level up');
+  });
+
+  test('legacy trade-intel results still render as Intel', () => {
+    const payload = {
+      results: [{ system_id: 'sol', poi_id: 'sol_belt', item_id: 'ore_iron', quantity: 12, confidence: 0.8 }],
+    };
+
+    for (const command of ['faction_query_trade_intel', 'some_other_command']) {
+      const { stdout, stderr } = captureStructuredOutput(command, payload);
+
+      expect(stderr, command).toBe('');
+      expect(stdout, command).toContain('=== Intel ===');
+      expect(stdout, command).toContain('ore_iron');
+      expect(stdout, command).toContain('12');
+      expect(stdout, command).not.toContain('=== Sell Orders ===');
+    }
+  });
+
+  test('player bulk sell body is not Intel under faction_query_trade_intel', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_query_trade_intel', createSellOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('summary-less player bulk sell is not an Intel table', () => {
+    const source = structuredClone(createSellOrderBulkFixture);
+    const { summary: _summary, ...details } = source.details;
+    const fixture = { ...source, details };
+    const onCommand = captureStructuredOutput('create_sell_order', fixture);
+    const onIntel = captureStructuredOutput('faction_query_trade_intel', fixture);
+
+    expect(onCommand.stderr).toBe('');
+    expect(onIntel.stderr).toBe('');
+    expect(onCommand.stdout).toContain('=== Response ===');
+    expect(onCommand.stdout).not.toContain('=== Intel ===');
+    expect(onCommand.stdout).not.toContain('=== Sell Orders ===');
+    expect(onIntel.stdout).not.toContain('=== Intel ===');
+    expect(onIntel.stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('player bulk sell declines a bigint summary count', () => {
+    const fixture = structuredClone(createSellOrderBulkFixture);
+    (fixture.details.summary as { total: number | bigint }).total = 3n;
+
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Sell Orders ===');
+  });
+
+  test('player bulk sell formats explicit, zero, and non-integer smuggling XP', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_sell_order', {
+      details: {
+        action: 'create_sell_order',
+        kind: 'bulk',
+        mode: 'bulk',
+        summary: { total: 9, succeeded: 9, failed: 0 },
+        results: [
+          {
+            index: 0,
+            success: true,
+            item: 'Explicit Zero',
+            item_id: 'explicit_zero',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-zero',
+            smuggling_xp: 0,
+            smuggling_level_up: false,
+          },
+          {
+            index: 1,
+            success: true,
+            item: 'Bigint Zero',
+            item_id: 'bigint_zero',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-bigint-zero',
+            smuggling_xp: 0n,
+            smuggling_level_up: false,
+          },
+          {
+            index: 2,
+            success: true,
+            item: 'Float XP',
+            item_id: 'float_xp',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-float',
+            smuggling_xp: 1.5,
+          },
+          {
+            index: 3,
+            success: true,
+            item: 'Level Only',
+            item_id: 'level_only',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-level',
+            smuggling_level_up: true,
+          },
+          {
+            index: 4,
+            success: true,
+            item: 'Negative XP',
+            item_id: 'negative_xp',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-neg',
+            smuggling_xp: -40,
+          },
+          {
+            index: 5,
+            success: true,
+            item: 'Huge XP',
+            item_id: 'huge_xp',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-huge',
+            smuggling_xp: 9007199254740993n,
+          },
+          {
+            index: 6,
+            success: true,
+            item: 'Null XP',
+            item_id: 'null_xp',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-null',
+            smuggling_xp: null,
+            smuggling_level_up: false,
+          },
+          {
+            index: 7,
+            success: true,
+            item: 'Blank XP',
+            item_id: 'blank_xp',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-blank',
+            smuggling_xp: '',
+          },
+          {
+            index: 8,
+            success: true,
+            item: 'String Level',
+            item_id: 'string_level',
+            quantity: 1,
+            price_each: 1,
+            order_id: 'order-string-level',
+            smuggling_level_up: 'yes',
+          },
+        ],
+      },
+    });
+    const headerLine = stdout.split('\n').find((line) => line.includes('Smuggling XP') && line.includes('Level up'));
+    const headers = headerLine?.split('|').map((cell) => cell.trim()) ?? [];
+    const xpIndex = headers.indexOf('Smuggling XP');
+    const levelIndex = headers.indexOf('Level up');
+    const cells = (item: string) => {
+      const line = stdout.split('\n').find((entry) => entry.includes(item));
+      expect(line, item).toBeDefined();
+      return line?.split('|').map((cell) => cell.trim()) ?? [];
+    };
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Sell Orders ===');
+    expect(stdout).not.toContain('Smuggling XP:');
+    expect(stdout).not.toContain('Smuggling level up');
+    expect(stdout).not.toContain('1.5');
+    expect(cells('Explicit Zero')[xpIndex]).toBe('0');
+    expect(cells('Explicit Zero')[levelIndex]).toBe('');
+    expect(cells('Bigint Zero')[xpIndex]).toBe('0');
+    expect(cells('Bigint Zero')[levelIndex]).toBe('');
+    expect(cells('Float XP')[xpIndex]).toBe('');
+    expect(cells('Level Only')[xpIndex]).toBe('');
+    expect(cells('Level Only')[levelIndex]).toBe('yes');
+    expect(cells('Negative XP')[xpIndex]).toBe('-40');
+    expect(cells('Huge XP')[xpIndex]).toBe(9007199254740993n.toLocaleString());
+    expect(cells('Null XP')[xpIndex]).toBe('');
+    expect(cells('Null XP')[levelIndex]).toBe('');
+    expect(cells('Blank XP')[xpIndex]).toBe('');
+    expect(cells('String Level')[levelIndex]).toBe('');
+    expect(cells('String Level').join(' ')).not.toContain('yes');
   });
 
   test('formats analyze_market insights as a table instead of a scalar dump', () => {
@@ -9129,6 +9514,7 @@ describe('structuredContent formatters', () => {
     expect(outputs.direct_buy).toContain('=== Buy Complete ===');
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
     expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
+    expect(outputs.player_bulk_sell_orders).toContain('=== Sell Orders ===');
     delete outputs.create_market_order;
     delete outputs.commission_quote;
     delete outputs.commission_ship;
@@ -9136,6 +9522,7 @@ describe('structuredContent formatters', () => {
     delete outputs.direct_buy;
     delete outputs.direct_sell;
     delete outputs.faction_bulk_orders;
+    delete outputs.player_bulk_sell_orders;
 
     expect(outputs).toMatchInlineSnapshot(`
       {

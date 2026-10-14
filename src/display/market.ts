@@ -1,6 +1,7 @@
 import { emitGiftEntries } from './gifts.ts';
 import {
   c,
+  commandNameEquals,
   emitLine,
   finiteNumber,
   firstArray,
@@ -431,6 +432,18 @@ function bulkOrderOrError(result: Record<string, unknown>): string {
   return code ?? message ?? '';
 }
 
+function formatSmugglingXp(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return formatIntegerText(value);
+  if (typeof value === 'number' && Number.isInteger(value)) return value.toLocaleString();
+  return undefined;
+}
+
+export function emitSmugglingAward(result: Record<string, unknown>): void {
+  const xp = formatSmugglingXp(result.smuggling_xp);
+  if (xp !== undefined) emitLine(`Smuggling XP: ${xp}`);
+  if (result.smuggling_level_up === true) emitLine('Smuggling level up: yes');
+}
+
 function renderFactionBulkOrders(result: Record<string, unknown>, command?: string): boolean {
   const side = createOrderSide(result, command);
   const expectedAction = side === 'buy' ? 'faction_create_buy_order' : 'faction_create_sell_order';
@@ -491,6 +504,81 @@ function renderFactionBulkOrders(result: Record<string, unknown>, command?: stri
       ['Price', ['price_display']],
       ['Bucket', ['bucket_display']],
       ['Financial', ['financial_display']],
+      ['Order / Error', ['outcome_display']],
+    ],
+    { maxCellWidth: 64 },
+  );
+  return true;
+}
+
+function isPlayerBulkSellShape(result: Record<string, unknown>): boolean {
+  return (
+    result.action === 'create_sell_order' &&
+    result.kind === 'bulk' &&
+    result.mode === 'bulk' &&
+    Array.isArray(result.results)
+  );
+}
+
+function renderPlayerBulkSellOrders(result: Record<string, unknown>, command?: string): boolean {
+  if (!commandNameEquals(command, 'create_sell_order') || !isPlayerBulkSellShape(result)) return false;
+  const summary = result.summary;
+  const resultsValue = result.results;
+  if (!isRecord(summary) || !Array.isArray(resultsValue)) return false;
+
+  const total = bulkInteger(summary.total);
+  const succeeded = bulkInteger(summary.succeeded);
+  const failed = bulkInteger(summary.failed);
+  if (total === undefined || succeeded === undefined || failed === undefined) return false;
+  if (
+    !resultsValue.every(
+      (entry) => isRecord(entry) && bulkInteger(entry.index) !== undefined && typeof entry.success === 'boolean',
+    )
+  ) {
+    return false;
+  }
+
+  const results = resultsValue as Array<Record<string, unknown>>;
+  emitLine(`\n${c.bright}=== Sell Orders ===${c.reset}`);
+  emitLine(
+    `${total.toLocaleString()} requested | ${succeeded.toLocaleString()} succeeded | ${failed.toLocaleString()} failed`,
+  );
+  if (results.length === 0) {
+    emitLine('No order results.');
+    return true;
+  }
+
+  const rows = results.map((entry) => ({
+    index: (entry.index as number).toLocaleString(),
+    status: entry.success ? 'created' : 'failed',
+    item_display: bulkItem(entry),
+    quantity_display: bulkInteger(entry.quantity)?.toLocaleString() ?? '',
+    filled_listed: bulkFilledListed(entry),
+    price_display:
+      typeof entry.price_each === 'bigint'
+        ? formatCredits(entry.price_each)
+        : bulkNumber(entry.price_each) === undefined
+          ? ''
+          : formatCredits(entry.price_each as number),
+    financial_display: bulkFinancial(entry, 'sell'),
+    smuggling_xp_display: formatSmugglingXp(entry.smuggling_xp) ?? '',
+    level_up_display: entry.smuggling_level_up === true ? 'yes' : '',
+    outcome_display: bulkOrderOrError(entry),
+  }));
+
+  printCompactTable(
+    'Results',
+    rows,
+    [
+      ['#', ['index']],
+      ['Status', ['status']],
+      ['Item', ['item_display']],
+      ['Qty', ['quantity_display']],
+      ['Filled/Listed', ['filled_listed']],
+      ['Price', ['price_display']],
+      ['Financial', ['financial_display']],
+      ['Smuggling XP', ['smuggling_xp_display']],
+      ['Level up', ['level_up_display']],
       ['Order / Error', ['outcome_display']],
     ],
     { maxCellWidth: 64 },
@@ -1029,6 +1117,11 @@ export const marketFormatters = [
     suppressShapeFallbackOnDecline: true,
   }),
 
+  namedFormatter('player_bulk_sell_orders', ['kind', 'results', 'summary'], renderPlayerBulkSellOrders, {
+    commands: ['create_sell_order'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+
   namedFormatter(
     'create_market_order',
     ['listing_fee', 'order_id'],
@@ -1376,6 +1469,8 @@ export const marketFormatters = [
         ]);
         return true;
       }
+
+      if (isPlayerBulkSellShape(r)) return false;
 
       const intel = firstArray(r, ['intel', 'results', 'trade_intel']);
       if (!intel) return false;

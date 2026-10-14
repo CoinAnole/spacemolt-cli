@@ -1,0 +1,11 @@
+
+=== Sell Orders ===
+3 requested | 2 succeeded | 1 failed
+
+=== Results ===
+
+  # | Status  | Item                  | Qty | Filled/Listed | Price  | Financial                    | Smuggling XP | Level up | Order / Error                       
+  --+---------+-----------------------+-----+---------------+--------+------------------------------+--------------+----------+-------------------------------------
+  0 | created | Void Salt (void_salt) | 20  | 20/0          | 500 cr | earned 10,000 cr; fee 100 cr | 50           | yes      | order-salt-1                        
+  1 | created | Iron Ore (ore_iron)   | 10  | 0/10          | 15 cr  | fee 2 cr                     |              |          | order-iron-1                        
+  2 | failed  | Fuel (fuel)           | 4   |               | 3 cr   |                              |              |          | insufficient_items: Not enough Fuel.
