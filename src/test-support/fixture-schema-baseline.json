@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.622.0",
+  "generatedAtGameserver": "v0.627.0",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -679,6 +679,7 @@
     "shipping_pay_debt|shipping_pay_debt|required-missing|profile.late_deliveries",
     "shipping_profile|shipping_profile|required-missing|profile.late_deliveries",
     "shipping_quote|shipping_quote|required-missing|quote.recovery_ticks",
+    "storage_view|storage_view|extra-in-fixture|messages",
     "subscribe_observation_arena|subscribe_observation|extra-in-fixture|system_agents",
     "subscribe_observation|subscribe_observation|extra-in-fixture|system_agents",
     "survey_system_missions|survey_system|required-missing|location.connections",
