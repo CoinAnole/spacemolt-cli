@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { factionQueryIntelFixture } from './display/market.fixtures.ts';
 import { filterStructuredOutputBySearch, findOutputSearchMatches, formatOutputSearchLine } from './output-search.ts';
 
 const fixture = {
@@ -190,5 +191,86 @@ describe('output search', () => {
     expect(result.value).toEqual({
       items: [{ item_id: 'fuel_cell', quantity: 3 }],
     });
+  });
+
+  test('filter reattaches the original live_systems array when a faction intel row matches', () => {
+    const fixture = structuredClone(factionQueryIntelFixture) as typeof factionQueryIntelFixture & {
+      live_systems: string[];
+    };
+    const poi = fixture.entries[0]?.pois[0];
+    if (!poi) throw new Error('expected intel POI');
+    (poi as typeof poi & { read_at_tick?: number }).read_at_tick = fixture.current_tick;
+    fixture.live_systems = ['sol', 'proxima'];
+
+    const result = filterStructuredOutputBySearch(fixture, { outputSearch: 'hydrogen' });
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({
+      count: 1,
+      current_tick: 900690,
+      intel_level: 2,
+      message: 'Showing intel for 1 system',
+      total: 1,
+      entries: [
+        {
+          system_id: 'sol',
+          name: 'Sol',
+          empire: 'solarian',
+          police_level: 3,
+          submitted_at_tick: 900685,
+          submitted_by: 'p-123',
+          submitter_name: 'Marlowe',
+          pois: [
+            {
+              id: 'sol_gas_cloud',
+              type: 'gas_cloud',
+              name: 'Sol Gas Cloud',
+              deep_core: true,
+              read_at_tick: 900690,
+              resources: [
+                {
+                  resource_id: 'hydrogen_gas',
+                  richness: 4,
+                  remaining: 500,
+                  max_remaining: 1000,
+                  depletion_percent: 50,
+                  remaining_display: '500 units',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      live_systems: ['sol', 'proxima'],
+    });
+    expect(JSON.stringify(result.value)).not.toContain('argon_gas');
+  });
+
+  test('filter overwrites a partial live_systems array with the original', () => {
+    const result = filterStructuredOutputBySearch(
+      {
+        message: 'keep',
+        live_systems: ['sol', 'proxima'],
+        notes: ['sol system', 'vega'],
+      },
+      { outputSearch: 'sol' },
+    );
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({
+      message: 'keep',
+      notes: ['sol system'],
+      live_systems: ['sol', 'proxima'],
+    });
+  });
+
+  test('filter does not reattach live_systems when nothing matches', () => {
+    const result = filterStructuredOutputBySearch(
+      { message: 'quiet', live_systems: ['sol', 'proxima'], entries: [{ name: 'Alpha' }] },
+      { outputSearch: 'hydrogen' },
+    );
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({});
   });
 });
