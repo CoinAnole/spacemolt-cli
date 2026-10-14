@@ -28,7 +28,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   complete_mission: 'Complete a mission and claim rewards',
   completed_missions: 'List all missions you have completed',
   craft: 'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (storage/faction; cargo for packages).',
-  create_buy_order: 'Place a buy offer on the station exchange',
+  create_buy_order:
+    'Place a buy offer on the station exchange. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
   create_faction: 'Create a new faction',
   create_note: 'Create a new note document',
   create_sell_order: 'List items for sale on the station exchange',

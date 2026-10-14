@@ -359,6 +359,12 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage: '<item_id_or_cached_name> <quantity> <price_each> [deliver_to=cargo|storage]  (place a buy offer)',
     category: 'Exchange',
     apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
+    schemaExtensions: {
+      deliver_to: {
+        description:
+          "Where to deliver filled items: 'cargo' (default) or 'storage' (station storage). A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.",
+      },
+    },
   },
   view_market: {
     usage:
