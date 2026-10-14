@@ -90,7 +90,8 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
   persist_failed: {
     code: 'persist_failed',
     message: 'Persistence confirmation failed.',
-    suggestion: 'Verify your state with "spacemolt get_status" before retrying the transaction.',
+    suggestion:
+      'The server could not save the change. Nothing was charged, moved or changed. Check your state with "spacemolt get_status", then retry.',
     retryable: true,
     auth: false,
     relatedCommands: ['get_status'],
