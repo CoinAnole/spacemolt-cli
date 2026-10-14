@@ -910,6 +910,9 @@ describe('help output branches', () => {
     expect(output).toContain('Grace');
     expect(output).toContain('Facilities');
     expect(output).toContain('credits_owed');
+    expect(output).toContain('mission.completed');
+    expect(output).toContain('Direct supplied');
+    expect(output).toContain('direct_supplied');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');
     expect(output).toContain('faction.freight_claim_paid');

@@ -1424,6 +1424,8 @@ export const socialFormatters = [
         const facilitiesDisplay = rentWarning
           ? formatActionLogGroupedInteger(scalarFrom('facilities_behind'))
           : undefined;
+        const missionCompleted = eventType === 'mission.completed';
+        const directSuppliedDisplay = missionCompleted ? formatYesBlank(scalarFrom('direct_supplied')) : undefined;
         const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1463,6 +1465,7 @@ export const socialFormatters = [
         if (missedDisplay !== undefined) row.missed_display = missedDisplay;
         if (graceDisplay !== undefined) row.grace_display = graceDisplay;
         if (facilitiesDisplay !== undefined) row.facilities_display = facilitiesDisplay;
+        if (directSuppliedDisplay !== undefined) row.direct_supplied_display = directSuppliedDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1496,6 +1499,9 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['missed_display'])) columns.push(['Missed', ['missed_display']]);
       if (hasAnyField(rows, ['grace_display'])) columns.push(['Grace', ['grace_display']]);
       if (hasAnyField(rows, ['facilities_display'])) columns.push(['Facilities', ['facilities_display']]);
+      if (hasAnyField(rows, ['direct_supplied_display'])) {
+        columns.push(['Direct supplied', ['direct_supplied_display']]);
+      }
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);
       }

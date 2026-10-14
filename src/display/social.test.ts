@@ -248,6 +248,21 @@ function rentEntry(
   };
 }
 
+function missionEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 701,
+    created_at: '2026-10-14T12:00:00.000Z',
+    event_type: 'mission.completed',
+    category: 'mission',
+    summary: 'Shipyard procurement payout.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function expectNoPrizeOrLocation(header: string | undefined): void {
   expect(header).toBeDefined();
   expect(header).not.toContain('Prize');
@@ -1380,6 +1395,291 @@ test('keeps rent-warning data on json output', () => {
   expect(rendered.stdout.join('\n')).not.toContain('facilities_display');
   const human = renderActionLog(fixture);
   expect(actionLogCell(human, 'other.rent_warning', 'Owed')).toBe('12,000cr');
+});
+
+test('lifts direct_supplied yes for mission.completed', () => {
+  const stdout = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true, base_name: 'Earth Station', commission_id: 'comm-1' })]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Direct supplied');
+  expect(columns).not.toContain('Facilities');
+  expect(actionLogCell(stdout, 'mission.completed', 'Direct supplied')).toBe('yes');
+  expect(actionLogCell(stdout, 'mission.completed', 'Event')).toBe('mission.completed');
+  expect(actionLogCell(stdout, 'Shipyard procurement payout.', 'Summary')).toBe('Shipyard procurement payout.');
+  expect(actionLogCell(stdout, 'mission.completed', 'Commission')).toBe('comm-1');
+  expect(actionLogCell(stdout, 'mission.completed', 'Base')).toBe('Earth Station');
+  const direct = columns.indexOf('Direct supplied');
+  expect(columns[direct + 1]).toBe('Base');
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Direct supplied', 'Base']);
+
+  const withRent = renderActionLog(
+    actionLogPage([
+      rentEntry('other.rent_warning', { facilities_behind: 2 }),
+      missionEntry({ direct_supplied: true, base_name: 'Earth Station' }),
+    ]),
+  );
+  const rentColumns = actionLogHeaderColumns(withRent);
+  const facilities = rentColumns.indexOf('Facilities');
+  expect(rentColumns.slice(facilities, facilities + 3)).toEqual(['Facilities', 'Direct supplied', 'Base']);
+  expect(actionLogCell(withRent, 'Shipyard', 'Direct supplied')).toBe('yes');
+});
+
+test('omits Direct supplied when mission.completed direct_supplied is not boolean true', () => {
+  const pages = [
+    missionEntry(undefined, { direct_supplied: false }),
+    missionEntry(undefined),
+    missionEntry({}),
+    missionEntry({ direct_supplied: false }),
+    missionEntry({ direct_supplied: null }),
+  ];
+  for (const entry of pages) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    const label = JSON.stringify(entry.direct_supplied ?? entry.data ?? null);
+    expect(actionLogHeaderColumns(stdout), label).not.toContain('Direct supplied');
+    expect(actionLogCell(stdout, 'mission.completed', 'Event'), label).toBe('mission.completed');
+  }
+});
+
+test('does not lift direct_supplied off other events', () => {
+  for (const eventType of ['ship.commission_completed', 'crafting.completed'] as const) {
+    const stdout = renderActionLog(
+      actionLogPage([
+        missionEntry({ direct_supplied: true }, { event_type: eventType, summary: `${eventType} summary` }),
+      ]),
+    );
+    expect(actionLogHeaderColumns(stdout), eventType).not.toContain('Direct supplied');
+    expect(stdout, eventType).not.toContain('yes');
+    expect(actionLogCell(stdout, eventType, 'Event'), eventType).toBe(eventType);
+  }
+
+  const commissionEntry = renderActionLog(
+    actionLogPage([
+      missionEntry(undefined, {
+        event_type: 'ship.commission_completed',
+        category: 'ship',
+        summary: 'Hull delivered.',
+        direct_supplied: true,
+      }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(commissionEntry)).not.toContain('Direct supplied');
+  expect(commissionEntry).not.toContain('yes');
+  expect(actionLogCell(commissionEntry, 'Hull delivered.', 'Event')).toBe('ship.commission_completed');
+
+  const pirate = renderActionLog(
+    actionLogPage([pirateEntry({ direct_supplied: true, credits_earned: 1500 })], 'combat'),
+  );
+  expect(actionLogHeaderColumns(pirate)).not.toContain('Direct supplied');
+  expect(actionLogHeaderColumns(pirate)).toContain('Credits');
+  expect(actionLogCell(pirate, 'Corsair', 'Credits')).toBe('1,500cr');
+  expect(pirate).not.toContain('yes');
+});
+
+test('does not treat a prefix, different case, data event_type, or losing type as mission.completed', () => {
+  const rejected = [
+    missionEntry({ direct_supplied: true }, { event_type: 'mission.completed.extra' }),
+    missionEntry({ direct_supplied: true }, { event_type: 'MISSION.COMPLETED' }),
+    missionEntry(
+      { direct_supplied: true },
+      {
+        event_type: 'crafting.completed',
+        data: { event_type: 'mission.completed', direct_supplied: true },
+      },
+    ),
+    missionEntry(
+      { direct_supplied: true },
+      {
+        event_type: 'crafting.completed',
+        type: 'mission.completed',
+      },
+    ),
+  ];
+  for (const entry of rejected) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(entry.event_type)).not.toContain('Direct supplied');
+    expect(stdout, JSON.stringify(entry.event_type)).not.toContain('yes');
+  }
+});
+
+test('lifts direct_supplied from type when event_type is absent and from a trimmed event type', () => {
+  const fromType = missionEntry({ direct_supplied: true }, { type: 'mission.completed' });
+  delete fromType.event_type;
+  const typeStdout = renderActionLog(actionLogPage([fromType]));
+  expect(actionLogCell(typeStdout, 'mission.completed', 'Event')).toBe('mission.completed');
+  expect(actionLogCell(typeStdout, 'mission.completed', 'Direct supplied')).toBe('yes');
+
+  for (const eventType of ['', '   ']) {
+    const entry = missionEntry({ direct_supplied: true }, { type: 'mission.completed', event_type: eventType });
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expect(actionLogCell(stdout, 'Shipyard', 'Direct supplied'), JSON.stringify(eventType)).toBe('yes');
+  }
+
+  const trimmed = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { event_type: ' mission.completed ' })]),
+  );
+  expect(actionLogCell(trimmed, 'mission.completed', 'Direct supplied')).toBe('yes');
+  expect(actionLogCell(trimmed, 'mission.completed', 'Event')).toBe('mission.completed');
+});
+
+test('prefers entry-level direct_supplied over data except for null and empty string', () => {
+  const entryWins = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: false }, { direct_supplied: true })]),
+  );
+  expect(actionLogCell(entryWins, 'mission.completed', 'Direct supplied')).toBe('yes');
+  expect(entryWins).not.toContain('false');
+
+  const dataBlocked = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { direct_supplied: false })]),
+  );
+  expect(actionLogHeaderColumns(dataBlocked)).not.toContain('Direct supplied');
+
+  const emptyFallsThrough = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { direct_supplied: '' })]),
+  );
+  expect(actionLogCell(emptyFallsThrough, 'mission.completed', 'Direct supplied')).toBe('yes');
+
+  const whitespaceBlocks = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { direct_supplied: '   ' })]),
+  );
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Direct supplied');
+
+  const nullFallsThrough = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { direct_supplied: null })]),
+  );
+  expect(actionLogCell(nullFallsThrough, 'mission.completed', 'Direct supplied')).toBe('yes');
+});
+
+test('omits Direct supplied for non-boolean direct_supplied values', () => {
+  const badValues: unknown[] = ['true', 'yes', ' TRUE ', '1', 1, 1n, 1.5, {}, []];
+  for (const value of badValues) {
+    const label = typeof value === 'bigint' ? `${value}n` : JSON.stringify(value);
+    const onData = renderActionLog(actionLogPage([missionEntry({ direct_supplied: value })]));
+    expect(actionLogHeaderColumns(onData), label).not.toContain('Direct supplied');
+    expect(onData, label).not.toContain('[object Object]');
+
+    const onEntry = renderActionLog(
+      actionLogPage([missionEntry({ direct_supplied: true }, { direct_supplied: value })]),
+    );
+    expect(actionLogHeaderColumns(onEntry), `entry ${label}`).not.toContain('Direct supplied');
+    expect(onEntry, `entry ${label}`).not.toContain('[object Object]');
+  }
+});
+
+test('does not parse direct supplied out of the summary', () => {
+  const summary = 'Direct supplied: true';
+  const summaryOnly = renderActionLog(actionLogPage([missionEntry(undefined, { summary })]));
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Direct supplied');
+  expect(summaryOnly).toContain(summary);
+
+  const withField = renderActionLog(
+    actionLogPage([
+      missionEntry(undefined, { summary, id: 701 }),
+      missionEntry({ direct_supplied: true }, { id: 702, summary: 'Procurement payout, owner sourced.' }),
+    ]),
+  );
+  expect(withField).toContain(summary);
+  expect(withField).toContain('Procurement payout, owner sourced.');
+  expect(actionLogCell(withField, summary, 'Direct supplied')).toBe('');
+  expect(actionLogCell(withField, 'owner sourced', 'Direct supplied')).toBe('yes');
+  expect(actionLogHeaderColumns(withField).filter((column) => column === 'Direct supplied')).toEqual([
+    'Direct supplied',
+  ]);
+});
+
+test('keeps Direct supplied beside rent columns on a mixed action-log page', () => {
+  const refuel = structuredClone(actionLogFactionRefuelFixture);
+  const marlowe = refuel.entries[0];
+  if (!marlowe) throw new Error('expected refuel row');
+  const stdout = renderActionLog(
+    actionLogPage([
+      pirateEntry({ credits_earned: 1500 }),
+      marlowe,
+      rentEntry('other.rent_warning', rentCounters),
+      missionEntry({ direct_supplied: true, base_name: 'Earth Station' }),
+      missionEntry({ direct_supplied: false }, { id: 702, summary: 'Procurement payout, owner sourced.' }),
+      missionEntry(
+        { direct_supplied: true },
+        {
+          id: 801,
+          event_type: 'ship.commission_completed',
+          category: 'ship',
+          summary: 'Commission hull delivered.',
+        },
+      ),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  for (const header of ['Credits', 'Owed', 'Missed', 'Grace', 'Facilities', 'Direct supplied', 'Base']) {
+    expect(columns).toContain(header);
+  }
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), [
+    'Credits',
+    'Owed',
+    'Missed',
+    'Grace',
+    'Facilities',
+    'Direct supplied',
+    'Base',
+  ]);
+  const credits = columns.indexOf('Credits');
+  expect(columns.slice(credits, credits + 7)).toEqual([
+    'Credits',
+    'Owed',
+    'Missed',
+    'Grace',
+    'Facilities',
+    'Direct supplied',
+    'Base',
+  ]);
+  expect(actionLogCell(stdout, 'Shipyard', 'Direct supplied')).toBe('yes');
+  expect(actionLogCell(stdout, 'owner sourced', 'Direct supplied')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Direct supplied')).toBe('');
+  expect(actionLogCell(stdout, 'Marlowe', 'Direct supplied')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Direct supplied')).toBe('');
+  expect(actionLogCell(stdout, 'Commission hull', 'Direct supplied')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Owed')).toBe('12,000cr');
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
+});
+
+test('lifts direct_supplied for mission.completed regardless of category', () => {
+  const stdout = renderActionLog(
+    actionLogPage([missionEntry({ direct_supplied: true }, { category: 'ship' })], 'ship'),
+  );
+  expect(actionLogCell(stdout, 'mission.completed', 'Direct supplied')).toBe('yes');
+  expect(actionLogCell(stdout, 'mission.completed', 'Category')).toBe('ship');
+});
+
+test('keeps direct_supplied on json, yaml, structured, and compact output', () => {
+  const fixture = actionLogPage([missionEntry({ direct_supplied: true, message: 'DETAIL_MESSAGE_TOKEN' })]);
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const rendered = renderStructuredResult('get_action_log', fixture, renderOptions, context);
+    expect(rendered.success).toBe(true);
+    const stdout = rendered.stdout.join('\n');
+    expect(stdout).not.toContain('direct_supplied_display');
+    expect(stdout).not.toContain('Direct supplied');
+    expect(stdout).toContain('DETAIL_MESSAGE_TOKEN');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('direct_supplied: true');
+    } else {
+      const parsed = JSON.parse(stdout) as {
+        entries: Array<{ data: { direct_supplied?: unknown; message?: unknown } }>;
+      };
+      expect(parsed.entries[0]?.data.direct_supplied).toBe(true);
+      expect(parsed.entries[0]?.data.message).toBe('DETAIL_MESSAGE_TOKEN');
+      expect(stdout).toContain(renderOptions.compact ? '"direct_supplied":true' : '"direct_supplied": true');
+    }
+  }
+  const human = renderActionLog(fixture);
+  expect(actionLogCell(human, 'mission.completed', 'Direct supplied')).toBe('yes');
+  expect(human).not.toContain('DETAIL_MESSAGE_TOKEN');
+  expect(human).not.toContain('direct_supplied_display');
 });
 
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
