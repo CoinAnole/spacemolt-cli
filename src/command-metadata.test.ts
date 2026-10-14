@@ -573,21 +573,32 @@ describe('command metadata', () => {
     expect(config?.description).toContain('When the server includes cargo');
     expect(config?.description).toContain('mission cargo handed on arrival');
     expect(config?.description).toContain('Absent missions or cargo means unchanged');
-    expect(config?.description).not.toContain('`');
-    expect(config?.seeAlso).toEqual(
-      expect.arrayContaining([
-        'undock',
-        'get_status',
-        'view_market',
-        'get_battle_status',
-        'get_active_missions',
-        'get_cargo',
-      ]),
+    expect(config?.description).toBe(
+      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end. When an objective advances, table output prints the Active Missions table from the response. When the server includes cargo, the hold is printed so mission cargo handed on arrival is visible immediately. Absent missions or cargo means unchanged. The response no longer includes a station mailbox (messages, messages_count). Shipyard, Ship Exchange, and Station Authority notices are private DMs; read them from anywhere with get_chat_history private (gameserver 0.626.0). Unread chat (unread_chat, unread_chat_note) is unchanged.',
     );
+    expect(config?.description).not.toContain('`');
+    const unchangedMarker = 'Absent missions or cargo means unchanged. ';
+    const dockDescription = config?.description ?? '';
+    const unchangedAt = dockDescription.indexOf(unchangedMarker);
+    expect(unchangedAt).toBeGreaterThanOrEqual(0);
+    const mailboxSuffix = dockDescription.slice(unchangedAt + unchangedMarker.length);
+    expect(mailboxSuffix).not.toContain('trade fills');
+    expect(mailboxSuffix).not.toContain('trade_fills');
+    expect(config?.seeAlso).toEqual([
+      'undock',
+      'get_status',
+      'view_market',
+      'get_battle_status',
+      'get_active_missions',
+      'get_cargo',
+      'get_chat_history',
+    ]);
     expect(config?.discoverWith).toEqual(['get_status', 'get_system']);
 
     const help = captureHelp('dock');
     expect(help).toContain('station_under_attack');
+    expect(help).toContain('station mailbox');
+    expect(help).toContain('Unread chat');
     expect(help).toContain('armed faction station');
     expect(help).toContain('get_battle_status');
     expect(help).toContain('Active Missions');
@@ -597,6 +608,36 @@ describe('command metadata', () => {
     expect(help).toContain('get_cargo');
     expect(help).toContain('spacemolt dock');
     expect(help).not.toContain('spacemolt dock <args...>');
+    expect(help).not.toContain('`');
+  });
+
+  test('storage view help points station notices at private chat history', () => {
+    const config = COMMANDS.storage_view;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('storage_view command is missing from COMMANDS');
+
+    expect(config.description).toBe(
+      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0).',
+    );
+    expect(config.usage).toBe(
+      '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]  (station_id: station base ID or station POI ID)',
+    );
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_view?.positionals).toEqual(['station_id', 'target']);
+    expect(config.args).toEqual(['station_id', 'target']);
+    expect(config.clientOnlyFields).toEqual(['search', 'items', 'item_id']);
+    expect(config.aliases).toEqual({ item: 'item_id' });
+    expect(config.schema?.station_id?.description).toContain('station Base ID or station POI ID');
+    expect(config.schema?.station_id?.description).not.toContain('0.626.0');
+    expect(config.seeAlso).toEqual(['storage_deposit', 'storage_withdraw', 'get_cargo', 'get_chat_history']);
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_view).toBe('View personal or faction station storage.');
+
+    const help = captureHelp('storage view');
+    expect(help).toContain('This view no longer includes messages.');
+    expect(help).toContain(
+      'Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0).',
+    );
+    expect(help).toContain('spacemolt storage view target=faction');
+    expect(help).toContain('See also: storage deposit, storage withdraw, get_cargo, get_chat_history');
     expect(help).not.toContain('`');
   });
 
@@ -902,9 +943,16 @@ describe('command metadata', () => {
     expect(config.seeAlso).toEqual(['chat']);
     expect(config.schema?.target?.enum).toEqual(['system', 'local', 'faction', 'private', 'emergency']);
     expect(Object.keys(config.schema ?? {}).sort()).toEqual(['after', 'before', 'limit', 'target', 'target_id']);
+    expect(config.schema?.target_id?.description).toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_social/get_chat_history']?.schema?.target_id?.description,
+    );
     expect(FACTION_SOCIAL_COMMAND_OVERRIDES.get_chat_history?.positionals).toEqual(['channel', 'limit', 'before']);
     expect(CURATED_COMMAND_DESCRIPTIONS.get_chat_history).toBeUndefined();
 
+    expect(config.description).toBe(
+      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0).',
+    );
+    expect(config.description).not.toContain('channel=private');
     expect(config.description).toContain('emergency');
     expect(config.description).toContain('read-only');
     expect(config.description).toContain('MAYDAY');
@@ -925,8 +973,13 @@ describe('command metadata', () => {
     expect(config.usage).not.toContain('live emergency broadcast');
     expect(config.usage).not.toContain('not from this history');
     expect(config.usage).not.toContain('gameserver 0.608.0');
+    expect(config.usage).not.toContain('0.626.0');
+    expect(config.usage).not.toContain('Shipyard');
+    expect(config.usage).not.toContain('mailbox');
 
-    expect(config.example).toBe('spacemolt get_chat_history local 20; spacemolt get_chat_history emergency');
+    expect(config.example).toBe(
+      'spacemolt get_chat_history local 20; spacemolt get_chat_history emergency; spacemolt get_chat_history private',
+    );
     expect(config.example).not.toContain('mission_id');
     expect(config.example).not.toContain('accept_mission');
     expect(config.example).not.toContain('live emergency broadcast');
@@ -963,6 +1016,9 @@ describe('command metadata', () => {
     expect(help).toContain('read-only MAYDAY history');
     expect(help).toContain('(channels: local, system, faction, private, emergency');
     expect(help).toContain('spacemolt get_chat_history local 20; spacemolt get_chat_history emergency');
+    expect(help).toContain('get_chat_history private');
+    expect(help).toContain('gameserver 0.626.0');
+    expect(help).toContain('whole DM inbox');
     expect(help).toContain('target (system|local|faction|private|emergency)');
     expect(help).toContain('Chat channel to get history for');
     expect(help).toContain('See also: chat');

@@ -77,10 +77,18 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   dock: {
     usage: '',
     description:
-      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end. When an objective advances, table output prints the Active Missions table from the response. When the server includes cargo, the hold is printed so mission cargo handed on arrival is visible immediately. Absent missions or cargo means unchanged.',
+      'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end. When an objective advances, table output prints the Active Missions table from the response. When the server includes cargo, the hold is printed so mission cargo handed on arrival is visible immediately. Absent missions or cargo means unchanged. The response no longer includes a station mailbox (messages, messages_count). Shipyard, Ship Exchange, and Station Authority notices are private DMs; read them from anywhere with get_chat_history private (gameserver 0.626.0). Unread chat (unread_chat, unread_chat_note) is unchanged.',
     example: 'spacemolt dock',
     discoverWith: ['get_status', 'get_system'],
-    seeAlso: ['undock', 'get_status', 'view_market', 'get_battle_status', 'get_active_missions', 'get_cargo'],
+    seeAlso: [
+      'undock',
+      'get_status',
+      'view_market',
+      'get_battle_status',
+      'get_active_missions',
+      'get_cargo',
+      'get_chat_history',
+    ],
     category: 'Navigation',
     apiRoute: 'POST /api/v2/spacemolt/dock',
   },

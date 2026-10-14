@@ -1048,6 +1048,14 @@ describe('help output branches', () => {
     expect(output).toMatch(/^ {2}dock /m);
   });
 
+  test('command search for Station Authority finds get_chat_history and dock', () => {
+    const capture = captureWriter();
+    showCommandSearch('Station Authority', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+    const output = capture.stdout.join('\n');
+    expect(output).toMatch(/^ {2}get_chat_history /m);
+    expect(output).toMatch(/^ {2}dock /m);
+  });
+
   test('command search for prize finds attack, get_nearby, and scan', () => {
     const capture = captureWriter();
     showCommandSearch('prize', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
