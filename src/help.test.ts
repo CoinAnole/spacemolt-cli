@@ -2851,29 +2851,46 @@ describe('help output branches', () => {
     expect(output).not.toContain('This is an authentication error.');
   });
 
-  test('displayError tells users to verify state before retrying persistence errors', () => {
-    const baseContext: CliRuntimeContext = {
+  test('displayError states the persist_failed nothing-changed contract', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
       env: {},
-      writer: captureWriter().writer,
+      writer: capture.writer,
       clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
       sleep: () => Promise.resolve(),
       output: { quiet: false, plain: true },
     };
 
-    for (const code of ['persist_failed', 'persist_timeout']) {
-      const capture = captureWriter();
-      displayError(
-        'buy',
-        { code, message: 'Could not confirm transaction persistence' },
-        { context: { ...baseContext, writer: capture.writer } },
-      );
+    displayError('buy', { code: 'persist_failed', message: 'Could not confirm transaction persistence' }, { context });
 
-      const output = capture.stderr.join('\n');
-      expect(output).toContain(`Error [${code}]`);
-      expect(output).toContain('Verify your state');
-      expect(output).toContain('spacemolt get_status');
-      expect(output).toContain('This error may be retryable.');
-    }
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [persist_failed]');
+    expect(output).toContain('Could not confirm transaction persistence');
+    expect(output).toContain(
+      'Suggestion: The server could not save the change. Nothing was charged, moved or changed. Check your state with "spacemolt get_status", then retry.',
+    );
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('Verify your state');
+    expect(output).not.toContain('before retrying the transaction');
+  });
+
+  test('displayError tells users to verify state before retrying persist_timeout', () => {
+    const capture = captureWriter();
+    const context: CliRuntimeContext = {
+      env: {},
+      writer: capture.writer,
+      clock: { now: () => new Date('2026-05-20T00:00:00.000Z') },
+      sleep: () => Promise.resolve(),
+      output: { quiet: false, plain: true },
+    };
+
+    displayError('buy', { code: 'persist_timeout', message: 'Could not confirm transaction persistence' }, { context });
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [persist_timeout]');
+    expect(output).toContain('Verify your state');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('This error may be retryable.');
   });
 
   test('displayError preserves ambiguous bucket guidance instead of target not found suggestion', () => {

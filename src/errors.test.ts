@@ -398,6 +398,33 @@ describe('trade_not_found', () => {
   });
 });
 
+describe('persist_failed', () => {
+  test('is retryable, is not an authentication error, and states that nothing changed', () => {
+    expect(ERROR_REGISTRY.persist_failed?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.persist_failed?.auth).toBe(false);
+    expect(isRetryableError('persist_failed')).toBe(true);
+    expect(isAuthError('persist_failed')).toBe(false);
+    expect(isKnownErrorCode('persist_failed')).toBe(true);
+    expect(ERROR_CODES).toContain('persist_failed');
+    expect(ERROR_REGISTRY.persist_failed?.message).toBe('Persistence confirmation failed.');
+    const suggestion = getErrorSuggestion('persist_failed');
+    expect(suggestion).toBe(
+      'The server could not save the change. Nothing was charged, moved or changed. Check your state with "spacemolt get_status", then retry.',
+    );
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(ERROR_REGISTRY.persist_failed?.commandSuggestions).toBeUndefined();
+    expect(getErrorSuggestion('persist_failed', 'buy_insurance')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'create_note')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'write_note')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'delete_note')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'mine')).toBe(suggestion);
+    expect(getRelatedCommands('persist_failed')).toEqual(['get_status']);
+    const timeoutSuggestion = getErrorSuggestion('persist_timeout');
+    expect(timeoutSuggestion).toContain('Verify your state');
+    expect(timeoutSuggestion).not.toContain('Nothing was charged');
+  });
+});
+
 describe('transaction_uncertain', () => {
   test('is not retryable, is not an authentication error, and forbids retrying the transfer', () => {
     expect(ERROR_REGISTRY.transaction_uncertain?.retryable).toBe(false);
