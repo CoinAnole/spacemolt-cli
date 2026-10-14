@@ -577,13 +577,8 @@ describe('command metadata', () => {
       'Dock at the current station. A station in a battle shuts its blast doors and refuses with station_under_attack. An armed faction station joins any in-system battle where one of its members is fighting. Unarmed outposts and wrecked stations stay out. Faction stations also stay out of wildlife hunts unless the creature is a leviathan. Wait for the battle to end. When an objective advances, table output prints the Active Missions table from the response. When the server includes cargo, the hold is printed so mission cargo handed on arrival is visible immediately. Absent missions or cargo means unchanged. The response no longer includes a station mailbox (messages, messages_count). Shipyard, Ship Exchange, and Station Authority notices are private DMs; read them from anywhere with get_chat_history private (gameserver 0.626.0). Unread chat (unread_chat, unread_chat_note) is unchanged.',
     );
     expect(config?.description).not.toContain('`');
-    const unchangedMarker = 'Absent missions or cargo means unchanged. ';
-    const dockDescription = config?.description ?? '';
-    const unchangedAt = dockDescription.indexOf(unchangedMarker);
-    expect(unchangedAt).toBeGreaterThanOrEqual(0);
-    const mailboxSuffix = dockDescription.slice(unchangedAt + unchangedMarker.length);
-    expect(mailboxSuffix).not.toContain('trade fills');
-    expect(mailboxSuffix).not.toContain('trade_fills');
+    expect(config?.description).not.toContain('trade fills');
+    expect(config?.description).not.toContain('trade_fills');
     expect(config?.seeAlso).toEqual([
       'undock',
       'get_status',
