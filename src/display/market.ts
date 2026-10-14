@@ -438,6 +438,12 @@ function formatSmugglingXp(value: unknown): string | undefined {
   return undefined;
 }
 
+function emitSmugglingAward(result: Record<string, unknown>): void {
+  const xp = formatSmugglingXp(result.smuggling_xp);
+  if (xp !== undefined) emitLine(`Smuggling XP: ${xp}`);
+  if (result.smuggling_level_up === true) emitLine('Smuggling level up: yes');
+}
+
 function renderFactionBulkOrders(result: Record<string, unknown>, command?: string): boolean {
   const side = createOrderSide(result, command);
   const expectedAction = side === 'buy' ? 'faction_create_buy_order' : 'faction_create_sell_order';
@@ -1252,6 +1258,7 @@ export const marketFormatters = [
       if (escrowRefunded !== undefined) emitLine(`Escrow refunded: ${escrowRefunded}`);
       if (listingFee !== undefined) emitLine(`Listing fee: ${listingFee}`);
       if (r.order_id) emitLine(`Order ID: ${r.order_id}`);
+      if (side === 'sell' && commandNameEquals(command, 'create_sell_order')) emitSmugglingAward(r);
       return true;
     },
     {
@@ -1351,6 +1358,7 @@ export const marketFormatters = [
       }
       if (unsold !== undefined) emitLine(`Unsold: ${unsold}`);
       emitAutoListed(r.auto_listed);
+      emitSmugglingAward(r);
       return true;
     },
     { commands: ['sell'], shapeFallback: true },
