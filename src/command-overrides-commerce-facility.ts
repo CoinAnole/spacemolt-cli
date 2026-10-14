@@ -12,6 +12,18 @@ const STORAGE_DEST_BUCKET_DESCRIPTION =
 const FACTION_BUILD_BUCKET_DESCRIPTION =
   "For 'faction_build'/'faction_upgrade': a Storage Extension bucket (name or id) to source build/upgrade MATERIALS from, instead of the faction main store. Ship cargo backfills either way.";
 
+const FACTION_MEMBERSHIP_FACILITY_RENT_HELP =
+  "Joining that faction makes your facilities at its stations rent-free at once, and any unpaid rent on them is cleared (faction join). Leaving makes your facilities at the faction's stations tenancies that pay it rent each cycle (faction leave). A kicked player's facilities at the faction's stations become tenancies and pay it rent each cycle (faction kick).";
+
+const FACILITY_RECLAIMED_PLAYER_STATION_HELP =
+  "Gameserver 0.618.2, facility_reclaimed notification description (Notification_facility_reclaimed), not a property of that notice: at another faction's station, a repossessed production facility passes to that faction and any other facility is removed, with its build materials returned to the tenant's storage there, after the owning faction takes enough of them to cover the unpaid rent. Any rent the materials cannot cover is forgiven. The notice properties are base_id, base_name, facilities, faction_id, and message.";
+
+const OUTSIDER_STATION_RENT_HELP =
+  "Anyone outside a faction who owns a facility at that faction's player station pays rent each cycle to the faction's treasury. The faction and its members pay nothing there, so quotes and rent totals for them are 0, not an omitted field. " +
+  FACTION_MEMBERSHIP_FACILITY_RENT_HELP +
+  ' Changelog 0.618.2: arrears warnings and eviction match an NPC station (roughly 3 days). ' +
+  FACILITY_RECLAIMED_PLAYER_STATION_HELP;
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -583,7 +595,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_owned: {
     category: 'Facilities',
-    description: 'List every facility you own across all stations.',
+    description:
+      "List every facility you own across all stations. Rent/cycle on each row is the server's stored rent_per_cycle. An explicit 0 prints 0 and is not replaced with a sentence. Personal rent bill is the server rent summary, and an explicit 0 prints 0cr/cycle. " +
+      OUTSIDER_STATION_RENT_HELP,
     example: 'spacemolt facility_owned',
     discoverWith: ['facility_list'],
     seeAlso: ['facility_list', 'facility_types'],
@@ -592,6 +606,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_types: {
     category: 'Facilities',
+    description:
+      "Browse facility types. Pass facility_type for one type. Detail output prints that type's rent_per_cycle as Rent/cycle, including an explicit 0 as 0. An omitted key prints no rent line. The number is your quote per facility cycle (100 ticks) at the docked station: 0 at your own faction's player station or outpost, where members pay no rent; an outsider there is quoted the tenant rent paid to the owning faction. List and discovery pages have no rent quote. " +
+      OUTSIDER_STATION_RENT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/types',
     positionals: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'],
   },
@@ -602,7 +619,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_build: {
     usage: '<facility_type> [package_ids=id[,id...]]',
     description:
-      'Build a facility at the current station; faction facility types are accepted by the server. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+      "Build a facility at the current station; faction facility types are accepted by the server. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall). The facility bills rent every cycle even when idle (none at your own faction's station). Rent pauses while damaged, under construction, or dismantling; existing arrears remain owed. A table view whose location supplies poi_id and nearby_players prints Arrived at and hides the rent integer. A partial location that lacks either field does not print Arrived at. When location is absent and the build details stay scalars, table output can print Rent Per Cycle, including an explicit 0. That label is not Rent/cycle. --json and --format json print the whole response; the integer is structuredContent.details.rent_per_cycle, including an explicit 0. --structured and --format yaml print details.rent_per_cycle. facility types detail prints the quote as Rent/cycle. This help states no credit price and no grace-cycle count. " +
+      OUTSIDER_STATION_RENT_HELP,
     example: 'spacemolt facility_build ore_refinery package_ids=pkg-tier1,pkg-tier2',
     discoverWith: ['facility_types', 'facility_list'],
     seeAlso: ['facility_types', 'facility_list', 'facility_dismantle'],
@@ -972,7 +990,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_set_build_policy: {
     usage: '<allow_outsiders=true|false>',
-    description: 'Control whether outsiders may build facilities at your faction station.',
+    description:
+      'Control whether outsiders may build facilities at your faction station. Those tenants pay rent each cycle to your faction treasury. Outposts do not support this action.',
     example: 'spacemolt station_set_build_policy false',
     discoverWith: ['station_info'],
     seeAlso: ['station_info', 'faction_build'],
