@@ -23,8 +23,9 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     usage:
       '<channel> [limit] [before] [target_id=...]  (channels: local, system, faction, private, emergency; emergency is read-only MAYDAY history)',
     description:
-      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0).',
-    example: 'spacemolt get_chat_history local 20; spacemolt get_chat_history emergency',
+      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0).',
+    example:
+      'spacemolt get_chat_history local 20; spacemolt get_chat_history emergency; spacemolt get_chat_history private',
     seeAlso: ['chat'],
     category: 'Chat - rest captures remaining args as content',
     apiRoute: 'POST /api/v2/spacemolt_social/get_chat_history',

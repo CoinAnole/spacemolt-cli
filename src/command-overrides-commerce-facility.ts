@@ -223,10 +223,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]  (station_id: station base ID or station POI ID)',
     description:
-      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked.',
+      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0).',
     example: 'spacemolt storage_view target=faction',
     discoverWith: ['get_status', 'get_cargo'],
-    seeAlso: ['storage_deposit', 'storage_withdraw', 'get_cargo'],
+    seeAlso: ['storage_deposit', 'storage_withdraw', 'get_cargo', 'get_chat_history'],
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/view',
     positionals: ['station_id', 'target'],

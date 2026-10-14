@@ -16,6 +16,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Navigation
 
 - `dock` help names `station_under_attack` and the 0.604.0 join rules (armed join; unarmed/wrecked stay out; wildlife hunts unless leviathan).
+- `dock` help: the response no longer includes a station mailbox (`messages`, `messages_count`). Shipyard, Ship Exchange, and Station Authority notices are private DMs; read them from anywhere with `get_chat_history private` (gameserver 0.626.0). Unread chat (`unread_chat`, `unread_chat_note`) still prints. Battle rules, Active Missions, and cargo lines are unchanged. **No parser change.**
 - `dock` table output now prints envelope `cargo` when present, so mission cargo handed on arrival is visible without `get_cargo`.
 - `travel`, `jump`, `find_route`, `inspect`, `faction scan_poi`, and `upload_drone` help: an uncharted hidden POI acts like an unknown id. Codes: `invalid_poi` (travel, wormhole mouths included; arriving charts it), `unknown_system` (uncharted wormhole entrance on jump; chart with `survey_system`, by arriving, or through faction intel — that sentence does not use the word travel), `system_not_found` (find_route), `not_found` (inspect), `poi_not_found` (`faction scan_poi`, not the flat `faction_scan_poi` invocation). Drone MOVE is not an upload error: at MOVE time the POI acts like an id that does not exist, and the failure is often silent. `upload_drone` names no code (gameserver 0.618.0). **No parser change.**
 
@@ -134,6 +135,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_chat_history` help lists `emergency` as read-only MAYDAY history (gameserver 0.608.0). Use it to reread distress text. The `mission_id` for `accept_mission` comes from the live emergency broadcast, not from history. **No parser change.**
 - `get_chat_history` help: `emergency` is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call (gameserver 0.618.0). It no longer says the current system. The `mission_id` sentence is unchanged. **No parser change.**
+- `get_chat_history` help: Shipyard, Ship Exchange, and Station Authority notices are private DMs (ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities). Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with `get_chat_history private`; omit `target_id`; docking is not required (gameserver 0.626.0). Emergency MAYDAY text is unchanged (gameserver 0.608.0 / 0.618.0). The example adds `spacemolt get_chat_history private`. Usage is unchanged. **No parser change.**
 
 ### Combat
 
@@ -162,6 +164,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `storage deposit` help states that materials donated to an empire (an empire alias target, including an `empire:` prefix) that no empire ship uses are passed to the manager of the station you donated at and sold on that station's market (gameserver 0.621.0). Only those unused materials are sold. The sale does not apply to a station material gift (`target=station:<base-or-POI-ID>`). **No parser change.**
 - `storage view` table output lists durable gifts (`sender`, time, credits, items, ships, note). An explicit empty `gifts` array prints `Gifts: none`. An omitted key prints nothing. `messages` are unchanged. **No parser change.**
+- `storage view` help: the view no longer includes `messages` (gameserver 0.626.0). Station notices are private DMs; read them with `get_chat_history private`. Remote `station_id` and the undocked locations summary are unchanged. Table output still does not print a `messages` array if one is present. **No parser change.**
 - `dock` table output lists durable gifts after trade fills: `Gifts: N`, the trade-fill truncated suffix when `gifts_truncated` is true, `gifts_note` when non-empty, then one block per returned `StorageGift` row. Rows print `ships` with the same ship line as `storage view` when the server sends them (gameserver 0.612.4; `DockResponse.gifts[]` is `StorageGift`). An omitted `ships` key and an explicit empty array print no Ships heading. `base_id` is still omitted on dock because `StorageGift` does not include it. `gift_received` previews still print `base_id`. **No parser change.**
 
 ### P2P Trading
