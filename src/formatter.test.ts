@@ -3184,6 +3184,37 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('tick 12,050');
   });
 
+  test('faction_query_trade_intel --json deep-equals entries that include auto_synced', () => {
+    const payload = {
+      entries: [
+        {
+          base_id: 'earth_station',
+          station_name: 'Earth Station',
+          system_id: 'sol',
+          submitted_by: 'player-ibis',
+          submitter_name: 'Ibis',
+          submitted_at_tick: 12050,
+          auto_synced: true,
+          items: [
+            {
+              item_id: 'fuel',
+              item_name: 'Fuel',
+              best_buy: 3,
+              best_sell: 5,
+              buy_volume: 40,
+              sell_volume: 12,
+            },
+          ],
+        },
+      ],
+    };
+
+    const { stdout, stderr } = captureStructuredOutput('faction_query_trade_intel', payload, { json: true });
+
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual(payload);
+  });
+
   test('formats faction created buy order without sell wording', () => {
     const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', {
       action: 'create_buy_order',

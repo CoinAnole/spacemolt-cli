@@ -421,7 +421,8 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   faction_query_trade_intel: {
     usage: '[base_id] [item_id] [station_name]  (base_id: station base ID or station POI ID)',
-    description: "Search your faction's market price database. base_id accepts a station base ID or station POI ID.",
+    description:
+      "Search your faction's market price database, or an allied faction's with source_faction_id. base_id accepts a station base ID or station POI ID. Auto-synced entries come from an online member docked at that station. They show no other faction's private orders, no fuel sell orders, and no contraband that member could not trade. Offline members do not refresh those entries. Contraband that member could trade is kept, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.",
     category: 'Faction missions & intel',
     apiRoute: 'POST /api/v2/spacemolt_intel/query_trade_intel',
     positionals: ['base_id', 'item_id', 'station_name'],
