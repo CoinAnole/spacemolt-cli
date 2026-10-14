@@ -3132,6 +3132,29 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Order ID: order-buy-1');
     expect(stdout).not.toContain('Sell Order Created');
     expect(stdout).not.toContain('earned:');
+    expect(stdout).not.toContain('Created buy order.');
+  });
+
+  test('prints create_buy_order storage delivery counts and drops the server message', () => {
+    const message = 'A hazardous instant fill went to station storage.';
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', {
+      action: 'create_buy_order',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      order_id: 'order-buy-storage',
+      delivered_to_cargo: 0,
+      delivered_to_storage: 10,
+      message,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Order Created ===');
+    expect(stdout).toContain('Delivered to cargo: 0');
+    expect(stdout).toContain('Delivered to storage: 10');
+    expect(stdout).not.toContain(message);
+    expect(stdout).not.toContain('hazmat');
+    expect(stdout).not.toContain('hazardous');
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('formats faction_query_intel with searchable resource ids', () => {
@@ -5237,6 +5260,65 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Listing fee: 1 cr');
     expect(stdout).toContain('Order ID: auto-buy-1');
     expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('Bought items.');
+  });
+
+  test('prints buy storage delivery counts and drops the server message', () => {
+    const message = 'A hazardous instant fill went to station storage.';
+    const { stdout, stderr } = captureStructuredOutput('buy', {
+      action: 'buy',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity: 10,
+      delivered_to_cargo: 0,
+      delivered_to_storage: 10,
+      message,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Complete ===');
+    expect(stdout).toContain('Delivered to cargo: 0');
+    expect(stdout).toContain('Delivered to storage: 10');
+    expect(stdout).not.toContain(message);
+    expect(stdout).not.toContain('hazmat');
+    expect(stdout).not.toContain('hazardous');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints split delivery counts for create_buy_order and buy without a hazmat label', () => {
+    const created = captureStructuredOutput('create_buy_order', {
+      action: 'create_buy_order',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      order_id: 'order-buy-split',
+      delivered_to_cargo: 3,
+      delivered_to_storage: 7,
+    });
+
+    expect(created.stderr).toBe('');
+    expect(created.stdout).toContain('=== Buy Order Created ===');
+    expect(created.stdout).toContain('Delivered to cargo: 3');
+    expect(created.stdout).toContain('Delivered to storage: 7');
+    expect(created.stdout).not.toContain('hazmat');
+    expect(created.stdout).not.toContain('hazardous');
+    expect(created.stdout).not.toContain('=== Response ===');
+
+    const bought = captureStructuredOutput('buy', {
+      action: 'buy',
+      item: 'Iron Ore',
+      item_id: 'iron_ore',
+      quantity: 10,
+      delivered_to_cargo: 3,
+      delivered_to_storage: 7,
+    });
+
+    expect(bought.stderr).toBe('');
+    expect(bought.stdout).toContain('=== Buy Complete ===');
+    expect(bought.stdout).toContain('Delivered to cargo: 3');
+    expect(bought.stdout).toContain('Delivered to storage: 7');
+    expect(bought.stdout).not.toContain('hazmat');
+    expect(bought.stdout).not.toContain('hazardous');
+    expect(bought.stdout).not.toContain('=== Response ===');
   });
 
   test('does not format sparse buy messages as direct market buys', () => {
