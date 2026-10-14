@@ -2084,7 +2084,10 @@ describe('help output branches', () => {
     expect(queryHelp).toMatch(/Arguments:\n {2}base_id, item_id, station_name\n/);
     const fieldsIndex = queryHelp.indexOf('\nFields:\n');
     expect(fieldsIndex).toBeGreaterThan(-1);
-    const fields = queryHelp.slice(fieldsIndex, queryHelp.indexOf('\nServer help:'));
+    const serverHelpIndex = queryHelp.indexOf('\nServer help:');
+    const fields =
+      serverHelpIndex === -1 ? queryHelp.slice(fieldsIndex) : queryHelp.slice(fieldsIndex, serverHelpIndex);
+    expect(fields).toContain('Filter by station name');
     expect(fields).toContain('limit');
     expect(fields).toContain('offset');
     expect(fields).toContain('source_faction_id');
