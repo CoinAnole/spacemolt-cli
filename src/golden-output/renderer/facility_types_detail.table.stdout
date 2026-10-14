@@ -8,6 +8,7 @@ Build cost: 12000
 Build time: 40
 Labor: 80
 Rent/cycle: 200
+Your quote at the docked station, per cycle (100 ticks). 0 at your own faction's player station or outpost, where members pay no rent. An outsider there is quoted the tenant rent paid to the owning faction.
 Description: Recruits fit crew from the station pool.
 
 Service pool: 20 cap, +4/cycle, 1x crew_rations

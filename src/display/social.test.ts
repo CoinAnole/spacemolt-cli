@@ -1854,13 +1854,19 @@ test('prints remaining 0 and next-cycle supply need for station service pools', 
   expect(stdout).not.toContain('Marine training:');
 });
 
+const facilityTypeRentQuote =
+  'Your quote at the docked station, per cycle (100 ticks). ' +
+  "0 at your own faction's player station or outpost, where members pay no rent. " +
+  'An outsider there is quoted the tenant rent paid to the owning faction.';
+
+function facilityTypeDetailLines(fixture: Record<string, unknown>): string[] {
+  return renderStructuredResult('facility_types', fixture, options, context).stdout.join('\n').split('\n');
+}
+
 test('facility_types detail prints identity and service pool without generic dump', () => {
-  const stdout = renderStructuredResult(
-    'facility_types',
-    structuredClone(facilityTypesDetailFixture),
-    options,
-    context,
-  ).stdout.join('\n');
+  const lines = facilityTypeDetailLines(structuredClone(facilityTypesDetailFixture));
+  const stdout = lines.join('\n');
+  const rentIndex = lines.indexOf('Rent/cycle: 200');
   expect(stdout).toContain('=== Facility type: Crew Office ===');
   expect(stdout).toContain('ID: crew_office');
   expect(stdout).toContain('Category: service');
@@ -1870,10 +1876,80 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).toContain('Build time: 40');
   expect(stdout).toContain('Labor: 80');
   expect(stdout).toContain('Rent/cycle: 200');
+  expect(rentIndex).toBeGreaterThanOrEqual(0);
+  expect(lines[rentIndex + 1]).toBe(facilityTypeRentQuote);
+  expect(lines.filter((line) => line === facilityTypeRentQuote).length).toBe(1);
+  expect(stdout).not.toContain('production facility');
   expect(stdout).toContain('Description: Recruits fit crew from the station pool.');
   expect(stdout).toContain('Service pool: 20 cap, +4/cycle, 1x crew_rations');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('=== Categories ===');
+});
+
+test('facility_types detail keeps an explicit 0 rent quote and the same gloss', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture);
+  fixture.rent_per_cycle = 0;
+  const lines = facilityTypeDetailLines(fixture);
+  const rentIndex = lines.indexOf('Rent/cycle: 0');
+  expect(rentIndex).toBeGreaterThanOrEqual(0);
+  expect(lines[rentIndex + 1]).toBe(facilityTypeRentQuote);
+  expect(lines.join('\n')).not.toBe(facilityTypeRentQuote);
+  expect(lines.join('\n')).toContain('=== Facility type: Crew Office ===');
+});
+
+test('facility_types detail prints the rent gloss for false and non-finite values', () => {
+  for (const rent_per_cycle of [false, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.rent_per_cycle = rent_per_cycle;
+    const lines = facilityTypeDetailLines(fixture);
+    const rentIndex = lines.indexOf(`Rent/cycle: ${rent_per_cycle}`);
+    expect(rentIndex).toBeGreaterThanOrEqual(0);
+    expect(lines[rentIndex + 1]).toBe(facilityTypeRentQuote);
+  }
+});
+
+test('facility_types detail omits rent and gloss when rent_per_cycle is absent', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete fixture.rent_per_cycle;
+  const stdout = facilityTypeDetailLines(fixture).join('\n');
+  expect(stdout).toContain('=== Facility type: Crew Office ===');
+  expect(stdout).not.toContain('Rent/cycle');
+  expect(stdout).not.toContain('owning faction');
+});
+
+test('facility_types detail omits rent when rent_per_cycle is blank, null, a record, or an array', () => {
+  for (const rent_per_cycle of ['', null, { amount: 1 }, [1]]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.rent_per_cycle = rent_per_cycle;
+    const stdout = facilityTypeDetailLines(fixture).join('\n');
+    expect(stdout).toContain('=== Facility type: Crew Office ===');
+    expect(stdout).not.toContain('Rent/cycle');
+    expect(stdout).not.toContain('owning faction');
+  }
+});
+
+test('facility_types detail rent quote stays off json, yaml, structured, and compact output', () => {
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const stdout = renderStructuredResult(
+      'facility_types',
+      structuredClone(facilityTypesDetailFixture),
+      renderOptions,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain(facilityTypeRentQuote);
+    expect(stdout).not.toContain('owning faction');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('rent_per_cycle: 200');
+    } else {
+      expect(JSON.parse(stdout).rent_per_cycle).toBe(200);
+    }
+  }
 });
 
 test('facility_types omits Service pool when definition pool fields are absent', () => {

@@ -142,9 +142,14 @@ function formatArenaOnlyFleetLine(arenaOnly: unknown): string | undefined {
   return 'Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)';
 }
 
+function isDefinedLineValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === '') return false;
+  if (isRecord(value) || Array.isArray(value)) return false;
+  return true;
+}
+
 function emitDefinedLine(label: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
-  if (isRecord(value) || Array.isArray(value)) return;
+  if (!isDefinedLineValue(value)) return;
   emitLine(`${label}: ${value}`);
 }
 
@@ -178,7 +183,14 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   emitDefinedLine('Build cost', r.build_cost);
   emitDefinedLine('Build time', r.build_time);
   emitDefinedLine('Labor', r.labor_cost);
-  emitDefinedLine('Rent/cycle', r.rent_per_cycle);
+  if (isDefinedLineValue(r.rent_per_cycle)) {
+    emitLine(`Rent/cycle: ${r.rent_per_cycle}`);
+    emitLine(
+      'Your quote at the docked station, per cycle (100 ticks). ' +
+        "0 at your own faction's player station or outpost, where members pay no rent. " +
+        'An outsider there is quoted the tenant rent paid to the owning faction.',
+    );
+  }
   emitDefinedLine('Description', r.description);
   const pool = formatFacilityTypeServicePool(r);
   if (pool) {
