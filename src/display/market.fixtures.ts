@@ -411,6 +411,47 @@ export const factionCreateSellOrderFixture = {
   },
 };
 
+export const createBuyOrderBulkFixture = {
+  details: {
+    action: 'create_buy_order',
+    mode: 'bulk',
+    kind: 'bulk',
+    results: [
+      {
+        index: 0,
+        success: true,
+        item: 'Nickel Ore',
+        item_id: 'nickel_ore',
+        quantity: 25,
+        price_each: 2,
+        quantity_filled: 10,
+        quantity_listed: 15,
+        total_spent: 20,
+        total_escrowed: 30,
+        escrow_refunded: 0,
+        listing_fee: 1,
+        order_id: 'order-buy-1',
+        remaining_escrowed: 30,
+        message: 'Created buy order.',
+      },
+      {
+        index: 1,
+        success: false,
+        item: 'Fuel',
+        item_id: 'fuel',
+        quantity: 4,
+        price_each: 3,
+        error_code: 'insufficient_credits',
+        error: 'Not enough credits.',
+      },
+    ],
+    summary: { total: 2, succeeded: 1, failed: 1 },
+  },
+  player: { username: 'Marlowe', credits: 198000 },
+  ship: { id: 'ship-wayfarer', name: 'Wayfarer', cargo_used: 0, cargo_capacity: 500 },
+  cargo: [],
+};
+
 export const factionCreateBuyOrderBulkFixture = {
   details: {
     action: 'faction_create_buy_order',
@@ -840,6 +881,12 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   buy: { command: 'buy', fixture: buyFixture },
   sell: { command: 'sell', fixture: sellFixture },
   create_buy_order: { command: 'create_buy_order', fixture: createBuyOrderFixture },
+  create_buy_order_bulk: {
+    command: 'create_buy_order',
+    fixture: createBuyOrderBulkFixture,
+    apiRoute: 'POST /api/v2/spacemolt_market/create_buy_order',
+    schemaTarget: 'details',
+  },
   create_sell_order: { command: 'create_sell_order', fixture: createSellOrderFixture },
   create_sell_order_bulk: {
     command: 'create_sell_order',

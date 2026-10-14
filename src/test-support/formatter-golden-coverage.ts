@@ -40,6 +40,7 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   inspect_catalog_skill: 'inspect',
   facility_list_detailed: 'facility_list',
   faction_create_buy_order_bulk: 'faction_create_buy_order',
+  create_buy_order_bulk: 'create_buy_order',
   faction_create_sell_order_bulk: 'faction_create_sell_order',
   create_sell_order_bulk: 'create_sell_order',
   faction_list_missions_empty: 'faction_list_missions',

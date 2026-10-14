@@ -22,6 +22,7 @@ import {
   completedMissionDetailFixture,
   completedMissionsFixture,
   completeMissionFixture,
+  createBuyOrderBulkFixture,
   createSellOrderBulkFixture,
   createSellOrderFixture,
   declineMissionFixture,
@@ -170,6 +171,10 @@ const namedFormatterFixtureCases = {
   player_bulk_sell_orders: {
     command: 'create_sell_order',
     fixture: createSellOrderBulkFixture,
+  },
+  player_bulk_buy_orders: {
+    command: 'create_buy_order',
+    fixture: createBuyOrderBulkFixture,
   },
   faction_scan_poi: {
     command: 'faction_scan_poi',
@@ -3573,6 +3578,7 @@ describe('structuredContent formatters', () => {
       expect(stdout, command).toContain('ore_iron');
       expect(stdout, command).toContain('12');
       expect(stdout, command).not.toContain('=== Sell Orders ===');
+      expect(stdout, command).not.toContain('=== Buy Orders ===');
     }
   });
 
@@ -3745,6 +3751,154 @@ describe('structuredContent formatters', () => {
     expect(cells('Blank XP')[xpIndex]).toBe('');
     expect(cells('String Level')[levelIndex]).toBe('');
     expect(cells('String Level').join(' ')).not.toContain('yes');
+  });
+
+  test('formats player bulk buy orders with spent, escrow, refund, and fee', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', createBuyOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Orders ===');
+    expect(stdout).toContain('2 requested | 1 succeeded | 1 failed');
+    expect(stdout).toContain('spent 20 cr; escrow 30 cr; refund 0 cr; fee 1 cr');
+    expect(stdout).toContain('order-buy-1');
+    expect(stdout).toContain('insufficient_credits: Not enough credits.');
+    expect(stdout.indexOf('Nickel Ore')).toBeLessThan(stdout.indexOf('Fuel (fuel)'));
+    expect(stdout).not.toContain('Intel');
+    expect(stdout).not.toContain('Sell Orders');
+    expect(stdout).not.toContain('Smuggling');
+    expect(stdout).not.toContain('Created buy order.');
+    expect(stdout).not.toContain('Bucket');
+    expect(stdout).not.toContain('Delivered to storage');
+    expect(stdout).not.toContain('Delivered to cargo');
+    expect(stdout).not.toContain('Remaining');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('player bulk buy with no result rows prints the summary and no table', () => {
+    const fixture = structuredClone(createBuyOrderBulkFixture);
+    fixture.details.results = [];
+    fixture.details.summary = { total: 0, succeeded: 0, failed: 0 };
+
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Orders ===');
+    expect(stdout).toContain('0 requested | 0 succeeded | 0 failed');
+    expect(stdout).toContain('No order results.');
+    expect(stdout).not.toContain('=== Results ===');
+    expect(stdout).not.toContain('Intel');
+  });
+
+  test('declines malformed player bulk buy to raw fallback instead of Intel', () => {
+    const fixture = structuredClone(createBuyOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a player bulk buy fixture result.');
+    firstResult.success = 'yes';
+
+    const { stdout } = captureStructuredOutput('create_buy_order', fixture);
+
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Buy Orders ===');
+    expect(stdout).not.toContain('=== Buy Order Created ===');
+    expect(stdout).not.toContain('=== Results ===');
+  });
+
+  test('declines player bulk buy with single-order bait to raw fallback', () => {
+    const fixture = structuredClone(createBuyOrderBulkFixture) as Record<string, unknown>;
+    const details = fixture.details as Record<string, unknown>;
+    const results = details.results as Array<Record<string, unknown>>;
+    const firstResult = results[0];
+    if (!firstResult) throw new Error('Expected a player bulk buy fixture result.');
+    firstResult.success = 'yes';
+    details.order_id = 'single-order-bait';
+    details.listing_fee = 1;
+
+    const { stdout } = captureStructuredOutput('create_buy_order', fixture);
+
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Buy Orders ===');
+    expect(stdout).not.toContain('=== Buy Order Created ===');
+  });
+
+  test('player bulk buy --json deep-equals the body and keeps remaining_escrowed', () => {
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', createBuyOrderBulkFixture, { json: true });
+    const parsed = JSON.parse(stdout) as {
+      details: { results: Array<{ remaining_escrowed?: number; message?: string; escrow_refunded?: number }> };
+    };
+
+    expect(stderr).toBe('');
+    expect(parsed).toEqual(createBuyOrderBulkFixture);
+    expect(parsed.details.results[0]?.remaining_escrowed).toBe(30);
+    expect(parsed.details.results[0]?.message).toBe('Created buy order.');
+    expect(parsed.details.results[0]?.escrow_refunded).toBe(0);
+    expect(stdout).not.toContain('=== Buy Orders ===');
+  });
+
+  test('player bulk buy --quiet matches the table and omits the auto-dock banner', () => {
+    const fixture = { ...structuredClone(createBuyOrderBulkFixture), auto_docked: true };
+    const quiet = captureStructuredOutput('create_buy_order', fixture, { quiet: true });
+    const loud = captureStructuredOutput('create_buy_order', fixture);
+
+    expect(quiet.stderr).toBe('');
+    expect(loud.stderr).toBe('');
+    expect(quiet.stdout).toContain('=== Buy Orders ===');
+    expect(quiet.stdout).toContain('spent 20 cr; escrow 30 cr; refund 0 cr; fee 1 cr');
+    expect(quiet.stdout).not.toContain('[AUTO-DOCKED]');
+    expect(loud.stdout).toContain('=== Buy Orders ===');
+    expect(loud.stdout).toContain('spent 20 cr; escrow 30 cr; refund 0 cr; fee 1 cr');
+    expect(loud.stdout).toContain('[AUTO-DOCKED]');
+  });
+
+  test('player bulk buy ignores injected smuggling fields', () => {
+    const fixture = structuredClone(createBuyOrderBulkFixture);
+    const firstResult = fixture.details.results[0] as Record<string, unknown> | undefined;
+    if (!firstResult) throw new Error('Expected a player bulk buy fixture result.');
+    firstResult.smuggling_xp = 50;
+    firstResult.smuggling_level_up = true;
+
+    const { stdout, stderr } = captureStructuredOutput('create_buy_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Orders ===');
+    expect(stdout).toContain('25');
+    expect(stdout).not.toContain('Smuggling XP');
+    expect(stdout).not.toContain('Level up');
+    expect(stdout).not.toContain('50');
+  });
+
+  test('faction bulk buy does not gain smuggling columns', () => {
+    const fixture = structuredClone(factionCreateBuyOrderBulkFixture);
+    const firstResult = fixture.details.results[0] as Record<string, unknown> | undefined;
+    if (!firstResult) throw new Error('Expected a faction bulk buy fixture result.');
+    firstResult.smuggling_xp = 50;
+    firstResult.smuggling_level_up = true;
+
+    const { stdout, stderr } = captureStructuredOutput('faction_create_buy_order', fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Faction Buy Orders ===');
+    expect(stdout).toContain('spent 0 cr; escrow 50 cr; refund 0 cr; fee 1 cr');
+    expect(stdout).not.toContain('Smuggling');
+  });
+
+  test('v2_create_buy_order renders the player bulk buy table', () => {
+    const { stdout, stderr } = captureStructuredOutput('v2_create_buy_order', createBuyOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Buy Orders ===');
+    expect(stdout).not.toContain('=== Intel ===');
+  });
+
+  test('player bulk buy body is not Intel under faction_query_trade_intel', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_query_trade_intel', createBuyOrderBulkFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('=== Intel ===');
+    expect(stdout).not.toContain('=== Buy Orders ===');
   });
 
   test('formats analyze_market insights as a table instead of a scalar dump', () => {
@@ -9515,6 +9669,7 @@ describe('structuredContent formatters', () => {
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
     expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
     expect(outputs.player_bulk_sell_orders).toContain('=== Sell Orders ===');
+    expect(outputs.player_bulk_buy_orders).toContain('=== Buy Orders ===');
     delete outputs.create_market_order;
     delete outputs.commission_quote;
     delete outputs.commission_ship;
@@ -9523,6 +9678,7 @@ describe('structuredContent formatters', () => {
     delete outputs.direct_sell;
     delete outputs.faction_bulk_orders;
     delete outputs.player_bulk_sell_orders;
+    delete outputs.player_bulk_buy_orders;
 
     expect(outputs).toMatchInlineSnapshot(`
       {
