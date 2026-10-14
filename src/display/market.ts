@@ -1406,14 +1406,8 @@ export const marketFormatters = [
       emitLine(`\n${c.bright}=== Faction Intel ===${c.reset}`);
       if (r.current_tick !== undefined) emitLine(`Current tick: ${r.current_tick}`);
       if (r.count !== undefined) emitLine(`Systems: ${r.count}`);
-      let printedMessage: string | undefined;
-      if (typeof r.message === 'string') {
-        const message = r.message.trim();
-        if (message !== '') {
-          printedMessage = message;
-          emitLine(message);
-        }
-      }
+      const printedMessage = trimmedIntelText(r.message);
+      if (printedMessage !== undefined) emitLine(printedMessage);
       const liveSystemIds = Array.isArray(r.live_systems)
         ? r.live_systems.filter((id): id is string => typeof id === 'string')
         : undefined;
