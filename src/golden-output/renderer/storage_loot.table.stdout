@@ -1,0 +1,22 @@
+
+=== Wreck Loot ===
+Wreck empty: no
+
+=== Looted ===
+
+  Item     | Qty
+  ---------+----
+  ore_iron | 12 
+
+=== Looted Modules ===
+
+  Name              | Type   | Type ID           | ID          
+  ------------------+--------+-------------------+-------------
+  Adaptive Shield I | shield | adaptive_shield_i | mod-shield-1
+
+=== Skipped ===
+
+  Name        | Type   | Type ID       | ID          | Reason  
+  ------------+--------+---------------+-------------+---------
+  Pulse Laser | weapon | pulse_laser_i | mod-laser-9 | no_space
+Some modules did not fit.

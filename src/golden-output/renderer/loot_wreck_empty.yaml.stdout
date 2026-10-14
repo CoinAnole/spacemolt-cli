@@ -1,0 +1,8 @@
+
+details:
+  action: loot_wreck_all
+  looted: []
+  looted_modules: []
+  skipped: []
+  wreck_empty: true
+  message: "The wreck is empty."

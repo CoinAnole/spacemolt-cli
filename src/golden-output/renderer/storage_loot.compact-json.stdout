@@ -1,0 +1,1 @@
+{"details":{"action":"loot_wreck_all","looted":[{"item_id":"ore_iron","quantity":12}],"looted_modules":[{"id":"mod-shield-1","name":"Adaptive Shield I","type":"shield","type_id":"adaptive_shield_i"}],"skipped":[{"id":"mod-laser-9","name":"Pulse Laser","type":"weapon","type_id":"pulse_laser_i","reason":"no_space"}],"wreck_empty":false,"message":"Some modules did not fit."}}
