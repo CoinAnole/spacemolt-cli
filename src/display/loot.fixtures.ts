@@ -1,17 +1,15 @@
 import type { HighValueFixtureEntry } from './formatter-fixtures.ts';
 
-export const lootWreckAllCargoDetails = {
-  action: 'loot_wreck_all',
-  looted: [
-    { item_id: 'ore_iron', quantity: 40 },
-    { item_id: 'adamant_tooth', quantity: 2 },
-  ],
-  wreck_empty: false,
-  message: 'Looted 2 cargo stacks.',
-};
-
 export const lootWreckAllCargoFixture = {
-  details: lootWreckAllCargoDetails,
+  details: {
+    action: 'loot_wreck_all',
+    looted: [
+      { item_id: 'ore_iron', quantity: 40 },
+      { item_id: 'adamant_tooth', quantity: 2 },
+    ],
+    wreck_empty: false,
+    message: 'Looted 2 cargo stacks.',
+  },
 };
 
 export const lootWreckAllEmptyFixture = {

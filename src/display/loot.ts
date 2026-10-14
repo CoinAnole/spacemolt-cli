@@ -89,10 +89,12 @@ function projectSkipped(row: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-function readableRows(
+function emitRecordTable(
+  title: string,
   entries: unknown[],
+  columns: Array<[string, string[]]>,
   project: (row: Record<string, unknown>) => Record<string, unknown>,
-): { rows: Array<Record<string, unknown>>; unreadable: number } {
+): void {
   const rows: Array<Record<string, unknown>> = [];
   let unreadable = 0;
   for (const entry of entries) {
@@ -102,16 +104,6 @@ function readableRows(
     }
     rows.push(project(entry));
   }
-  return { rows, unreadable };
-}
-
-function emitRecordTable(
-  title: string,
-  entries: unknown[],
-  columns: Array<[string, string[]]>,
-  project: (row: Record<string, unknown>) => Record<string, unknown>,
-): void {
-  const { rows, unreadable } = readableRows(entries, project);
   printCompactTable(title, rows, columns, { maxCellWidth: 48 });
   if (unreadable > 0) emitLine(`${c.dim}Unreadable ${title} rows: ${unreadable}${c.reset}`);
 }
