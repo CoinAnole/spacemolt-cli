@@ -59,6 +59,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `get_wrecks` table output prints `Carrion: N` when `carrion` is present on a wreck (age-death leviathan body; amount added to the system each wildlife pass, about 1 minute, while the body lasts; feeds scavengers). Omitted when the field is absent. An explicit `0` prints `Carrion: 0`. Loot is still `loot_wreck`. `--json` / `--yaml` / `--structured` stay pass-through (gameserver 0.614.0). **No parser change.**
 - `loot_wreck` and `storage loot` help: a wreck at another POI returns `not_found`, the same as a wreck that is already gone. `tow_wreck` help: the wreck must be at your POI; elsewhere is `wreck_not_found` (gameserver 0.618.0). Carrion display is unchanged. **No parser change.**
 - `loot_wreck` help: omit `item_id` and `module_id` to take every cargo stack that fits and leave the rest in the wreck (gameserver 0.628.3). The `item_id` field no longer says that omitting it puts every cargo stack and every module in the hold. `module_id` is still one module into cargo, unfitted. `storage loot` help is unchanged. `no_space` is unchanged. **No parser change.**
+- `loot_wreck` and `storage loot` table output lists each stack taken (`item_id`, quantity), each module taken, and each skipped module with `reason`, plus `Wreck empty:` and `Skill XP:` when `xp_gained` is set. Omit-all no longer prints `Looted: N item(s)` or a raw JSON dump when XP is present. `--json` output is unchanged. **No parser change.**
 
 ### Crafting
 

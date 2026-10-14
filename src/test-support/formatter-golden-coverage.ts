@@ -79,6 +79,8 @@ const REQUIRED_HIGH_VALUE_FIXTURE_LABELS: Record<string, string> = {
   subscribe_observation_arena: 'subscribe_observation',
   sell_wreck_partial: 'sell_wreck',
   sell_wreck_modules: 'sell_wreck',
+  loot_wreck_empty: 'loot_wreck',
+  loot_wreck_xp: 'loot_wreck',
   scan_creature: 'scan',
   scan_poi: 'scan',
   scan_poi_empty: 'scan',

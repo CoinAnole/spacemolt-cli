@@ -2,6 +2,7 @@ import { arenaFixtureCases, arenaHighValueFixtures } from './arena.fixtures.ts';
 import { citizenshipHighValueFixtures } from './citizenship.fixtures.ts';
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
 import { inspectHighValueFixtures } from './inspect.fixtures.ts';
+import { lootFixtureCases, lootHighValueFixtures } from './loot.fixtures.ts';
 import { marketFixtureCases, marketHighValueFixtures } from './market.fixtures.ts';
 import { mineFixtureCases, mineHighValueFixtures } from './mine.fixtures.ts';
 import { notificationsHighValueFixtures } from './notifications.fixtures.ts';
@@ -17,6 +18,7 @@ export * from './arena.fixtures.ts';
 export * from './citizenship.fixtures.ts';
 export * from './generic.fixtures.ts';
 export * from './inspect.fixtures.ts';
+export * from './loot.fixtures.ts';
 export * from './market.fixtures.ts';
 export * from './mine.fixtures.ts';
 export * from './notifications.fixtures.ts';
@@ -48,6 +50,7 @@ export const formatterFixtureCases = {
   ...statusFixtureCases,
   ...surveyFixtureCases,
   ...mineFixtureCases,
+  ...lootFixtureCases,
   ...marketFixtureCases,
   ...shipFixtureCases,
   ...socialFixtureCases,
@@ -59,6 +62,7 @@ export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...statusHighValueFixtures,
   ...surveyHighValueFixtures,
   ...mineHighValueFixtures,
+  ...lootHighValueFixtures,
   ...marketHighValueFixtures,
   ...passengerHighValueFixtures,
   ...shipHighValueFixtures,

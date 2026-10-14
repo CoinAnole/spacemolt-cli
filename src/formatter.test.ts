@@ -10119,6 +10119,19 @@ describe('structuredContent formatters', () => {
         -------+---------+-----------+----------+-----------+---------+----------+-------------+-----
         sol    | Earth   | Fuel Cell | 25 cr    | 31 cr     | 140     | 80       | tick 12,050 | Ibis"
       ,
+        "loot_wreck_all": 
+      "
+      === Wreck Loot ===
+      Wreck empty: no
+
+      === Looted ===
+
+        Item          | Qty
+        --------------+----
+        ore_iron      | 40
+        adamant_tooth | 2
+      Looted 2 cargo stacks."
+      ,
         "market_orders": 
       "
       === Orders ===
