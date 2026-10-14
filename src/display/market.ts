@@ -438,12 +438,6 @@ function formatSmugglingXp(value: unknown): string | undefined {
   return undefined;
 }
 
-export function emitSmugglingAward(result: Record<string, unknown>): void {
-  const xp = formatSmugglingXp(result.smuggling_xp);
-  if (xp !== undefined) emitLine(`Smuggling XP: ${xp}`);
-  if (result.smuggling_level_up === true) emitLine('Smuggling level up: yes');
-}
-
 function renderFactionBulkOrders(result: Record<string, unknown>, command?: string): boolean {
   const side = createOrderSide(result, command);
   const expectedAction = side === 'buy' ? 'faction_create_buy_order' : 'faction_create_sell_order';
