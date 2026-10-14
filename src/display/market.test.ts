@@ -200,6 +200,7 @@ interface IntelResult {
     system_id: string;
     submitted_at_tick?: unknown;
     submitter_name?: string;
+    description?: unknown;
     pois: Array<Record<string, unknown>>;
   }>;
   [key: string]: unknown;
@@ -243,6 +244,7 @@ test('faction_query_intel prints the trimmed message and an unverified read', ()
   expect(stdout).toContain('(40.00% remaining)');
   expect(stdout).toContain('Intel tick: 900685 by Marlowe, age 5 ticks');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Description');
 
   const spaced = renderStructuredResult(
     'faction query_intel',
@@ -528,6 +530,213 @@ test('faction_query_intel prints message and live systems when entries is empty'
   expect(stdout).toContain('Systems: 0\nShowing intel for 1 system\nLive systems: (none)');
   expect(stdout).not.toContain('Sol');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel prints trimmed system and POI descriptions in field order', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).description = '  Birthplace system  ';
+  firstIntelPoi(fixture).description = '  Dense mining field  ';
+  const stdout = renderIntel(fixture);
+  const poiHeader = '  Sol Gas Cloud (gas_cloud) [deep core] sol_gas_cloud';
+  const tickAt = stdout.indexOf('Intel tick: 900685 by Marlowe, age 5 ticks');
+  const systemDescAt = stdout.indexOf('Description: Birthplace system');
+  const poiAt = stdout.indexOf(poiHeader);
+  const poiDescAt = stdout.indexOf('    Description: Dense mining field');
+  const readAt = stdout.indexOf('    Read at tick: unverified');
+  const hydrogenAt = stdout.indexOf('hydrogen_gas');
+
+  expect(stdoutLine(stdout, 'Description: Birthplace system')).toBe('Description: Birthplace system');
+  expect(stdoutLine(stdout, '    Description: Dense mining field')).toBe('    Description: Dense mining field');
+  expect(tickAt).toBeGreaterThan(-1);
+  expect(systemDescAt).toBeGreaterThan(tickAt);
+  expect(poiAt).toBeGreaterThan(systemDescAt);
+  expect(poiDescAt).toBeGreaterThan(poiAt);
+  expect(readAt).toBeGreaterThan(poiDescAt);
+  expect(hydrogenAt).toBeGreaterThan(readAt);
+  expect(stdout).toContain('Showing intel for 1 system');
+  expect(stdoutLine(stdout, poiHeader)).toBe(poiHeader);
+  expect(stdoutLine(stdout, poiHeader)).not.toContain('Description');
+  expect(stdoutLine(stdout, poiHeader)).not.toContain('Dense mining field');
+});
+
+test('faction_query_intel omits missing, blank, and non-string descriptions', () => {
+  for (const description of [undefined, '', '  \n\t  ', null, 4, false, { text: 'no' }]) {
+    const fixture = cloneIntelFixture();
+    const entry = firstIntelEntry(fixture);
+    const poi = firstIntelPoi(fixture);
+    if (description === undefined) {
+      delete entry.description;
+      delete poi.description;
+    } else {
+      entry.description = description;
+      poi.description = description;
+    }
+    const stdout = renderIntel(fixture);
+    expect(stdout).toContain('Showing intel for 1 system');
+    expect(stdout).toContain('    Read at tick: unverified');
+    expect(stdout).toContain('Sol Gas Cloud');
+    expect(stdout).not.toContain('Description');
+  }
+
+  expect(renderIntel(cloneIntelFixture())).not.toContain('Description');
+});
+
+test('faction_query_intel skips a description whose trimmed text equals the printed message', () => {
+  const fixture = cloneIntelFixture();
+  const message = 'Showing intel for 1 system';
+  firstIntelEntry(fixture).description = '  Showing intel for 1 system  ';
+  firstIntelPoi(fixture).description = message;
+  firstIntelEntry(fixture).pois.push({
+    id: 'sol_belt',
+    type: 'asteroid',
+    name: 'Sol Belt',
+    description: 'Dense mining field',
+  });
+  const stdout = renderIntel(fixture);
+  const beltAt = stdout.indexOf('  Sol Belt (asteroid) sol_belt');
+  const descAt = stdout.indexOf('    Description: Dense mining field');
+  const readAt = stdout.indexOf('    Read at tick: unverified', descAt);
+
+  expect(stdout.split('\n').filter((line) => line === message)).toHaveLength(1);
+  expect(stdout).not.toContain('Description: Showing intel for 1 system');
+  expect(beltAt).toBeGreaterThan(-1);
+  expect(descAt).toBeGreaterThan(beltAt);
+  expect(readAt).toBeGreaterThan(descAt);
+});
+
+test('faction_query_intel prints a description when the message was not printed', () => {
+  const blank = cloneIntelFixture();
+  blank.message = '   ';
+  firstIntelEntry(blank).description = '   ';
+  expect(renderIntel(blank)).not.toContain('Description');
+
+  const numeric = cloneIntelFixture();
+  numeric.message = 4;
+  firstIntelEntry(numeric).description = 'Birthplace system';
+  const stdout = renderIntel(numeric);
+  expect(stdoutLine(stdout, 'Description: Birthplace system')).toBe('Description: Birthplace system');
+  expect(stdout).not.toContain('Showing intel');
+});
+
+test('faction_query_intel prints every POI description with no 12 cap', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).description = 'System lore';
+  firstIntelEntry(fixture).pois = Array.from({ length: 13 }, (_, index) => {
+    const n = index + 1;
+    return {
+      id: `belt_${n}`,
+      type: 'asteroid',
+      name: `Belt ${n}`,
+      description: 'Belt lore',
+    };
+  });
+  const stdout = renderIntel(fixture);
+  const lines = stdout.split('\n');
+
+  expect(lines.filter((line) => line === 'Description: System lore')).toHaveLength(1);
+  expect(lines.filter((line) => line === '    Description: Belt lore')).toHaveLength(13);
+  expect(stdout).not.toMatch(/and \d+ more/);
+  expect(stdout).toContain('Belt 13');
+});
+
+test('faction_query_intel prints descriptions when intel tick is omitted', () => {
+  const fixture = cloneIntelFixture();
+  delete firstIntelEntry(fixture).submitted_at_tick;
+  firstIntelEntry(fixture).description = 'Birthplace system';
+  firstIntelPoi(fixture).description = 'Dense mining field';
+  const stdout = renderIntel(fixture);
+  const policeAt = stdout.indexOf('Police: 3');
+  const descAt = stdout.indexOf('Description: Birthplace system');
+  const poiAt = stdout.indexOf('  Sol Gas Cloud (gas_cloud) [deep core] sol_gas_cloud');
+
+  expect(policeAt).toBeGreaterThan(-1);
+  expect(descAt).toBeGreaterThan(policeAt);
+  expect(poiAt).toBeGreaterThan(descAt);
+  expect(stdout).toContain('    Description: Dense mining field');
+  expect(stdout).not.toContain('Intel tick:');
+});
+
+test('faction_query_intel --format text uses the description lines', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).description = '  Birthplace system  ';
+  firstIntelPoi(fixture).description = '  Dense mining field  ';
+  const stdout = renderIntel(fixture, { format: 'text' });
+
+  expect(stdoutLine(stdout, 'Description: Birthplace system')).toBe('Description: Birthplace system');
+  expect(stdoutLine(stdout, '    Description: Dense mining field')).toBe('    Description: Dense mining field');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel json keeps description and does not add the label', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).description = 'Birthplace system';
+  firstIntelPoi(fixture).description = 'Dense mining field';
+  const jsonStdout = renderStructuredResult(
+    'faction_query_intel',
+    fixture,
+    { ...options, format: 'json' },
+    context,
+  ).stdout.join('\n');
+  const parsed = JSON.parse(jsonStdout) as IntelResult;
+
+  expect(parsed.entries[0]?.description).toBe('Birthplace system');
+  expect(parsed.entries[0]?.pois[0]?.description).toBe('Dense mining field');
+  expect(jsonStdout).not.toContain('Description:');
+  expect(jsonStdout).not.toContain('=== Faction Intel ===');
+
+  const yamlStdout = renderStructuredResult(
+    'faction_query_intel',
+    fixture,
+    { ...options, format: 'yaml' },
+    context,
+  ).stdout.join('\n');
+  expect(yamlStdout).toContain('Birthplace system');
+  expect(yamlStdout).toContain('Dense mining field');
+  expect(yamlStdout).not.toContain('=== Faction Intel ===');
+});
+
+test('faction_query_intel search keeps descriptions on the matched row', () => {
+  const fixture = cloneIntelFixture();
+  fixture.live_systems = ['sol', 'proxima'];
+  firstIntelPoi(fixture).read_at_tick = fixture.current_tick;
+  firstIntelEntry(fixture).description = 'System lore';
+  firstIntelPoi(fixture).description = 'Dense mining field';
+  firstIntelEntry(fixture).pois.push({
+    id: 'sol_belt',
+    type: 'asteroid',
+    name: 'Sol Belt',
+    description: 'Other belt',
+    resources: [{ resource_id: 'iron_ore', richness: 3, remaining: 10, max_remaining: 40, depletion_percent: 75 }],
+  });
+  const stdout = renderIntel(fixture, { outputSearch: 'hydrogen' });
+
+  expect(stdoutLine(stdout, 'Description: System lore')).toBe('Description: System lore');
+  expect(stdoutLine(stdout, '    Description: Dense mining field')).toBe('    Description: Dense mining field');
+  expect(stdout).toContain('Live systems: sol, proxima');
+  expect(stdout).toContain('hydrogen_gas');
+  expect(stdout).not.toContain('Sol Belt');
+  expect(stdout).not.toContain('Other belt');
+  expect(stdout).not.toContain('argon_gas');
+});
+
+test('faction_query_intel keeps an internal newline and repeated spaces in a description', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).description = '  line one\nline  two  ';
+  firstIntelPoi(fixture).description = '  belt  one\nline two  ';
+  const stdout = renderIntel(fixture);
+  const lines = stdout.split('\n');
+  const systemAt = lines.indexOf('Description: line one');
+  const poiAt = lines.indexOf('    Description: belt  one');
+
+  expect(stdout).toContain('Description: line one\nline  two');
+  expect(stdout).toContain('    Description: belt  one\nline two');
+  expect(systemAt).toBeGreaterThan(-1);
+  expect(lines[systemAt + 1]).toBe('line  two');
+  expect(poiAt).toBeGreaterThan(-1);
+  expect(lines[poiAt + 1]).toBe('line two');
+  expect(stdout).not.toContain('Description: line one line');
+  expect(stdout).not.toContain('    line  two');
+  expect(stdout).not.toContain('    line two');
 });
 
 function renderSupplyCommission(fixture: Record<string, unknown>) {

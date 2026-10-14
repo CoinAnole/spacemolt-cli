@@ -246,6 +246,65 @@ describe('output search', () => {
     expect(JSON.stringify(result.value)).not.toContain('argon_gas');
   });
 
+  test('filter keeps nested intel descriptions and still reattaches live_systems', () => {
+    const fixture = structuredClone(factionQueryIntelFixture) as typeof factionQueryIntelFixture & {
+      live_systems: string[];
+    };
+    const entry = fixture.entries[0];
+    const poi = entry?.pois[0];
+    if (!entry || !poi) throw new Error('expected intel POI');
+    (entry as typeof entry & { description?: string }).description = 'System lore';
+    const describedPoi = poi as typeof poi & { read_at_tick?: number; description?: string };
+    describedPoi.read_at_tick = fixture.current_tick;
+    describedPoi.description = 'Dense mining field';
+    fixture.live_systems = ['sol', 'proxima'];
+
+    const result = filterStructuredOutputBySearch(fixture, { outputSearch: 'hydrogen' });
+    if (!result.ok) throw new Error(result.message);
+
+    expect(result.value).toEqual({
+      count: 1,
+      current_tick: 900690,
+      intel_level: 2,
+      message: 'Showing intel for 1 system',
+      total: 1,
+      entries: [
+        {
+          system_id: 'sol',
+          name: 'Sol',
+          empire: 'solarian',
+          police_level: 3,
+          submitted_at_tick: 900685,
+          submitted_by: 'p-123',
+          submitter_name: 'Marlowe',
+          description: 'System lore',
+          pois: [
+            {
+              id: 'sol_gas_cloud',
+              type: 'gas_cloud',
+              name: 'Sol Gas Cloud',
+              deep_core: true,
+              description: 'Dense mining field',
+              read_at_tick: 900690,
+              resources: [
+                {
+                  resource_id: 'hydrogen_gas',
+                  richness: 4,
+                  remaining: 500,
+                  max_remaining: 1000,
+                  depletion_percent: 50,
+                  remaining_display: '500 units',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      live_systems: ['sol', 'proxima'],
+    });
+    expect(JSON.stringify(result.value)).not.toContain('argon_gas');
+  });
+
   test('filter overwrites a partial live_systems array with the original', () => {
     const result = filterStructuredOutputBySearch(
       {
