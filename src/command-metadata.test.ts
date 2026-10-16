@@ -4160,8 +4160,10 @@ describe('command metadata', () => {
     expect(COMMANDS.notifications?.schema?.types?.description).toBe(NOTIFICATION_TYPES_FIELD_DESCRIPTION);
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('action_error, error, drone_adrift');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('personnel_update, refueled_by, and repaired_by');
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('exchange_fill is under trade');
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('starts muted');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toBe(
-      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them.',
+      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax.',
     );
     expect(captureHelp('get_notifications')).toContain('action_error, error, drone_adrift');
     expect(captureHelp('notifications')).toContain('action_error, error, drone_adrift');
@@ -4175,6 +4177,8 @@ describe('command metadata', () => {
       expect(help).toContain('types=chat,combat,market,observation');
       expect(help).toContain('fall back to system');
       expect(help).toContain('types=combat does not include them');
+      expect(help).toContain('exchange_fill is under trade');
+      expect(help).toContain('starts muted');
       expect(help).toContain('action_error, error, drone_adrift');
       expect(help).toContain('pirate_radio');
       expect(help).toContain('arena_challenge');
@@ -4187,7 +4191,34 @@ describe('command metadata', () => {
     }
     expect(COMMANDS.get_notifications?.example).toContain('types=chat,market,observation');
     expect(COMMANDS.notifications?.example).toContain('types=chat,observation');
-    expect(captureHelp('get_notifications')).toContain('types=chat,market,observation');
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
+    );
+    expect(COMMANDS.notifications?.description).toContain(
+      'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
+    );
+    expect(COMMANDS.get_notifications?.seeAlso).toEqual([
+      'get_status',
+      'get_action_log',
+      'notifications',
+      'unmute_notifications',
+      'get_notification_settings',
+    ]);
+    expect(COMMANDS.notifications?.seeAlso).toEqual([
+      'get_notifications',
+      'get_status',
+      'get_action_log',
+      'unmute_notifications',
+      'get_notification_settings',
+    ]);
+    expect(COMMANDS.get_notification_settings?.description).toContain(
+      'exchange_fills starts muted; while muted, HTTP get_notifications omits its exchange_fill frames.',
+    );
+    const getNotificationsHelp = captureHelp('get_notifications');
+    expect(getNotificationsHelp).toContain('types=chat,market,observation');
+    expect(getNotificationsHelp).toContain('unmute_notifications');
+    expect(getNotificationsHelp).toContain('get_notification_settings');
+    expect(captureHelp('notifications')).toContain('get_notification_settings');
     const subscribeHelp = captureHelp('subscribe_observation');
     expect(subscribeHelp).toContain('observation notifications');
     expect(subscribeHelp).not.toContain('shared notification queue');
@@ -4232,6 +4263,12 @@ describe('command metadata', () => {
     expect(config.description).toContain('nothing is assigned');
     expect(config.description).toContain('hides the distress ping');
     expect(config.description).toContain('gameserver 0.608.0');
+    expect(config.description).toContain('exchange_fills');
+    expect(config.description).toContain('no transport');
+    expect(config.description).toContain('0.630.0');
+    expect(config.description?.startsWith('Mute WebSocket push channels (HTTP get_notifications is unaffected)')).toBe(
+      false,
+    );
     expect(config.description).not.toContain('`');
     expect(config.description).not.toContain('auto-assign');
     expect(config.description).not.toContain('still assigned');
@@ -4248,6 +4285,8 @@ describe('command metadata', () => {
     expect(config.schema?.channels?.description).toContain('nothing is assigned');
     expect(config.schema?.channels?.description).toContain('hides the distress ping');
     expect(config.schema?.channels?.description).toContain('HTTP polling is unaffected');
+    expect(config.schema?.channels?.description).toContain('exchange_fills');
+    expect(config.schema?.channels?.description).toContain('no transport');
     expect(config.schema?.channels?.description).not.toContain('`');
     expect(config.schema?.channels?.description).not.toContain('still assigned');
     expect(config.schema?.channels?.description).not.toContain('accept_mission');
@@ -4265,6 +4304,67 @@ describe('command metadata', () => {
     expect(help).toContain('nothing is assigned');
     expect(help).toContain('hides the distress ping');
     expect(help).toContain('gameserver 0.608.0');
+    expect(help).toContain('exchange_fills');
+    expect(help).toContain('no transport');
+    expect(help).toContain('0.630.0');
+    expect(help).not.toContain('`');
+    expect(help).not.toContain('still assigned');
+    expect(help).not.toContain('accept_mission');
+    expect(help).not.toContain('distress_signal');
+  });
+
+  test('unmute_notifications help names the exchange_fills opt-in', () => {
+    const config = COMMANDS.unmute_notifications;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('unmute_notifications command is missing from COMMANDS');
+
+    expect(config.description).toBe(
+      'Unmute notification channels, or pass all=true to clear all WebSocket mutes. HTTP get_notifications is unaffected, except exchange_fills (gameserver 0.630.0): it starts muted, and unmuting it by name or with all=true opts you in on every transport, including HTTP get_notifications.',
+    );
+    expect(config.description).toContain('all=true opts you in on every transport, including HTTP get_notifications');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toContain('still assigned');
+    expect(config.description).not.toContain('accept_mission');
+    expect(config.description).not.toContain('distress_signal');
+
+    expect(config.example).toBe(
+      'spacemolt unmute_notifications channels=exchange_fills; spacemolt unmute_notifications all=true',
+    );
+    expect(config.example).toContain('channels=exchange_fills');
+    expect(config.example).toContain('all=true');
+    expect(config.usage).toBe('[channels] [all=true]');
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.unmute_notifications?.positionals).toEqual(['channels', 'all']);
+    expect(config.args).toEqual(['channels', 'all']);
+    expect(config.arrayFields).toEqual(['channels']);
+
+    expect(config.schema?.channels?.description).toBe(
+      'Notification channels to unmute (e.g. exchange_fills). Unmuting exchange_fills by name opts you in on every transport, including HTTP get_notifications. Catalog: get_notification_settings.',
+    );
+    expect(config.schema?.channels?.type).toBe('array');
+    expect(config.schema?.channels?.description).not.toContain('`');
+    expect(config.schema?.channels?.description).not.toContain('still assigned');
+    expect(config.schema?.channels?.description).not.toContain('accept_mission');
+    expect(config.schema?.channels?.description).not.toContain('distress_signal');
+
+    expect(config.schema?.all?.description).toBe(
+      'Unmute all channels (alternative to listing channels). all=true also opts you in to exchange_fills on every transport, including HTTP get_notifications.',
+    );
+    expect(config.schema?.all?.description).toContain('all=true also opts you in to exchange_fills');
+    expect(config.schema?.all?.description).toContain('HTTP get_notifications');
+    expect(config.schema?.all?.type).toBe('boolean');
+    expect(config.schema?.all?.description).not.toContain('`');
+    expect(config.schema?.all?.description).not.toContain('still assigned');
+    expect(config.schema?.all?.description).not.toContain('accept_mission');
+    expect(config.schema?.all?.description).not.toContain('distress_signal');
+
+    const help = captureHelp('unmute_notifications');
+    expect(help).toContain('exchange_fills');
+    expect(help).toContain('channels=exchange_fills');
+    expect(help).toContain('spacemolt unmute_notifications all=true');
+    expect(help).toContain('all=true opts you in on every transport, including HTTP get_notifications');
+    expect(help).toContain('all=true also opts you in to exchange_fills');
+    expect(help).toContain('gameserver 0.630.0');
+    expect(help).toContain('HTTP get_notifications');
     expect(help).not.toContain('`');
     expect(help).not.toContain('still assigned');
     expect(help).not.toContain('accept_mission');
