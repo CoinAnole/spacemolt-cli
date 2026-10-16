@@ -90,4 +90,62 @@ export const notificationFormatters = [
     },
     { commands: ['notifications', 'get_notifications'] },
   ),
+  formatter(
+    (r) => {
+      if (!Array.isArray(r.channels)) return false;
+      const channels = r.channels.filter(isRecord);
+      if (channels.length !== r.channels.length) return false;
+
+      const trimmedStrings = (value: unknown): string[] => {
+        if (!Array.isArray(value)) return [];
+        return value
+          .filter((entry): entry is string => typeof entry === 'string')
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0);
+      };
+
+      if (Array.isArray(r.muted)) {
+        if (r.muted.length === 0) emitLine('Muted: none');
+        else {
+          const names = trimmedStrings(r.muted);
+          if (names.length > 0) emitLine(`Muted: ${names.join(', ')}`);
+        }
+      }
+
+      const rows = channels.map((channel) => {
+        let muted = '';
+        if (channel.muted === true) muted = 'yes';
+        else if (channel.muted === false) muted = 'no';
+        return {
+          channel: typeof channel.channel === 'string' ? channel.channel : '',
+          muted,
+          message_types: trimmedStrings(channel.message_types).join(', '),
+          description: typeof channel.description === 'string' ? channel.description.trim() : '',
+        };
+      });
+
+      // Default width 32 clips server channel descriptions.
+      printCompactTable(
+        'Notification Settings',
+        rows,
+        [
+          ['Channel', ['channel']],
+          ['Muted', ['muted']],
+          ['Message types', ['message_types']],
+          ['Description', ['description']],
+        ],
+        { maxCellWidth: 80 },
+      );
+
+      if (typeof r.message === 'string') {
+        const message = r.message.trim();
+        if (message) emitLine(`${c.dim}${message}${c.reset}`);
+      }
+      return true;
+    },
+    {
+      commands: ['get_notification_settings', 'mute_notifications', 'unmute_notifications'],
+      shapeFallback: false,
+    },
+  ),
 ];

@@ -1,0 +1,8 @@
+Muted: exchange_fills
+
+=== Notification Settings ===
+
+  Channel        | Muted | Message types            | Description                                                                 
+  ---------------+-------+--------------------------+-----------------------------------------------------------------------------
+  exchange_fills | yes   | exchange_fill            | One frame each time one of your resting exchange orders fills. Starts muted.
+  support        | no    | refueled_by, repaired_by | Ally refuel and repair.                                                     

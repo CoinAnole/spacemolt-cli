@@ -191,6 +191,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Notifications
 
 - `mute_notifications`, `unmute_notifications`, `get_notification_settings`, `get_notifications`, and `notifications` help: `exchange_fills` starts muted for every pilot (gameserver 0.630.0) and while muted is sent on no transport, including HTTP `get_notifications`. Unmute it with `unmute_notifications channels=exchange_fills` or `all=true` to opt in on every transport, including that poll. An `exchange_fill` frame is type `trade`, so `types=trade` includes it, and the poll omits it until that unmute. `support` and `chat.emergency` stay WebSocket-only; HTTP polling is unaffected for those channels. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
+- `get_notification_settings`, `mute_notifications`, and `unmute_notifications` table output prints each server notification channel with muted yes or no, message types, and description, plus a `Muted:` summary, instead of `Channels: N item(s)`. An empty channel list prints `(None)` with no column header. `--format text` uses the same table. `--json` / `--yaml` / `--structured` stay pass-through (gameserver 0.630.0). **No parser change.**
 
 ### Fixed
 

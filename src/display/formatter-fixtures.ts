@@ -5,6 +5,7 @@ import { inspectHighValueFixtures } from './inspect.fixtures.ts';
 import { lootFixtureCases, lootHighValueFixtures } from './loot.fixtures.ts';
 import { marketFixtureCases, marketHighValueFixtures } from './market.fixtures.ts';
 import { mineFixtureCases, mineHighValueFixtures } from './mine.fixtures.ts';
+import { notificationSettingsHighValueFixtures } from './notification-settings.fixtures.ts';
 import { notificationsHighValueFixtures } from './notifications.fixtures.ts';
 import { passengerHighValueFixtures } from './passenger.fixtures.ts';
 import { prizesHighValueFixtures } from './prizes.fixtures.ts';
@@ -21,6 +22,7 @@ export * from './inspect.fixtures.ts';
 export * from './loot.fixtures.ts';
 export * from './market.fixtures.ts';
 export * from './mine.fixtures.ts';
+export * from './notification-settings.fixtures.ts';
 export * from './notifications.fixtures.ts';
 export * from './passenger.fixtures.ts';
 export * from './prizes.fixtures.ts';
@@ -69,6 +71,7 @@ export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...prizesHighValueFixtures,
   ...socialHighValueFixtures,
   ...notificationsHighValueFixtures,
+  ...notificationSettingsHighValueFixtures,
   ...shippingHighValueFixtures,
   ...genericHighValueFixtures,
   ...inspectHighValueFixtures,
