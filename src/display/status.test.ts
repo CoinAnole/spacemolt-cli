@@ -3088,15 +3088,16 @@ test('get_system_agents omits offline collapsed when the value is absent or not 
   }
 });
 
-test('get_system_agents does not print warning or ship counts', () => {
+test('get_system_agents prints a warning and does not print ship counts', () => {
   const fixture = cloneSystemAgents();
   fixture.warning = 'scanner-degraded-token';
   fixture.ship_counts = { sol_earth: 4, sol_belt: 0 };
   const stdout = renderSystemAgents(fixture);
 
   expect(stdout).toContain('offline collapsed 4');
-  expect(stdout).not.toContain('scanner-degraded-token');
-  expect(stdout).not.toContain('warning');
+  expect(stdout).toContain('Warning: scanner-degraded-token');
+  expect(stdout.indexOf('=== System Agents:')).toBeLessThan(stdout.indexOf('Warning:'));
+  expect(stdout.indexOf('Warning:')).toBeLessThan(stdout.indexOf('=== Agents ==='));
   expect(stdout).not.toContain('Ship counts');
   expect(stdout).not.toContain('sol_earth=4');
   expect(stdout).not.toContain('sol_belt=0');

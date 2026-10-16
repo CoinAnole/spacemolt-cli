@@ -278,7 +278,14 @@ describe('output golden test support', () => {
   });
 
   test('standalone route fixtures are excluded from OpenAPI schema comparison', () => {
-    expect(compareHighValueFixturesToSpec({ only: ['get_mobile_base'] })).toEqual([]);
+    const comparisons = compareHighValueFixturesToSpec({ only: ['get_mobile_base'] });
+
+    expect(comparisons.length).toBeGreaterThan(0);
+    expect(comparisons.map((comparison) => comparison.command)).not.toContain('get_mobile_base');
+    expect(comparisons.map((comparison) => comparison.label)).not.toContain('get_mobile_base');
+    expect(new Set(comparisons.map((comparison) => comparison.apiRoute))).toEqual(
+      new Set(['POST /api/v2/spacemolt_faction/get_mobile_base']),
+    );
   });
 
   test('schema divergence signatures are stable and sortable', () => {
