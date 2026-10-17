@@ -66,6 +66,7 @@ import {
   shipRemoteFixture,
   stationInfoContrabandFixture,
   stationInfoContrabandScalarsFixture,
+  storageDepositAutoDockedFixture,
   storageFixture,
   storageViewGiftsFixture,
   storageViewUndockedFixture,
@@ -4664,6 +4665,221 @@ describe('structuredContent formatters', () => {
     expect(stdout.indexOf('=== Mine ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
     expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  const partialCargoStorageMissions = {
+    active: [
+      {
+        mission_id: 'mission-delivery-partial',
+        title: 'Food Delivery',
+        type: 'delivery',
+        objectives: [
+          {
+            description: 'Deliver Food Rations',
+            current: 2,
+            required: 5,
+            in_cargo: 2,
+            in_storage: 3,
+          },
+        ],
+        rewards: {},
+      },
+    ],
+    max_missions: 5,
+  };
+
+  function cargoStorageCommandBody(command: string, missions?: unknown): Record<string, unknown> {
+    const normalized = command.replaceAll(' ', '_');
+    const details =
+      normalized === 'craft' || normalized === 'recycle'
+        ? {
+            action: normalized,
+            job_id: `${normalized}-job-1`,
+            recipe: 'Build Power Cell',
+            runs: 1,
+            message: 'Queued.',
+          }
+        : {
+            action: normalized === 'storage_loot' ? 'loot_wreck' : normalized,
+            item_id: 'ore_iron',
+            quantity: 12,
+          };
+    const body: Record<string, unknown> = { details };
+    if (missions !== undefined) body.missions = missions;
+    return body;
+  }
+
+  const cargoStorageMissionCommands = [
+    'storage_deposit',
+    'storage deposit',
+    'storage_withdraw',
+    'storage withdraw',
+    'storage_loot',
+    'storage loot',
+    'loot_wreck',
+    'craft',
+    'recycle',
+    'jettison',
+    'storage_jettison',
+    'storage jettison',
+    'use_item',
+    'install_mod',
+    'uninstall_mod',
+  ];
+
+  test.each(
+    cargoStorageMissionCommands,
+  )('%s prints one Active Missions table when envelope missions is present', (command) => {
+    const { stdout, stderr } = captureStructuredOutput(
+      command,
+      cargoStorageCommandBody(command, partialCargoStorageMissions),
+    );
+    const normalized = command.replaceAll(' ', '_');
+    const marker = normalized === 'craft' || normalized === 'recycle' ? 'Build Power Cell' : 'Item Id: ore_iron';
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(marker);
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).toContain('Food Delivery');
+    expect(stdout).toContain('Deliver Food Rations 2/5 cargo:2 storage:3');
+    expect(stdout.indexOf(marker)).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['malformed', { title: 'x' }],
+    ['board-array', [{ title: 'Board listing' }]],
+  ] as const)('cargo and storage commands omit Active Missions for %s missions', (_label, missions) => {
+    for (const command of cargoStorageMissionCommands) {
+      const { stdout, stderr } = captureStructuredOutput(command, cargoStorageCommandBody(command, missions));
+
+      expect(stderr, command).toBe('');
+      expect(stdout, command).not.toContain('=== Active Missions ===');
+      expect(stdout, command).not.toContain('=== Response ===');
+      expect(stdout, command).not.toContain('[object Object]');
+    }
+  });
+
+  test('storage deposit empty active missions still prints (None)', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'storage deposit',
+      cargoStorageCommandBody('storage deposit', { active: [], max_missions: 5 }),
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Storage Deposit ===');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).toContain('(None)');
+    expect(stdout).toContain('missions 0/5');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('storage deposit prints the body and dock line before one Active Missions table', () => {
+    const { stdout, stderr } = captureStructuredOutput('storage deposit', {
+      ...storageDepositAutoDockedFixture,
+      missions: partialCargoStorageMissions,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Deposit Items ===');
+    expect(stdout).toContain('Docked at: Earth Station (earth_station)');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).toContain('Deliver Food Rations 2/5 cargo:2 storage:3');
+    expect(stdout.indexOf('=== Deposit Items ===')).toBeLessThan(stdout.indexOf('Docked at:'));
+    expect(stdout.indexOf('Docked at:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('craft missions nested only in details does not print Active Missions', () => {
+    const { stdout, stderr } = captureStructuredOutput('craft', {
+      details: {
+        action: 'craft',
+        job_id: 'craft-job-1',
+        recipe: 'Build Power Cell',
+        missions: partialCargoStorageMissions,
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Build Power Cell');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('[object Object]');
+  });
+
+  test.each([
+    ['storage view', { ...storageFixture, missions: partialCargoStorageMissions }, '=== Storage'],
+    ['storage_view', { ...storageFixture, missions: partialCargoStorageMissions }, '=== Storage'],
+    ['get_status', { ...getStatusFixture, missions: partialCargoStorageMissions }, 'Standings:'],
+    ['get_state', { ...getStatusFixture, missions: partialCargoStorageMissions }, 'Standings:'],
+    ['travel', { ...arrivalFixture, missions: partialCargoStorageMissions }, 'Arrived at Earth'],
+    [
+      'faction_deposit_credits',
+      {
+        details: { action: 'deposit_credits', item_id: 'credits', quantity: 100 },
+        missions: partialCargoStorageMissions,
+      },
+      'Item Id: credits',
+    ],
+    [
+      'faction deposit_credits',
+      {
+        details: { action: 'deposit_credits', item_id: 'credits', quantity: 100 },
+        missions: partialCargoStorageMissions,
+      },
+      'Item Id: credits',
+    ],
+    [
+      'faction_withdraw_credits',
+      {
+        details: { action: 'withdraw_credits', item_id: 'credits', quantity: 40 },
+        missions: partialCargoStorageMissions,
+      },
+      'Item Id: credits',
+    ],
+    [
+      'faction withdraw_credits',
+      {
+        details: { action: 'withdraw_credits', item_id: 'credits', quantity: 40 },
+        missions: partialCargoStorageMissions,
+      },
+      'Item Id: credits',
+    ],
+  ] as const)('%s omits Active Missions when envelope missions is present', (command, fixture, marker) => {
+    const { stdout, stderr } = captureStructuredOutput(command, fixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(marker);
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('storage deposit envelope missions stays pass-through for json, yaml, structured, and compact, and prints on format text', () => {
+    const body = cargoStorageCommandBody('storage_deposit', partialCargoStorageMissions);
+    const json = captureStructuredOutput('storage_deposit', body, { json: true });
+    const yaml = captureStructuredOutput('storage_deposit', body, { format: 'yaml' });
+    const structured = captureStructuredOutput('storage_deposit', body, { structured: true });
+    const compact = captureStructuredOutput('storage_deposit', body, { compact: true });
+    const text = captureStructuredOutput('storage_deposit', body, { format: 'text' });
+
+    expect(json.stderr).toBe('');
+    expect(yaml.stderr).toBe('');
+    expect(structured.stderr).toBe('');
+    expect(compact.stderr).toBe('');
+    expect(text.stderr).toBe('');
+    expect(JSON.parse(json.stdout)).toEqual(body);
+    expect(JSON.parse(structured.stdout)).toEqual(body);
+    expect(JSON.parse(compact.stdout)).toEqual(body);
+    expect(json.stdout).not.toContain('=== Active Missions ===');
+    expect(yaml.stdout).toContain('missions:');
+    expect(yaml.stdout).not.toContain('=== Active Missions ===');
+    expect(structured.stdout).not.toContain('=== Active Missions ===');
+    expect(compact.stdout).not.toContain('=== Active Missions ===');
+    expect(text.stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(text.stdout).toContain('Deliver Food Rations 2/5 cargo:2 storage:3');
+    expect(text.stdout).not.toContain('=== Response ===');
   });
 
   test.each([

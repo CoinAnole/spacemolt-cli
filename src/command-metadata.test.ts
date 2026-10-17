@@ -706,7 +706,16 @@ describe('command metadata', () => {
     expect(config?.description).toContain('Survey stops count in any order');
     expect(config?.description).toContain('jump out and back');
     expect(config?.description).toContain('no sweep of the system you are sitting in');
-    expect(config?.description).toContain('Kill and crafting still need get_active_missions');
+    expect(config?.description).toContain('Kills still need get_active_missions.');
+    expect(config?.description).toContain(
+      'craft and recycle reprint the Active Missions table when the response includes envelope missions.',
+    );
+    expect(config?.description).toContain(
+      'A job that finishes on a later tick is an action_result command mission_objective_completed when that frame is already in a notifications array.',
+    );
+    expect(config?.description).toContain('This CLI does not open a WebSocket.');
+    expect(config?.description).not.toContain('Kill and crafting still need get_active_missions');
+    expect(config?.description).not.toContain('next get_notifications poll');
     expect(config?.description).toContain('unknown_system');
     expect(config?.description).toContain('survey_system');
     expect(config?.description).toContain('faction intel');
@@ -721,7 +730,13 @@ describe('command metadata', () => {
     expect(help).toContain('Active Missions');
     expect(help).toContain('Survey stops count in any order');
     expect(help).toContain('jump out and back');
-    expect(help).toContain('Kill and crafting still need get_active_missions');
+    expect(help).toContain('Kills still need get_active_missions.');
+    expect(help).toContain(
+      'craft and recycle reprint the Active Missions table when the response includes envelope missions.',
+    );
+    expect(help).toContain('This CLI does not open a WebSocket.');
+    expect(help).not.toContain('Kill and crafting still need get_active_missions');
+    expect(help).not.toContain('next get_notifications poll');
     expect(help).toContain('get_active_missions');
     expect(help).toContain('unknown_system');
     expect(help).toContain('survey_system');
@@ -805,24 +820,70 @@ describe('command metadata', () => {
   });
 
   test('get_active_missions help names post-action reprints including complete_mission', () => {
+    const description =
+      'View your active missions, progress, and the server-issued mission description. jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, complete_mission, storage deposit, storage withdraw, storage loot, loot_wreck, craft, recycle, jettison, storage jettison, use_item, install_mod, and uninstall_mod re-print this table when the server includes envelope missions on that command. Partial cargo or storage progress reprints there. A kill, a crafting job that finishes on a later tick, a fill on a resting order, or a fleet or auto dock that completes an objective is an action_result whose command is mission_objective_completed. The CLI formats that frame when a notifications array already contains it. Cached gameserver text describes the unsolicited frame as a WebSocket v2 push. This CLI does not open a WebSocket. Keep using get_active_missions for kills and whenever the last mutation omitted missions. complete_mission prints remaining actives after the rewards block.';
     const config = BUNDLED_COMMAND_REGISTRY.commands.get_active_missions;
-    expect(config?.description).toContain(
-      'jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, and complete_mission',
-    );
-    expect(config?.description).toContain('envelope missions');
-    expect(config?.description).toContain('Keep using get_active_missions for kill and crafting');
-    expect(config?.description).toContain('whenever the last mutation omitted missions');
-    expect(config?.description).toContain('complete_mission prints remaining actives after the rewards block');
+    expect(config?.description).toBe(description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_active_missions).toBe(description);
+    expect(config?.description).toContain('storage loot');
+    expect(config?.description).toContain('storage jettison');
+    expect(config?.description).toContain('loot_wreck');
+    expect(config?.description).not.toContain('deposit_items');
+    expect(config?.description).not.toContain('withdraw_items');
+    expect(config?.description).not.toContain('storage_loot');
+    expect(config?.description).not.toContain('storage_jettison');
+    expect(config?.description).not.toContain('next get_notifications poll');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
 
     const help = captureHelp('get_active_missions');
     expect(help).toContain('create_buy_order');
-    expect(help).toContain('complete_mission');
-    expect(help).toContain('remaining actives after the rewards block');
-    expect(help).toContain('kill and crafting');
+    expect(help).toContain('storage loot');
+    expect(help).toContain('storage jettison');
+    expect(help).toContain('complete_mission prints remaining actives after the rewards block');
+    expect(help).toContain('Keep using get_active_missions for kills');
+    expect(help).toContain('This CLI does not open a WebSocket.');
+    expect(help).not.toContain('deposit_items');
+    expect(help).not.toContain('withdraw_items');
+    expect(help).not.toContain('storage_loot');
+    expect(help).not.toContain('storage_jettison');
+    expect(help).not.toContain('next get_notifications poll');
+    expect(help).not.toContain('kill and crafting');
     expect(help).not.toContain('`');
     expect(help).not.toMatch(/\btravel\b/);
+  });
+
+  test('cargo and storage command help names the Active Missions reprint', () => {
+    const sentence =
+      'When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.';
+    for (const command of [
+      'storage_deposit',
+      'storage_withdraw',
+      'storage_loot',
+      'storage_jettison',
+      'jettison',
+      'loot_wreck',
+      'craft',
+      'recycle',
+      'use_item',
+      'install_mod',
+      'uninstall_mod',
+    ]) {
+      expect(COMMANDS[command]?.description, command).toContain(sentence);
+      expect(COMMANDS[command]?.description, command).not.toContain('deposit_items');
+      expect(COMMANDS[command]?.description, command).not.toContain('withdraw_items');
+      expect(COMMANDS[command]?.description, command).not.toContain('storage_loot');
+      expect(COMMANDS[command]?.description, command).not.toContain('storage_jettison');
+    }
+    expect(CURATED_COMMAND_DESCRIPTIONS.use_item).toBe(COMMANDS.use_item?.description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.install_mod).toBe(COMMANDS.install_mod?.description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.uninstall_mod).toBe(COMMANDS.uninstall_mod?.description);
+    expect(CORE_COMMAND_OVERRIDES.jettison).toBeUndefined();
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.jettison?.description).toContain(sentence);
+    expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('settles back into the belt');
+    expect(CURATED_COMMAND_DESCRIPTIONS.jettison).not.toContain(sentence);
+    expect(CORE_COMMAND_OVERRIDES.install_mod?.description).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.uninstall_mod?.description).toBeUndefined();
   });
 
   test('distress_signal help documents the 0.608.0 claimable rescue', () => {
@@ -3882,6 +3943,10 @@ describe('command metadata', () => {
     ]) {
       expect(help).not.toContain(command);
     }
+    expect(help).toContain('storage loot');
+    expect(help).toContain('storage jettison');
+    expect(help).not.toContain('next get_notifications poll');
+    expect(help).not.toContain('poll delivers mission_objective_completed');
   });
 
   test('notifications and shipping_list stay curated while other safe shipping commands are bundled generated fallbacks', () => {
@@ -4432,7 +4497,10 @@ describe('command metadata', () => {
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('exchange_fill is under trade');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('starts muted');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toBe(
-      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax.',
+      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax. mission_objective_completed is the command on an action_result, not its own type. It uses that system fallback: omit types, or pass types=system; types=combat does not include it.',
+    );
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain(
+      'mission_objective_completed is the command on an action_result, not its own type.',
     );
     expect(captureHelp('get_notifications')).toContain('action_error, error, drone_adrift');
     expect(captureHelp('notifications')).toContain('action_error, error, drone_adrift');
@@ -4463,9 +4531,19 @@ describe('command metadata', () => {
     expect(COMMANDS.get_notifications?.description).toContain(
       'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
     );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'When an action_result in this response has command mission_objective_completed, table output prints the tick headline Mission objective completed (tick N).',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain('This CLI does not open a WebSocket.');
+    expect(COMMANDS.get_notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.notifications?.description).toContain(
       'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
     );
+    expect(COMMANDS.notifications?.description).toContain(
+      'When an action_result has command mission_objective_completed, it is formatted the same way as on get_notifications.',
+    );
+    expect(COMMANDS.notifications?.description).toContain('This CLI does not open a WebSocket.');
+    expect(COMMANDS.notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.get_notifications?.seeAlso).toEqual([
       'get_status',
       'get_action_log',
@@ -4484,6 +4562,10 @@ describe('command metadata', () => {
       'exchange_fills starts muted; while muted, HTTP get_notifications omits its exchange_fill frames.',
     );
     const getNotificationsHelp = captureHelp('get_notifications');
+    expect(getNotificationsHelp).toContain('Mission objective completed (tick N)');
+    expect(getNotificationsHelp).toContain('not its own type');
+    expect(getNotificationsHelp).toContain('types=system');
+    expect(getNotificationsHelp).not.toContain('next get_notifications poll');
     expect(getNotificationsHelp).toContain('types=chat,market,observation');
     expect(getNotificationsHelp).toContain('unmute_notifications');
     expect(getNotificationsHelp).toContain('get_notification_settings');
@@ -5348,6 +5430,9 @@ describe('command metadata', () => {
     expect(config.description).not.toContain('spacemolt flee');
     expect(config.description).not.toContain('`');
     expect(CURATED_COMMAND_DESCRIPTIONS.use_item).toBe(config.description);
+    expect(config.description).toContain(
+      'When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+    );
 
     expect(config.usage).toContain('emergency_warp_device');
     expect(config.usage).toContain('shield_charge');

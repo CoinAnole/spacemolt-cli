@@ -517,7 +517,7 @@ const MUTATION_DOCK_STATE_QUERY_COMMANDS = [
   'player_profile',
 ] as const;
 
-/** Snapshots like get_status also carry V2Missions; print only on these mutations. */
+/** Snapshots omit this appendix. 0.630.4 cargo and storage mutations are listed, including partial progress when the server sends the section. mission_objective_completed is not a command here. */
 const POST_ACTION_MISSIONS_COMMANDS = [
   'jump',
   'dock',
@@ -530,6 +530,17 @@ const POST_ACTION_MISSIONS_COMMANDS = [
   'scrap_wreck',
   'survey_system',
   'complete_mission',
+  'storage_deposit',
+  'storage_withdraw',
+  'storage_loot',
+  'loot_wreck',
+  'craft',
+  'recycle',
+  'jettison',
+  'storage_jettison',
+  'use_item',
+  'install_mod',
+  'uninstall_mod',
 ] as const;
 
 function emitPostActionEnvelopeAppendix(viewModel: Record<string, unknown>, command: string): void {
