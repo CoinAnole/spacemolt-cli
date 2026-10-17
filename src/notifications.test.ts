@@ -1379,7 +1379,9 @@ describe('notification formatting', () => {
     };
     const bulkyShip = { id: 'ship-1', name: 'Dust Devil', hull: 130 };
 
-    test.each([...UNSOLICITED_STATE_EVENTS])('command %s never says completed and includes tick', (command) => {
+    test.each([
+      ...UNSOLICITED_STATE_EVENTS,
+    ])('command %s uses event copy (never "{command} completed") and includes tick', (command) => {
       const notification = actionResultNote(command);
       const output = stripAnsi(formatNotification(notification).join('\n'));
       const preview = formatNotificationPreview(notification);
@@ -1661,6 +1663,9 @@ describe('notification formatting', () => {
       expect(output).not.toContain('ore_iron');
       expect(output).not.toContain('=== Active Missions ===');
       expectNoNestedJsonDump(output);
+      expect(formatNotificationMessage(notification)).toBe(
+        `${preview.headline}; Docked at: Haven Exchange (haven_exchange)`,
+      );
     });
 
     test('mission progress keeps eight detail lines and overflows the rest', () => {
@@ -1842,6 +1847,39 @@ describe('notification formatting', () => {
       expect(formatNotificationPreview(notification).details[0]).toBe(line);
       expect(message).toBe(`${headline}; ${line}`);
       expect(message.indexOf(summary, first + summary.length)).toBeGreaterThan(first);
+    });
+
+    test('a non-event command does not format a missions envelope', () => {
+      const notification = actionResultNote('storage_deposit', {
+        result: {
+          ship: bulkyShip,
+          missions: {
+            active: [
+              {
+                title: 'Faction Supply Delivery',
+                mission_id: 'mission-faction-delivery-1',
+                objectives: [
+                  {
+                    description: 'Deliver Food Rations',
+                    current: 5,
+                    required: 5,
+                    in_cargo: 0,
+                    in_storage: 5,
+                    completed: true,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+
+      expect(preview.headline).toBe('storage_deposit completed (tick 1523)');
+      expect(preview.details.join('\n')).not.toContain('Faction Supply Delivery');
+      expect(preview.details.join('\n')).not.toContain('Deliver Food Rations');
+      expect(preview.details.join('\n')).not.toContain('Active missions:');
+      expect(omittedKeys(preview.omittedHint)).toContain('missions');
     });
   });
 

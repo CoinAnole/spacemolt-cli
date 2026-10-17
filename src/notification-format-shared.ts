@@ -542,6 +542,7 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
 const FLEET_DOCK_NAME_KEYS = ['base', 'base_name', 'station_name', 'name', 'poi_name'] as const;
 const FLEET_DOCK_ID_KEYS = ['base_id', 'docked_at', 'station_id'] as const;
 const ACTION_RESULT_STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
+const MISSION_PROGRESS_LINE_LIMIT = 8;
 
 function nonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -613,7 +614,7 @@ function previewActionResult(
   const tick = safeScalar(data.tick);
   const result = isRecord(data.result) ? data.result : undefined;
 
-  // Membership first; headline helper never adds "completed".
+  // Event commands never get the "{command} completed" form.
   let headline =
     command !== undefined && NON_COMPLETION_ACTION_RESULT_COMMANDS.has(command)
       ? actionResultEventHeadline(command, tick, data)
@@ -657,9 +658,12 @@ function previewActionResult(
       );
     } else {
       const ordered = [...entries.filter((entry) => entry.completed), ...entries.filter((entry) => !entry.completed)];
-      const visible = ordered.length > 8 ? ordered.slice(0, 7) : ordered;
+      const visibleCount = MISSION_PROGRESS_LINE_LIMIT - 1;
+      const visible = ordered.length > MISSION_PROGRESS_LINE_LIMIT ? ordered.slice(0, visibleCount) : ordered;
       for (const entry of visible) details.push(truncate(entry.line, options));
-      if (ordered.length > 8) details.push(`+${ordered.length - 7} more missions`);
+      if (ordered.length > MISSION_PROGRESS_LINE_LIMIT) {
+        details.push(`+${ordered.length - visibleCount} more missions`);
+      }
       const summary = ordered[0]?.summary;
       if (summary) headline = `${headline}: ${summary}`;
     }
