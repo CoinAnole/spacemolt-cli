@@ -1,0 +1,13 @@
+
+action: unmute_notifications
+muted: []
+channels:
+  - channel: exchange_fills
+    description: "One frame each time one of your resting exchange orders fills. Starts muted."
+    message_types: [exchange_fill]
+    muted: true
+  - channel: support
+    description: "Ally refuel and repair."
+    message_types: [refueled_by, repaired_by]
+    muted: false
+message: ""
