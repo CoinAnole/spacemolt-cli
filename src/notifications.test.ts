@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import { renderStructuredResult } from './display';
 import { formatNotificationMessage } from './display/notifications';
 import {
   getNotificationsBattleDronesFixture,
   getNotificationsEmergencyChatFixture,
+  getNotificationsExchangeFillFixture,
   getNotificationsFacilitiesFixture,
   getNotificationsFixture,
   getNotificationsObservationFixture,
@@ -431,6 +433,20 @@ describe('notification formatting', () => {
       msgType: 'error',
       data: { code: 'combat_interrupt', message: 'Mining interrupted by combat.' },
       snippets: ['[ERROR]', 'combat_interrupt: Mining interrupted by combat.'],
+    },
+    {
+      msgType: 'exchange_fill',
+      data: {
+        type: 'sell_filled',
+        order_id: 'ord_resting_1',
+        base_id: 'haven_exchange',
+        item_id: 'ore_iron',
+        item_name: 'Iron Ore',
+        quantity: 12,
+        price_each: 1500,
+        total: 18000,
+      },
+      snippets: ['[FILL]', 'Sell filled', 'Iron Ore', '1,500cr', '18,000cr', 'haven_exchange', 'order_id='],
     },
     {
       msgType: 'faction_alliance_broken',
@@ -10359,6 +10375,7 @@ describe('notification formatting', () => {
           'refueled_by',
           'repaired_by',
           'gift_received',
+          'exchange_fill',
         ]),
       );
       expect(types.filter((t) => !hasPreviewHandler(t))).toEqual([]);
@@ -11566,6 +11583,303 @@ describe('notification formatting', () => {
       );
       expect(blankStation.headline).toBe('Gift from Alice — 1500 credits');
       expect(blankStation.headline).not.toContain(' at ');
+    });
+  });
+
+  describe('exchange_fill typed preview', () => {
+    function fill(data: Record<string, unknown>) {
+      return {
+        type: 'trade',
+        msg_type: 'exchange_fill',
+        timestamp: '2026-05-23T20:00:00.000Z',
+        data,
+      };
+    }
+
+    const fullSell = {
+      type: 'sell_filled',
+      order_id: 'ord_resting_1',
+      base_id: 'haven_exchange',
+      item_id: 'ore_iron',
+      item_name: 'Iron Ore',
+      quantity: 12,
+      price_each: 1500,
+      total: 18000,
+    };
+    const fullSellHeadline = 'Sell filled: Iron Ore (ore_iron) x12 @ 1,500cr = 18,000cr at haven_exchange';
+
+    function expectCleanPreview(preview: { headline: string; details: string[] }) {
+      const text = [preview.headline, ...preview.details].join('\n');
+      expect(text).not.toContain('{');
+      expect(text).not.toContain('NaN');
+      expect(text).not.toContain('[object Object]');
+      expect(text).not.toContain('Use:');
+      expect(text).not.toContain('cancel_order');
+      expect(preview.headline.includes('\n')).toBe(false);
+      expect(preview.details.every((line) => !line.includes('\n'))).toBe(true);
+    }
+
+    test('handler is registered and an empty bag stays Exchange order filled', () => {
+      expect(hasPreviewHandler('exchange_fill')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('exchange_fill');
+      const preview = formatNotificationPreview(fill({}));
+      expect(preview.tag).toBe('FILL');
+      expect(preview.severity).toBeUndefined();
+      expect(preview.headline).toBe('Exchange order filled');
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).not.toContain('notification');
+      const output = stripAnsi(formatNotification(fill({}), { noTimestamp: true }).join('\n'));
+      expect(output).toBe('[FILL] Exchange order filled');
+      expect(output).not.toContain('notification');
+      expectCleanPreview(preview);
+    });
+
+    test.each([
+      {
+        name: 'full sell',
+        data: fullSell,
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'full buy with name equal to id',
+        data: {
+          type: 'buy_filled',
+          order_id: 'ord_buy_1',
+          base_id: 'earth_station',
+          item_id: 'fuel_cell',
+          item_name: 'fuel_cell',
+          quantity: 1,
+          price_each: 10,
+          total: 10,
+        },
+        headline: 'Buy filled: fuel_cell x1 @ 10cr = 10cr at earth_station',
+        details: ['order_id=ord_buy_1'],
+      },
+      {
+        name: 'explicit zero amounts',
+        data: {
+          type: 'sell_filled',
+          order_id: 'ord_resting_1',
+          base_id: 'haven_exchange',
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          quantity: 0,
+          price_each: 0,
+          total: 0,
+        },
+        headline: 'Sell filled: Iron Ore (ore_iron) x0 @ 0cr = 0cr at haven_exchange',
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'quantity only',
+        data: { type: 'sell_filled', quantity: 12 },
+        headline: 'Sell filled: x12',
+        details: [],
+      },
+      {
+        name: 'price only',
+        data: { type: 'buy_filled', price_each: 1500 },
+        headline: 'Buy filled: @ 1,500cr',
+        details: [],
+      },
+      {
+        name: 'total only',
+        data: { type: 'sell_filled', total: 18000 },
+        headline: 'Sell filled: = 18,000cr',
+        details: [],
+      },
+      {
+        name: 'item only',
+        data: { type: 'sell_filled', item_name: 'Iron Ore', item_id: 'ore_iron' },
+        headline: 'Sell filled: Iron Ore (ore_iron)',
+        details: [],
+      },
+      {
+        name: 'no side with full economics',
+        data: {
+          base_id: 'haven_exchange',
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          quantity: 12,
+          price_each: 1500,
+          total: 18000,
+        },
+        headline: 'Exchange order filled: Iron Ore (ore_iron) x12 @ 1,500cr = 18,000cr at haven_exchange',
+        details: [],
+      },
+      {
+        name: 'empty bag',
+        data: {},
+        headline: 'Exchange order filled',
+        details: [],
+      },
+      {
+        name: 'unknown side with item name',
+        data: { type: 'partial', item_name: 'Iron Ore' },
+        headline: 'partial: Iron Ore',
+        details: [],
+      },
+      {
+        name: 'bigint price and total',
+        data: {
+          type: 'sell_filled',
+          item_name: 'Iron Ore',
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 9007199254740993n,
+          total: 9007199254740993n,
+        },
+        headline: 'Sell filled: Iron Ore (ore_iron) x1 @ 9,007,199,254,740,993cr = 9,007,199,254,740,993cr',
+        details: [],
+      },
+      {
+        name: 'string quantity is omitted',
+        data: { type: 'sell_filled', item_name: 'Iron Ore', item_id: 'ore_iron', quantity: '12' },
+        headline: 'Sell filled: Iron Ore (ore_iron)',
+        details: [],
+      },
+      {
+        name: 'fractional amounts',
+        data: { quantity: 1.5, price_each: 1.5, total: 1.5 },
+        headline: 'Exchange order filled: x1.5 @ 1.5cr = 1.5cr',
+        details: [],
+      },
+      {
+        name: 'object price is omitted',
+        data: { type: 'buy_filled', quantity: 12, price_each: { amount: 1 } },
+        headline: 'Buy filled: x12',
+        details: [],
+      },
+      {
+        name: 'server total is not recomputed',
+        data: {
+          type: 'sell_filled',
+          item_name: 'Iron Ore',
+          item_id: 'ore_iron',
+          quantity: 12,
+          price_each: 1500,
+          total: 999,
+        },
+        headline: 'Sell filled: Iron Ore (ore_iron) x12 @ 1,500cr = 999cr',
+        details: [],
+      },
+      {
+        name: 'place only',
+        data: { type: 'sell_filled', base_id: 'haven_exchange' },
+        headline: 'Sell filled at haven_exchange',
+        details: [],
+      },
+      {
+        name: 'blank side is omitted',
+        data: { type: '   ', quantity: 12 },
+        headline: 'Exchange order filled: x12',
+        details: [],
+      },
+      {
+        name: 'non-string side is omitted',
+        data: { type: 1, quantity: 12 },
+        headline: 'Exchange order filled: x12',
+        details: [],
+      },
+      {
+        name: 'negative and bigint zero amounts',
+        data: { type: 'sell_filled', quantity: -5, price_each: -5n, total: 0n },
+        headline: 'Sell filled: x-5 @ -5cr = 0cr',
+        details: [],
+      },
+      {
+        name: 'already-rounded number is not repaired',
+        data: {
+          type: 'buy_filled',
+          price_each: Number('9007199254740993'),
+          total: Number('9007199254740993'),
+        },
+        headline: 'Buy filled: @ 9,007,199,254,740,992cr = 9,007,199,254,740,992cr',
+        details: [],
+      },
+    ])('$name', ({ data, headline, details }) => {
+      const preview = formatNotificationPreview(fill(data));
+      expect(preview.tag).toBe('FILL');
+      expect(preview.severity).toBeUndefined();
+      expect(preview.headline).toBe(headline);
+      expect(preview.details).toEqual([...details]);
+      expectCleanPreview(preview);
+    });
+
+    test('folds order_id into the table Message and prints Type exchange_fill', () => {
+      const notification = fill(fullSell);
+      const atTableWidth = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe(tableMessageFromPreview(atTableWidth));
+      expect(message).toBe(`${fullSellHeadline}; order_id=ord_resting_1`);
+      expect(message).toContain('; order_id=ord_resting_1');
+
+      const inline = stripAnsi(formatNotification(notification, { noTimestamp: true }).join('\n'));
+      expect(inline).toBe(`[FILL] ${fullSellHeadline}\n  order_id=ord_resting_1`);
+      const stamped = stripAnsi(formatNotification(notification).join('\n'));
+      expect(stamped).toMatch(
+        /^\[.+\] \[FILL\] Sell filled: Iron Ore \(ore_iron\) x12 @ 1,500cr = 18,000cr at haven_exchange\n {2}order_id=ord_resting_1$/,
+      );
+
+      const rendered = renderStructuredResult('get_notifications', getNotificationsExchangeFillFixture);
+      const stdout = stripAnsi(rendered.stdout.join('\n'));
+      expect(rendered.success).toBe(true);
+      expect(stdout).toMatch(/\|\s*exchange_fill\s*\|/);
+      expect(stdout).toMatch(/\|\s*Sell filled:/);
+      expect(stdout).toContain('; order_id=ord_resting_1');
+      expect(stdout).not.toContain('[FILL]');
+      expect(stdout).not.toContain('=== Response ===');
+    });
+
+    test('FILL uses the same color as TRADE', () => {
+      const fillLine = formatNotification(fill(fullSell), { noTimestamp: true })[0] ?? '';
+      const tradeLine =
+        formatNotification(
+          {
+            type: 'trade',
+            msg_type: 'trade_complete',
+            timestamp: '2026-05-23T20:00:00.000Z',
+            data: { partner_name: 'Marlowe' },
+          },
+          { noTimestamp: true },
+        )[0] ?? '';
+      const fillColor = fillLine.slice(0, fillLine.indexOf('['));
+      const tradeColor = tradeLine.slice(0, tradeLine.indexOf('['));
+      expect(fillColor.length).toBeGreaterThan(0);
+      expect(fillColor).toBe(tradeColor);
+    });
+
+    test('string fields keep the first line and ignore base_name', () => {
+      const preview = formatNotificationPreview(
+        fill({
+          type: 'sell_filled\nignored',
+          order_id: 'ord_resting_1\nmore',
+          base_id: 'haven_exchange\nelsewhere',
+          base_name: 'Haven Exchange',
+          item_id: 'ore_iron\nextra',
+          item_name: 'Iron Ore\nsecret',
+          quantity: 12,
+        }),
+      );
+      expect(preview.headline).toBe('Sell filled: Iron Ore (ore_iron) x12 at haven_exchange');
+      expect(preview.details).toEqual(['order_id=ord_resting_1']);
+      expect(preview.headline).not.toContain('Haven Exchange');
+      expect(preview.headline).not.toContain('secret');
+      expect(preview.headline).not.toContain('extra');
+      expect(preview.headline).not.toContain('elsewhere');
+      expect(preview.headline).not.toContain('ignored');
+      expect(preview.details.join('\n')).not.toContain('more');
+      expect(preview.headline.includes('\n')).toBe(false);
+
+      const nameOnly = formatNotificationPreview(fill({ type: 'sell_filled', base_name: 'Haven Exchange' }));
+      expect(nameOnly.headline).toBe('Sell filled');
+      expect(nameOnly.headline).not.toContain('at ');
+      expect(nameOnly.details).toEqual([]);
+
+      const numericOrder = formatNotificationPreview(fill({ type: 'sell_filled', order_id: 12, quantity: 12 }));
+      expect(numericOrder.headline).toBe('Sell filled: x12');
+      expect(numericOrder.details).toEqual([]);
     });
   });
 });

@@ -1738,6 +1738,45 @@ function previewTradeCancelled(
   return headlinePreview('TRADE', `Trade cancelled (ID: ${scalarOr(data.trade_id, 'unknown')})`, options);
 }
 
+function previewExchangeFill(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const sideRaw = firstLine(nonEmptyString(data.type) ?? '');
+  let side: string | undefined;
+  if (sideRaw === 'buy_filled') side = 'Buy filled';
+  else if (sideRaw === 'sell_filled') side = 'Sell filled';
+  else if (sideRaw) side = sideRaw;
+
+  const item = formatNameId(
+    firstLine(nonEmptyString(data.item_name) ?? '') || undefined,
+    firstLine(nonEmptyString(data.item_id) ?? '') || undefined,
+  );
+  const quantity = formatIntegerText(data.quantity);
+  const price = formatCreditsAmount(data.price_each);
+  const total = formatCreditsAmount(data.total);
+  const baseId = firstLine(nonEmptyString(data.base_id) ?? '');
+  const orderId = firstLine(nonEmptyString(data.order_id) ?? '');
+
+  let economics: string | undefined;
+  if (item !== undefined && quantity !== undefined) economics = `${item} x${quantity}`;
+  else if (item !== undefined) economics = item;
+  else if (quantity !== undefined) economics = `x${quantity}`;
+  if (price !== undefined) economics = economics === undefined ? `@ ${price}` : `${economics} @ ${price}`;
+  if (total !== undefined) economics = economics === undefined ? `= ${total}` : `${economics} = ${total}`;
+
+  const place = baseId ? `at ${baseId}` : undefined;
+  const stem = side ?? 'Exchange order filled';
+  let headline = stem;
+  if (economics !== undefined && place !== undefined) headline = `${stem}: ${economics} ${place}`;
+  else if (economics !== undefined) headline = `${stem}: ${economics}`;
+  else if (place !== undefined) headline = `${stem} ${place}`;
+
+  if (!orderId) return headlinePreview('FILL', headline, options);
+  return detailPreview('FILL', headline, [`order_id=${orderId}`], options);
+}
+
 function cappedCountSummary(labels: readonly string[], singular: string, cap: number): string | undefined {
   if (labels.length === 0) return undefined;
   const shown = labels.slice(0, cap);
@@ -3398,6 +3437,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   trade_complete: previewTradeComplete,
   trade_declined: previewTradeDeclined,
   trade_cancelled: previewTradeCancelled,
+  exchange_fill: previewExchangeFill,
   gift_received: previewGiftReceived,
   friend_request: previewFriendRequest,
   friend_request_accepted: previewFriendRequestAccepted,

@@ -1267,10 +1267,40 @@ export const getNotificationsUnsolicitedStateFixture = {
   ],
 };
 
+/** exchange_fill poll sample. The notification item includes required id and a date-time timestamp. */
+export const getNotificationsExchangeFillFixture = {
+  count: 1,
+  current_tick: 902900,
+  remaining: 0,
+  timestamp: 1779569100,
+  notifications: [
+    {
+      id: 'notif-exchange-fill-1',
+      type: 'trade',
+      msg_type: 'exchange_fill',
+      timestamp: '2026-05-23T20:00:00.000Z',
+      data: {
+        type: 'sell_filled',
+        order_id: 'ord_resting_1',
+        base_id: 'haven_exchange',
+        item_id: 'ore_iron',
+        item_name: 'Iron Ore',
+        quantity: 12,
+        price_each: 1500,
+        total: 18000,
+      },
+    },
+  ],
+};
+
 export const notificationsHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_notifications: {
     command: 'get_notifications',
     fixture: getNotificationsFixture,
+  },
+  get_notifications_exchange_fill: {
+    command: 'get_notifications',
+    fixture: getNotificationsExchangeFillFixture,
   },
   get_notifications_observation: {
     command: 'get_notifications',
