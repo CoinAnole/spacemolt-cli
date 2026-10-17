@@ -32,6 +32,7 @@ import {
   scanFixture,
   scanPoiEmptyFixture,
   scanPoiFixture,
+  stationPoiContrabandDefaultFixture,
   stationPoiInfoFixture,
   subscribeObservationArenaFixture,
   subscribeObservationFixture,
@@ -1040,7 +1041,53 @@ test('get_poi nested station prints indented ID and POI and skips Station Base I
   expect(stdout).toContain('  Fuel: 500/1000');
   expect(stdout).not.toContain('Station Base ID:');
   expect(stdout).not.toContain("Station: earth_station (use 'dock' to enter)");
+  expect(stdout).not.toContain('Contraband mode:');
+  expect(stdout).not.toContain('Contraband items:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_poi indents station contraband lines and skips them without a nested base', () => {
+  const stdout = renderStructuredResult(
+    'get_poi',
+    structuredClone(stationPoiContrabandDefaultFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toMatch(/^ {2}Contraband mode: default$/m);
+  expect(stdout).toMatch(/^ {2}Contraband items: \(default rules\)$/m);
+  expect(stdout).not.toMatch(/^Contraband mode:/m);
+  expect(stdout).not.toMatch(/^Contraband items:/m);
+  expect(stdout).not.toContain('Faction:');
+  expect(stdout.indexOf('  Empire: Terran')).toBeLessThan(stdout.indexOf('  Contraband mode: default'));
+  expect(stdout.indexOf('  Contraband items: (default rules)')).toBeLessThan(stdout.indexOf('  Hull: 900/1000'));
+
+  const withFaction = structuredClone(stationPoiContrabandDefaultFixture) as {
+    base: { faction_id?: string };
+  };
+  withFaction.base.faction_id = 'sol_gov';
+  const factionStdout = renderStructuredResult('get_poi', withFaction, options, context).stdout.join('\n');
+  expect(factionStdout).toContain('  Faction: sol_gov');
+  expect(factionStdout.indexOf('  Faction: sol_gov')).toBeLessThan(factionStdout.indexOf('  Contraband mode: default'));
+  expect(factionStdout).toMatch(/^ {2}Contraband items: \(default rules\)$/m);
+
+  const missingBase = renderStructuredResult(
+    'get_poi',
+    {
+      poi: {
+        id: 'sol_earth',
+        name: 'Earth',
+        type: 'station',
+        system_id: 'sol',
+        base_id: 'earth_station',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(missingBase).toContain("Station Base ID: earth_station (use 'dock' to enter)");
+  expect(missingBase).not.toContain('Contraband mode:');
+  expect(missingBase).not.toContain('Contraband items:');
 });
 
 test('get_poi with poi.base_id and no nested base prints Station Base ID', () => {

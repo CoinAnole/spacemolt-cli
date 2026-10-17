@@ -307,6 +307,20 @@ export const inspectBaseFixture = {
   },
 };
 
+export const inspectBaseContrabandEmptyFixture = {
+  ...inspectBaseFixture,
+  source: 'station',
+  base: {
+    ...inspectBaseFixture.base,
+    services: ['market'],
+    base: {
+      ...inspectBaseFixture.base.base,
+      contraband_mode: 'custom',
+      contraband_items: [],
+    },
+  },
+};
+
 export const inspectBaseRepairsFixture = {
   id: 'frontier_cache',
   kind: 'base',
@@ -385,6 +399,7 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_catalog_recipe: { command: 'inspect', fixture: inspectCatalogRecipeFixture },
   inspect_catalog_recipe_venues: { command: 'inspect', fixture: inspectCatalogRecipeVenuesFixture },
   inspect_base: { command: 'inspect', fixture: inspectBaseFixture },
+  inspect_base_contraband_empty: { command: 'inspect', fixture: inspectBaseContrabandEmptyFixture },
   inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
   inspect_base_sovereign_mint_inputs: { command: 'inspect', fixture: inspectBaseSovereignMintInputsFixture },
   inspect_base_sovereign_mint_internal: { command: 'inspect', fixture: inspectBaseSovereignMintInternalFixture },

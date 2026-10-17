@@ -3271,6 +3271,15 @@ describe('command metadata', () => {
     expect(COMMANDS.get_base?.description).toContain('buy order: yes');
     expect(COMMANDS.get_base?.description).toContain('price_limited');
     expect(COMMANDS.get_base?.description).toContain('Price limits');
+    expect(COMMANDS.get_base?.description).toContain('Contraband mode');
+    expect(COMMANDS.get_base?.description).toContain('Contraband items');
+    expect(COMMANDS.get_base?.description).toContain('(default rules)');
+    expect(COMMANDS.get_base?.description).toContain('(none — all items allowed)');
+    expect(COMMANDS.get_base?.description).toContain('(none)');
+    expect(COMMANDS.get_base?.description).toContain('Smuggling skill still bypasses listed items');
+    expect(COMMANDS.get_base?.description).toContain(
+      'Empire customs still apply in empire territory, including aboard a mobile base.',
+    );
     expect(COMMANDS.get_base?.seeAlso).toEqual(['facility_repair', 'facility_list', 'view_market', 'storage']);
 
     const help = captureHelp('get_base');
@@ -3282,11 +3291,22 @@ describe('command metadata', () => {
     expect(help).toContain('buy order: yes');
     expect(help).toContain('price_limited');
     expect(help).toContain('Price limits');
+    expect(help).toContain('Contraband mode');
+    expect(help).toContain('Smuggling skill still bypasses listed items');
     expect(help).toContain('facility repair');
     expect(help).toContain('facility list');
     expect(help).toContain('view_market');
     expect(help).toContain('storage');
     expect(help).not.toContain('`');
+  });
+
+  test('get_poi help documents station contraband lines', () => {
+    const sentence =
+      'When a station is present, table output prints the same Contraband mode and Contraband items lines as get_base. Smuggling skill still bypasses listed items.';
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.get_poi?.description).toContain(sentence);
+    expect(COMMANDS.get_poi?.description).toContain(sentence);
+    expect(CURATED_COMMAND_DESCRIPTIONS.get_poi).toBe('Get your current POI details');
+    expect(captureHelp('get_poi')).not.toContain('`');
   });
 
   test('inspect help documents the docked-base repair queue and sovereign mint report', () => {
@@ -3300,12 +3320,13 @@ describe('command metadata', () => {
     expect(help).toContain('sovereign mint');
     expect(help).toContain('repair queue');
     expect(help).toContain('buy order: yes');
+    expect(help).toContain('Smuggling skill still bypasses listed items');
     expect(help).not.toContain('`');
   });
 
   test('inspect help points skills, recipes, and facilities at catalog', () => {
     const description =
-      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. An uncharted hidden POI in this system is not found (not_found), the same as an unknown id.';
+      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. An uncharted hidden POI in this system is not found (not_found), the same as an unknown id. Docked-base inspect prints the same Contraband mode and Contraband items lines as get_base. Smuggling skill still bypasses listed items.';
 
     expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.description).toBe(description);
     expect(COMMANDS.inspect?.description).toBe(description);

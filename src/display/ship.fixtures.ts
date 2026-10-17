@@ -212,6 +212,15 @@ export const baseFixture = {
   services: ['crafting', 'market', 'missions', 'refuel'],
 };
 
+export const baseContrabandCustomFixture = {
+  ...baseFixture,
+  base: {
+    ...baseFixture.base,
+    contraband_mode: 'custom',
+    contraband_items: ['ore_copper', 'ore_iron'],
+  },
+};
+
 export const sovereignMintBlockedInputs = {
   status: 'blocked_inputs',
   output_item_id: 'trade_authenticator',
@@ -901,6 +910,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
+  get_base_contraband_custom: { command: 'get_base', fixture: baseContrabandCustomFixture },
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },
   get_base_sovereign_mint_inputs: { command: 'get_base', fixture: baseSovereignMintInputsFixture },
   get_base_sovereign_mint_internal: { command: 'get_base', fixture: baseSovereignMintInternalFixture },

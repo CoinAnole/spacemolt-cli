@@ -15,6 +15,7 @@ import {
   emitLine,
   emitSovereignMint,
   emitStationConstruction,
+  emitStationContrabandPolicy,
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
@@ -337,6 +338,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
   emitStationIds(base, '');
   emitLine(`Empire: ${base.empire || 'None'}`);
   if (base.faction_id) emitLine(`Faction: ${base.faction_id}`);
+  emitStationContrabandPolicy(base);
   emitStationDefences(base);
   if (base.fuel !== undefined || base.max_fuel !== undefined) {
     emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);

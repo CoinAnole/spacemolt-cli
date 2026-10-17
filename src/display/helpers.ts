@@ -435,6 +435,54 @@ export function emitStationDefences(base: unknown, indent = ''): boolean {
   return true;
 }
 
+function hasLineBreakOrControl(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x20 || code === 0x7f || code === 0x2028 || code === 0x2029) return true;
+  }
+  return false;
+}
+
+function isPrintableId(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '' && !hasLineBreakOrControl(value);
+}
+
+function printableIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || !value.every(isPrintableId)) return undefined;
+  return value;
+}
+
+export function emitStationContrabandPolicy(source: unknown, indent = ''): boolean {
+  if (!isRecord(source)) return false;
+  let printed = false;
+
+  if (Object.hasOwn(source, 'contraband_mode')) {
+    const mode = source.contraband_mode;
+    if (typeof mode === 'string' && mode.trim() !== '' && !hasLineBreakOrControl(mode)) {
+      emitLine(`${indent}Contraband mode: ${mode}`);
+      printed = true;
+    }
+  }
+
+  if (Object.hasOwn(source, 'contraband_items')) {
+    const items = source.contraband_items;
+    let text: string | undefined;
+    if (items === null) text = '(default rules)';
+    else if (Array.isArray(items) && items.length === 0) {
+      text = source.contraband_mode === 'custom' ? '(none — all items allowed)' : '(none)';
+    } else {
+      const ids = printableIds(items);
+      if (ids !== undefined) text = ids.join(', ');
+    }
+    if (text !== undefined) {
+      emitLine(`${indent}Contraband items: ${text}`);
+      printed = true;
+    }
+  }
+
+  return printed;
+}
+
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;

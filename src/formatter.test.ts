@@ -9129,6 +9129,191 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('[object Object]');
   });
 
+  function contrabandBase(fields: Record<string, unknown>): Record<string, unknown> {
+    return {
+      base: {
+        id: 'earth_station',
+        name: 'Earth Station',
+        empire: 'solarian',
+        hull: 10,
+        max_hull: 20,
+        ...fields,
+      },
+    };
+  }
+
+  test('get_base omits contraband lines when those keys are absent', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', baseFixture);
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Contraband mode:');
+    expect(stdout).not.toContain('Contraband items:');
+
+    const modeOnly = captureStructuredOutput('get_base', contrabandBase({ contraband_mode: 'custom' }));
+    expect(modeOnly.stdout).toContain('Contraband mode: custom');
+    expect(modeOnly.stdout).not.toContain('Contraband items:');
+
+    const itemsOnly = captureStructuredOutput('get_base', contrabandBase({ contraband_items: null }));
+    expect(itemsOnly.stdout).not.toContain('Contraband mode:');
+    expect(itemsOnly.stdout).toContain('Contraband items: (default rules)');
+  });
+
+  test('get_base prints default mode with null items as default rules', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'default', contraband_items: null }),
+    );
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Contraband mode: default');
+    expect(stdout).toContain('Contraband items: (default rules)');
+    expect(stdout).not.toContain('(none');
+    expect(stdout.indexOf('Empire: solarian')).toBeLessThan(stdout.indexOf('Contraband mode: default'));
+    expect(stdout.indexOf('Contraband items: (default rules)')).toBeLessThan(stdout.indexOf('Hull: 10/20'));
+  });
+
+  test('get_base prints (none) for an empty item list when the mode is not custom', () => {
+    const { stdout } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'default', contraband_items: [] }),
+    );
+    expect(stdout).toContain('Contraband mode: default');
+    expect(stdout).toContain('Contraband items: (none)');
+    expect(stdout).not.toContain('all items allowed');
+    expect(stdout).not.toContain('(default rules)');
+  });
+
+  test('get_base prints the allow-all line only for an empty custom list', () => {
+    const { stdout } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom', contraband_items: [] }),
+    );
+    expect(stdout).toContain('Contraband mode: custom');
+    expect(stdout).toContain('Contraband items: (none — all items allowed)');
+
+    const padded = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: ' custom', contraband_items: [] }),
+    );
+    expect(padded.stdout).toContain('Contraband mode:  custom');
+    expect(padded.stdout).toContain('Contraband items: (none)');
+    expect(padded.stdout).not.toContain('all items allowed');
+  });
+
+  test('get_base prints an unknown contraband mode as sent', () => {
+    const { stdout } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'seasonal', contraband_items: ['ore_iron'] }),
+    );
+    expect(stdout).toContain('Contraband mode: seasonal');
+    expect(stdout).toContain('Contraband items: ore_iron');
+  });
+
+  test('get_base omits a junk contraband mode and still prints a valid item list', () => {
+    const numberMode = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 1, contraband_items: ['ore_iron'] }),
+    );
+    expect(numberMode.stdout).not.toContain('Contraband mode:');
+    expect(numberMode.stdout).toContain('Contraband items: ore_iron');
+
+    const blankMode = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: '   ', contraband_items: [] }),
+    );
+    expect(blankMode.stdout).not.toContain('Contraband mode:');
+    expect(blankMode.stdout).toContain('Contraband items: (none)');
+
+    const newlineMode = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom\nFaction: forged', contraband_items: ['ore_iron'] }),
+    );
+    expect(newlineMode.stdout).not.toContain('Contraband mode:');
+    expect(newlineMode.stdout).not.toContain('Faction: forged');
+    expect(newlineMode.stdout).toContain('Contraband items: ore_iron');
+
+    const nullMode = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: null, contraband_items: [] }),
+    );
+    expect(nullMode.stdout).not.toContain('Contraband mode:');
+    expect(nullMode.stdout).toContain('Contraband items: (none)');
+  });
+
+  test('get_base omits contraband items when the value is not an id array', () => {
+    const objectItems = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom', contraband_items: { 0: 'ore_iron' } }),
+    );
+    expect(objectItems.stdout).toContain('Contraband mode: custom');
+    expect(objectItems.stdout).not.toContain('Contraband items:');
+
+    const stringItems = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom', contraband_items: 'ore_iron' }),
+    );
+    expect(stringItems.stdout).toContain('Contraband mode: custom');
+    expect(stringItems.stdout).not.toContain('Contraband items:');
+  });
+
+  test('get_base omits the items line when any id is not printable', () => {
+    const badLists = [
+      ['ore_iron', 1],
+      ['ore_iron', ''],
+      ['ore_iron', '   '],
+      ['ore_iron', 'ore_copper\nContraband items: (none — all items allowed)'],
+      ['ore_iron', `ore_copper${String.fromCharCode(0x2028)}`],
+      ['ore_iron', `ore_copper${String.fromCharCode(0x2029)}`],
+    ];
+    for (const contrabandItems of badLists) {
+      const { stdout } = captureStructuredOutput(
+        'get_base',
+        contrabandBase({ contraband_mode: 'custom', contraband_items: contrabandItems }),
+      );
+      expect(stdout).toContain('Contraband mode: custom');
+      expect(stdout).not.toContain('Contraband items:');
+    }
+  });
+
+  test('get_base prints contraband item ids in server order without trimming', () => {
+    const { stdout } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom', contraband_items: ['ore_iron', ' ore_copper '] }),
+    );
+    expect(stdout).toContain('Contraband items: ore_iron,  ore_copper ');
+    expect(stdout).not.toContain('ore_copper, ore_iron');
+  });
+
+  test('get_base prints contraband when faction_id is absent', () => {
+    const { stdout, stderr } = captureStructuredOutput(
+      'get_base',
+      contrabandBase({ contraband_mode: 'custom', contraband_items: ['ore_copper', 'ore_iron'] }),
+    );
+    expect(stderr).toBe('');
+    expect(stdout).not.toMatch(/^Faction:/m);
+    expect(stdout).toContain('Contraband mode: custom');
+    expect(stdout).toContain('Contraband items: ore_copper, ore_iron');
+    expect(stdout.indexOf('Empire: solarian')).toBeLessThan(stdout.indexOf('Contraband mode: custom'));
+    expect(stdout.indexOf('Contraband items: ore_copper, ore_iron')).toBeLessThan(stdout.indexOf('Hull: 10/20'));
+  });
+
+  test('get_base --format text matches table contraband lines and json stays pass-through', () => {
+    const payload = contrabandBase({
+      contraband_mode: 'custom',
+      contraband_items: ['ore_copper', 'ore_iron'],
+    });
+    const table = captureStructuredOutput('get_base', payload);
+    const text = captureStructuredOutput('get_base', payload, { format: 'text' });
+    expect(text.stdout).toBe(table.stdout);
+    expect(text.stdout).toContain('Contraband mode: custom');
+    expect(text.stderr).toBe('');
+
+    const json = captureStructuredOutput('get_base', payload, { format: 'json' });
+    expect(json.stdout).toContain('"contraband_mode"');
+    expect(json.stdout).toContain('"contraband_items"');
+    expect(json.stdout).not.toContain('Contraband mode:');
+    expect(json.stdout).not.toContain('Contraband items:');
+    expect(json.stderr).toBe('');
+  });
+
   test('get_poi includes faction fuel reserve when present', () => {
     const { stdout, stderr } = captureStructuredOutput('get_poi', {
       ...poiInfoFixture,

@@ -439,6 +439,15 @@ export const stationPoiInfoFixture = {
   },
 };
 
+export const stationPoiContrabandDefaultFixture = {
+  ...stationPoiInfoFixture,
+  base: {
+    ...stationPoiInfoFixture.base,
+    contraband_mode: 'default',
+    contraband_items: null,
+  },
+};
+
 export const nearbyFixture = {
   nearby: [
     {
@@ -1179,6 +1188,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_poi_workability: { command: 'get_poi', fixture: poiWorkabilityFixture },
   get_poi_arena: { command: 'get_poi', fixture: poiArenaFixture },
   get_poi_station: { command: 'get_poi', fixture: stationPoiInfoFixture },
+  get_poi_station_contraband_default: { command: 'get_poi', fixture: stationPoiContrabandDefaultFixture },
   get_nearby: { command: 'get_nearby', fixture: nearbyFixture },
   get_nearby_boss: { command: 'get_nearby', fixture: nearbyBossFixture },
   get_nearby_livery: { command: 'get_nearby', fixture: nearbyLiveryFixture },
