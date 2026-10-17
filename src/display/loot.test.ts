@@ -722,6 +722,40 @@ test('single-item loot without xp prints Active Missions when envelope missions 
   expect(stdout.indexOf('=== Loot Wreck ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
 });
 
+test('loot_wreck_all prints one Active Missions table after the wreck loot heading', () => {
+  const missions = {
+    active: [
+      {
+        mission_id: 'mission-delivery-partial',
+        title: 'Food Delivery',
+        type: 'delivery',
+        objectives: [
+          {
+            description: 'Deliver Food Rations',
+            current: 2,
+            required: 5,
+            in_cargo: 0,
+            in_storage: 5,
+          },
+        ],
+        rewards: {},
+      },
+    ],
+    max_missions: 5,
+  };
+  const body = { ...lootWreckAllCargoFixture, missions };
+  const salvage = stdoutOf('loot_wreck', body);
+  const grouped = stdoutOf('storage loot', body);
+
+  expect(grouped).toBe(salvage);
+  expect(salvage).toContain('=== Wreck Loot ===');
+  expect(salvage).not.toContain('=== Loot Wreck ===');
+  expect(salvage.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(salvage).toContain('Deliver Food Rations 2/5 cargo:0 storage:5');
+  expect(salvage.indexOf('=== Wreck Loot ===')).toBeLessThan(salvage.indexOf('=== Active Missions ==='));
+  expect(salvage).not.toContain('=== Response ===');
+});
+
 test('json, yaml, structured, compact, and text modes keep or use the human tables', () => {
   const body = lootWreckAllCargoFixture;
   const json = stdoutOf('loot_wreck', body, { format: 'json' });

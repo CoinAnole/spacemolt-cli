@@ -517,7 +517,7 @@ const MUTATION_DOCK_STATE_QUERY_COMMANDS = [
   'player_profile',
 ] as const;
 
-/** Snapshots omit this appendix. 0.630.4 cargo and storage mutations are listed, including partial progress when the server sends the section. mission_objective_completed is not a command here. */
+/** Snapshots like get_status also carry V2Missions; print only after these mutations. */
 const POST_ACTION_MISSIONS_COMMANDS = [
   'jump',
   'dock',

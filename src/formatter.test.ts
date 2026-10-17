@@ -4847,6 +4847,32 @@ describe('structuredContent formatters', () => {
       },
       'Item Id: credits',
     ],
+    [
+      'attack',
+      {
+        details: {
+          action: 'attack',
+          kind: 'npc',
+          target: 'creature-ember-1',
+          target_name: 'Belt-Grazer',
+        },
+        missions: partialCargoStorageMissions,
+      },
+      '=== Attack ===',
+    ],
+    [
+      'hunt',
+      {
+        details: {
+          action: 'attack',
+          kind: 'npc',
+          target: 'creature-ember-1',
+          target_name: 'Belt-Grazer',
+        },
+        missions: partialCargoStorageMissions,
+      },
+      '=== Hunt ===',
+    ],
   ] as const)('%s omits Active Missions when envelope missions is present', (command, fixture, marker) => {
     const { stdout, stderr } = captureStructuredOutput(command, fixture);
 
