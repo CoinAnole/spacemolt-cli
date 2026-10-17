@@ -11,7 +11,7 @@ export const NOTIFICATION_TYPE_ENUM = [
 ] as const;
 
 export const NOTIFICATION_TYPES_FIELD_DESCRIPTION =
-  'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them.';
+  'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax.';
 
 export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_status: {
@@ -248,9 +248,9 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market,observation]',
     description:
-      'Poll queued game events across chat, combat, trade, market, crafting, observation, and system categories.',
+      'Poll queued game events across chat, combat, trade, market, crafting, observation, and system categories. An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
     example: 'spacemolt get_notifications limit=10 types=chat,market,observation',
-    seeAlso: ['get_status', 'get_action_log', 'notifications'],
+    seeAlso: ['get_status', 'get_action_log', 'notifications', 'unmute_notifications', 'get_notification_settings'],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_notifications',
     positionals: ['clear', 'limit', 'types'],
@@ -263,9 +263,10 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   notifications: {
     usage: '[clear=true/false] [limit=50] [types=chat,combat,market,observation]',
-    description: 'Poll pending game events via GET query parameters. Prefer get_notifications for the primary poll UX.',
+    description:
+      'Poll pending game events via GET query parameters. Prefer get_notifications for the primary poll UX. An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
     example: 'spacemolt notifications limit=10 clear=false types=chat,observation',
-    seeAlso: ['get_notifications', 'get_status', 'get_action_log'],
+    seeAlso: ['get_notifications', 'get_status', 'get_action_log', 'unmute_notifications', 'get_notification_settings'],
     category: 'Query commands',
     apiRoute: 'GET /api/v2/notifications',
     positionals: ['clear', 'limit', 'types'],

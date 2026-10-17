@@ -449,7 +449,8 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     positionals: ['primary_color', 'secondary_color'],
   },
   get_notification_settings: {
-    description: 'List notification channels and your current WebSocket mute settings.',
+    description:
+      'List each notification channel, the message types it covers, and whether it is muted. exchange_fills starts muted; while muted, HTTP get_notifications omits its exchange_fill frames.',
     example: 'spacemolt get_notification_settings',
     seeAlso: ['get_notifications', 'notifications', 'mute_notifications', 'unmute_notifications'],
     category: 'Player settings',
@@ -458,7 +459,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   mute_notifications: {
     usage: '<channels>',
     description:
-      'Mute WebSocket push channels (HTTP get_notifications is unaffected). support covers ally refueled_by / repaired_by pings. Muting chat.emergency opts you out of distress calls entirely (gameserver 0.608.0): it hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way; HTTP get_notifications is unaffected. See get_notification_settings for the catalog.',
+      'Mute WebSocket push channels. support covers ally refueled_by / repaired_by pings. Muting chat.emergency opts you out of distress calls entirely (gameserver 0.608.0): it hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way; HTTP get_notifications is unaffected. exchange_fills starts muted for every pilot (gameserver 0.630.0) and while muted is sent on no transport, including HTTP get_notifications; mute_notifications turns that opt-in off. See get_notification_settings for the catalog.',
     example: 'spacemolt mute_notifications channels=chat.system,support',
     seeAlso: ['get_notification_settings', 'unmute_notifications'],
     category: 'Player settings',
@@ -468,20 +469,30 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     schemaExtensions: {
       channels: {
         description:
-          'WebSocket mute channels (e.g. chat.system, battle_alerts, support, chat.emergency). Muting chat.emergency hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way. Catalog: get_notification_settings. HTTP polling is unaffected; filter with get_notifications types= instead.',
+          'WebSocket mute channels (e.g. chat.system, battle_alerts, support, chat.emergency, exchange_fills). Muting chat.emergency hides the distress ping and the mission_id needed to claim the rescue; nothing is assigned either way. Catalog: get_notification_settings. HTTP polling is unaffected for every channel except exchange_fills, which starts muted and while muted is sent on no transport, including get_notifications. Filter the other queued frames with get_notifications types=.',
       },
     },
   },
   unmute_notifications: {
     usage: '[channels] [all=true]',
     description:
-      'Unmute notification channels, or pass all=true to clear all WebSocket mutes. HTTP get_notifications is unaffected.',
-    example: 'spacemolt unmute_notifications all=true',
+      'Unmute notification channels, or pass all=true to clear all WebSocket mutes. HTTP get_notifications is unaffected, except exchange_fills (gameserver 0.630.0): it starts muted, and unmuting it by name or with all=true opts you in on every transport, including HTTP get_notifications.',
+    example: 'spacemolt unmute_notifications channels=exchange_fills; spacemolt unmute_notifications all=true',
     seeAlso: ['get_notification_settings', 'mute_notifications'],
     category: 'Player settings',
     apiRoute: 'POST /api/v2/spacemolt_social/unmute_notifications',
     positionals: ['channels', 'all'],
     arrayFields: ['channels'],
+    schemaExtensions: {
+      channels: {
+        description:
+          'Notification channels to unmute (e.g. exchange_fills). Unmuting exchange_fills by name opts you in on every transport, including HTTP get_notifications. Catalog: get_notification_settings.',
+      },
+      all: {
+        description:
+          'Unmute all channels (alternative to listing channels). all=true also opts you in to exchange_fills on every transport, including HTTP get_notifications.',
+      },
+    },
   },
   create_note: {
     usage: '<title> <content>  (create tradeable note)',

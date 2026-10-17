@@ -188,6 +188,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `analyze_market` no longer accepts or sends `item_id` or `page`. The v0.622.0 body has no properties, and the operation text says no parameters are needed. Those arguments were posted and not applied locally. Usage is `(no args)`. `item_id=` and `page=` are unknown fields. A bare token is unknown field `id`. Response output is unchanged.
 - `create_buy_order` and `buy` help: a hazardous instant fill goes to station storage when the ship has no hazmat cargo module (gameserver 0.628.3). Human output still prints `Delivered to cargo` and `Delivered to storage` when those integers are present, including 0. `--json`, `--yaml`, and `--structured` stay pass-through. **No parser change.**
 
+### Notifications
+
+- `mute_notifications`, `unmute_notifications`, `get_notification_settings`, `get_notifications`, and `notifications` help: `exchange_fills` starts muted for every pilot (gameserver 0.630.0) and while muted is sent on no transport, including HTTP `get_notifications`. Unmute it with `unmute_notifications channels=exchange_fills` or `all=true` to opt in on every transport, including that poll. An `exchange_fill` frame is type `trade`, so `types=trade` includes it, and the poll omits it until that unmute. `support` and `chat.emergency` stay WebSocket-only; HTTP polling is unaffected for those channels. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
+
 ### Fixed
 
 - Whole numbers outside the safe integer range (`|n| <= 2^53-1`) are preserved on v2 HTTP JSON and re-emitted by `--json`, `--yaml`, `--structured`, `--field`, `--fields`, and `--jq`. Notification amounts that used to fall back to `0` (`xp_gained`, damage labels, raid HP) print the digits. Human credit lines and notification `positiveNumber` print those digits as well.
