@@ -105,7 +105,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   forum_upvote: 'Upvote a thread or reply',
   get_action_log: 'Retrieve your or your faction persistent action history.',
   get_active_missions:
-    'View your active missions, progress, and the server-issued mission description. jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, and complete_mission already re-print this table when the server includes envelope missions on that command. Keep using get_active_missions for kill and crafting, and whenever the last mutation omitted missions. complete_mission prints remaining actives after the rewards block.',
+    'View your active missions, progress, and the server-issued mission description. jump, dock, mine, buy, sell, create_buy_order, create_sell_order, sell_wreck, scrap_wreck, survey_system, complete_mission, storage deposit, storage withdraw, storage loot, loot_wreck, craft, recycle, jettison, storage jettison, use_item, install_mod, and uninstall_mod re-print this table when the server includes envelope missions on that command. Partial cargo or storage progress reprints there. A kill, a crafting job that finishes on a later tick, a fill on a resting order, or a fleet or auto dock that completes an objective is an action_result whose command is mission_objective_completed. The CLI formats that frame when a notifications array already contains it. Cached gameserver text describes the unsolicited frame as a WebSocket v2 push. This CLI does not open a WebSocket. Keep using get_active_missions for kills and whenever the last mutation omitted missions. complete_mission prints remaining actives after the rewards block.',
   get_base:
     'Get docked station details. When facilities are damaged, table output shows the repair queue, hull recovery, combined supply shortages that count shared stock once, missing supplies, and how to deliver them. When authenticator production is blocked or price_limited, table output shows the sovereign mint report. It prints whichever of these the server sent, and more than one can appear in the same block: missing inputs such as Trade Crystals with buy order: yes or no per input, Price limits rows (station public buy and lowest public sell, in credits), and an internal mint-stage blocker. Status is printed as sent, including price_limited. price_limited means needed replenishment has public sell asks above the station public buy even if production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. Table output also prints Contraband mode and Contraband items from the station, including a mobile base, when the server sends those keys. The mode is printed as sent. default uses the general contraband rules. custom replaces them with the item ids. Null items print as (default rules). An empty item list when the mode is custom prints (none — all items allowed). Any other empty item list prints (none). An omitted key prints nothing. Item ids stay in server order. This is not the empire list from get_empire_info. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base.',
   get_battle_status:
@@ -129,7 +129,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_trades: 'View pending trade offers',
   get_version: 'Get game version and release notes.',
   get_wrecks: 'List wrecks and jettison containers at the current POI',
-  install_mod: 'Install a module on your ship',
+  install_mod:
+    'Install a module on your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:
     'Dump cargo into a lootable container; matching ore settles back into the belt when the container despawns.',
   join_faction: 'Join a faction via invitation',
@@ -193,10 +194,11 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   trade_decline:
     "Decline a trade offered to you. Nothing moves, and the offerer is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_decline. Fails with trade_not_found if the trade is already gone; check get_trades.",
   trade_offer: 'Offer a trade to another player',
-  uninstall_mod: 'Uninstall a module from your ship',
+  uninstall_mod:
+    'Uninstall a module from your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   unload_drone: 'Return a drone from your bay back to cargo',
   use_item:
-    'Use a consumable from cargo. Works in battle and mid-flight. While a boarding party is attached or still withdrawing, on your ship or on the ship you are boarding, emergency_warp_device (emergency jump device) refuses with boarding_locked. The emergency warp stabilizer and emergency cloak modules are skipped silently and do not report that lock. Flee makes no progress until the latch clears.',
+    'Use a consumable from cargo. Works in battle and mid-flight. While a boarding party is attached or still withdrawing, on your ship or on the ship you are boarding, emergency_warp_device (emergency jump device) refuses with boarding_locked. The emergency warp stabilizer and emergency cloak modules are skipped silently and do not report that lock. Flee makes no progress until the latch clears. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   view_completed_mission: 'View full details of a completed mission.',
   view_insurance: 'View your active insurance policies',
   view_ship_buy_orders: 'View your open ship buy orders across all stations',

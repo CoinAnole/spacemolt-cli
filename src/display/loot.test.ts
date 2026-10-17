@@ -650,12 +650,110 @@ test('storage_deposit with an xp object still falls through to the raw response'
       quantity: 4,
       xp_gained: { armor: 1 },
     },
+    missions: {
+      active: [
+        {
+          mission_id: 'mission-delivery-partial',
+          title: 'Food Delivery',
+          objectives: [
+            {
+              description: 'Deliver Food Rations',
+              current: 2,
+              required: 5,
+              in_cargo: 0,
+              in_storage: 5,
+            },
+          ],
+        },
+      ],
+      max_missions: 5,
+    },
   });
 
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Loot Wreck ===');
   expect(stdout).not.toContain('=== Deposit Items ===');
   expect(stdout).not.toContain('Skill XP:');
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(0);
+});
+
+test('single-item loot without xp prints Active Missions when envelope missions is present', () => {
+  const item = {
+    details: {
+      action: 'loot_wreck',
+      item_id: 'adamant_tooth',
+      quantity: 4,
+      wreck_empty: false,
+    },
+    missions: {
+      active: [
+        {
+          mission_id: 'mission-delivery-partial',
+          title: 'Food Delivery',
+          type: 'delivery',
+          objectives: [
+            {
+              description: 'Deliver Food Rations',
+              current: 2,
+              required: 5,
+              in_cargo: 0,
+              in_storage: 5,
+            },
+          ],
+          rewards: {},
+        },
+      ],
+      max_missions: 5,
+    },
+  };
+  expect(lootFormatters[0]?.(item.details, 'loot_wreck')).toBe(false);
+  expect(lootFormatters[0]?.(item.details, 'storage loot')).toBe(false);
+
+  const stdout = stdoutOf('loot_wreck', item);
+  const grouped = stdoutOf('storage loot', item);
+
+  expect(grouped).toBe(stdout);
+  expect(stdout).toContain('=== Loot Wreck ===');
+  expect(stdout).toContain('Item Id: adamant_tooth');
+  expect(stdout).not.toContain('=== Wreck Loot ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).toContain('Deliver Food Rations 2/5 cargo:0 storage:5');
+  expect(stdout.indexOf('=== Loot Wreck ===')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+});
+
+test('loot_wreck_all prints one Active Missions table after the wreck loot heading', () => {
+  const missions = {
+    active: [
+      {
+        mission_id: 'mission-delivery-partial',
+        title: 'Food Delivery',
+        type: 'delivery',
+        objectives: [
+          {
+            description: 'Deliver Food Rations',
+            current: 2,
+            required: 5,
+            in_cargo: 0,
+            in_storage: 5,
+          },
+        ],
+        rewards: {},
+      },
+    ],
+    max_missions: 5,
+  };
+  const body = { ...lootWreckAllCargoFixture, missions };
+  const salvage = stdoutOf('loot_wreck', body);
+  const grouped = stdoutOf('storage loot', body);
+
+  expect(grouped).toBe(salvage);
+  expect(salvage).toContain('=== Wreck Loot ===');
+  expect(salvage).not.toContain('=== Loot Wreck ===');
+  expect(salvage.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(salvage).toContain('Deliver Food Rations 2/5 cargo:0 storage:5');
+  expect(salvage.indexOf('=== Wreck Loot ===')).toBeLessThan(salvage.indexOf('=== Active Missions ==='));
+  expect(salvage).not.toContain('=== Response ===');
 });
 
 test('json, yaml, structured, compact, and text modes keep or use the human tables', () => {
