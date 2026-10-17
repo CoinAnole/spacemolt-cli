@@ -48,6 +48,8 @@ import {
   factionScanPoiPartialFixture,
   fleetArenaOnlyFixture,
   fleetFixture,
+  forumEditReplyFixture,
+  forumEditThreadFixture,
   forumThreadFixture,
   listBattlesArenaCaptureFixture,
   listBattlesEmptyFixture,
@@ -3889,6 +3891,183 @@ test('renders forum thread reply pagination metadata', () => {
   expect(stdout).toContain('Replies: 41');
   expect(stdout).toContain('reply page 2 | per page 20 | total replies 41');
   expect(stdout).toContain('More replies available.');
+});
+
+const FORUM_EDIT_THREAD_ID = forumEditThreadFixture.thread_id;
+const FORUM_EDIT_REPLY_ID = forumEditReplyFixture.reply_id;
+
+function renderForumEdit(
+  command: string,
+  fixture: Record<string, unknown>,
+  extra: Partial<GlobalOptions> = {},
+): string {
+  const rendered = renderStructuredResult(command, fixture, { ...options, ...extra }, context);
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  return rendered.stdout.join('\n');
+}
+
+function forumEditThreadReceipt(id: string, readLine: string): string {
+  return [`OK: Thread updated.`, `Thread ID: ${id}`, readLine].join('\n');
+}
+
+test('forum_edit_thread table output prints a UUID thread id and get_thread command', () => {
+  const readLine = `Read: spacemolt forum get_thread ${FORUM_EDIT_THREAD_ID}`;
+  const expected = forumEditThreadReceipt(FORUM_EDIT_THREAD_ID, readLine);
+  expect(renderForumEdit('forum_edit_thread', forumEditThreadFixture)).toBe(expected);
+  expect(renderForumEdit('forum edit_thread', forumEditThreadFixture)).toBe(expected);
+});
+
+test('forum_edit_thread prints the get_thread command for an uppercase UUID', () => {
+  const id = FORUM_EDIT_THREAD_ID.toUpperCase();
+  expect(renderForumEdit('forum_edit_thread', { message: 'Thread updated.', thread_id: id })).toBe(
+    forumEditThreadReceipt(id, `Read: spacemolt forum get_thread ${id}`),
+  );
+});
+
+test('forum_edit_thread prints prose and no shell command for a non-UUID thread id', () => {
+  const id = 'thread;rm';
+  const stdout = renderForumEdit('forum_edit_thread', { message: 'Thread updated.', thread_id: id });
+  expect(stdout).toBe(
+    forumEditThreadReceipt(id, 'Read the saved post with forum get_thread using the Thread ID above.'),
+  );
+  expect(stdout).not.toContain(`forum get_thread ${id}`);
+  expect(stdout).not.toContain('spacemolt forum get_thread');
+});
+
+test('forum_edit_thread does not interpolate a near-UUID or padded thread id', () => {
+  const prose = 'Read the saved post with forum get_thread using the Thread ID above.';
+  for (const id of [`${FORUM_EDIT_THREAD_ID};rm`, ` ${FORUM_EDIT_THREAD_ID} `]) {
+    const stdout = renderForumEdit('forum_edit_thread', { message: 'Thread updated.', thread_id: id });
+    expect(stdout).toBe(forumEditThreadReceipt(id, prose));
+    expect(stdout).not.toContain(`forum get_thread ${id}`);
+    expect(stdout).not.toContain('spacemolt forum get_thread');
+  }
+});
+
+test('forum_edit_reply table output prints the reply id and parent-thread prose', () => {
+  const expected = [
+    'OK: Reply updated.',
+    `Reply ID: ${FORUM_EDIT_REPLY_ID}`,
+    'Read the saved reply with forum get_thread on the parent thread.',
+  ].join('\n');
+  expect(renderForumEdit('forum_edit_reply', forumEditReplyFixture)).toBe(expected);
+  expect(renderForumEdit('forum edit_reply', forumEditReplyFixture)).toBe(expected);
+  expect(expected).not.toContain('spacemolt forum get_thread');
+  expect(expected).not.toContain(`forum get_thread ${FORUM_EDIT_REPLY_ID}`);
+});
+
+test('forum edit falls through when the id or message is missing or blank', () => {
+  expect(renderForumEdit('forum_edit_thread', { message: 'Thread updated.' })).toBe('OK: Thread updated.');
+  expect(renderForumEdit('forum_edit_thread', { message: 'Thread updated.', thread_id: '   ' })).toBe(
+    'OK: Thread updated.',
+  );
+  expect(renderForumEdit('forum_edit_thread', { message: 'Thread updated.', thread_id: 12 })).toBe(
+    'OK: Thread updated.',
+  );
+  expect(renderForumEdit('forum_edit_thread', { message: 'Thread updated.', reply_id: FORUM_EDIT_REPLY_ID })).toBe(
+    'OK: Thread updated.',
+  );
+  expect(renderForumEdit('forum_edit_reply', { message: 'Reply updated.' })).toBe('OK: Reply updated.');
+  expect(renderForumEdit('forum_edit_reply', { message: 'Reply updated.', reply_id: '' })).toBe('OK: Reply updated.');
+  expect(renderForumEdit('forum_edit_reply', { message: 'Reply updated.', thread_id: FORUM_EDIT_THREAD_ID })).toBe(
+    'OK: Reply updated.',
+  );
+
+  const blankMessage = renderForumEdit('forum_edit_thread', {
+    message: '   ',
+    thread_id: FORUM_EDIT_THREAD_ID,
+  });
+  expect(blankMessage).toBe('OK:    ');
+  expect(blankMessage).not.toContain('Thread ID:');
+  expect(blankMessage).not.toContain('spacemolt forum get_thread');
+
+  const missingMessage = renderForumEdit('forum_edit_thread', { thread_id: FORUM_EDIT_THREAD_ID });
+  expect(missingMessage).not.toContain('Thread ID:');
+  expect(missingMessage).not.toContain('spacemolt forum get_thread');
+  expect(missingMessage).toContain('Thread Id:');
+});
+
+test('forum edit still prints the id when extra scalar keys are present', () => {
+  const thread = renderForumEdit('forum_edit_thread', {
+    ...forumEditThreadFixture,
+    edited_at: '2026-10-16T00:00:00Z',
+  });
+  expect(thread).toBe(
+    forumEditThreadReceipt(FORUM_EDIT_THREAD_ID, `Read: spacemolt forum get_thread ${FORUM_EDIT_THREAD_ID}`),
+  );
+  expect(thread).not.toContain('Edited At');
+  expect(thread).not.toContain('=== Forum Edit Thread ===');
+
+  const reply = renderForumEdit('forum_edit_reply', {
+    ...forumEditReplyFixture,
+    edited_at: '2026-10-16T00:00:00Z',
+  });
+  expect(reply).toBe(
+    [
+      'OK: Reply updated.',
+      `Reply ID: ${FORUM_EDIT_REPLY_ID}`,
+      'Read the saved reply with forum get_thread on the parent thread.',
+    ].join('\n'),
+  );
+  expect(reply).not.toContain('Edited At');
+  expect(reply).not.toContain('=== Forum Edit Reply ===');
+});
+
+test('forum delete, reply, upvote, and create stay on their current formatters', () => {
+  expect(renderForumEdit('forum_delete_thread', { message: 'Thread deleted.', thread_id: FORUM_EDIT_THREAD_ID })).toBe(
+    'OK: Thread deleted.',
+  );
+  expect(renderForumEdit('forum_delete_reply', { message: 'Reply deleted.', reply_id: FORUM_EDIT_REPLY_ID })).toBe(
+    'OK: Reply deleted.',
+  );
+  expect(renderForumEdit('forum_upvote', { message: 'Upvoted.', thread_id: FORUM_EDIT_THREAD_ID })).toBe(
+    'OK: Upvoted.',
+  );
+
+  const reply = renderForumEdit('forum_reply', {
+    message: 'Reply posted.',
+    reply_id: FORUM_EDIT_REPLY_ID,
+    thread_id: FORUM_EDIT_THREAD_ID,
+  });
+  expect(reply).toContain('=== Forum Reply ===');
+  expect(reply).toContain(`Reply Id: ${FORUM_EDIT_REPLY_ID}`);
+  expect(reply).toContain(`Thread Id: ${FORUM_EDIT_THREAD_ID}`);
+  expect(reply).not.toContain('Reply ID:');
+  expect(reply).not.toContain('spacemolt forum get_thread');
+
+  const created = renderForumEdit('forum_create_thread', {
+    message: 'Thread created.',
+    thread_id: FORUM_EDIT_THREAD_ID,
+    title: 'New title',
+  });
+  expect(created).toContain('=== Forum Create Thread ===');
+  expect(created).toContain(`Thread Id: ${FORUM_EDIT_THREAD_ID}`);
+  expect(created).toContain('Title: New title');
+  expect(created).not.toContain('Thread ID:');
+  expect(created).not.toContain('spacemolt forum get_thread');
+});
+
+test('forum edit json, yaml, structured, and compact stay the structured content', () => {
+  for (const [command, fixture] of [
+    ['forum_edit_thread', forumEditThreadFixture],
+    ['forum_edit_reply', forumEditReplyFixture],
+  ] as const) {
+    const json = renderForumEdit(command, fixture, { format: 'json' });
+    expect(JSON.parse(json)).toEqual(fixture);
+    const flagged = renderForumEdit(command, fixture, { json: true });
+    expect(JSON.parse(flagged)).toEqual(fixture);
+    const structured = renderForumEdit(command, fixture, { structured: true });
+    expect(JSON.parse(structured)).toEqual(fixture);
+    const compact = renderForumEdit(command, fixture, { format: 'json', compact: true });
+    expect(JSON.parse(compact)).toEqual(fixture);
+    expect(compact).not.toContain('\n');
+    const yaml = renderForumEdit(command, fixture, { format: 'yaml' });
+    expect(yaml).toContain('message:');
+    expect(yaml).not.toContain('Thread ID:');
+    expect(yaml).not.toContain('Reply ID:');
+    expect(yaml).not.toContain('spacemolt forum get_thread');
+  }
 });
 
 test('renders chat history timestamps from v2 timestamp_utc field', () => {

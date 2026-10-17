@@ -145,6 +145,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Forum
 
 - `forum edit_thread` and `forum edit_reply` edit your own unlocked post (gameserver 0.629.0). A thread edit takes the id, then the title, then the body, the same order as `forum create_thread`. Leave out a title or a body to keep the saved text. Category cannot change. A body-only edit is one quoted `--content` or `content=` value, or `--content @file`. Unquoted words after `--content` are not a body-only edit: the next word is the body, the word after it becomes the title, and a further word replaces the body and drops the flag value. A reply edit takes the reply id, then the new text. Edits grant no XP, send no new-post notification, and preserve votes, timestamps, and ordering. **No parser change.**
+- `forum edit_thread` and `forum edit_reply` table output prints the edited id. A thread edit adds the copy-paste line `spacemolt forum get_thread <id>` only when that id is a UUID. Any other thread id prints a hint and no shell command. A reply edit prints the reply id and tells you to open the parent thread; it does not print a `forum get_thread` command. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
 
 ### Combat
 
