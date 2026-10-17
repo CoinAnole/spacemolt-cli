@@ -1572,6 +1572,16 @@ export const forumThreadFixture = {
   has_more: false,
 };
 
+export const forumEditThreadFixture = {
+  message: 'Thread updated.',
+  thread_id: 'a470d964-530a-427b-80e4-80a14a92116d',
+};
+
+export const forumEditReplyFixture = {
+  message: 'Reply updated.',
+  reply_id: '13b63bdc-c2cd-450b-993e-0fc981f0654e',
+};
+
 export const guideFixture = {
   guide: 'miner',
   content: 'Mine at asteroid belts, then sell ore at a station market.',
@@ -2409,6 +2419,16 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     },
   },
   forum_get_thread: { command: 'forum_get_thread', fixture: forumThreadFixture },
+  forum_edit_thread: {
+    command: 'forum_edit_thread',
+    fixture: forumEditThreadFixture,
+    schemaTarget: 'structuredContent',
+  },
+  forum_edit_reply: {
+    command: 'forum_edit_reply',
+    fixture: forumEditReplyFixture,
+    schemaTarget: 'structuredContent',
+  },
   get_guide: { command: 'get_guide', fixture: guideFixture },
   get_guide_list: { command: 'get_guide', fixture: guideListFixture },
 };

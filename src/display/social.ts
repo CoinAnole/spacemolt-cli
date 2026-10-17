@@ -1373,6 +1373,31 @@ export const socialFormatters = [
   ),
 
   formatter(
+    (r, command) => {
+      const thread = commandNameEquals(command, 'forum_edit_thread');
+      const reply = commandNameEquals(command, 'forum_edit_reply');
+      if (!thread && !reply) return false;
+      if (typeof r.message !== 'string' || r.message.trim() === '') return false;
+      const id = thread ? r.thread_id : r.reply_id;
+      if (typeof id !== 'string' || id.trim() === '') return false;
+
+      emitLine(`${c.green}OK:${c.reset} ${r.message}`);
+      emitLine(thread ? `Thread ID: ${id}` : `Reply ID: ${id}`);
+      // Pasted into a shell: interpolate only an 8-4-4-4-12 hex id.
+      const threadIdIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (thread && threadIdIsUuid) {
+        emitLine(`${c.dim}Read: spacemolt forum get_thread ${id}${c.reset}`);
+      } else if (thread) {
+        emitLine(`${c.dim}Read the saved post with forum get_thread using the Thread ID above.${c.reset}`);
+      } else if (reply) {
+        emitLine(`${c.dim}Read the saved reply with forum get_thread on the parent thread.${c.reset}`);
+      }
+      return true;
+    },
+    { commands: ['forum_edit_thread', 'forum_edit_reply'] },
+  ),
+
+  formatter(
     (r) => {
       if (r.content === undefined && !Array.isArray(r.guides)) return false;
       if (Array.isArray(r.guides)) {
