@@ -913,6 +913,13 @@ describe('help output branches', () => {
     expect(output).toContain('mission.completed');
     expect(output).toContain('Direct supplied');
     expect(output).toContain('direct_supplied');
+    expect(output).toContain('trading.exchange_fill');
+    expect(output).toContain('column Order');
+    expect(output).toContain('order_id');
+    expect(output).toContain('no resting order');
+    expect(output).toContain('Order is not the ID column');
+    expect(output).toContain('Non-strings do not print');
+    expect(output).toContain('longer than 80 characters');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');
     expect(output).toContain('faction.freight_claim_paid');
