@@ -106,6 +106,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'RAID':
       return c.red;
     case 'TRADE':
+    case 'FILL':
     case 'SCANNED':
     case 'PILOTLESS':
     case 'QUEUE':

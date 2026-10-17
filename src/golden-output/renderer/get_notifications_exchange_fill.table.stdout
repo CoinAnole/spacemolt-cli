@@ -1,0 +1,7 @@
+count 1
+
+=== Notifications ===
+
+  Timestamp           | Type          | Message                                                                                            
+  --------------------+---------------+----------------------------------------------------------------------------------------------------
+  2026-05-23 20:00:00 | exchange_fill | Sell filled: Iron Ore (ore_iron) x12 @ 1,500cr = 18,000cr at haven_exchange; order_id=ord_resting_1
