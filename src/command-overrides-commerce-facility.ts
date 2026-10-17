@@ -596,6 +596,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_list: {
     category: 'Facilities',
+    description:
+      "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3.",
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
   facility_owned: {
