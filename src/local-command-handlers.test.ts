@@ -481,6 +481,42 @@ describe('local command handlers', () => {
     expect(output).not.toContain('forum_reply');
   });
 
+  test('station set_contraband --help and missing-arg example rewrite every flat invocation', () => {
+    const helpHandler = resolveHandler(['station', 'set_contraband', '--help'], options);
+    expect(helpHandler?.name).toBe('station set_contraband');
+    if (!helpHandler) return;
+    const helpCapture = captureContext();
+    const helpParsed = helpHandler.parse(
+      ['station', 'set_contraband', '--help'],
+      { ...options, plain: true, profile: 'pilot' },
+      helpCapture.context,
+    );
+    expect(helpParsed.ok).toBe(false);
+    const helpOutput = helpCapture.stdout.join('\n');
+    expect(helpOutput).toContain('spacemolt station set_contraband ore_iron,ore_copper');
+    expect(helpOutput).toContain("spacemolt station set_contraband '[]'");
+    expect(helpOutput).not.toContain('station_set_contraband');
+
+    const errorHandler = resolveHandler(['station', 'set_contraband'], options);
+    expect(errorHandler?.name).toBe('station set_contraband');
+    if (!errorHandler) return;
+    const errorCapture = captureContext();
+    const errorParsed = errorHandler.parse(
+      ['station', 'set_contraband'],
+      { ...options, plain: true, profile: 'pilot' },
+      errorCapture.context,
+    );
+    expect(errorParsed.ok).toBe(false);
+    if (errorParsed.ok) return;
+    expect(errorParsed.error.code).toBe('exit');
+    const errorOutput = errorCapture.stderr.join('\n');
+    const example = exampleBlock(errorOutput);
+    expect(example).toContain('spacemolt station set_contraband ore_iron,ore_copper');
+    expect(example).toContain("spacemolt station set_contraband '[]'");
+    expect(example).not.toContain('station_set_contraband');
+    expect(errorOutput).not.toContain('station_set_contraband');
+  });
+
   test('nested API command missing required argument output uses grouped display name', () => {
     const handler = resolveHandler(['facility', 'list_for_sale'], options);
     expect(handler?.name).toBe('facility list_for_sale');

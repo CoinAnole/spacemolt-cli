@@ -31,10 +31,14 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
   }
 
   private displayConfig() {
+    const escapedCommand = this.action.command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return {
       ...this.action.config,
       serverHelpTopic: false as const,
-      example: this.action.config.example?.replace(`spacemolt ${this.action.command}`, `spacemolt ${this.name}`),
+      example: this.action.config.example?.replace(
+        new RegExp(`spacemolt ${escapedCommand}(?=$|[\\s"';&|)])`, 'g'),
+        `spacemolt ${this.name}`,
+      ),
       discoverWith: this.action.config.discoverWith?.map((command) => this.translateRelatedCommand(command)),
       seeAlso: this.action.config.seeAlso?.map((command) => this.translateRelatedCommand(command)),
     };
