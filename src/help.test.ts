@@ -2055,6 +2055,12 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('faction create_buy_order');
     expect(generatedSection).not.toContain('facility upgrade');
     expect(generatedSection).not.toContain('station info');
+    expect(generatedSection).not.toContain('facility set_contraband');
+    expect(generatedSection).not.toContain('facility_set_contraband');
+    expect(generatedSection).not.toContain('facility reset_contraband');
+    expect(generatedSection).not.toContain('facility_reset_contraband');
+    expect(generatedSection).not.toContain('station set_contraband');
+    expect(generatedSection).not.toContain('station reset_contraband');
   });
 
   test('showFullHelp emphasizes local help command discovery before server help', () => {

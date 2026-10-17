@@ -950,7 +950,14 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description: "Show the current configuration for your faction's station or outpost.",
     example: 'spacemolt station_info',
     discoverWith: ['get_status', 'get_base'],
-    seeAlso: ['build_base', 'build_outpost', 'station_set_name', 'station_set_auto_buy_fuel'],
+    seeAlso: [
+      'build_base',
+      'build_outpost',
+      'station_set_name',
+      'station_set_auto_buy_fuel',
+      'station_set_contraband',
+      'station_reset_contraband',
+    ],
     category: 'Station management',
     apiRoute: 'POST /api/v2/spacemolt_facility/station_info',
     positionals: [],
@@ -1054,6 +1061,35 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Station management',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_repair_price',
     positionals: ['price'],
+  },
+  station_set_contraband: {
+    usage: '<contraband_items>',
+    description:
+      'Replace the market contraband list with contraband_items on the faction-owned station or mobile base you are docked at. Requires ManageBases. Pass one item id, a comma-separated list, or []. [] allows all items. station reset_contraband restores the default rules. Existing stations keep those default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read contraband_mode and contraband_items from station info (raw response).',
+    example:
+      "spacemolt station_set_contraband ore_iron; spacemolt station_set_contraband ore_iron,ore_copper; spacemolt station_set_contraband '[]'",
+    discoverWith: ['station_info'],
+    seeAlso: ['station_info', 'station_reset_contraband', 'catalog'],
+    category: 'Station management',
+    apiRoute: 'POST /api/v2/spacemolt_facility/set_contraband',
+    positionals: ['contraband_items'],
+    arrayFields: ['contraband_items'],
+    schemaExtensions: {
+      contraband_items: {
+        description:
+          'Replacement item ids for this station or mobile base market contraband list. One id, comma-separated ids, or []. [] allows all items.',
+      },
+    },
+  },
+  station_reset_contraband: {
+    description:
+      'Restore the default market contraband rules on the faction-owned station or mobile base you are docked at. Requires ManageBases. station set_contraband replaces the list; [] on that command allows all items. Existing stations keep the default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read contraband_mode and contraband_items from station info (raw response).',
+    example: 'spacemolt station_reset_contraband',
+    discoverWith: ['station_info'],
+    seeAlso: ['station_info', 'station_set_contraband'],
+    category: 'Station management',
+    apiRoute: 'POST /api/v2/spacemolt_facility/reset_contraband',
+    positionals: [],
   },
   station_allow_player: {
     usage: '<player_id_or_username>',

@@ -1457,6 +1457,96 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
   });
 
+  test('station set_contraband sends one id, a comma list, or [] as a JSON array', () => {
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', 'ore_iron']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: ['ore_iron'],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', 'ore_iron,ore_copper']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: ['ore_iron', 'ore_copper'],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', 'ore_iron, ore_copper']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: ['ore_iron', 'ore_copper'],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', '[]']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: [],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', 'contraband_items=[]']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: [],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', '--contraband-items', 'ore_iron,ore_copper']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: ['ore_iron', 'ore_copper'],
+    });
+    expect(
+      applyPayloadTransforms(
+        'station_set_contraband',
+        convertInternalPayloadTypes(
+          parseInternalOk(['station_set_contraband', '--payload-json', '{"contraband_items":[]}']).payload,
+          'station_set_contraband',
+        ),
+        internalCommandRegistry,
+      ),
+    ).toEqual({
+      contraband_items: [],
+    });
+    expect(parseInternalOk(['station_reset_contraband']).payload).toEqual({});
+    expect(validateInternalRequiredArgs('station_set_contraband', {})).toBe('contraband_items');
+    expect(validateInternalRequiredArgs('station_reset_contraband', {})).toBeNull();
+  });
+
   test('pay_bounty accepts id/source positionals and empire aliases', () => {
     expect(parseOk(['pay_bounty', 'solarian']).payload).toEqual({ id: 'solarian' });
     expect(parseOk(['pay_bounty', 'solarian', 'faction']).payload).toEqual({
