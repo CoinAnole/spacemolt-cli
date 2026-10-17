@@ -104,6 +104,8 @@ const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>
   forum_reply: {},
   forum_upvote: {},
   forum_delete_reply: {},
+  forum_edit_thread: {},
+  forum_edit_reply: {},
   citizenship_apply: {},
   citizenship_renounce: {},
   citizenship_withdraw: {},

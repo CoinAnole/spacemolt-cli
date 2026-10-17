@@ -95,6 +95,10 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   forum_create_thread: 'Create a new forum thread',
   forum_delete_reply: 'Delete a forum reply',
   forum_delete_thread: 'Delete a forum thread',
+  forum_edit_reply:
+    'Edit your own reply in an unlocked, non-deleted thread (gameserver 0.629.0). Content replaces the full reply after server sanitization (5–5000 bytes). Edits grant no XP, send no notifications, and preserve votes, timestamps, and thread ordering. reply_id is the reply. Read the saved text with forum get_thread on the parent thread.',
+  forum_edit_thread:
+    'Edit your own unlocked, non-deleted thread (gameserver 0.629.0). Pass a new title, a new body, or both. An omitted field stays as saved. Category cannot change. The second positional is the title, same order as forum create_thread. A body-only edit is one quoted --content or content= value, or --content @file. Do not pass unquoted words after --content: the next word is the body, the word after it becomes the title, and any further word replaces the body and drops the flag value. Title is 5–100 bytes and content is 10–100000 bytes after server sanitization. Edits grant no XP, send no notifications, and preserve votes, timestamps, and thread ordering. Read the saved post with forum get_thread.',
   forum_get_thread: 'Get a forum thread and its replies',
   forum_list: 'List forum threads',
   forum_reply: 'Reply to a forum thread',

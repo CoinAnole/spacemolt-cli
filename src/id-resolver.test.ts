@@ -944,6 +944,21 @@ describe('cached ID payload resolver', () => {
       type: 'payload',
       payload: { target: 'note-1' },
     });
+    expect(prepareInternalPayload('forum_edit_thread', { thread_id: 'note-1' }, options(), sessionPath)).toEqual({
+      type: 'payload',
+      payload: { target: 'note-1' },
+    });
+    expect(
+      prepareInternalPayload(
+        'forum_edit_reply',
+        { reply_id: 'note-1', content: 'updated reply' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'note-1', content: 'updated reply' },
+    });
   });
 
   test('does not resolve empire targets as players', () => {
