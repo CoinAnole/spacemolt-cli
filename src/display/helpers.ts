@@ -810,6 +810,34 @@ function printableMintShortages(value: unknown): string[] {
   return lines;
 }
 
+function formatMintCreditAmount(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return `${value.toLocaleString()} credits`;
+  if (typeof value === 'number' && Number.isSafeInteger(value)) return `${value.toLocaleString()} credits`;
+  return undefined;
+}
+
+function formatMintPriceLimit(row: Record<string, unknown>): string | undefined {
+  const name = nonEmptyString(row.name) ?? nonEmptyString(row.item_id);
+  if (!name) return undefined;
+  const buy = formatMintCreditAmount(row.station_buy_price);
+  const sell = formatMintCreditAmount(row.lowest_sell_price);
+  const detail = [buy ? `station buy ${buy}` : undefined, sell ? `lowest sell ${sell}` : undefined]
+    .filter((part): part is string => Boolean(part))
+    .join(', ');
+  return detail ? `${name}: ${detail}` : name;
+}
+
+function printableMintPriceLimits(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const lines: string[] = [];
+  for (const row of value) {
+    if (!isRecord(row)) continue;
+    const formatted = formatMintPriceLimit(row);
+    if (formatted) lines.push(formatted);
+  }
+  return lines;
+}
+
 function hasPrintableMintBlocker(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value)) return false;
   return Boolean(
@@ -828,6 +856,7 @@ function hasPrintableMint(mint: Record<string, unknown>): boolean {
   if (nonEmptyString(mint.output_name) || nonEmptyString(mint.output_item_id)) return true;
   if (nonEmptyString(mint.remediation)) return true;
   if (printableMintShortages(mint.shortages).length) return true;
+  if (printableMintPriceLimits(mint.price_limits).length) return true;
   return Array.isArray(mint.internal_blockers) && mint.internal_blockers.some(hasPrintableMintBlocker);
 }
 
@@ -868,6 +897,12 @@ export function emitSovereignMint(mint: unknown): boolean {
     for (const line of combined) emitLine(`  ${line}`);
   }
 
+  const priceLimits = printableMintPriceLimits(mint.price_limits);
+  if (priceLimits.length) {
+    emitLine('Price limits:');
+    for (const line of priceLimits) emitLine(`  ${line}`);
+  }
+
   if (Array.isArray(mint.internal_blockers)) {
     const blockers = mint.internal_blockers.filter(hasPrintableMintBlocker);
     if (blockers.length) {
@@ -878,7 +913,7 @@ export function emitSovereignMint(mint: unknown): boolean {
 
   const remediation = nonEmptyString(mint.remediation);
   if (remediation) {
-    if (combined.length) emitLine('');
+    if (combined.length || priceLimits.length) emitLine('');
     emitLine(remediation);
   }
   return true;
