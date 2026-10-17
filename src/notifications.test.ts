@@ -1350,6 +1350,7 @@ describe('notification formatting', () => {
       fleet_kicked: 'You were kicked from the fleet (tick 1523)',
       fleet_disbanded: 'Fleet disbanded (tick 1523)',
       mobile_capital_transit: 'Mobile Capital jumped (tick 1523)',
+      mission_objective_completed: 'Mission objective completed (tick 1523)',
     };
     const STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
 
@@ -1387,10 +1388,15 @@ describe('notification formatting', () => {
 
       expect(preview.headline).toBe(expectedHeadline);
       expect(preview.headline).toContain('tick');
-      expect(preview.headline).not.toContain('completed');
       expect(output).toContain('[ACTION RESULT]');
       expect(output).toContain(expectedHeadline);
-      expect(output).not.toContain('completed');
+      if (command === 'mission_objective_completed') {
+        expect(preview.headline).not.toContain('mission_objective_completed completed');
+        expect(output).not.toContain('mission_objective_completed completed');
+      } else {
+        expect(preview.headline).not.toContain('completed');
+        expect(output).not.toContain('completed');
+      }
       if (STATUS_HINT_COMMANDS.has(command)) {
         expect(preview.details).toContain('Use: get_status');
         expect(output).toContain('Use: get_status');
@@ -1567,6 +1573,275 @@ describe('notification formatting', () => {
         data: { command: 'player_died' },
       });
       expect(preview.headline).toBe('You died (tick ?)');
+    });
+
+    function omittedKeys(hint: string | undefined): string[] {
+      if (!hint?.startsWith('omitted: ')) return [];
+      return hint
+        .slice('omitted: '.length)
+        .replace(/, \+\d+ more$/, '')
+        .split(', ')
+        .filter((key) => key.length > 0);
+    }
+
+    test('mission_objective_completed headline names the event without a progress suffix', () => {
+      expect(actionResultEventHeadline('mission_objective_completed', 1523)).toBe(
+        'Mission objective completed (tick 1523)',
+      );
+      expect(actionResultEventHeadline('mission_objective_completed', undefined)).toBe(
+        'Mission objective completed (tick ?)',
+      );
+      const mixed = formatNotificationPreview(actionResultNote('Mission_Objective_Completed'));
+      expect(mixed.headline).toBe('Mission objective completed (tick 1523)');
+      expect(mixed.headline).not.toContain('mission_objective_completed completed');
+      const missingTick = formatNotificationPreview({
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: { command: 'mission_objective_completed' },
+      });
+      expect(missingTick.headline).toBe('Mission objective completed (tick ?)');
+    });
+
+    test('completed objective on a later mission is the headline suffix', () => {
+      const completedSummary = 'Deliver Food Rations 5/5 cargo:0 storage:5';
+      const completedLine = `Faction Supply Delivery (mission-faction-delivery-1): ${completedSummary}`;
+      const surveyLine = 'Survey Belt (mission-survey-1): Survey Sol 1/3';
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          ship: bulkyShip,
+          location: bulkyLocation,
+          cargo: [{ item_id: 'ore_iron', item_name: 'Iron Ore', quantity: 12 }],
+          missions: {
+            active: [
+              {
+                title: 'Survey Belt',
+                mission_id: 'mission-survey-1',
+                objectives: [{ description: 'Survey Sol', current: 1, required: 3, completed: false }],
+              },
+              {
+                title: 'Faction Supply Delivery',
+                mission_id: 'mission-faction-delivery-1',
+                objectives: [
+                  {
+                    description: 'Deliver Food Rations',
+                    current: 5,
+                    required: 5,
+                    in_cargo: 0,
+                    in_storage: 5,
+                    completed: true,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const keys = omittedKeys(preview.omittedHint);
+
+      expect(actionResultEventHeadline('mission_objective_completed', 1523, notification.data)).toBe(
+        'Mission objective completed (tick 1523)',
+      );
+      expect(preview.headline).toBe(`Mission objective completed (tick 1523): ${completedSummary}`);
+      expect(preview.headline).not.toContain('Survey Sol');
+      expect(preview.headline).not.toContain('mission_objective_completed completed');
+      expect(preview.details[0]).toBe('Docked at: Haven Exchange (haven_exchange)');
+      expect(preview.details[1]).toBe(completedLine);
+      expect(preview.details[2]).toBe(surveyLine);
+      expect(completedLine).not.toContain('completed');
+      expect(keys).toContain('ship');
+      expect(keys).toContain('location');
+      expect(keys).not.toContain('missions');
+      expect(output).toContain(completedLine);
+      expect(output).not.toContain('ILC Knurl');
+      expect(output).not.toContain('Dust Devil');
+      expect(output).not.toContain('Iron Ore');
+      expect(output).not.toContain('ore_iron');
+      expect(output).not.toContain('=== Active Missions ===');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('mission progress keeps eight detail lines and overflows the rest', () => {
+      const mission = (n: number, completed = false) => ({
+        title: `Job ${n}`,
+        mission_id: `id-${n}`,
+        objectives: [{ description: `Step ${n}`, current: n, required: 9, completed }],
+      });
+      const lineFor = (n: number) => `Job ${n} (id-${n}): Step ${n} ${n}/9`;
+      const nine = formatNotificationPreview(
+        actionResultNote('mission_objective_completed', {
+          result: { missions: { active: Array.from({ length: 9 }, (_, index) => mission(index + 1, index === 8)) } },
+        }),
+      );
+
+      expect(nine.details).toHaveLength(8);
+      expect(nine.details[7]).toBe('+2 more missions');
+      expect(nine.details.slice(0, 7)).toEqual([9, 1, 2, 3, 4, 5, 6].map(lineFor));
+      expect(nine.headline).toBe('Mission objective completed (tick 1523): Step 9 9/9');
+      expect(nine.headline).not.toContain('more missions');
+      expect(nine.details.join('\n')).not.toContain(lineFor(7));
+      expect(nine.details.join('\n')).not.toContain(lineFor(8));
+
+      const eight = formatNotificationPreview(
+        actionResultNote('mission_objective_completed', {
+          result: { missions: { active: Array.from({ length: 8 }, (_, index) => mission(index + 1)) } },
+        }),
+      );
+      expect(eight.details).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map(lineFor));
+      expect(eight.headline).toBe('Mission objective completed (tick 1523): Step 1 1/9');
+    });
+
+    test('empty active envelope prints (none) and drops missions from the hint', () => {
+      const quietLocation = { poi_name: 'Haven Exchange', nearby_players: [{ username: 'ILC Knurl' }] };
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          ship: bulkyShip,
+          location: quietLocation,
+          missions: { active: [] },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const keys = omittedKeys(preview.omittedHint);
+
+      expect(preview.headline).toBe('Mission objective completed (tick 1523)');
+      expect(preview.headline).not.toContain('(none)');
+      expect(preview.details).toEqual(['Active missions: (none)']);
+      expect(keys).toContain('ship');
+      expect(keys).toContain('location');
+      expect(keys).not.toContain('missions');
+      expect(output).toContain('Active missions: (none)');
+      expect(output).not.toContain('ILC Knurl');
+      expect(output).not.toContain('Dust Devil');
+      expectNoNestedJsonDump(output);
+
+      const capped = formatNotificationPreview(
+        actionResultNote('mission_objective_completed', {
+          result: {
+            ship: bulkyShip,
+            location: quietLocation,
+            missions: { active: [], max_missions: 5 },
+          },
+        }),
+      );
+      expect(capped.headline).toBe('Mission objective completed (tick 1523)');
+      expect(capped.details).toEqual(['Active missions: (none) (0/5)']);
+      expect(omittedKeys(capped.omittedHint)).not.toContain('missions');
+
+      const nonFinite = formatNotificationPreview(
+        actionResultNote('mission_objective_completed', {
+          result: { missions: { active: [], max_missions: '5' }, ship: bulkyShip },
+        }),
+      );
+      expect(nonFinite.details).toEqual(['Active missions: (none)']);
+      expect(nonFinite.headline).toBe('Mission objective completed (tick 1523)');
+      expect(omittedKeys(nonFinite.omittedHint)).not.toContain('missions');
+
+      const nonRecords = formatNotificationPreview(
+        actionResultNote('mission_objective_completed', {
+          result: { missions: { active: [null, 'Secret Survey', 1], max_missions: 4 }, ship: bulkyShip },
+        }),
+      );
+      expect(nonRecords.headline).toBe('Mission objective completed (tick 1523)');
+      expect(nonRecords.details).toEqual(['Active missions: (none) (0/4)']);
+      expect(nonRecords.details.join('\n')).not.toContain('Secret Survey');
+      expect(omittedKeys(nonRecords.omittedHint)).not.toContain('missions');
+    });
+
+    test('non-envelope missions object stays in the omitted hint', () => {
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          ship: bulkyShip,
+          location: { poi_name: 'Haven Exchange' },
+          missions: { board: [{ title: 'Secret Survey' }] },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const keys = omittedKeys(preview.omittedHint);
+
+      expect(preview.headline).toBe('Mission objective completed (tick 1523)');
+      expect(preview.details).toEqual([]);
+      expect(keys).toContain('missions');
+      expect(keys).toContain('ship');
+      expect(keys).toContain('location');
+      expect(output).not.toContain('Secret Survey');
+      expect(output).not.toContain('Active missions:');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('label-only completed mission stays under the unsuffixed headline', () => {
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          missions: {
+            active: [
+              {
+                title: 'Survey',
+                mission_id: 'm-2',
+                objectives: [{ description: 'Chart Sol', current: 1, required: 2 }],
+              },
+              { title: 'Supply: Food', mission_id: 'm-1', objectives: [{ completed: true }] },
+            ],
+          },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+
+      expect(preview.headline).toBe('Mission objective completed (tick 1523)');
+      expect(preview.headline).not.toContain('Chart Sol');
+      expect(preview.headline).not.toContain('Food');
+      expect(preview.details).toEqual(['Supply: Food (m-1)', 'Survey (m-2): Chart Sol 1/2']);
+    });
+
+    test('a mission detail longer than 80 leaves the Message cell as the suffixed headline', () => {
+      const label = 'Food (m1)';
+      const prefix = `${label}: `;
+      const summary = 'Deliver Food Rations'.padEnd(80 - prefix.length + 1, 'x');
+      const line = `${prefix}${summary}`;
+      const headline = `Mission objective completed (tick 1523): ${summary}`;
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          missions: {
+            active: [{ title: 'Food', mission_id: 'm1', objectives: [{ description: summary, completed: true }] }],
+          },
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      const message = formatNotificationMessage(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+
+      expect(summary.length).toBeGreaterThan(64);
+      expect(line.length).toBe(81);
+      expect(preview.details[0]).toBe(line);
+      expect(preview.headline).toBe(headline);
+      expect(message).toBe(headline);
+      expect(message).not.toContain(label);
+      expect(message).not.toContain(';');
+      expect(output).toContain(line);
+    });
+
+    test('a mission detail of 80 or fewer folds and repeats the summary in the Message cell', () => {
+      const label = 'Food (m1)';
+      const prefix = `${label}: `;
+      const summary = 'Deliver Food Rations'.padEnd(80 - prefix.length, 'x');
+      const line = `${prefix}${summary}`;
+      const headline = `Mission objective completed (tick 1523): ${summary}`;
+      const notification = actionResultNote('mission_objective_completed', {
+        result: {
+          missions: {
+            active: [{ title: 'Food', mission_id: 'm1', objectives: [{ description: summary, completed: true }] }],
+          },
+        },
+      });
+      const message = formatNotificationMessage(notification);
+      const first = message.indexOf(summary);
+
+      expect(line.length).toBe(80);
+      expect(formatNotificationPreview(notification).details[0]).toBe(line);
+      expect(message).toBe(`${headline}; ${line}`);
+      expect(message.indexOf(summary, first + summary.length)).toBeGreaterThan(first);
     });
   });
 
