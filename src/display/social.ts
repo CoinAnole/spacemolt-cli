@@ -229,6 +229,14 @@ function formatYesBlank(value: unknown): string | undefined {
   return value === true ? 'yes' : undefined;
 }
 
+/** Opaque exchange order id. Split the first line, then trim. Strings only. */
+function formatActionLogOrderId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const first = value.split(/\r?\n/, 1)[0] ?? '';
+  const trimmed = first.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
 function formatYesFlags(flags: Array<[string, unknown]>): string | undefined {
   const parts = flags.filter(([, value]) => value === true).map(([label]) => label);
   return parts.length ? parts.join(' ') : undefined;
@@ -1426,6 +1434,8 @@ export const socialFormatters = [
           : undefined;
         const missionCompleted = eventType === 'mission.completed';
         const directSuppliedDisplay = missionCompleted ? formatYesBlank(scalarFrom('direct_supplied')) : undefined;
+        const exchangeFill = eventType === 'trading.exchange_fill';
+        const orderDisplay = exchangeFill ? formatActionLogOrderId(scalarFrom('order_id')) : undefined;
         const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1466,6 +1476,8 @@ export const socialFormatters = [
         if (graceDisplay !== undefined) row.grace_display = graceDisplay;
         if (facilitiesDisplay !== undefined) row.facilities_display = facilitiesDisplay;
         if (directSuppliedDisplay !== undefined) row.direct_supplied_display = directSuppliedDisplay;
+        delete row.order_display;
+        if (orderDisplay !== undefined) row.order_display = orderDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1501,6 +1513,9 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['facilities_display'])) columns.push(['Facilities', ['facilities_display']]);
       if (hasAnyField(rows, ['direct_supplied_display'])) {
         columns.push(['Direct supplied', ['direct_supplied_display']]);
+      }
+      if (hasAnyField(rows, ['order_display'])) {
+        columns.push(['Order', ['order_display']]);
       }
       if (hasAnyField(rows, ['base_display', 'base_name', 'base_id'])) {
         columns.push(['Base', ['base_display', 'base_name', 'base_id']]);

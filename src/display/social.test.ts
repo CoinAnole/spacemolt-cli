@@ -263,6 +263,21 @@ function missionEntry(
   };
 }
 
+function fillEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 801,
+    created_at: '2026-10-16T12:00:00.000Z',
+    event_type: 'trading.exchange_fill',
+    category: 'trading',
+    summary: 'Sell order filled at Haven Exchange.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function expectNoPrizeOrLocation(header: string | undefined): void {
   expect(header).toBeDefined();
   expect(header).not.toContain('Prize');
@@ -1680,6 +1695,413 @@ test('keeps direct_supplied on json, yaml, structured, and compact output', () =
   expect(actionLogCell(human, 'mission.completed', 'Direct supplied')).toBe('yes');
   expect(human).not.toContain('DETAIL_MESSAGE_TOKEN');
   expect(human).not.toContain('direct_supplied_display');
+});
+
+test('lifts order_id for trading.exchange_fill', () => {
+  const stdout = renderActionLog(
+    actionLogPage([fillEntry({ order_id: 'ord_resting_1', base_id: 'haven_exchange', base_name: 'Haven Exchange' })]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Order');
+  expect(columns).toContain('Base');
+  expect(columns[0]).toBe('ID');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Base')).toBe('Haven Exchange');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Event')).toBe('trading.exchange_fill');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'ID')).toBe('801');
+  expect(columns[columns.indexOf('Order') + 1]).toBe('Base');
+  expect(stdout).not.toContain('order_display');
+});
+
+test('lifts base_id when trading.exchange_fill has no base_name', () => {
+  const stdout = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_resting_1', base_id: 'haven_exchange' })]));
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Base')).toBe('haven_exchange');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Order')).toBe('ord_resting_1');
+});
+
+test('omits Order when trading.exchange_fill has no printable order_id', () => {
+  const deleted = fillEntry(undefined);
+  delete deleted.data;
+  const pages = [
+    fillEntry(undefined),
+    fillEntry({}),
+    deleted,
+    fillEntry({ order_id: null }),
+    fillEntry({ order_id: '' }),
+  ];
+  for (const entry of pages) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    const label = JSON.stringify(entry.data ?? null);
+    expect(actionLogHeaderColumns(stdout), label).not.toContain('Order');
+    expect(actionLogCell(stdout, 'trading.exchange_fill', 'Event'), label).toBe('trading.exchange_fill');
+  }
+});
+
+test('leaves a blank Order cell beside a fill that omits order_id', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      fillEntry({ order_id: 'ord_resting_1' }),
+      fillEntry(undefined, { id: 802, summary: 'Spot sell filled at Haven Exchange.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(stdout)).toContain('Order');
+  expect(actionLogCell(stdout, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(stdout, 'Spot sell', 'Order')).toBe('');
+});
+
+test('does not lift order_id off other events', () => {
+  const events = [
+    {
+      event_type: 'trading.order_filled',
+      category: 'trading',
+      summary: 'Faction repair procurement filled.',
+    },
+    {
+      event_type: 'trading.escrow_refunded',
+      category: 'trading',
+      summary: 'Modify-order buy-cross refund.',
+    },
+    {
+      event_type: 'ship.buy_order_filled',
+      category: 'ship',
+      summary: 'Prospector buy order filled at Nova Terra Central.',
+    },
+    {
+      event_type: 'combat.pirate_destroyed',
+      category: 'combat',
+      summary: 'Destroyed pirate Corsair.',
+    },
+  ] as const;
+  for (const event of events) {
+    const baseId = event.event_type === 'ship.buy_order_filled' ? 'nova-terra-central' : 'haven_exchange';
+    for (const placement of ['data', 'entry'] as const) {
+      const data = placement === 'data' ? { order_id: 'ord_resting_1', base_id: baseId } : { base_id: baseId };
+      const entry = fillEntry(data, {
+        event_type: event.event_type,
+        category: event.category,
+        summary: event.summary,
+        ...(placement === 'entry' ? { order_id: 'ord_resting_1' } : {}),
+      });
+      const stdout = renderActionLog(actionLogPage([entry], event.category));
+      const label = `${event.event_type} ${placement}`;
+      expect(actionLogHeaderColumns(stdout), label).not.toContain('Order');
+      expect(stdout, label).not.toContain('ord_resting_1');
+      expect(actionLogCell(stdout, event.event_type, 'Event'), label).toBe(event.event_type);
+      if (event.event_type === 'ship.buy_order_filled') {
+        expect(actionLogCell(stdout, event.event_type, 'Base'), label).toBe('nova-terra-central');
+      }
+    }
+  }
+
+  for (const entry of [
+    pirateEntry({ order_id: 'ord_resting_1', credits_earned: 1500 }),
+    pirateEntry({ credits_earned: 1500 }, { order_id: 'ord_resting_1' }),
+  ]) {
+    const pirate = renderActionLog(actionLogPage([entry], 'combat'));
+    expect(actionLogHeaderColumns(pirate)).not.toContain('Order');
+    expect(actionLogHeaderColumns(pirate)).toContain('Credits');
+    expect(actionLogCell(pirate, 'Corsair', 'Credits')).toBe('1,500cr');
+    expect(pirate).not.toContain('ord_resting_1');
+  }
+});
+
+test('does not treat a prefix, different case, data event_type, or losing type as trading.exchange_fill', () => {
+  const rejected = [
+    fillEntry({ order_id: 'ord_resting_1' }, { event_type: 'trading.exchange_fill.extra' }),
+    fillEntry({ order_id: 'ord_resting_1' }, { event_type: 'TRADING.EXCHANGE_FILL' }),
+    fillEntry(
+      { order_id: 'ord_resting_1' },
+      {
+        event_type: 'crafting.completed',
+        data: { event_type: 'trading.exchange_fill', order_id: 'ord_resting_1' },
+      },
+    ),
+    fillEntry(
+      { order_id: 'ord_resting_1' },
+      {
+        event_type: 'crafting.completed',
+        type: 'trading.exchange_fill',
+      },
+    ),
+  ];
+  for (const entry of rejected) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(entry.event_type)).not.toContain('Order');
+    expect(stdout, JSON.stringify(entry.event_type)).not.toContain('ord_resting_1');
+  }
+});
+
+test('lifts order_id from type when event_type is absent and from a trimmed event type', () => {
+  const order = { order_id: 'ord_resting_1' };
+  const fromType = fillEntry(order, { type: 'trading.exchange_fill' });
+  delete fromType.event_type;
+  const typeStdout = renderActionLog(actionLogPage([fromType]));
+  expect(actionLogCell(typeStdout, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(typeStdout, 'Sell order filled', 'Event')).toBe('trading.exchange_fill');
+
+  const emptyEvent = fillEntry(order, { type: 'trading.exchange_fill', event_type: '' });
+  const emptyStdout = renderActionLog(actionLogPage([emptyEvent]));
+  expect(actionLogCell(emptyStdout, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(emptyStdout, 'Sell order filled', 'Event')).toBe('trading.exchange_fill');
+
+  const whitespaceEvent = fillEntry(order, { type: 'trading.exchange_fill', event_type: '   ' });
+  const whitespaceStdout = renderActionLog(actionLogPage([whitespaceEvent]));
+  expect(actionLogCell(whitespaceStdout, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(whitespaceStdout, 'Sell order filled', 'Event')).toBe('');
+
+  const trimmed = renderActionLog(actionLogPage([fillEntry(order, { event_type: ' trading.exchange_fill ' })]));
+  expect(actionLogCell(trimmed, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(trimmed, 'Sell order filled', 'Event')).toBe('trading.exchange_fill');
+});
+
+test('prefers entry-level order_id over data except for null and empty string', () => {
+  const entryWins = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: 'ord_entry' })]));
+  expect(actionLogCell(entryWins, 'Sell order filled', 'Order')).toBe('ord_entry');
+  expect(entryWins).not.toContain('ord_data');
+
+  const nullFallsThrough = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: null })]));
+  expect(actionLogCell(nullFallsThrough, 'Sell order filled', 'Order')).toBe('ord_data');
+
+  const emptyFallsThrough = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: '' })]));
+  expect(actionLogCell(emptyFallsThrough, 'Sell order filled', 'Order')).toBe('ord_data');
+
+  const whitespaceBlocks = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: '   ' })]));
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Order');
+  expect(whitespaceBlocks).not.toContain('ord_data');
+
+  const numberBlocks = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: 12 })]));
+  expect(actionLogHeaderColumns(numberBlocks)).not.toContain('Order');
+  expect(numberBlocks).not.toContain('ord_data');
+});
+
+test('omits Order for non-string order_id values', () => {
+  const badValues: unknown[] = [
+    0,
+    12,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number('9007199254740993'),
+    0n,
+    9007199254740993n,
+    true,
+    false,
+    { bad: true },
+    ['ord_resting_1'],
+  ];
+  for (const value of badValues) {
+    const label =
+      typeof value === 'bigint' ? `${value}n` : typeof value === 'number' ? String(value) : JSON.stringify(value);
+    const onData = renderActionLog(actionLogPage([fillEntry({ order_id: value })]));
+    expect(actionLogHeaderColumns(onData), label).not.toContain('Order');
+    expect(onData, label).not.toContain('9007199254740992');
+    expect(onData, label).not.toContain('9007199254740993');
+    expect(onData, label).not.toContain('[object Object]');
+    expect(onData, label).not.toContain('true');
+    expect(onData, label).not.toContain('false');
+    expect(onData, label).not.toContain('ord_resting_1');
+
+    const onEntry = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_data' }, { order_id: value })]));
+    expect(actionLogHeaderColumns(onEntry), `entry ${label}`).not.toContain('Order');
+    expect(onEntry, `entry ${label}`).not.toContain('ord_data');
+    expect(onEntry, `entry ${label}`).not.toContain('9007199254740992');
+    expect(onEntry, `entry ${label}`).not.toContain('9007199254740993');
+    expect(onEntry, `entry ${label}`).not.toContain('[object Object]');
+    expect(onEntry, `entry ${label}`).not.toContain('true');
+    expect(onEntry, `entry ${label}`).not.toContain('false');
+    expect(onEntry, `entry ${label}`).not.toContain('ord_resting_1');
+  }
+});
+
+test('prints order_id strings without rewriting digits or extra lines', () => {
+  const padded = renderActionLog(actionLogPage([fillEntry({ order_id: '  ord_resting_1  ' })]));
+  expect(actionLogCell(padded, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+
+  const digits = renderActionLog(actionLogPage([fillEntry({ order_id: '007' })]));
+  expect(actionLogCell(digits, 'Sell order filled', 'Order')).toBe('007');
+
+  const unsafe = renderActionLog(actionLogPage([fillEntry({ order_id: '9007199254740993' })]));
+  const unsafeCell = actionLogCell(unsafe, 'Sell order filled', 'Order');
+  expect(unsafeCell).toBe('9007199254740993');
+  expect(unsafeCell).not.toContain(',');
+
+  const multiline = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_resting_1\nmore' })]));
+  expect(actionLogCell(multiline, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(multiline).not.toContain('more');
+
+  const crlf = renderActionLog(actionLogPage([fillEntry({ order_id: 'ord_resting_1\r\nmore' })]));
+  expect(actionLogCell(crlf, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(crlf).not.toContain('more');
+
+  for (const raw of ['ord 1', '0', 'false', '+1500', '1,500', '1e3'] as const) {
+    const stdout = renderActionLog(actionLogPage([fillEntry({ order_id: raw })]));
+    expect(actionLogCell(stdout, 'Sell order filled', 'Order'), raw).toBe(raw);
+  }
+
+  for (const raw of ['\nord_resting_1', '\r\nord_resting_1']) {
+    const stdout = renderActionLog(actionLogPage([fillEntry({ order_id: raw })]));
+    const label = JSON.stringify(raw);
+    expect(actionLogHeaderColumns(stdout), label).not.toContain('Order');
+    expect(stdout, label).not.toContain('ord_resting_1');
+  }
+});
+
+test('does not parse order id out of the summary', () => {
+  const summary = 'Order: ord_from_summary';
+  const summaryOnly = renderActionLog(actionLogPage([fillEntry(undefined, { summary })]));
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Order');
+  expect(summaryOnly).toContain(summary);
+
+  const withField = renderActionLog(
+    actionLogPage([
+      fillEntry(undefined, { summary, id: 801 }),
+      fillEntry({ order_id: 'ord_resting_1' }, { id: 802, summary: 'Sell order filled at Haven Exchange.' }),
+    ]),
+  );
+  expect(withField).toContain(summary);
+  expect(actionLogCell(withField, summary, 'Order')).toBe('');
+  expect(actionLogCell(withField, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+});
+
+test('drops a poisoned order_display unless the fill order_id qualifies', () => {
+  const poisonOnly = renderActionLog(actionLogPage([fillEntry(undefined, { order_display: 'poison' })]));
+  expect(actionLogHeaderColumns(poisonOnly)).not.toContain('Order');
+  expect(poisonOnly).not.toContain('poison');
+
+  const poisonWithId = renderActionLog(
+    actionLogPage([fillEntry({ order_id: 'ord_resting_1' }, { order_display: 'poison' })]),
+  );
+  expect(actionLogCell(poisonWithId, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(poisonWithId).not.toContain('poison');
+
+  const otherEvent = renderActionLog(
+    actionLogPage([
+      fillEntry(
+        { order_id: 'ord_resting_1' },
+        {
+          event_type: 'trading.order_filled',
+          summary: 'Faction repair procurement filled.',
+          order_display: 'poison',
+          order_id: 'ord_resting_1',
+        },
+      ),
+    ]),
+  );
+  expect(actionLogHeaderColumns(otherEvent)).not.toContain('Order');
+  expect(otherEvent).not.toContain('poison');
+  expect(otherEvent).not.toContain('ord_resting_1');
+});
+
+test('places Order after Direct supplied and before Base on a mixed action-log page', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      pirateEntry({ credits_earned: 1500 }),
+      rentEntry('other.rent_warning', rentCounters),
+      missionEntry({ direct_supplied: true, base_name: 'Earth Station' }),
+      fillEntry({ order_id: 'ord_resting_1', base_id: 'haven_exchange' }),
+      fillEntry(undefined, { id: 802, summary: 'Spot sell filled at Haven Exchange.' }),
+      fillEntry(
+        { order_id: 'ord_resting_1', base_id: 'nova-terra-central' },
+        {
+          id: 803,
+          event_type: 'ship.buy_order_filled',
+          category: 'ship',
+          summary: 'Prospector buy order filled at Nova Terra Central.',
+        },
+      ),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), [
+    'Credits',
+    'Owed',
+    'Missed',
+    'Grace',
+    'Facilities',
+    'Direct supplied',
+    'Order',
+    'Base',
+  ]);
+  const credits = columns.indexOf('Credits');
+  expect(columns.slice(credits, credits + 8)).toEqual([
+    'Credits',
+    'Owed',
+    'Missed',
+    'Grace',
+    'Facilities',
+    'Direct supplied',
+    'Order',
+    'Base',
+  ]);
+  expect(actionLogCell(stdout, 'Corsair', 'Order')).toBe('');
+  expect(actionLogCell(stdout, 'Rent overdue', 'Order')).toBe('');
+  expect(actionLogCell(stdout, 'Shipyard', 'Order')).toBe('');
+  expect(actionLogCell(stdout, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(stdout, 'Spot sell', 'Order')).toBe('');
+  expect(actionLogCell(stdout, 'Prospector', 'Order')).toBe('');
+  expect(actionLogCell(stdout, 'Prospector', 'Base')).toBe('nova-terra-central');
+  expect(actionLogDataIdCells(stdout)).toEqual(['501', '601', '701', '801', '802', '803']);
+});
+
+test('lifts order_id for trading.exchange_fill regardless of category', () => {
+  const stdout = renderActionLog(
+    actionLogPage([fillEntry({ order_id: 'ord_resting_1' }, { category: 'ship' })], 'ship'),
+  );
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Order')).toBe('ord_resting_1');
+  expect(actionLogCell(stdout, 'trading.exchange_fill', 'Category')).toBe('ship');
+});
+
+test('keeps order_id on json, yaml, structured, and compact output', () => {
+  const fixture = actionLogPage([fillEntry({ order_id: 'ord_resting_1', message: 'DETAIL_MESSAGE_TOKEN' })]);
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const rendered = renderStructuredResult('get_action_log', fixture, renderOptions, context);
+    expect(rendered.success).toBe(true);
+    const stdout = rendered.stdout.join('\n');
+    expect(stdout).not.toContain('order_display');
+    expect(stdout).not.toContain('Order');
+    expect(stdout).toContain('DETAIL_MESSAGE_TOKEN');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('order_id: ord_resting_1');
+    } else {
+      const parsed = JSON.parse(stdout) as {
+        entries: Array<{ data: { order_id?: unknown; message?: unknown } }>;
+      };
+      expect(parsed.entries[0]?.data.order_id).toBe('ord_resting_1');
+      expect(parsed.entries[0]?.data.message).toBe('DETAIL_MESSAGE_TOKEN');
+      expect(stdout).toContain(renderOptions.compact ? '"order_id":"ord_resting_1"' : '"order_id": "ord_resting_1"');
+    }
+  }
+  const human = renderActionLog(fixture);
+  expect(actionLogCell(human, 'trading.exchange_fill', 'Order')).toBe('ord_resting_1');
+  expect(human).not.toContain('DETAIL_MESSAGE_TOKEN');
+  expect(human).not.toContain('order_display');
+});
+
+test('renders the Order column for format text', () => {
+  const fixture = actionLogPage([fillEntry({ order_id: 'ord_resting_1', base_id: 'haven_exchange' })]);
+  const table = renderStructuredResult('get_action_log', structuredClone(fixture), options, context).stdout.join('\n');
+  const text = renderStructuredResult(
+    'get_action_log',
+    structuredClone(fixture),
+    { ...options, format: 'text' },
+    context,
+  ).stdout.join('\n');
+  expect(text).toBe(table);
+  expect(actionLogCell(text, 'Sell order filled', 'Order')).toBe('ord_resting_1');
+});
+
+test('truncates an order id longer than 80 characters', () => {
+  const raw = 'o'.repeat(81);
+  const stdout = renderActionLog(actionLogPage([fillEntry({ order_id: raw })]));
+  const cell = actionLogCell(stdout, 'Sell order filled', 'Order');
+  expect(cell).toBe(`${'o'.repeat(77)}...`);
+  expect(cell).not.toBe(raw);
 });
 
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
