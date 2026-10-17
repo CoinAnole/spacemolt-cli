@@ -64,6 +64,8 @@ import {
   shipDroneBayFixture,
   shipFixture,
   shipRemoteFixture,
+  stationInfoContrabandFixture,
+  stationInfoContrabandScalarsFixture,
   storageFixture,
   storageViewGiftsFixture,
   storageViewUndockedFixture,
@@ -9314,6 +9316,181 @@ describe('structuredContent formatters', () => {
     expect(json.stderr).toBe('');
   });
 
+  function stationConfigBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      ...stationInfoContrabandScalarsFixture,
+      ...overrides,
+    };
+  }
+
+  test('station info prints contraband item ids for the scalar-shaped body', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_info', stationInfoContrabandScalarsFixture);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('ore_copper, ore_iron');
+    expect(stdout).toContain('=== Station Config: Aurora Freeport ===');
+    expect(stdout).not.toContain('2 item(s)');
+    expect(stdout).not.toContain('=== Station Info ===');
+    expect(stdout).not.toContain('Action:');
+  });
+
+  test('station info omits service access when a key contains a newline', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      service_access: { 'market\nForged access': 'allies' },
+    });
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Station Config: Aurora Freeport ===');
+    expect(stdout).not.toContain('Service access:');
+    expect(stdout).not.toContain('Forged access');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Station Info ===');
+  });
+
+  test('station info uses base_id in the header when name contains a newline', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_info', stationConfigBody({ name: 'Aurora\nFreeport' }));
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Station Config: aurora_freeport ===');
+    expect(stdout).toContain('Base ID: aurora_freeport');
+    expect(stdout).not.toContain('Aurora');
+    expect(stdout).not.toContain('=== Station Info ===');
+  });
+
+  test('station info claims an unknown header when name and base_id contain newlines', () => {
+    const hostileName = 'Hostile\nName';
+    const { stdout, stderr } = captureStructuredOutput(
+      'station_info',
+      stationConfigBody({ name: hostileName, base_id: 'bad\nid' }),
+    );
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Station Config: unknown ===');
+    expect(stdout).not.toContain(hostileName);
+    expect(stdout).not.toContain('Hostile');
+    expect(stdout).not.toContain('bad');
+    expect(stdout).not.toContain('Base ID:');
+    expect(stdout).not.toContain('=== Station Info ===');
+  });
+
+  test('station info omits allowed players when one id is not printable', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: ['pilot_one', 'bad\nid'],
+    });
+    expect(stderr).toBe('');
+    expect(stdout).not.toContain('Allowed players:');
+    expect(stdout).not.toContain('pilot_one');
+    expect(stdout).toContain('Allowed factions: allied_faction');
+    expect(stdout).toContain('Banned players: pirate_one');
+
+    const notArray = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: 'pilot_one',
+    });
+    expect(notArray.stdout).not.toContain('Allowed players:');
+  });
+
+  test('station info prints zero fees and skips non-integers', () => {
+    const zero = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      market_fee_bps: 0,
+      refuel_price_each: 0n,
+      repair_price_per_hull: 0,
+    });
+    expect(zero.stderr).toBe('');
+    expect(zero.stdout).toContain('Market fee: 0 bps');
+    expect(zero.stdout).toContain('Refuel price: 0 credits');
+    expect(zero.stdout).toContain('Repair price: 0 credits/hull');
+
+    const skipped = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      market_fee_bps: 1.5,
+      refuel_price_each: '3',
+      repair_price_per_hull: Number.MAX_SAFE_INTEGER + 2,
+    });
+    expect(skipped.stdout).not.toContain('Market fee:');
+    expect(skipped.stdout).not.toContain('Refuel price:');
+    expect(skipped.stdout).not.toContain('Repair price:');
+    expect(skipped.stdout).toContain('=== Station Config:');
+  });
+
+  test('station info prints empty service access and omits a bad value', () => {
+    const empty = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      service_access: {},
+    });
+    expect(empty.stdout).toContain('Service access: (none)');
+
+    const badValue = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      service_access: { market: 'allies', repair: 'fac\ntion' },
+    });
+    expect(badValue.stdout).not.toContain('Service access:');
+    expect(badValue.stdout).not.toContain('market: allies');
+    expect(badValue.stdout).toContain('=== Station Config:');
+  });
+
+  test('station info keeps an internal description newline and a trimmed message', () => {
+    const described = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      description: '  Lawless\nhub.  ',
+      message: '  Dock updated.\nStay sharp.  ',
+    });
+    expect(described.stdout).toContain('Description: Lawless\nhub.');
+    expect(described.stdout).toContain('Dock updated.\nStay sharp.');
+    expect(described.stdout).not.toContain('Message:');
+
+    const blank = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandScalarsFixture,
+      description: '   ',
+      message: ' \n ',
+    });
+    expect(blank.stdout).not.toContain('Description:');
+    expect(blank.stdout).not.toContain('Dock updated.');
+  });
+
+  test('station info declines when name and base_id are empty', () => {
+    const { stdout } = captureStructuredOutput('station_info', stationConfigBody({ name: '', base_id: '' }));
+    expect(stdout).not.toContain('=== Station Config:');
+    expect(stdout).toContain('=== Station Info ===');
+  });
+
+  function setContrabandDetails(extra: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      action: 'set_contraband',
+      base_id: 'aurora_freeport',
+      name: 'Aurora Freeport',
+      public_access: false,
+      allow_outsider_facilities: false,
+      auto_buy_fuel: true,
+      contraband_mode: 'custom',
+      contraband_items: [],
+      ...extra,
+    };
+  }
+
+  test('station set_contraband scalar details stay on the scalar summary', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_set_contraband', {
+      details: setContrabandDetails(),
+      credits: 10,
+    });
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Set Contraband ===');
+    expect(stdout).toContain('Contraband Items: 0 item(s)');
+    expect(stdout).not.toContain('=== Station Config:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('station set_contraband with service_access stays on the raw response', () => {
+    const { stdout, stderr } = captureStructuredOutput('station_set_contraband', {
+      details: setContrabandDetails({ service_access: { market: 'allies' } }),
+      credits: 10,
+    });
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).toContain('"service_access"');
+    expect(stdout).not.toContain('=== Station Config:');
+    expect(stdout).not.toContain('=== Set Contraband ===');
+  });
+
   test('get_poi includes faction fuel reserve when present', () => {
     const { stdout, stderr } = captureStructuredOutput('get_poi', {
       ...poiInfoFixture,
@@ -10422,6 +10599,26 @@ describe('structuredContent formatters', () => {
         --------+--------------------+---------+-----+-------+------+---------
         utility | Cargo Expander III | utility | 2   | 2     | 10   | module-1
         weapon  | Pulse Laser III    | weapon  | 3   | 8     | 10   | module-2"
+      ,
+        "station_config": 
+      "
+      === Station Config: Aurora Freeport ===
+      Base ID: aurora_freeport
+      Description: A lawless trade hub.
+      Public access: no
+      Outsider facilities: no
+      Auto-buy fuel: yes
+      Market fee: 250 bps
+      Refuel price: 3 credits
+      Repair price: 4 credits/hull
+      Contraband mode: custom
+      Contraband items: ore_copper, ore_iron
+      Allowed players: (none)
+      Allowed factions: allied_faction
+      Banned players: pirate_one
+      Service access:
+        market: allies
+        repair: faction"
       ,
         "storage": 
       "

@@ -799,10 +799,44 @@ export const shipRemoteFixture = {
   },
 };
 
+export const stationInfoContrabandFixture = {
+  action: 'station_info',
+  allow_outsider_facilities: false,
+  allowed_factions: ['allied_faction'],
+  allowed_players: [],
+  auto_buy_fuel: true,
+  banned_players: ['pirate_one'],
+  base_id: 'aurora_freeport',
+  contraband_items: ['ore_copper', 'ore_iron'],
+  contraband_mode: 'custom',
+  description: 'A lawless trade hub.',
+  market_fee_bps: 250,
+  name: 'Aurora Freeport',
+  public_access: false,
+  refuel_price_each: 3,
+  repair_price_per_hull: 4,
+  service_access: {
+    market: 'allies',
+    repair: 'faction',
+  },
+};
+
+export const stationInfoContrabandScalarsFixture = {
+  action: 'station_info',
+  allow_outsider_facilities: false,
+  auto_buy_fuel: true,
+  base_id: 'aurora_freeport',
+  contraband_items: ['ore_copper', 'ore_iron'],
+  contraband_mode: 'custom',
+  name: 'Aurora Freeport',
+  public_access: false,
+};
+
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
   base: { command: 'get_base', fixture: baseFixture },
+  station_config: { command: 'station_info', fixture: stationInfoContrabandFixture },
   drone: { command: 'get_drone', fixture: droneFixture },
   drones: { command: 'list_drones', fixture: dronesFixture },
 };
@@ -911,6 +945,8 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_base_contraband_custom: { command: 'get_base', fixture: baseContrabandCustomFixture },
+  station_info_contraband: { command: 'station_info', fixture: stationInfoContrabandFixture },
+  station_info_contraband_scalars: { command: 'station_info', fixture: stationInfoContrabandScalarsFixture },
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },
   get_base_sovereign_mint_inputs: { command: 'get_base', fixture: baseSovereignMintInputsFixture },
   get_base_sovereign_mint_internal: { command: 'get_base', fixture: baseSovereignMintInternalFixture },

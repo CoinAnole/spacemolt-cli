@@ -1,0 +1,28 @@
+{
+  "action": "station_info",
+  "allow_outsider_facilities": false,
+  "allowed_factions": [
+    "allied_faction"
+  ],
+  "allowed_players": [],
+  "auto_buy_fuel": true,
+  "banned_players": [
+    "pirate_one"
+  ],
+  "base_id": "aurora_freeport",
+  "contraband_items": [
+    "ore_copper",
+    "ore_iron"
+  ],
+  "contraband_mode": "custom",
+  "description": "A lawless trade hub.",
+  "market_fee_bps": 250,
+  "name": "Aurora Freeport",
+  "public_access": false,
+  "refuel_price_each": 3,
+  "repair_price_per_hull": 4,
+  "service_access": {
+    "market": "allies",
+    "repair": "faction"
+  }
+}

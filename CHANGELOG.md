@@ -89,6 +89,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Stations
 
 - `station set_contraband` replaces the market contraband list on the faction-owned station or mobile base you are docked at (ManageBases). Pass one item id, a comma-separated list, or `[]` to allow all items. `station reset_contraband` restores the default rules. Existing stations keep those defaults until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read `contraband_mode` and `contraband_items` from `station info`. Gameserver 0.631.0. **No parser change.**
+- `station info` table output prints the station config block, including those same policy lines, instead of both the scalar summary (`=== Station Info ===`, arrays as `N item(s)`) and the raw dump. Human scrapers of either shape need `--format json`. Mutation commands stay on the renderer they have today. **No parser change.**
 
 ### Query
 
