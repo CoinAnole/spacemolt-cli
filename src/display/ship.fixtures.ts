@@ -257,6 +257,37 @@ export const baseSovereignMintInternalFixture = {
   sovereign_mint: sovereignMintBlockedInternal,
 };
 
+export const sovereignMintPriceLimited = {
+  status: 'price_limited',
+  output_item_id: 'trade_authenticator',
+  output_name: 'Trade Authenticator',
+  shortages: [
+    {
+      buy_order_available: true,
+      item_id: 'trade_crystal',
+      name: 'Trade Crystal',
+      quantity_in_storage: 2,
+      quantity_missing: 8,
+      quantity_required: 10,
+    },
+  ],
+  price_limits: [
+    {
+      item_id: 'trade_crystal',
+      lowest_sell_price: 550,
+      name: 'Trade Crystal',
+      station_buy_price: 372,
+    },
+  ],
+  remediation:
+    'Sell listed inputs with buy_order_available=true to the station through its public market. Available sell prices exceed the station buy price. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
+};
+
+export const baseSovereignMintPriceLimitedFixture = {
+  ...baseFixture,
+  sovereign_mint: sovereignMintPriceLimited,
+};
+
 const baseRepairsNextBlocked = {
   instance_id: 'fac-ls-1',
   definition_id: 'life_support_mk1',
@@ -873,6 +904,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },
   get_base_sovereign_mint_inputs: { command: 'get_base', fixture: baseSovereignMintInputsFixture },
   get_base_sovereign_mint_internal: { command: 'get_base', fixture: baseSovereignMintInternalFixture },
+  get_base_sovereign_mint_price_limits: { command: 'get_base', fixture: baseSovereignMintPriceLimitedFixture },
   get_wrecks: { command: 'get_wrecks', fixture: wrecksFixture },
   tow_wreck: { command: 'tow_wreck', fixture: towWreckFixture },
   release_tow: { command: 'release_tow', fixture: releaseTowFixture },

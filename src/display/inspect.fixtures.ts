@@ -3,6 +3,7 @@ import {
   baseRepairsFixture,
   baseSovereignMintInputsFixture,
   baseSovereignMintInternalFixture,
+  baseSovereignMintPriceLimitedFixture,
 } from './ship.fixtures.ts';
 import { poiWorkabilityResources } from './status.fixtures.ts';
 
@@ -327,6 +328,13 @@ export const inspectBaseSovereignMintInternalFixture = {
   base: baseSovereignMintInternalFixture,
 };
 
+export const inspectBaseSovereignMintPriceLimitedFixture = {
+  id: 'nova_terra_central',
+  kind: 'base',
+  source: 'station',
+  base: baseSovereignMintPriceLimitedFixture,
+};
+
 export const inspectPoiFixture = {
   id: 'main_belt',
   kind: 'poi',
@@ -380,5 +388,9 @@ export const inspectHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   inspect_base_repairs: { command: 'inspect', fixture: inspectBaseRepairsFixture },
   inspect_base_sovereign_mint_inputs: { command: 'inspect', fixture: inspectBaseSovereignMintInputsFixture },
   inspect_base_sovereign_mint_internal: { command: 'inspect', fixture: inspectBaseSovereignMintInternalFixture },
+  inspect_base_sovereign_mint_price_limits: {
+    command: 'inspect',
+    fixture: inspectBaseSovereignMintPriceLimitedFixture,
+  },
   inspect_poi: { command: 'inspect', fixture: inspectPoiFixture },
 };

@@ -8,6 +8,7 @@ import {
   inspectBaseRepairsFixture,
   inspectBaseSovereignMintInputsFixture,
   inspectBaseSovereignMintInternalFixture,
+  inspectBaseSovereignMintPriceLimitedFixture,
   inspectCatalogBoardingModuleFixture,
   inspectCatalogModuleFixture,
   inspectCatalogShipFixture,
@@ -1446,6 +1447,7 @@ test('renders nested base sovereign mint shortages matching get_base', () => {
     'Sell listed inputs with buy_order_available=true to the station through its public market. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
   );
   expect(stdout).not.toContain('  Sell listed inputs');
+  expect(stdout).not.toContain('Price limits:');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -1462,6 +1464,32 @@ test('renders nested base sovereign mint internal blockers matching get_base', (
   expect(stdout).toContain('sovereign_mint — unavailable');
   expect(stdout).toContain('Facility: Sovereign Mint');
   expect(stdout).toContain('Facility ID: fac-mint-1');
+  expect(stdout).not.toContain('Price limits:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders nested base sovereign mint price limits matching get_base', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseSovereignMintPriceLimitedFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: nova_terra_central ===');
+  expect(stdout).toContain('Station: Nova Terra Central');
+  expect(stdout).not.toContain('=== Station: Nova Terra Central ===');
+  expect(stdout).toContain(
+    [
+      '=== Sovereign Mint ===',
+      'Status: price_limited',
+      'Output: Trade Authenticator (trade_authenticator)',
+      'Shortages:',
+      '  Trade Crystal: 2/10, 8 missing, buy order: yes',
+      'Price limits:',
+      '  Trade Crystal: station buy 372 credits, lowest sell 550 credits',
+      '',
+      'Sell listed inputs with buy_order_available=true to the station through its public market. Available sell prices exceed the station buy price. Check current prices and order depth before acquiring supplies. The station must arrange procurement for inputs with buy_order_available=false.',
+    ].join('\n'),
+  );
+  expect(stdout).not.toContain('  Sell listed inputs');
   expect(stdout).not.toContain('=== Response ===');
 });
 
