@@ -677,6 +677,17 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
   });
 }
 
+function projectAllyRentalFee(row: Record<string, unknown>): Record<string, unknown> {
+  const top = row.rental_fee_per_run;
+  if (top !== undefined && top !== null && top !== '') return row;
+  const production = facilityProduction(row);
+  const fee = production?.rental_fee_per_run;
+  if (typeof fee === 'bigint' || (typeof fee === 'number' && Number.isFinite(fee))) {
+    return { ...row, rental_fee_per_run: fee };
+  }
+  return row;
+}
+
 function facilityColumns(
   rows: Array<Record<string, unknown>>,
   options: { grouped?: boolean; includeType?: boolean } = {},
@@ -1949,11 +1960,12 @@ export const socialFormatters = [
       const factionFacilities = firstArray(r, ['faction_facilities']);
       if (!stationFacilities || !playerFacilities || !factionFacilities) return false;
 
-      const groups: Array<[string, Array<Record<string, unknown>> | undefined]> = [
-        ['Station Facilities', stationFacilities],
-        ['Public Facilities', firstArray(r, ['public_facilities'])],
-        ['Player Facilities', playerFacilities],
-        ['Faction Facilities', factionFacilities],
+      const groups: Array<[string, Array<Record<string, unknown>> | undefined, boolean]> = [
+        ['Station Facilities', stationFacilities, false],
+        ['Public Facilities', firstArray(r, ['public_facilities']), false],
+        ['Ally Facilities', firstArray(r, ['ally_facilities']), true],
+        ['Player Facilities', playerFacilities, false],
+        ['Faction Facilities', factionFacilities, false],
       ];
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
@@ -1961,9 +1973,10 @@ export const socialFormatters = [
       emitStationLifeSupport(r.life_support);
       emitStationConstruction(r.construction);
       emitStationServicePools(r.service_pools);
-      for (const [title, rows] of groups) {
+      for (const [title, rows, projectFee] of groups) {
         if (!rows?.length) continue;
-        const displayRows = facilityRows(rows);
+        const source = projectFee ? rows.map(projectAllyRentalFee) : rows;
+        const displayRows = facilityRows(source);
         printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
       }
       emitFacilityRentSummaries(r);

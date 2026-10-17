@@ -2972,6 +2972,279 @@ test('renders facility list faction rent summary', () => {
   expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
 });
 
+test('facility_list prints Ally Facilities between Public and Player', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.public_facilities = [
+    {
+      facility_id: 'public-refinery',
+      name: 'Public Refinery',
+      category: 'production',
+      level: 1,
+      production: { rental_fee_per_run: 0 },
+    },
+  ];
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally_algae_tank',
+      name: 'Algae Cultivation Tank',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+    },
+  ];
+
+  const rendered = renderStructuredResult('facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  const station = stdout.indexOf('=== Station Facilities ===');
+  const publicHeading = stdout.indexOf('=== Public Facilities ===');
+  const allyHeading = stdout.indexOf('=== Ally Facilities ===');
+  const player = stdout.indexOf('=== Player Facilities ===');
+  const faction = stdout.indexOf('=== Faction Facilities ===');
+  const publicSection = sectionAfter(stdout, 'Public Facilities', 'Ally Facilities');
+  const allySection = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+  const publicHeader = publicSection.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+
+  expect(rendered.success).toBe(true);
+  expect(station).toBeGreaterThanOrEqual(0);
+  expect(station).toBeLessThan(publicHeading);
+  expect(publicHeading).toBeLessThan(allyHeading);
+  expect(allyHeading).toBeLessThan(player);
+  expect(player).toBeLessThan(faction);
+  expect(allySection).toContain('ally_algae_tank');
+  expect(publicSection).not.toContain('ally_algae_tank');
+  expect(publicHeader).toBeDefined();
+  expect(publicHeader).not.toContain('Rent/run');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_list prints a nested ally rental fee of 0 without a price', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const allyRow: Record<string, unknown> = {
+    facility_id: 'ally_algae_tank',
+    type: 'algae_cultivation_tank',
+    name: 'Algae Cultivation Tank',
+    description: '',
+    category: 'production',
+    level: 1,
+    recipe_id: 'cultivate_bioluminescent_algae',
+    production: {
+      recipe: 'Cultivate Bioluminescent Algae',
+      queued_runs: 0,
+      queued_items: 0,
+      backlog_ticks: 0,
+      public: true,
+      rental_fee_per_run: 0,
+    },
+    faction_id: 'ally_faction',
+  };
+  fixture.ally_facilities = [allyRow];
+
+  const rendered = renderStructuredResult('facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  const ally = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+  const header = ally.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+
+  expect(rendered.success).toBe(true);
+  expect(header).toBeDefined();
+  expect(header).toContain('Rent/run');
+  expect(header).not.toContain('Price/unit');
+  expect(header).not.toContain('Public');
+  expect(tableCell(ally, 'ally_algae_tank', 'Rent/run')).toBe('0');
+  expect(tableCell(ally, 'ally_algae_tank', 'Price/unit')).toBeUndefined();
+  expect(tableCell(ally, 'ally_algae_tank', 'Owner')).toBe('ally_faction');
+  expect(ally).not.toContain('0cr');
+  expect(allyRow.rental_fee_per_run).toBeUndefined();
+  expect((allyRow.production as Record<string, unknown>).rental_fee_per_run).toBe(0);
+});
+
+test('facility_list prints a top-level ally rental fee of 0', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const allyRow = {
+    facility_id: 'ally-top-fee',
+    name: 'Ally Top Fee',
+    category: 'production',
+    level: 1,
+    rental_fee_per_run: 0,
+    faction_id: 'ally_faction',
+  };
+  fixture.ally_facilities = [allyRow];
+
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const ally = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+
+  expect(tableCell(ally, 'ally-top-fee', 'Rent/run')).toBe('0');
+  expect(allyRow.rental_fee_per_run).toBe(0);
+});
+
+test('facility_list omits Rent/run and Price/unit when an ally fee and price are absent', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const allyRow: Record<string, unknown> = {
+    facility_id: 'ally-omitted',
+    name: 'Ally Omitted',
+    category: 'production',
+    level: 1,
+    faction_id: 'ally_faction',
+    production: { queued_runs: 0 },
+  };
+  fixture.ally_facilities = [allyRow];
+
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const ally = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+  const header = ally.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Rent/run');
+  expect(header).not.toContain('Price/unit');
+  expect(tableCell(ally, 'ally-omitted', 'Rent/run')).toBeUndefined();
+  expect(tableCell(ally, 'ally-omitted', 'Price/unit')).toBeUndefined();
+  expect(allyRow.rental_fee_per_run).toBeUndefined();
+});
+
+test('facility_list prints an explicit ally output price of 0cr', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally-priced',
+      name: 'Ally Priced',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+      production: { output_price_per_unit: 0 },
+    },
+  ];
+
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const ally = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+
+  expect(tableCell(ally, 'ally-priced', 'Price/unit')).toBe('0cr');
+});
+
+test('facility_list omits Ally Facilities when ally_facilities is omitted', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const rendered = renderStructuredResult('facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(fixture.ally_facilities).toBeUndefined();
+  expect(stdout).not.toContain('=== Ally Facilities ===');
+  expect(stdout).toContain('=== Station Facilities ===');
+  expect(stdout).toContain('=== Player Facilities ===');
+  expect(stdout).toContain('=== Faction Facilities ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_list omits Ally Facilities when ally_facilities is empty', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.ally_facilities = [];
+  const rendered = renderStructuredResult('facility_list', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('=== Ally Facilities ===');
+  expect(stdout).not.toContain('(None)');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
+});
+
+test('facility_list omits Ally Facilities when ally_facilities is null or not an array', () => {
+  for (const allyFacilities of [null, { facility_id: 'not-a-list' }]) {
+    const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+    fixture.ally_facilities = allyFacilities;
+    const rendered = renderStructuredResult('facility_list', fixture, options, context);
+    const stdout = rendered.stdout.join('\n');
+
+    expect(rendered.success).toBe(true);
+    expect(stdout).not.toContain('=== Ally Facilities ===');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).toContain('=== Station Facilities ===');
+    expect(stdout).toContain('=== Player Facilities ===');
+    expect(stdout).toContain('=== Faction Facilities ===');
+  }
+});
+
+test('facility_list text format prints the same Ally Facilities table', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally_algae_tank',
+      name: 'Algae Cultivation Tank',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+      production: { rental_fee_per_run: 0 },
+    },
+  ];
+  const table = renderStructuredResult('facility_list', structuredClone(fixture), options, context).stdout.join('\n');
+  const text = renderStructuredResult(
+    'facility_list',
+    structuredClone(fixture),
+    { ...options, format: 'text' },
+    context,
+  ).stdout.join('\n');
+
+  expect(text).toContain('=== Ally Facilities ===');
+  expect(sectionAfter(text, 'Ally Facilities', 'Player Facilities')).toBe(
+    sectionAfter(table, 'Ally Facilities', 'Player Facilities'),
+  );
+});
+
+test('facility_list json, yaml, and structured pass ally_facilities through', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally_algae_tank',
+      name: 'Algae Cultivation Tank',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+    },
+  ];
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+  ];
+  for (const renderOptions of cases) {
+    const stdout = renderStructuredResult(
+      'facility_list',
+      structuredClone(fixture),
+      renderOptions,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('ally_facilities');
+    expect(stdout).toContain('ally_algae_tank');
+    expect(stdout).not.toContain('=== Ally Facilities ===');
+    if (renderOptions.format !== 'yaml') {
+      const parsed = JSON.parse(stdout) as { ally_facilities: Array<{ facility_id: string }> };
+      expect(parsed.ally_facilities[0]?.facility_id).toBe('ally_algae_tank');
+    }
+  }
+});
+
+test('faction_facility_list does not print Ally Facilities', () => {
+  const stdout = renderStructuredResult(
+    'faction_facility_list',
+    structuredClone(factionFacilityListFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('Ally Facilities');
+
+  const withAlly = structuredClone(factionFacilityListFixture) as Record<string, unknown>;
+  withAlly.ally_facilities = [
+    {
+      facility_id: 'ally_algae_tank',
+      name: 'Algae Cultivation Tank',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+    },
+  ];
+  const extra = renderStructuredResult('faction_facility_list', withAlly, options, context).stdout.join('\n');
+  expect(extra).not.toContain('=== Ally Facilities ===');
+  expect(extra).toContain('Faction Facilities at earth_station');
+});
+
 const factionInfoRentSummary = {
   facilities: 1,
   total_rent_per_cycle: 1200,
