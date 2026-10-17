@@ -1,0 +1,8 @@
+
+=== Station Config: Aurora Freeport ===
+Base ID: aurora_freeport
+Public access: no
+Outsider facilities: no
+Auto-buy fuel: yes
+Contraband mode: custom
+Contraband items: ore_copper, ore_iron

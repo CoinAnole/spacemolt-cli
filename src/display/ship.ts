@@ -7,6 +7,7 @@ import {
   emitLine,
   emitLines,
   emitSovereignMint,
+  emitStationConfig,
   emitStationConstruction,
   emitStationContrabandPolicy,
   emitStationDefences,
@@ -679,6 +680,11 @@ export const shipFormatters = [
     },
     { commands: ['get_base'], shapeFallback: true },
   ),
+
+  namedFormatter('station_config', ['base_id', 'contraband_mode'], (r) => emitStationConfig(r), {
+    commands: ['station_info'],
+    shapeFallback: false,
+  }),
 
   formatter(
     (r) => {

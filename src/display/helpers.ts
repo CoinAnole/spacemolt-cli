@@ -483,6 +483,80 @@ export function emitStationContrabandPolicy(source: unknown, indent = ''): boole
   return printed;
 }
 
+export function emitStationConfig(result: Record<string, unknown>): boolean {
+  function emitYesNo(label: string, value: unknown): void {
+    if (value === true) emitLine(`${label}: yes`);
+    else if (value === false) emitLine(`${label}: no`);
+  }
+
+  function emitSafeIntegerLine(label: string, value: unknown, suffix: string): void {
+    if (typeof value !== 'bigint' && !(typeof value === 'number' && Number.isSafeInteger(value))) return;
+    const text = formatIntegerText(value);
+    if (text !== undefined) emitLine(`${label}: ${text} ${suffix}`);
+  }
+
+  function emitIdList(label: string, value: unknown): void {
+    if (!Array.isArray(value)) return;
+    if (value.length === 0) {
+      emitLine(`${label}: (none)`);
+      return;
+    }
+    const ids = printableIds(value);
+    if (ids === undefined) return;
+    emitLine(`${label}: ${ids.join(', ')}`);
+  }
+
+  function emitServiceAccess(value: unknown): void {
+    if (!isRecord(value)) return;
+    const entries = Object.entries(value);
+    if (entries.length === 0) {
+      emitLine('Service access: (none)');
+      return;
+    }
+    const lines: string[] = [];
+    for (const [key, entry] of entries) {
+      if (!isPrintableId(key) || !isPrintableId(entry)) return;
+      lines.push(`  ${key}: ${entry}`);
+    }
+    emitLine('Service access:');
+    for (const line of lines) emitLine(line);
+  }
+
+  const name = result.name;
+  const baseId = result.base_id;
+  const namePresent = typeof name === 'string' && name !== '';
+  const basePresent = typeof baseId === 'string' && baseId !== '';
+  if (!namePresent && !basePresent) return false;
+
+  // Non-printable name and base_id still claim; the header stays the literal unknown.
+  const label = isPrintableId(name) ? name : isPrintableId(baseId) ? baseId : 'unknown';
+  emitLine(`\n${c.bright}=== Station Config: ${label} ===${c.reset}`);
+  if (isPrintableId(baseId)) emitLine(`Base ID: ${baseId}`);
+
+  if (typeof result.description === 'string') {
+    const description = result.description.trim();
+    if (description !== '') emitLine(`Description: ${description}`);
+  }
+
+  emitYesNo('Public access', result.public_access);
+  emitYesNo('Outsider facilities', result.allow_outsider_facilities);
+  emitYesNo('Auto-buy fuel', result.auto_buy_fuel);
+  emitSafeIntegerLine('Market fee', result.market_fee_bps, 'bps');
+  emitSafeIntegerLine('Refuel price', result.refuel_price_each, 'credits');
+  emitSafeIntegerLine('Repair price', result.repair_price_per_hull, 'credits/hull');
+  emitStationContrabandPolicy(result);
+  emitIdList('Allowed players', result.allowed_players);
+  emitIdList('Allowed factions', result.allowed_factions);
+  emitIdList('Banned players', result.banned_players);
+  emitServiceAccess(result.service_access);
+
+  if (typeof result.message === 'string') {
+    const message = result.message.trim();
+    if (message !== '') emitLine(`${c.dim}${message}${c.reset}`);
+  }
+  return true;
+}
+
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;

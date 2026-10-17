@@ -947,7 +947,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['listing_id'],
   },
   station_info: {
-    description: "Show the current configuration for your faction's station or outpost.",
+    description:
+      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules.",
     example: 'spacemolt station_info',
     discoverWith: ['get_status', 'get_base'],
     seeAlso: [
@@ -1065,7 +1066,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   station_set_contraband: {
     usage: '<contraband_items>',
     description:
-      'Replace the market contraband list with contraband_items on the faction-owned station or mobile base you are docked at. Requires ManageBases. Pass one item id, a comma-separated list, or []. [] allows all items. station reset_contraband restores the default rules. Existing stations keep those default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read contraband_mode and contraband_items from station info (raw response).',
+      'Replace the market contraband list with contraband_items on the faction-owned station or mobile base you are docked at. Requires ManageBases. Pass one item id, a comma-separated list, or []. [] allows all items. station reset_contraband restores the default rules. Existing stations keep those default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read Contraband mode and Contraband items from station info (contraband_mode and contraband_items).',
     example:
       "spacemolt station_set_contraband ore_iron; spacemolt station_set_contraband ore_iron,ore_copper; spacemolt station_set_contraband '[]'",
     discoverWith: ['station_info'],
@@ -1083,7 +1084,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_reset_contraband: {
     description:
-      'Restore the default market contraband rules on the faction-owned station or mobile base you are docked at. Requires ManageBases. station set_contraband replaces the list; [] on that command allows all items. Existing stations keep the default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read contraband_mode and contraband_items from station info (raw response).',
+      'Restore the default market contraband rules on the faction-owned station or mobile base you are docked at. Requires ManageBases. station set_contraband replaces the list; [] on that command allows all items. Existing stations keep the default rules until configured. Smuggling skill still bypasses listed items. Empire customs still apply when a mobile base is inside empire territory. The policy applies to new and modified market orders. Existing orders stay active. Read Contraband mode and Contraband items from station info (contraband_mode and contraband_items).',
     example: 'spacemolt station_reset_contraband',
     discoverWith: ['station_info'],
     seeAlso: ['station_info', 'station_set_contraband'],

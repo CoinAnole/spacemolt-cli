@@ -1,0 +1,13 @@
+{
+  "action": "station_info",
+  "allow_outsider_facilities": false,
+  "auto_buy_fuel": true,
+  "base_id": "aurora_freeport",
+  "contraband_items": [
+    "ore_copper",
+    "ore_iron"
+  ],
+  "contraband_mode": "custom",
+  "name": "Aurora Freeport",
+  "public_access": false
+}
