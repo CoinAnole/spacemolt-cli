@@ -2764,6 +2764,36 @@ describe('command metadata', () => {
     }
   });
 
+  test('facility list help documents ally grants', () => {
+    const description = COMMERCE_FACILITY_COMMAND_OVERRIDES.facility_list?.description;
+    const config = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.list?.config;
+    const generatedSummary = 'Manage facilities at stations (production, faction, personal, sales, and more)';
+    expect(description).toBe(COMMANDS.facility_list?.description);
+    expect(config?.description).toBe(description);
+    expect(description).not.toBe(generatedSummary);
+    expect(config?.description).not.toBe(generatedSummary);
+    expect(CURATED_COMMAND_DESCRIPTIONS.facility_list).toBeUndefined();
+
+    const help = captureHelp('facility list');
+    expect(help).not.toBe(generatedSummary);
+    expect(help).not.toContain('`');
+    for (const text of [config?.description, help]) {
+      expect(text).toContain('ally_facility_access');
+      expect(text).toContain('queues free');
+      expect(text).toContain("behind the owner's own jobs");
+      expect(text).toContain('also public');
+      expect(text).toContain('explicit 0');
+      expect(text).toContain('omitted rental_fee_per_run');
+      expect(text).toContain('no Rent/run column');
+      expect(text).toContain('omitted output price');
+      expect(text).toContain('Gameserver 0.630.3');
+    }
+
+    const factionEdit = captureHelp('faction edit');
+    expect(factionEdit).toContain('ally_facility_access');
+    expect(factionEdit).not.toContain('Ally Facilities');
+  });
+
   test('station set_build_policy help states treasury rent without the transfer', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.station?.actions.set_build_policy?.config;
     expect(config?.usage).toContain('allow_outsiders');
