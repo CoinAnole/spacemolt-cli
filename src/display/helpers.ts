@@ -528,7 +528,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
   const basePresent = typeof baseId === 'string' && baseId !== '';
   if (!namePresent && !basePresent) return false;
 
-  // Non-printable name and base_id still claim; the header stays the literal unknown.
+  // Returning false would let the scalar-action summary print the raw name or base_id with String(value).
   const label = isPrintableId(name) ? name : isPrintableId(baseId) ? baseId : 'unknown';
   emitLine(`\n${c.bright}=== Station Config: ${label} ===${c.reset}`);
   if (isPrintableId(baseId)) emitLine(`Base ID: ${baseId}`);
