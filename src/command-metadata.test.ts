@@ -36,7 +36,7 @@ import {
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
-import { showCommandExplanation, showCommandHelp, showFullHelp } from './help';
+import { showCommandExplanation, showCommandGroup, showCommandHelp, showFullHelp } from './help';
 import { schemaRequiredScalarType } from './openapi-metadata';
 import { createCommandConfigDryRunResponse } from './preview';
 
@@ -2785,6 +2785,155 @@ describe('command metadata', () => {
       expect(text).toContain('Outposts do not support');
       for (const phrase of absent) expect(text).not.toContain(phrase);
     }
+  });
+
+  test('station set_contraband and reset_contraband replace generated facility names', () => {
+    function capturePlainExplanation(command: string): string {
+      const stdout: string[] = [];
+      expect(
+        showCommandExplanation(
+          command,
+          {
+            out(message = '') {
+              stdout.push(message);
+            },
+            err() {},
+          },
+          BUNDLED_COMMAND_REGISTRY,
+          { plain: true },
+        ),
+      ).toBe(true);
+      return stdout.join('\n');
+    }
+
+    function capturePlainGroup(topic: string): string {
+      const stdout: string[] = [];
+      expect(
+        showCommandGroup(
+          topic,
+          {
+            out(message = '') {
+              stdout.push(message);
+            },
+            err() {},
+          },
+          BUNDLED_COMMAND_REGISTRY,
+          { plain: true },
+        ),
+      ).toBe(true);
+      return stdout.join('\n');
+    }
+
+    const generatedSummary =
+      "Administer one of your faction's stations or outposts: rename, access control, and build policy";
+    const setAction = BUNDLED_COMMAND_REGISTRY.commandGroups.station?.actions.set_contraband;
+    const resetAction = BUNDLED_COMMAND_REGISTRY.commandGroups.station?.actions.reset_contraband;
+    const setConfig = setAction?.config;
+    const resetConfig = resetAction?.config;
+    expect(setAction?.command).toBe('station_set_contraband');
+    expect(setAction?.displayName).toBe('station set_contraband');
+    expect(setConfig?.category).toBe('Station management');
+    expect(setConfig?.arrayFields).toEqual(['contraband_items']);
+    expect(setConfig?.discoverWith).toEqual(['station_info']);
+    expect(setConfig?.seeAlso).toEqual(['station_info', 'station_reset_contraband', 'catalog']);
+    expect(setConfig?.usage).toContain('contraband_items');
+    expect(setConfig?.args).toEqual(['contraband_items']);
+    expect(setConfig?.required).toEqual(['contraband_items']);
+    expect(setConfig?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'set_contraband',
+      method: 'POST',
+    });
+    expect(setConfig?.stateSections).toEqual(['location']);
+    expect(setConfig?.schema?.contraband_items?.type).toBe('array');
+    expect(setConfig?.schema?.contraband_items?.description).toBe(
+      'Replacement item ids for this station or mobile base market contraband list. One id, comma-separated ids, or []. [] allows all items.',
+    );
+    expect(setConfig?.description).not.toBe(generatedSummary);
+    expect(setConfig?.description).not.toContain('outpost');
+    expect(setConfig?.description).not.toContain('action=');
+
+    const setPhrases = [
+      'ManageBases',
+      'contraband_items',
+      '[]',
+      'allows all items',
+      'station reset_contraband',
+      'default rules',
+      'Smuggling',
+      'Empire customs',
+      'mobile base',
+      'new and modified',
+      'Existing orders stay active',
+      'station info',
+      'contraband_mode',
+    ];
+    const setHelp = captureHelp('station set_contraband');
+    for (const text of [setConfig?.description, setHelp]) {
+      for (const phrase of setPhrases) expect(text).toContain(phrase);
+    }
+    expect(setHelp).toContain('ore_iron,ore_copper');
+    expect(setHelp).toContain("station set_contraband '[]'");
+    expect(setHelp).toContain('contraband_items":[]');
+    expect(setHelp).not.toContain('Server help');
+    expect(setHelp).not.toContain('POST /api/v2/spacemolt_facility/set_contraband');
+    expect(setHelp).not.toContain('outpost');
+    expect(setHelp).not.toContain('action=');
+
+    const setExplanation = capturePlainExplanation('station set_contraband');
+    expect(setExplanation).toContain(
+      'Category: Station management\nAPI route: POST /api/v2/spacemolt_facility/set_contraband',
+    );
+
+    expect(resetConfig?.arrayFields).toBeUndefined();
+    expect(resetConfig?.args).toEqual([]);
+    expect(resetConfig?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'reset_contraband',
+      method: 'POST',
+    });
+    expect(resetConfig?.description).not.toBe(generatedSummary);
+    expect(resetConfig?.description).not.toContain('outpost');
+    expect(resetConfig?.description).not.toContain('action=');
+    expect(resetConfig?.description).toContain('station set_contraband');
+    expect(resetConfig?.description).toContain('[]');
+
+    const resetHelp = captureHelp('station reset_contraband');
+    expect(resetHelp).not.toContain('Arguments:');
+    expect(resetHelp).toContain('station set_contraband');
+    expect(resetHelp).toContain('[]');
+    const resetUsageLine = resetHelp.split('\n').find((line) => line.includes('spacemolt station reset_contraband'));
+    expect(resetUsageLine).toBe('  spacemolt station reset_contraband');
+    expect(resetUsageLine).not.toContain('<');
+    expect(resetHelp).not.toContain('Server help');
+    expect(resetHelp).not.toContain('POST /api/v2/spacemolt_facility/reset_contraband');
+
+    const resetExplanation = capturePlainExplanation('station reset_contraband');
+    expect(resetExplanation).toContain('Category: Station management');
+    expect(resetExplanation).toContain('API route: POST /api/v2/spacemolt_facility/reset_contraband');
+    expect(resetExplanation).toContain(
+      'Category: Station management\nAPI route: POST /api/v2/spacemolt_facility/reset_contraband',
+    );
+
+    expect(BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.set_contraband).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.reset_contraband).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_set_contraband).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_set_contraband).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.station_set_contraband).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.station_set_contraband).toBeUndefined();
+    expect(COMMANDS.station_set_contraband).toBeDefined();
+    expect(COMMANDS.station_reset_contraband).toBeDefined();
+
+    const stationGroup = capturePlainGroup('station');
+    expect(stationGroup).toContain('station set_contraband');
+    expect(stationGroup).toContain('station reset_contraband');
+    expect(stationGroup).not.toContain('facility_set_contraband');
+    const facilityGroup = capturePlainGroup('facility');
+    expect(facilityGroup).not.toContain('contraband');
+
+    expect(COMMANDS.station_info?.seeAlso).toEqual(
+      expect.arrayContaining(['station_set_contraband', 'station_reset_contraband']),
+    );
   });
 
   test('facility upgrade and faction facility_upgrade expose package_ids arrays', () => {
