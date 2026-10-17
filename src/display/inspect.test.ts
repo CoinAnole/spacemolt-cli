@@ -4,6 +4,7 @@ import { packageOperationLabel } from './catalog-detail.ts';
 import { catalogEnergyCrystalItem } from './generic.fixtures.ts';
 import { renderStructuredResult } from './index.ts';
 import {
+  inspectBaseContrabandEmptyFixture,
   inspectBaseFixture,
   inspectBaseRepairsFixture,
   inspectBaseSovereignMintInputsFixture,
@@ -1428,6 +1429,47 @@ test('renders base inspect without a repairs section when repairs are absent', (
   expect(stdout).not.toContain('=== Repairs ===');
   expect(stdout).not.toContain('=== Repair Queue ===');
   expect(stdout).not.toContain('=== Sovereign Mint ===');
+  expect(stdout).not.toContain('Contraband mode:');
+  expect(stdout).not.toContain('Contraband items:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('docked inspect prints an empty custom contraband list from the inner base', () => {
+  const rendered = renderStructuredResult('inspect', inspectBaseContrabandEmptyFixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stderr).toEqual([]);
+  expect(stdout).toContain('Faction: sol_gov');
+  expect(stdout).toContain('Contraband mode: custom');
+  expect(stdout).toContain('Contraband items: (none — all items allowed)');
+  expect(stdout.indexOf('Faction: sol_gov')).toBeLessThan(stdout.indexOf('Contraband mode: custom'));
+  expect(stdout.indexOf('Contraband items: (none — all items allowed)')).toBeLessThan(stdout.indexOf('Hull:'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('docked inspect prints contraband when faction_id is absent', () => {
+  const inner = { ...inspectBaseFixture.base.base, contraband_mode: 'default', contraband_items: null };
+  delete (inner as { faction_id?: string }).faction_id;
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      ...inspectBaseFixture,
+      base: {
+        ...inspectBaseFixture.base,
+        base: inner,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).not.toContain('Faction:');
+  expect(stdout).toContain('Contraband mode: default');
+  expect(stdout).toContain('Contraband items: (default rules)');
+  expect(stdout.indexOf('Empire: solarian')).toBeLessThan(stdout.indexOf('Contraband mode: default'));
   expect(stdout).not.toContain('=== Response ===');
 });
 
