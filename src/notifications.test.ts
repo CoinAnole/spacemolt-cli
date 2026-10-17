@@ -11845,7 +11845,6 @@ describe('notification formatting', () => {
           },
           { noTimestamp: true },
         )[0] ?? '';
-      // indexOf('[') is the CSI bracket inside the color code, not the tag.
       const fillAt = fillLine.indexOf('[FILL]');
       const tradeAt = tradeLine.indexOf('[TRADE]');
       expect(fillAt).toBeGreaterThan(0);
