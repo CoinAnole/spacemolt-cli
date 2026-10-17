@@ -144,6 +144,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `distress_signal` / `accept_mission` help documents the gameserver 0.608.0 claimable rescue: one mission_id, first accept_mission wins (docked or not), counts toward the 5-mission cap. mission_id is empty when nobody heard the call. **No parser change.**
 - `distress_signal` table output prints `Mission ID` and `Responders reached` instead of `Missions sent` (gameserver 0.608.0). `Responders reached` is how many online pilots within 5 jumps heard the broadcast, not how many are coming. Empty `mission_id` (nobody in range; no rescue posted) prints `Mission ID: none`. `Expires in:` still prints when the server sends `expires_seconds`, including that 0-heard path. **No parser change.**
 - `chat_message` previews on `channel=emergency` print `distress_type`, `system`, and `mission_id` when present, and suggest `accept_mission id=…` when `mission_id` is non-empty (gameserver 0.608.0 claimable rescue). Empty `mission_id` omits the claim prompt. Non-emergency chat is unchanged. **No parser change.**
+- When an `action_result` command is `mission_objective_completed`, human output prints `Mission objective completed (tick N)` and the objective line, including `cargo:` / `storage:` when those counts are numbers. The rest of the state delta stays in the omitted hint. Partial progress does not use this command. A following command `action_result` stays its own line. The CLI formats the frame when it is present. It does not open a WebSocket. **No parser change.**
 
 ### Chat
 

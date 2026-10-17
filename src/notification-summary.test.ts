@@ -777,4 +777,85 @@ describe('notification presentation', () => {
     expect(presented.summarizedCount).toBe(0);
     expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'system', 'trade_offer_received']);
   });
+
+  test('does not summarize a pair of mission_objective_completed frames', () => {
+    const missionA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'mission_objective_completed', tick: 1523 },
+    };
+    const missionB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'mission_objective_completed', tick: 1524 },
+    };
+
+    const presented = presentNotifications([missionA, missionB]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual([
+      'mission_objective_completed',
+      'mission_objective_completed',
+    ]);
+  });
+
+  test('keeps mission_objective_completed separate from a following command action_result', () => {
+    const mission = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'mission_objective_completed', tick: 1523 },
+    };
+    const deposit = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'storage_deposit', tick: 1524, result: { details: { action: 'deposit_items' } } },
+    };
+
+    const presented = presentNotifications([mission, deposit]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual([
+      'mission_objective_completed',
+      'storage_deposit',
+    ]);
+  });
+
+  test('two dock frames still collapse while mission_objective_completed stays beside the summary', () => {
+    const dockA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'dock', tick: 1523, result: { details: { action: 'dock' } } },
+    };
+    const mission = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'mission_objective_completed', tick: 1524 },
+    };
+    const dockB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:10.000Z',
+      data: { command: 'dock', tick: 1525, result: { details: { action: 'dock' } } },
+    };
+
+    const presented = presentNotifications([dockA, mission, dockB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary', 'action_result']);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: { count: 2, commands: { dock: 2 } },
+    });
+    expect(presented.notifications[1]).toMatchObject({
+      data: { command: 'mission_objective_completed' },
+    });
+  });
 });

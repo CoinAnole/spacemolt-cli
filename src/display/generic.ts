@@ -191,6 +191,30 @@ function issuedMissionLabel(mission: Record<string, unknown>): string {
   return title || id || 'Mission';
 }
 
+export interface ActiveMissionProgressEntry {
+  line: string;
+  summary: string;
+  completed: boolean;
+}
+
+export function activeMissionProgressEntries(missions: unknown): ActiveMissionProgressEntry[] {
+  if (!isV2MissionsEnvelope(missions)) return [];
+  const rows = activeMissionRows({ missions });
+  if (!rows?.length) return [];
+  return rows.map((mission) => {
+    const summary = objectivesSummary(mission.objectives);
+    const label = issuedMissionLabel(mission);
+    const completed =
+      Array.isArray(mission.objectives) &&
+      mission.objectives.some((objective) => isRecord(objective) && objective.completed === true);
+    return {
+      line: summary ? `${label}: ${summary}` : label,
+      summary,
+      completed,
+    };
+  });
+}
+
 function playerPostedContractName(mission: Record<string, unknown>): string | undefined {
   if (typeof mission.faction_name !== 'string') return undefined;
   const name = mission.faction_name.replace(/\s+/g, ' ').trim();

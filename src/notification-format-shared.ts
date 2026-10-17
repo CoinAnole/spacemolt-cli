@@ -1,6 +1,7 @@
 import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatCreatureBrandSuffix } from './display/creatures.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
+import { activeMissionProgressEntries, isV2MissionsEnvelope } from './display/generic.ts';
 import { formatIntegerText } from './display/helpers.ts';
 import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
 import {
@@ -541,6 +542,7 @@ export function formatActionResultDetails(details: Record<string, unknown>): str
 const FLEET_DOCK_NAME_KEYS = ['base', 'base_name', 'station_name', 'name', 'poi_name'] as const;
 const FLEET_DOCK_ID_KEYS = ['base_id', 'docked_at', 'station_id'] as const;
 const ACTION_RESULT_STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
+const MISSION_PROGRESS_LINE_LIMIT = 8;
 
 function nonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -596,6 +598,8 @@ export function actionResultEventHeadline(command: string, tick: unknown, data?:
       const identity = data ? fleetDockIdentity(data) : undefined;
       return identity ? `Fleet docked at ${identity} (tick ${tickLabel})` : `Fleet docked (tick ${tickLabel})`;
     }
+    case 'mission_objective_completed':
+      return `Mission objective completed (tick ${tickLabel})`;
     default:
       return `${command} (tick ${tickLabel})`;
   }
@@ -610,7 +614,7 @@ function previewActionResult(
   const tick = safeScalar(data.tick);
   const result = isRecord(data.result) ? data.result : undefined;
 
-  // Membership first; headline helper never adds "completed".
+  // Event commands never get the "{command} completed" form.
   let headline =
     command !== undefined && NON_COMPLETION_ACTION_RESULT_COMMANDS.has(command)
       ? actionResultEventHeadline(command, tick, data)
@@ -643,8 +647,30 @@ function previewActionResult(
     details.push('Use: get_status');
   }
 
+  let skipBulky: ReadonlySet<string> | undefined;
+  if (command === 'mission_objective_completed' && result && isV2MissionsEnvelope(result.missions)) {
+    skipBulky = new Set(['missions']);
+    const entries = activeMissionProgressEntries(result.missions);
+    if (entries.length === 0) {
+      const maxMissions = finiteNumber(result.missions.max_missions);
+      details.push(
+        maxMissions === undefined ? 'Active missions: (none)' : `Active missions: (none) (0/${maxMissions})`,
+      );
+    } else {
+      const ordered = [...entries.filter((entry) => entry.completed), ...entries.filter((entry) => !entry.completed)];
+      const visibleCount = MISSION_PROGRESS_LINE_LIMIT - 1;
+      const visible = ordered.length > MISSION_PROGRESS_LINE_LIMIT ? ordered.slice(0, visibleCount) : ordered;
+      for (const entry of visible) details.push(truncate(entry.line, options));
+      if (ordered.length > MISSION_PROGRESS_LINE_LIMIT) {
+        details.push(`+${ordered.length - visibleCount} more missions`);
+      }
+      const summary = ordered[0]?.summary;
+      if (summary) headline = `${headline}: ${summary}`;
+    }
+  }
+
   headline = truncate(headline, options);
-  const omittedHint = omittedBulkyHint(result ?? data);
+  const omittedHint = omittedBulkyHint(result ?? data, skipBulky);
   return { tag: 'ACTION RESULT', headline, details, ...(omittedHint ? { omittedHint } : {}) };
 }
 
@@ -3595,11 +3621,12 @@ function collectScalarBits(
   return bits;
 }
 
-function omittedBulkyHint(data: Record<string, unknown>): string | undefined {
+function omittedBulkyHint(data: Record<string, unknown>, skip?: ReadonlySet<string>): string | undefined {
   // Prefer known bulky key names first, then any remaining object/array keys.
   const known: string[] = [];
   const other: string[] = [];
   for (const [key, value] of Object.entries(data)) {
+    if (skip?.has(key)) continue;
     if (!isBulkyValue(key, value)) continue;
     if (BULKY_KEYS.has(key)) known.push(key);
     else other.push(key);

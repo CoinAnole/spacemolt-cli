@@ -7,6 +7,7 @@ export const UNSOLICITED_STATE_EVENTS = new Set([
   'fleet_kicked',
   'fleet_disbanded',
   'mobile_capital_transit',
+  'mission_objective_completed',
 ]);
 
 /** Command strings that are events rather than completed mutations (`UNSOLICITED_STATE_EVENTS` plus `fleet_dock`). */
