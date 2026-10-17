@@ -25,6 +25,7 @@ import {
   tableMessageFromPreview,
 } from './notification-format-shared';
 import { displayNotifications, formatNotification, NOTIFICATION_TYPES } from './notifications';
+import { colorsForPlain } from './output-style';
 import { loadOpenApiSpec, openapiNotificationMsgTypes } from './test-support/openapi-schema';
 
 function stripAnsi(value: string): string {
@@ -11844,10 +11845,14 @@ describe('notification formatting', () => {
           },
           { noTimestamp: true },
         )[0] ?? '';
-      const fillColor = fillLine.slice(0, fillLine.indexOf('['));
-      const tradeColor = tradeLine.slice(0, tradeLine.indexOf('['));
-      expect(fillColor.length).toBeGreaterThan(0);
-      expect(fillColor).toBe(tradeColor);
+      // indexOf('[') is the CSI bracket inside the color code, not the tag.
+      const fillAt = fillLine.indexOf('[FILL]');
+      const tradeAt = tradeLine.indexOf('[TRADE]');
+      expect(fillAt).toBeGreaterThan(0);
+      expect(tradeAt).toBeGreaterThan(0);
+      const yellow = colorsForPlain(false).yellow;
+      expect(fillLine.slice(0, fillAt)).toBe(yellow);
+      expect(tradeLine.slice(0, tradeAt)).toBe(yellow);
     });
 
     test('string fields keep the first line and ignore base_name', () => {
