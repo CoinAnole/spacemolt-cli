@@ -2845,3 +2845,103 @@ describe('CLI output modes', () => {
     });
   });
 });
+
+describe('forum edit argv', () => {
+  function forumEditPayload(
+    args: string[],
+    resolveFile?: (filePath: string) => { ok: true; value: string } | { ok: false; error: string },
+  ): Record<string, unknown> {
+    const parsed = parseOk(args, { registry: internalCommandRegistry, resolveFile });
+    return normalizeInternalPayload(parsed.command, parsed.payload);
+  }
+
+  test('forum edit thread omits title and content that were not passed', () => {
+    expect(forumEditPayload(['forum_edit_thread', 'ID', 'New title'])).toEqual({
+      target: 'ID',
+      title: 'New title',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', 'New title', 'updated', 'body', 'text'])).toEqual({
+      target: 'ID',
+      title: 'New title',
+      content: 'updated body text',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--content', 'updated body text'])).toEqual({
+      target: 'ID',
+      content: 'updated body text',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', 'content=updated body'])).toEqual({
+      target: 'ID',
+      content: 'updated body',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--content', 'hello'])).toEqual({
+      target: 'ID',
+      content: 'hello',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--title', 'New title'])).toEqual({
+      target: 'ID',
+      title: 'New title',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--title', 'New title', '--content', 'updated body'])).toEqual({
+      target: 'ID',
+      title: 'New title',
+      content: 'updated body',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', 'title=New title', 'content=updated body'])).toEqual({
+      target: 'ID',
+      title: 'New title',
+      content: 'updated body',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID'])).toEqual({ target: 'ID' });
+    expect(validateInternalRequiredArgs('forum_edit_thread', { thread_id: 'ID' })).toBeNull();
+  });
+
+  test('forum edit reply joins the remaining argv as content', () => {
+    expect(forumEditPayload(['forum_edit_reply', 'ID', 'updated', 'reply', 'text'])).toEqual({
+      target: 'ID',
+      content: 'updated reply text',
+    });
+    expect(forumEditPayload(['forum_edit_reply', 'ID', '--content', 'updated reply'])).toEqual({
+      target: 'ID',
+      content: 'updated reply',
+    });
+    expect(validateInternalRequiredArgs('forum_edit_reply', { reply_id: 'ID' })).toBe('content');
+  });
+
+  test('unquoted --content words are not a body-only thread edit', () => {
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--content', 'hello', 'world'])).toEqual({
+      target: 'ID',
+      content: 'hello',
+      title: 'world',
+    });
+    expect(forumEditPayload(['forum_edit_thread', 'ID', '--content', 'updated', 'body', 'text'])).toEqual({
+      target: 'ID',
+      content: 'text',
+      title: 'body',
+    });
+  });
+
+  test('forum edit thread rejects category as an unknown field', () => {
+    const result = parseInternalArgs(['forum_edit_thread', 'ID', 'category=general']);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors[0]).toMatchObject({
+      field: 'category',
+      code: 'unknown_field',
+    });
+    expect(result.errors[0]?.message).toContain('Unknown field "category"');
+  });
+
+  test('forum edit thread --content @file is the body', () => {
+    const seen: string[] = [];
+    expect(
+      forumEditPayload(['forum_edit_thread', 'ID', '--content', '@post.md'], (filePath) => {
+        seen.push(filePath);
+        return { ok: true, value: 'file body' };
+      }),
+    ).toEqual({
+      target: 'ID',
+      content: 'file body',
+    });
+    expect(seen).toEqual(['post.md']);
+  });
+});

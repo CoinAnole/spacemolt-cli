@@ -25,6 +25,18 @@ import { runInvocation } from './main';
 import { colorsForPlain } from './output-style';
 import { setDefaultProfile } from './session';
 
+function exampleBlock(output: string): string {
+  const lines = output.split('\n');
+  const start = lines.findIndex((line) => line.includes('Example:'));
+  expect(start).toBeGreaterThanOrEqual(0);
+  const block = [lines[start] ?? ''];
+  for (const line of lines.slice(start + 1)) {
+    if (/Discover valid IDs\/state with:|See also:|Category:|API route:/.test(line)) break;
+    block.push(line);
+  }
+  return block.join('\n');
+}
+
 function captureWriter(): { stdout: string[]; stderr: string[]; writer: CliWriter } {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -4043,5 +4055,66 @@ describe('help output branches', () => {
     expect(statusOut).toContain(
       'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.',
     );
+  });
+
+  test('showCommandHelp documents forum edit commands without the flat route name', () => {
+    for (const [command, flatName] of [
+      ['forum edit_thread', 'forum_edit_thread'],
+      ['forum edit_reply', 'forum_edit_reply'],
+    ] as const) {
+      const capture = captureWriter();
+      expect(showCommandHelp(command, capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+      const output = capture.stdout.join('\n');
+      const example = exampleBlock(output);
+      expect(example).toContain(`spacemolt ${command}`);
+      expect(example).not.toContain(`spacemolt ${flatName}`);
+      expect(output).not.toContain('API route:');
+      expect(output).not.toContain(flatName);
+      expect(output).toContain('unlocked');
+      expect(output).toContain('no XP');
+      expect(output).toContain('no notifications');
+      expect(output).toContain('votes');
+      expect(output).toContain('thread ordering');
+      expect(output).not.toContain('1 per tick');
+      expect(output).not.toContain('Rate limited');
+      expect(output).toContain('spacemolt forum get_thread');
+      expect(output).not.toContain('forum_get_thread');
+    }
+
+    const thread = captureWriter();
+    expect(showCommandHelp('forum edit_thread', thread.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const threadOutput = thread.stdout.join('\n');
+    expect(threadOutput).toContain('second positional is the title');
+    expect(threadOutput).toContain('the next word is the body');
+    expect(threadOutput).toContain('the word after it becomes the title');
+    expect(threadOutput).toContain('replaces the body and drops the flag value');
+    expect(threadOutput).not.toContain('changes only the body');
+    expect(threadOutput).toContain('Category cannot change');
+  });
+
+  test('showCommandExplanation keeps the forum edit example and prints the API route', () => {
+    const thread = captureWriter();
+    const reply = captureWriter();
+    expect(showCommandExplanation('forum edit_thread', thread.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+    expect(showCommandExplanation('forum edit_reply', reply.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      true,
+    );
+
+    const threadOutput = thread.stdout.join('\n');
+    const threadExample = exampleBlock(threadOutput);
+    expect(threadExample).toContain('spacemolt forum edit_thread');
+    expect(threadExample).not.toContain('spacemolt forum_edit_thread');
+    expect(threadOutput).toContain('API route: POST /api/v2/spacemolt_social/forum_edit_thread');
+    expect(threadOutput).toContain('the next word is the body');
+    expect(threadOutput).toContain('the word after it becomes the title');
+    expect(threadOutput).toContain('replaces the body and drops the flag value');
+
+    const replyOutput = reply.stdout.join('\n');
+    const replyExample = exampleBlock(replyOutput);
+    expect(replyExample).toContain('spacemolt forum edit_reply');
+    expect(replyExample).not.toContain('spacemolt forum_edit_reply');
+    expect(replyOutput).toContain('API route: POST /api/v2/spacemolt_social/forum_edit_reply');
   });
 });

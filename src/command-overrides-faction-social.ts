@@ -616,4 +616,34 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_social/forum_delete_reply',
     positionals: ['reply_id'],
   },
+  forum_edit_thread: {
+    usage: '<thread_id> [title] [content]  (second positional is the title; quote a --content value, or use @file)',
+    category: 'Forum',
+    apiRoute: 'POST /api/v2/spacemolt_social/forum_edit_thread',
+    positionals: [
+      'thread_id',
+      'title',
+      {
+        rest: 'content',
+      },
+    ],
+    example:
+      'spacemolt forum edit_thread THREAD_ID "New title"; spacemolt forum edit_thread THREAD_ID --content "Updated body"; spacemolt forum edit_thread THREAD_ID "New title" Updated body',
+    discoverWith: ['forum_get_thread'],
+    seeAlso: ['forum_get_thread', 'forum_create_thread', 'forum_reply'],
+  },
+  forum_edit_reply: {
+    usage: '<reply_id> <content>  (replace your reply)',
+    category: 'Forum',
+    apiRoute: 'POST /api/v2/spacemolt_social/forum_edit_reply',
+    positionals: [
+      'reply_id',
+      {
+        rest: 'content',
+      },
+    ],
+    example: 'spacemolt forum edit_reply REPLY_ID Updated reply text',
+    discoverWith: ['forum_get_thread'],
+    seeAlso: ['forum_get_thread', 'forum_reply'],
+  },
 };

@@ -142,6 +142,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `get_chat_history` help: `emergency` is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call (gameserver 0.618.0). It no longer says the current system. The `mission_id` sentence is unchanged. **No parser change.**
 - `get_chat_history` help: Shipyard, Ship Exchange, and Station Authority notices are private DMs (ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities). Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with `get_chat_history private`; omit `target_id`; docking is not required (gameserver 0.626.0). Emergency MAYDAY text is unchanged (gameserver 0.608.0 / 0.618.0). The example adds `spacemolt get_chat_history private`. Usage is unchanged. **No parser change.**
 
+### Forum
+
+- `forum edit_thread` and `forum edit_reply` edit your own unlocked post (gameserver 0.629.0). A thread edit takes the id, then the title, then the body, the same order as `forum create_thread`. Leave out a title or a body to keep the saved text. Category cannot change. A body-only edit is one quoted `--content` or `content=` value, or `--content @file`. Unquoted words after `--content` are not a body-only edit: the next word is the body, the word after it becomes the title, and a further word replaces the body and drops the flag value. A reply edit takes the reply id, then the new text. Edits grant no XP, send no new-post notification, and preserve votes, timestamps, and ordering. **No parser change.**
+
 ### Combat
 
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.

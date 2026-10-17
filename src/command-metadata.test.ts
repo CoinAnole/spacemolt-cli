@@ -417,6 +417,8 @@ describe('command metadata', () => {
       'faction_info',
       'faction_personnel',
       'fleet_invite',
+      'forum_edit_reply',
+      'forum_edit_thread',
       'forum_get_thread',
       'station_set_name',
       'trade_offer',
@@ -424,6 +426,67 @@ describe('command metadata', () => {
       expect(BUNDLED_COMMAND_REGISTRY.commands[command], command).toBeUndefined();
       expect(BUNDLED_COMMAND_REGISTRY.allCommands[command], command).toBeUndefined();
     }
+  });
+
+  test('forum edit commands are curated group actions and not generated fallbacks', () => {
+    expect(BUNDLED_COMMAND_REGISTRY.commands.social_forum_edit_thread).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.social_forum_edit_reply).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.social_forum_edit_thread).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.social_forum_edit_reply).toBeUndefined();
+
+    const thread = BUNDLED_COMMAND_REGISTRY.commandGroups.forum?.actions.edit_thread;
+    const reply = BUNDLED_COMMAND_REGISTRY.commandGroups.forum?.actions.edit_reply;
+    expect(thread?.displayName).toBe('forum edit_thread');
+    expect(reply?.displayName).toBe('forum edit_reply');
+    expect(thread?.command).toBe('forum_edit_thread');
+    expect(reply?.command).toBe('forum_edit_reply');
+
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_thread?.aliases).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_thread?.required).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_thread?.description).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_reply?.aliases).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_reply?.required).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.forum_edit_reply?.description).toBeUndefined();
+
+    expect(thread?.config.args).toEqual(['thread_id', 'title', { rest: 'content' }]);
+    expect(thread?.config.required).toEqual(['thread_id']);
+    expect(thread?.config.aliases).toEqual({ thread_id: 'target' });
+    expect(thread?.config.usage).toBe(
+      '<thread_id> [title] [content]  (second positional is the title; quote a --content value, or use @file)',
+    );
+    expect(thread?.config.usage).not.toContain('changes only the body');
+    expect(thread?.config.example).toBe(
+      'spacemolt forum edit_thread THREAD_ID "New title"; spacemolt forum edit_thread THREAD_ID --content "Updated body"; spacemolt forum edit_thread THREAD_ID "New title" Updated body',
+    );
+    expect(thread?.config.example).not.toContain('spacemolt forum_edit_thread');
+    expect(thread?.config.description).toBe(CURATED_COMMAND_DESCRIPTIONS.forum_edit_thread);
+    expect(thread?.config.description).toContain('the next word is the body');
+    expect(thread?.config.description).toContain('the word after it becomes the title');
+    expect(thread?.config.description).toContain('replaces the body and drops the flag value');
+    expect(thread?.config.description).not.toBe('Edit your forum thread');
+    expect(thread?.config.description).not.toContain('1 per tick');
+    expect(thread?.config.description).not.toContain('Rate limited');
+    expect(thread?.config.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'forum_edit_thread',
+      method: 'POST',
+    });
+
+    expect(reply?.config.args).toEqual(['reply_id', { rest: 'content' }]);
+    expect(reply?.config.required).toEqual(['reply_id', 'content']);
+    expect(reply?.config.aliases).toEqual({ reply_id: 'target' });
+    expect(reply?.config.usage).toBe('<reply_id> <content>  (replace your reply)');
+    expect(reply?.config.example).toBe('spacemolt forum edit_reply REPLY_ID Updated reply text');
+    expect(reply?.config.example).not.toContain('spacemolt forum_edit_reply');
+    expect(reply?.config.description).toBe(CURATED_COMMAND_DESCRIPTIONS.forum_edit_reply);
+    expect(reply?.config.description).not.toBe('Edit your forum reply');
+    expect(reply?.config.description).not.toContain('1 per tick');
+    expect(reply?.config.description).not.toContain('Rate limited');
+    expect(reply?.config.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'forum_edit_reply',
+      method: 'POST',
+    });
   });
 
   test('top-level command metadata has human descriptions', () => {

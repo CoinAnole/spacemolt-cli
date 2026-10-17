@@ -45,6 +45,18 @@ function localHandler(args: string[]): CommandHandler {
   return handler as CommandHandler;
 }
 
+function exampleBlock(output: string): string {
+  const lines = output.split('\n');
+  const start = lines.findIndex((line) => line.includes('Example:'));
+  expect(start).toBeGreaterThanOrEqual(0);
+  const block = [lines[start] ?? ''];
+  for (const line of lines.slice(start + 1)) {
+    if (/Discover valid IDs\/state with:|See also:|Category:|API route:/.test(line)) break;
+    block.push(line);
+  }
+  return block.join('\n');
+}
+
 function captureContext(env: CliEnv = { HOME: '/tmp/spacemolt-test-home' }): {
   context: CliRuntimeContext;
   stdout: string[];
@@ -415,6 +427,58 @@ describe('local command handlers', () => {
     expect(output).not.toContain('facility_job_add');
     expect(output).not.toContain('facility_job_list');
     expect(output).not.toContain('facility_job_cancel');
+  });
+
+  test('forum edit_thread --help uses the grouped display name', () => {
+    const handler = resolveHandler(['forum', 'edit_thread', '--help'], options);
+    expect(handler?.name).toBe('forum edit_thread');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['forum', 'edit_thread', '--help'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    const example = exampleBlock(output);
+    expect(example).toContain('spacemolt forum edit_thread');
+    expect(example).not.toContain('spacemolt forum_edit_thread');
+    expect(output).not.toContain('API route:');
+    expect(output).not.toContain('forum_edit_thread');
+    expect(output).toContain('second positional is the title');
+    expect(output).toContain('the next word is the body');
+    expect(output).toContain('the word after it becomes the title');
+    expect(output).toContain('replaces the body and drops the flag value');
+    expect(output).not.toContain('changes only the body');
+    expect(output).not.toContain('1 per tick');
+    expect(output).not.toContain('Rate limited');
+    expect(output).toContain('spacemolt forum get_thread');
+    expect(output).not.toContain('forum_get_thread');
+  });
+
+  test('forum edit_reply --help uses the grouped display name', () => {
+    const handler = resolveHandler(['forum', 'edit_reply', '--help'], options);
+    expect(handler?.name).toBe('forum edit_reply');
+    if (!handler) return;
+    const { context, stdout } = captureContext();
+
+    const parsed = handler.parse(['forum', 'edit_reply', '--help'], { ...options, profile: 'pilot' }, context);
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.code).toBe('exit');
+    const output = stdout.join('\n');
+    const example = exampleBlock(output);
+    expect(example).toContain('spacemolt forum edit_reply');
+    expect(example).not.toContain('spacemolt forum_edit_reply');
+    expect(output).not.toContain('API route:');
+    expect(output).not.toContain('forum_edit_reply');
+    expect(output).not.toContain('1 per tick');
+    expect(output).not.toContain('Rate limited');
+    expect(output).toContain('spacemolt forum get_thread');
+    expect(output).not.toContain('forum_get_thread');
+    expect(output).not.toContain('forum_reply');
   });
 
   test('nested API command missing required argument output uses grouped display name', () => {
