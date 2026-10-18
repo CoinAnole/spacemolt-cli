@@ -683,6 +683,9 @@ describe('command metadata', () => {
     expect(config?.required ?? []).toEqual([]);
     expect(config?.usage).toContain('[target_id]');
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
+    expect(config?.description).toContain(
+      'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. It is not a target id and it is not the Target: row. false and an omitted field print nothing. A blank or null target_id still prints the line and does not invent a Target: row. A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true.',
+    );
     expect(config?.description).toContain('creature');
     expect(config?.description).toContain('intact prize');
     expect(config?.description).toContain('charted POI');
@@ -700,6 +703,11 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt scan');
     expect(help).toContain('[target_id]');
     expect(help).toContain('area sensor sweep');
+    expect(help).toContain('not the Target: row');
+    expect(help).toContain('A blank or null target_id still prints the line and does not invent a Target: row.');
+    expect(help).toContain(
+      'A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true.',
+    );
     expect(help).toContain('creature');
     expect(help).toContain('intact prize');
     expect(help).toContain('charted POI');
@@ -6258,8 +6266,11 @@ describe('command metadata', () => {
     const state =
       'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule;
+    const factionSensed =
+      'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. false and an omitted field print nothing.';
     const scan =
-      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.";
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel. " +
+      factionSensed;
     const status =
       'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players. ' +
       locationRule +
@@ -6270,10 +6281,23 @@ describe('command metadata', () => {
     expect(COMMANDS.get_location?.description).toBe(location);
     expect(COMMANDS.get_state?.description).toBe(state);
     expect(COMMANDS.faction_scan_poi?.description).toBe(scan);
+    expect(COMMANDS.faction_scan_poi?.description).toContain(factionSensed);
     expect(scan).toContain('poi_not_found');
     expect(scan).toContain('survey_system');
     expect(scan).toContain('faction intel');
     expect(scan).not.toContain('faction_scan_poi');
+    expect(scan).not.toContain('target_id');
+    expect(scan).not.toContain('Target:');
+    expect(factionSensed).not.toContain('target_id');
+    expect(factionSensed).not.toContain('Target:');
+    expect(COMMANDS.get_nearby?.description).toContain(
+      'When unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." That line does not name a ship or a creature, and it does not mean scan will identify the contact.',
+    );
+    expect(COMMANDS.get_nearby?.description).not.toContain('`');
+    expect(COMMANDS.subscribe_observation?.description).toContain(
+      'When unknown_signature is true, the snapshot prints "Unknown cloaked signature (not identified)." A false value prints no line. --follow still appends "unknown signature" to the observation headline only when that update\'s unknown_signature is true. Neither line names the contact.',
+    );
+    expect(COMMANDS.subscribe_observation?.description).not.toContain('`');
     expect(COMMANDS.get_location?.description).not.toContain('poi_not_found');
     expect(COMMANDS.get_state?.description).not.toContain('poi_not_found');
     expect(COMMANDS.get_status?.description).toBe(status);

@@ -113,7 +113,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_nearby: {
     description:
-      'Show visible nearby players, pirates, empire NPCs, wildlife creatures, and intact prizes at your current POI. Every animal in a wildlife herd is its own creature_id you can hunt. The list stops at 30 creatures; creature_count is the full number at this POI, including animals that are present but not listed. Prize rows provide actor_id for attack or scan and prize_id for claim_prize. Pirate names use crew primary_color / secondary_color (#RRGGBB) when the server sends them. Wild creatures are listed before branded livestock. A branded row keeps the server name, which already includes the faction tag, and adds the owner and ranch.',
+      'Show visible nearby players, pirates, empire NPCs, wildlife creatures, and intact prizes at your current POI. Every animal in a wildlife herd is its own creature_id you can hunt. The list stops at 30 creatures; creature_count is the full number at this POI, including animals that are present but not listed. Prize rows provide actor_id for attack or scan and prize_id for claim_prize. Pirate names use crew primary_color / secondary_color (#RRGGBB) when the server sends them. Wild creatures are listed before branded livestock. A branded row keeps the server name, which already includes the faction tag, and adds the owner and ranch. When unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." That line does not name a ship or a creature, and it does not mean scan will identify the contact.',
     example: 'spacemolt get_nearby',
     seeAlso: ['scan', 'hunt', 'survey_system', 'attack', 'claim_prize'],
     category: 'Query commands',
