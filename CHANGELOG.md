@@ -67,6 +67,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 ### Crafting
 
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
+- `craft` and `recycle` help: every tier II+ module recipe takes one of the module one tier below, recycling does not return that module, and a job queued before the change shows `complete_queued_<module>_order` instead of `build_<module>`. Gameserver 0.637.0 and 0.637.1. **No parser change.**
 
 ### Factions
 
