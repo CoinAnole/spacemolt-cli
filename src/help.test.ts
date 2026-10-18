@@ -1045,7 +1045,7 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
-    expect(output).toContain('target=self|faction|player|station:<base-or-POI-ID>');
+    expect(output).toContain('target=self|faction|player|fixer:tab|station:<base-or-POI-ID>');
     expect(output).toContain('send_gift');
     expect(output).toContain('already be docked');
     expect(output).toContain('source=storage');

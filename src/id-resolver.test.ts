@@ -1172,6 +1172,164 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('sends fixer:tab in lowercase and does not rewrite it from cached players', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'player',
+            id: 'player-fixer-tab',
+            name: 'fixer:tab',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-fixer',
+            name: 'Fixer',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-fixer-extra',
+            name: 'fixer:tab:extra',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:02:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-station-explorer',
+            name: 'Station:Explorer',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:03:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const fuzzy = options({ fuzzyIds: true });
+    expect(
+      prepareInternalPayload('storage_deposit', { target: 'fixer:tab', credits: '200' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'fixer:tab', credits: 200 },
+    });
+    expect(
+      prepareInternalPayload('storage_deposit', { target: 'Fixer:TAB', credits: '200' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'fixer:tab', credits: 200 },
+    });
+    expect(
+      prepareInternalPayload('storage_deposit', { target: ' Fixer:TAB ', credits: '200' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'fixer:tab', credits: 200 },
+    });
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'Station:Explorer', item_id: 'steel_plate', quantity: '20' },
+        fuzzy,
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'Station:Explorer', item_id: 'steel_plate', quantity: 20 },
+    });
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'fixer:tab:extra', item_id: 'steel_plate', quantity: '20' },
+        options(),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'player-fixer-extra', item_id: 'steel_plate', quantity: 20 },
+    });
+  });
+
+  test('does not let a cached item rewrite credits on storage and faction credit commands', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify({
+        version: 1,
+        hints: [
+          {
+            kind: 'item',
+            id: 'credit_chit',
+            name: 'credits',
+            sourceCommand: 'catalog',
+            seenAt: '2026-05-18T00:00:00.000Z',
+          },
+          {
+            kind: 'player',
+            id: 'player-fixer-tab',
+            name: 'fixer:tab',
+            sourceCommand: 'get_nearby',
+            seenAt: '2026-05-18T00:01:00.000Z',
+          },
+        ],
+      })}\n`,
+    );
+
+    const fuzzy = options({ fuzzyIds: true });
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { item_id: 'credits', quantity: '500', target: 'fixer:tab' },
+        fuzzy,
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'credits', quantity: 500, target: 'fixer:tab' },
+    });
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { item_id: 'Credits', quantity: '500', target: 'Fixer:TAB' },
+        fuzzy,
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'credits', quantity: 500, target: 'fixer:tab' },
+    });
+    expect(
+      prepareInternalPayload('storage_withdraw', { item_id: 'credits', quantity: '10' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'credits', quantity: 10 },
+    });
+    expect(
+      prepareInternalPayload('faction_deposit_credits', { item_id: 'credits', quantity: '10' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'credits', quantity: 10 },
+    });
+    expect(
+      prepareInternalPayload('faction_withdraw_credits', { item_id: 'Credits', quantity: '10' }, fuzzy, sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { item_id: 'credits', quantity: 10 },
+    });
+    expect(prepareInternalPayload('buy', { item_id: 'credits', quantity: '1' }, fuzzy, sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'credit_chit', quantity: 1 },
+    });
+    expect(prepareInternalPayload('sell', { item_id: 'credits', quantity: '1' }, fuzzy, sessionPath)).toEqual({
+      type: 'payload',
+      payload: { id: 'credit_chit', quantity: 1 },
+    });
+  });
+
   test('still resolves unprefixed station-like player names for storage deposit', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

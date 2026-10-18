@@ -3351,6 +3351,57 @@ describe('command metadata', () => {
     expect(release?.description).toContain('storage withdraw');
   });
 
+  test('storage deposit help documents the fixer tab payment and reserves credits off that field', () => {
+    const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
+    expect(deposit?.usage).toContain('target=self|faction|player|fixer:tab|station:<base-or-POI-ID>');
+    expect(deposit?.usage).toContain('fixer tab: item id credits, quantity, target=fixer:tab');
+    expect(deposit?.example).toContain('fixer tab: storage deposit credits 500 target=fixer:tab');
+    expect(deposit?.description).toContain(
+      'Pay shared fixer debt (gameserver 0.633.0) while docked at a public empire station with mission services: storage deposit credits 500 target=fixer:tab.',
+    );
+    expect(deposit?.description).toContain(
+      'Do not pass credits=, items=, a ship id, or faction funds for this payment.',
+    );
+    expect(deposit?.description).toContain('There is no send_gift command.');
+    expect(deposit?.description).toContain('send_gift');
+    expect(deposit?.description).not.toContain('`');
+    expect(deposit?.description).toContain('equal or smaller class scale');
+    expect(deposit?.schema?.target?.description).toContain(
+      'Items enter manager station inventory, not empire reserves',
+    );
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_deposit?.schemaExtensions?.target).toBeUndefined();
+    expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
+    expect(deposit?.schema?.item_id?.description).toContain('local path can auto-dock first');
+    expect(deposit?.schema?.item_id?.description).toContain('target=fixer:tab');
+    expect(deposit?.schema?.credits?.description).toContain('Not valid for fixer:tab.');
+    expect(deposit?.schema?.credits?.description).toContain('Not valid for station: targets.');
+    expect(deposit?.discoverWith).toEqual(['get_status', 'get_cargo', 'list_ships']);
+    expect(deposit?.seeAlso).toEqual([
+      'storage_view',
+      'storage_withdraw',
+      'get_cargo',
+      'list_ships',
+      'tow_wreck',
+      'get_status',
+      'get_missions',
+    ]);
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).toContain(
+      'Pay fixer debt with storage deposit credits 500 target=fixer:tab at an empire station with mission services.',
+    );
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).not.toBe(deposit?.description);
+
+    const help = captureHelp('storage deposit');
+    expect(help).toContain('target=fixer:tab');
+    expect(help).toContain('credits 500');
+    expect(help).toContain('empire');
+    expect(help).toContain('mission services');
+    expect(help).toContain('send_gift');
+    expect(help).not.toContain('`');
+    expect(help).toContain('Not valid for fixer:tab.');
+    expect(help).toContain('See also:');
+    expect(help).toContain('get_missions');
+  });
+
   test('claim_prize and service_prize are curated Salvage & Tow commands, not generated salvage_* names', () => {
     const claim = COMMANDS.claim_prize;
     expect(claim).toBeDefined();
