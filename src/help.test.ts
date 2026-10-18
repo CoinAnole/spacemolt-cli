@@ -3068,6 +3068,23 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives get_player_profile player_not_found a username lookup suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'get_player_profile',
+      { code: 'player_not_found', message: 'Player not found.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [player_not_found]');
+    expect(output).toContain(
+      'No pilot by that username. The match ignores case. This lookup never returns a system, POI, or docked station. Check the spelling. Pilots at your POI are listed by "spacemolt get_nearby". A cloaked ship at your POI is revealed by "spacemolt scan".',
+    );
+    expect(output).not.toContain('Meet at the same POI');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayError gives forum upvote cannot_upvote_own a do-not-retry suggestion', () => {
     const capture = captureWriter();
     displayError(

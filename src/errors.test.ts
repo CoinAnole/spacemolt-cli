@@ -585,15 +585,18 @@ describe('own_faction_station', () => {
 });
 
 describe('player_not_found', () => {
-  test('is one global suggestion for every documented caller', () => {
+  test('keeps one shared suggestion and a get_player_profile overlay', () => {
     expect(ERROR_REGISTRY.player_not_found?.retryable).toBe(false);
     expect(ERROR_REGISTRY.player_not_found?.auth).toBe(false);
     expect(isRetryableError('player_not_found')).toBe(false);
     expect(isAuthError('player_not_found')).toBe(false);
     expect(isKnownErrorCode('player_not_found')).toBe(true);
     expect(ERROR_CODES).toContain('player_not_found');
-    expect(ERROR_REGISTRY.player_not_found?.commandSuggestions).toBeUndefined();
     expect(ERROR_REGISTRY.player_not_found?.message).toBe('Player not found.');
+    expect(ERROR_REGISTRY.player_not_found?.commandSuggestions).toEqual({
+      get_player_profile:
+        'No pilot by that username. The match ignores case. This lookup never returns a system, POI, or docked station. Check the spelling. Pilots at your POI are listed by "spacemolt get_nearby". A cloaked ship at your POI is revealed by "spacemolt scan".',
+    });
 
     const suggestion = getErrorSuggestion('player_not_found');
     expect(suggestion).toContain('unknown name');
@@ -612,6 +615,14 @@ describe('player_not_found', () => {
       expect(getErrorSuggestion('player_not_found', command)).toBe(suggestion);
     }
     expect(getErrorSuggestion('player_not_found', 'arena_challenge')).toBe(suggestion);
+
+    const profile = getErrorSuggestion('player_not_found', 'get_player_profile');
+    expect(profile).toBe(
+      'No pilot by that username. The match ignores case. This lookup never returns a system, POI, or docked station. Check the spelling. Pilots at your POI are listed by "spacemolt get_nearby". A cloaked ship at your POI is revealed by "spacemolt scan".',
+    );
+    expect(profile).not.toContain('Meet at the same POI');
+    expect(profile).not.toContain('not visible');
+    expect(profile).not.toContain('same error');
     expect(getRelatedCommands('player_not_found')).toEqual(['get_nearby']);
   });
 });
