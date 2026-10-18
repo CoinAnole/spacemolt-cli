@@ -6250,13 +6250,22 @@ describe('command metadata', () => {
   });
 
   test('location, state, and faction scan help name leviathans without changing get_status', () => {
+    const locationRule =
+      'When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.';
     const location =
-      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.';
+      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
+      locationRule;
     const state =
-      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI.';
+      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
+      locationRule;
     const scan =
       "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.";
-    const status = 'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players.';
+    const status =
+      'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players. ' +
+      locationRule +
+      ' --summary does not print it.';
+    const travelRule =
+      'When details.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, within one sensor level of your scanner. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. A false or omitted details field prints nothing. The sibling location.unknown_signature is not copied onto this arrival line.';
 
     expect(COMMANDS.get_location?.description).toBe(location);
     expect(COMMANDS.get_state?.description).toBe(state);
@@ -6270,6 +6279,26 @@ describe('command metadata', () => {
     expect(COMMANDS.get_status?.description).toBe(status);
     expect(COMMANDS.get_status?.description).not.toContain('leviathan');
     expect(COMMANDS.get_status?.description).not.toContain('creature_id for hunt');
+    expect(COMMANDS.get_location?.description).toContain(locationRule);
+    expect(COMMANDS.get_state?.description).toContain(locationRule);
+    expect(COMMANDS.get_status?.description).toContain(locationRule);
+    expect(COMMANDS.get_status?.description).toContain('--summary does not print it.');
+    expect(COMMANDS.get_location?.description).not.toContain('--summary does not print it.');
+    expect(COMMANDS.get_state?.description).not.toContain('--summary does not print it.');
+    expect(COMMANDS.get_location?.description).not.toContain('within one sensor level');
+    expect(COMMANDS.get_state?.description).not.toContain('within one sensor level');
+    expect(COMMANDS.get_status?.description).not.toContain('within one sensor level');
+    expect(COMMANDS.travel?.description).toContain(travelRule);
+    expect(COMMANDS.travel?.description).not.toContain('near your sensor threshold');
+    expect(COMMANDS.travel?.description).not.toContain('--summary does not print it.');
+    for (const description of [
+      COMMANDS.get_location?.description,
+      COMMANDS.get_state?.description,
+      COMMANDS.get_status?.description,
+      COMMANDS.travel?.description,
+    ]) {
+      expect(description).not.toContain('`');
+    }
     expect(COMMANDS.faction_scan_poi?.usage).toBe('<poi_id>  (for a station: station base ID or station POI ID)');
     expect(COMMANDS.faction_scan_poi?.description).toContain('station base ID or station POI ID');
 

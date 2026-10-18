@@ -143,7 +143,7 @@ function hasUnknownSignature(...sources: unknown[]): boolean {
 
 function emitUnknownSignatureHint(...sources: unknown[]): void {
   if (!hasUnknownSignature(...sources)) return;
-  emitLine(`${c.yellow}Unknown cloaked signature detected.${c.reset} Run: scan`);
+  emitLine(`${c.yellow}Unknown cloaked signature (not identified).${c.reset}`);
 }
 
 function emitActiveScanLine(result: Record<string, unknown>, command: string | undefined): void {
@@ -1542,6 +1542,7 @@ export const statusFormatters = [
     (r) => {
       if (!r.poi_id || !Array.isArray(r.online_players)) return false;
       emitLine(`\n${c.green}Arrived at ${c.bright}${r.poi || r.poi_id}${c.reset}`);
+      emitUnknownSignatureHint(r);
       const players = r.online_players as Array<Record<string, unknown>>;
       const count = (r.online_players_count as number) || players.length;
       if (count > 0) {

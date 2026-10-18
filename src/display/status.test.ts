@@ -16,6 +16,7 @@ import {
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   getSystemAgentsFixture,
+  jumpFixture,
   jumpSurveyMissionsEnvelope,
   juvenileLeviathanContact,
   nearbyArenaFixture,
@@ -1904,7 +1905,117 @@ test('subscribe_observation prints Active scan: true', () => {
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature detected. Run: scan');
+  expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature (not identified).');
+});
+
+const UNKNOWN_SIGNATURE_LINE = 'Unknown cloaked signature (not identified).';
+
+test('location-aware tables print the presence line only when unknown_signature is exactly true', () => {
+  const nearbyBase = structuredClone(nearbyFixture) as Record<string, unknown>;
+  const locationBase = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  const statusBase = structuredClone(getStatusFixture) as {
+    location: Record<string, unknown>;
+    poi?: Record<string, unknown>;
+    unknown_signature?: unknown;
+  };
+
+  const nearbyTrue = renderStructuredResult(
+    'get_nearby',
+    { ...nearbyBase, unknown_signature: true },
+    options,
+    context,
+  ).stdout.join('\n');
+  const locationFixture = structuredClone(locationBase);
+  locationFixture.location.unknown_signature = true;
+  const locationTrue = renderStructuredResult('get_location', locationFixture, options, context).stdout.join('\n');
+  const statusFixture = structuredClone(statusBase);
+  statusFixture.location.unknown_signature = true;
+  const statusTrue = renderStructuredResult('get_status', statusFixture, options, context).stdout.join('\n');
+  const stateFixture = structuredClone(statusBase);
+  stateFixture.location.unknown_signature = true;
+  const stateTrue = renderStructuredResult('get_state', stateFixture, options, context).stdout.join('\n');
+
+  for (const stdout of [nearbyTrue, locationTrue, statusTrue, stateTrue]) {
+    expect(stdout.split('\n')).toContain(UNKNOWN_SIGNATURE_LINE);
+    expect(stdout).not.toContain('Run: scan');
+    expect(stdout).not.toContain('\x1b');
+  }
+  expect(nearbyTrue.indexOf('=== Nearby ===')).toBeLessThan(nearbyTrue.indexOf(UNKNOWN_SIGNATURE_LINE));
+  expect(nearbyTrue.indexOf(UNKNOWN_SIGNATURE_LINE)).toBeLessThan(nearbyTrue.indexOf('Players ('));
+  expect(locationTrue.indexOf('Docked at:')).toBeLessThan(locationTrue.indexOf(UNKNOWN_SIGNATURE_LINE));
+  expect(locationTrue.indexOf(UNKNOWN_SIGNATURE_LINE)).toBeLessThan(locationTrue.indexOf('Nearby Players'));
+  expect(statusTrue.indexOf('Docked:')).toBeLessThan(statusTrue.indexOf(UNKNOWN_SIGNATURE_LINE));
+  expect(statusTrue.indexOf(UNKNOWN_SIGNATURE_LINE)).toBeLessThan(statusTrue.indexOf('Ship:'));
+
+  const colored = renderStructuredResult(
+    'get_nearby',
+    { ...nearbyBase, unknown_signature: true },
+    colorOptions,
+    context,
+  ).stdout.join('\n');
+  const coloredLine = colored.split('\n').find((line) => line.includes(UNKNOWN_SIGNATURE_LINE));
+  expect(coloredLine).toContain('\x1b[33m');
+  expect(coloredLine).toContain(UNKNOWN_SIGNATURE_LINE);
+  expect(coloredLine).not.toContain(`\x1b[33m${UNKNOWN_SIGNATURE_LINE}`);
+
+  for (const value of [false, 'true', 1, null]) {
+    const nearby = renderStructuredResult(
+      'get_nearby',
+      { ...nearbyBase, unknown_signature: value },
+      options,
+      context,
+    ).stdout.join('\n');
+    const location = structuredClone(locationBase);
+    location.location.unknown_signature = value;
+    const locationOut = renderStructuredResult('get_location', location, options, context).stdout.join('\n');
+    const status = structuredClone(statusBase);
+    status.location.unknown_signature = value;
+    const statusOut = renderStructuredResult('get_status', status, options, context).stdout.join('\n');
+    for (const stdout of [nearby, locationOut, statusOut]) {
+      expect(stdout).not.toContain(UNKNOWN_SIGNATURE_LINE);
+      expect(stdout).not.toContain('Run: scan');
+    }
+  }
+
+  expect(renderStructuredResult('get_nearby', nearbyBase, options, context).stdout.join('\n')).not.toContain(
+    UNKNOWN_SIGNATURE_LINE,
+  );
+  expect(renderStructuredResult('get_location', locationBase, options, context).stdout.join('\n')).not.toContain(
+    UNKNOWN_SIGNATURE_LINE,
+  );
+  expect(renderStructuredResult('get_status', statusBase, options, context).stdout.join('\n')).not.toContain(
+    UNKNOWN_SIGNATURE_LINE,
+  );
+
+  const envelopeOnly = structuredClone(locationBase) as Record<string, unknown>;
+  envelopeOnly.unknown_signature = true;
+  expect(renderStructuredResult('get_location', envelopeOnly, options, context).stdout.join('\n')).not.toContain(
+    UNKNOWN_SIGNATURE_LINE,
+  );
+});
+
+test('get_status prints the presence line from the result, location, or poi', () => {
+  for (const source of ['result', 'location', 'poi'] as const) {
+    const fixture = structuredClone(getStatusFixture) as Record<string, unknown>;
+    if (source === 'result') fixture.unknown_signature = true;
+    if (source === 'location') (fixture.location as Record<string, unknown>).unknown_signature = true;
+    if (source === 'poi') fixture.poi = { unknown_signature: true };
+    const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+    expect(stdout.split('\n')).toContain(UNKNOWN_SIGNATURE_LINE);
+    expect(stdout).not.toContain('Run: scan');
+  }
+});
+
+test('get_status_summary does not print an unknown signature', () => {
+  const fixture = structuredClone(getStatusFixture) as Record<string, unknown>;
+  fixture.unknown_signature = true;
+  (fixture.location as Record<string, unknown>).unknown_signature = true;
+  fixture.poi = { unknown_signature: true };
+  const stdout = renderStructuredResult('get_status_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Player:');
+  expect(stdout).not.toContain(UNKNOWN_SIGNATURE_LINE);
+  expect(stdout).not.toContain('Run: scan');
 });
 
 test('subscribe_observation prints Active scan: false', () => {
@@ -4366,6 +4477,105 @@ test('enveloped jump without nearby_players falls through to Jumped', () => {
   expect(stdout).toContain('=== Jumped ===');
   expect(stdout).not.toContain('Players here');
   expect(stdout).not.toContain('offline collapsed');
+});
+
+test('travel arrival prints details.unknown_signature and ignores the location sibling', () => {
+  const details = {
+    action: 'travel',
+    poi: 'Earth',
+    poi_id: 'sol_earth',
+    online_players: [{ username: 'Ibis' }],
+    online_players_count: 1,
+  };
+  const printed = renderArrival('travel', {
+    details: { ...details, unknown_signature: true },
+    location: { unknown_signature: false, poi_id: 'sol_belt', poi_name: 'Belt' },
+  });
+  const arrived = printed.indexOf('Arrived at Earth');
+  const hint = printed.indexOf(UNKNOWN_SIGNATURE_LINE);
+  const players = printed.indexOf('Players here (1):');
+  expect(arrived).toBeGreaterThan(-1);
+  expect(hint).toBeGreaterThan(arrived);
+  expect(players).toBeGreaterThan(hint);
+  expect(printed).not.toContain('Run: scan');
+  expect(printed).not.toContain('Unknown Signature:');
+
+  for (const unknown_signature of [false, null, 'true', 1] as const) {
+    const stdout = renderArrival('travel', {
+      details: { ...details, unknown_signature },
+      location: {
+        unknown_signature: true,
+        system_id: 'sol',
+        poi_id: 'sol_earth',
+        poi_name: 'Earth',
+        nearby_players: [{ username: 'Ibis' }],
+      },
+    });
+    expect(stdout).toContain('Arrived at Earth');
+    expect(stdout).not.toContain(UNKNOWN_SIGNATURE_LINE);
+    expect(stdout).not.toContain('Run: scan');
+  }
+
+  const omitted = renderArrival('travel', {
+    details,
+    location: {
+      unknown_signature: true,
+      system_id: 'sol',
+      poi_id: 'sol_earth',
+      poi_name: 'Earth',
+      nearby_players: [{ username: 'Ibis' }],
+    },
+  });
+  expect(omitted).toContain('Arrived at Earth');
+  expect(omitted).not.toContain(UNKNOWN_SIGNATURE_LINE);
+});
+
+test('schema jump and pathfinder bodies do not print an unknown signature line', () => {
+  const jump = renderArrival('jump', {
+    details: { ...schemaJumpDetails, unknown_signature: true },
+  });
+  expect(jump).toContain('=== Jumped ===');
+  expect(jump).not.toContain('Arrived at');
+  expect(jump).not.toContain(UNKNOWN_SIGNATURE_LINE);
+
+  const pathfinder = renderArrival('jump', {
+    details: {
+      action: 'pathfinder_jump',
+      bearing: 90,
+      message: 'Bearing set.',
+      origin_x: 1,
+      origin_y: 2,
+      auto_docked: false,
+      auto_undocked: false,
+      unknown_signature: true,
+    },
+  });
+  expect(pathfinder).toContain('=== Pathfinder Jump ===');
+  expect(pathfinder).not.toContain('Arrived at');
+  expect(pathfinder).not.toContain(UNKNOWN_SIGNATURE_LINE);
+
+  const locationOnly = renderArrival('jump', {
+    details: schemaJumpDetails,
+    location: {
+      poi_id: 'procyon_a',
+      poi_name: 'Procyon A',
+      nearby_players: [{ username: 'Ibis' }],
+      unknown_signature: true,
+    },
+  });
+  expect(locationOnly).toContain('Arrived at Procyon A');
+  expect(locationOnly).not.toContain(UNKNOWN_SIGNATURE_LINE);
+});
+
+test('a jump body that already matches arrival prints details.unknown_signature', () => {
+  const fixture = structuredClone(jumpFixture) as { details: Record<string, unknown> };
+  fixture.details.unknown_signature = true;
+  const stdout = renderArrival('jump', fixture);
+
+  expect(stdout.indexOf('Arrived at Procyon A')).toBeGreaterThan(-1);
+  expect(stdout.indexOf('Arrived at Procyon A')).toBeLessThan(stdout.indexOf(UNKNOWN_SIGNATURE_LINE));
+  expect(stdout.indexOf(UNKNOWN_SIGNATURE_LINE)).toBeLessThan(stdout.indexOf('(No other players here)'));
+  expect(stdout).not.toContain('Run: scan');
 });
 
 function renderCompleteMission(fixture: Record<string, unknown>): string {

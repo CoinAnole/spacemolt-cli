@@ -55,7 +55,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   travel: {
     usage: '<poi_id_or_cached_name>  (station: station base ID or station POI ID; get_system caches names)',
     description:
-      'Move to a POI in the current system. A station accepts its station base ID or station POI ID. Use get_system first to cache names. An uncharted hidden POI is an unknown destination (invalid_poi), the same as an id that does not exist, wormhole mouths included. Arriving charts it.',
+      'Move to a POI in the current system. A station accepts its station base ID or station POI ID. Use get_system first to cache names. An uncharted hidden POI is an unknown destination (invalid_poi), the same as an id that does not exist, wormhole mouths included. Arriving charts it. When details.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, within one sensor level of your scanner. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. A false or omitted details field prints nothing. The sibling location.unknown_signature is not copied onto this arrival line.',
     example: 'spacemolt travel earth',
     discoverWith: ['get_system', 'get_status'],
     seeAlso: ['get_system', 'get_location', 'jump'],
