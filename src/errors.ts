@@ -340,6 +340,10 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     retryable: false,
     auth: false,
     relatedCommands: ['get_nearby'],
+    commandSuggestions: {
+      get_player_profile:
+        'No pilot by that username. The match ignores case. This lookup never returns a system, POI, or docked station. Check the spelling. Pilots at your POI are listed by "spacemolt get_nearby". A cloaked ship at your POI is revealed by "spacemolt scan".',
+    },
   },
   in_battle: {
     code: 'in_battle',
