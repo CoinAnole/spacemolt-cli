@@ -222,11 +222,22 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       bareResponse: true,
     },
   },
+  get_player_profile: {
+    description:
+      "Look up another pilot's public profile by username. The server match ignores case and the response username keeps its registered capitalization. Table output shows empire, clan tag, status message, colors, join date, online (yes or no), titles, faction and role, a leaderboard snapshot time, lifetime stats, leaderboard placements, and an achievement summary. An omitted key prints nothing. An explicit 0 prints 0. An empty ranks array prints No top-N leaderboard placements using ranks_top_n. Never returns a system, POI, or docked station, cloaked or not, and table output does not print a location block even if a later payload includes one. Finding a pilot uses get_nearby or scan. An unknown username is player_not_found. Requires a logged-in profile. The argument is username, not name. This is not player_profile, which takes name, needs no session, and may include a location when the server sends one. Gameserver 0.636.0.",
+    example: 'spacemolt get_player_profile "Vex Caldera"',
+    seeAlso: ['player_profile', 'get_player', 'get_nearby', 'scan', 'faction_info'],
+    category: 'Query commands',
+    required: ['username'],
+    positionals: ['username'],
+    usage: '<username>',
+    apiRoute: 'POST /api/v2/spacemolt/get_player_profile',
+  },
   player_profile: {
     description:
-      'Show a public pilot profile by username (identity, stats, ranks, achievements). No login required. Cloaked location and hidden pilots follow server rules.',
+      'Show a public pilot profile by username from GET /api/players/{name}: identity, stats, ranks, achievements, and location when the server sends it. No login required. The argument is name, not username. Cloaked location and hidden pilots follow server rules. This is not get_player_profile, which takes username.',
     example: 'spacemolt player_profile Arbiter47',
-    seeAlso: ['get_player', 'faction_profile', 'get_achievements'],
+    seeAlso: ['get_player', 'faction_profile', 'get_achievements', 'get_player_profile'],
     category: 'Query commands',
     required: ['name'],
     positionals: ['name'],
@@ -322,7 +333,14 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_player: {
     description: 'Show your player profile, credits, empire, faction, home station, standings, and arena stats.',
-    seeAlso: ['player_profile', 'get_skills', 'get_achievements', 'pay_bounty', 'arena_challenges'],
+    seeAlso: [
+      'player_profile',
+      'get_player_profile',
+      'get_skills',
+      'get_achievements',
+      'pay_bounty',
+      'arena_challenges',
+    ],
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_player',
   },

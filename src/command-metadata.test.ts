@@ -4513,6 +4513,95 @@ describe('command metadata', () => {
     expect(help).not.toContain('ship_id=');
   });
 
+  test('get_player_profile is a logged-in query lookup and is not player_profile', () => {
+    const description =
+      "Look up another pilot's public profile by username. The server match ignores case and the response username keeps its registered capitalization. Table output shows empire, clan tag, status message, colors, join date, online (yes or no), titles, faction and role, a leaderboard snapshot time, lifetime stats, leaderboard placements, and an achievement summary. An omitted key prints nothing. An explicit 0 prints 0. An empty ranks array prints No top-N leaderboard placements using ranks_top_n. Never returns a system, POI, or docked station, cloaked or not, and table output does not print a location block even if a later payload includes one. Finding a pilot uses get_nearby or scan. An unknown username is player_not_found. Requires a logged-in profile. The argument is username, not name. This is not player_profile, which takes name, needs no session, and may include a location when the server sends one. Gameserver 0.636.0.";
+    const publicDescription =
+      'Show a public pilot profile by username from GET /api/players/{name}: identity, stats, ranks, achievements, and location when the server sends it. No login required. The argument is name, not username. Cloaked location and hidden pilots follow server rules. This is not get_player_profile, which takes username.';
+    const override = QUERY_REFERENCE_COMMAND_OVERRIDES.get_player_profile;
+    expect(override).toEqual({
+      description,
+      example: 'spacemolt get_player_profile "Vex Caldera"',
+      seeAlso: ['player_profile', 'get_player', 'get_nearby', 'scan', 'faction_info'],
+      category: 'Query commands',
+      required: ['username'],
+      positionals: ['username'],
+      usage: '<username>',
+      apiRoute: 'POST /api/v2/spacemolt/get_player_profile',
+    });
+    expect(override?.aliases).toBeUndefined();
+    expect(override?.discoverWith).toBeUndefined();
+    expect(override?.schemaExtensions).toBeUndefined();
+    expect(override?.route).toBeUndefined();
+    expect(override?.description).not.toContain('`');
+    expect(override?.description).toContain('Requires a logged-in profile');
+    expect(override?.description).toContain('The argument is username, not name');
+    expect(override?.description).toContain('Never returns a system, POI, or docked station');
+    expect(override?.description).not.toContain('No login required');
+    expect(override?.description).not.toContain('GET /api/players/{name}');
+
+    const config = COMMANDS.get_player_profile;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('get_player_profile command is missing from COMMANDS');
+    expect(config.description).toBe(description);
+    expect(config.required).toEqual(['username']);
+    expect(config.args).toEqual(['username']);
+    expect(config.usage).toBe('<username>');
+    expect(config.aliases).toEqual({});
+    expect(config.route).toEqual({ tool: 'spacemolt', action: 'get_player_profile', method: 'POST' });
+    expect(config.route.publicUnauthenticated).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.get_player_profile?.category).toBe('Query commands');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.get_player_profile?.route).toEqual({
+      tool: 'spacemolt',
+      action: 'get_player_profile',
+      method: 'POST',
+    });
+    expect(BUNDLED_COMMAND_REGISTRY.commands.get_player_profile?.route.publicUnauthenticated).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.apiRoutes.get_player_profile).toEqual(config.route);
+
+    const help = captureHelp('get_player_profile');
+    expect(help).toContain(description);
+    expect(help).toContain('Requires a logged-in profile');
+    expect(help).toContain('The argument is username, not name');
+    expect(help).toContain('Never returns a system, POI, or docked station');
+    expect(help).not.toContain('No login required');
+    expect(help).not.toContain('GET /api/players/{name}');
+    expect(help).toContain('See also: player_profile, get_player, get_nearby, scan, faction info');
+    expect(help).not.toContain('`');
+
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.player_profile?.description).toBe(publicDescription);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.player_profile?.seeAlso).toEqual([
+      'get_player',
+      'faction_profile',
+      'get_achievements',
+      'get_player_profile',
+    ]);
+    expect(publicDescription).not.toContain('`');
+    expect(COMMANDS.player_profile?.description).toBe(publicDescription);
+    const publicHelp = captureHelp('player_profile');
+    expect(publicHelp).toContain(publicDescription);
+    expect(publicHelp).toContain('No login required');
+    expect(publicHelp).toContain('GET /api/players/{name}');
+    expect(publicHelp).toContain('The argument is name, not username');
+    expect(publicHelp).not.toContain('Requires a logged-in profile');
+    expect(publicHelp).not.toContain('Never returns a system, POI, or docked station');
+    expect(publicHelp).toContain('See also: get_player, faction profile, get_achievements, get_player_profile');
+    expect(publicHelp).not.toContain('`');
+
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.get_player?.seeAlso).toEqual([
+      'player_profile',
+      'get_player_profile',
+      'get_skills',
+      'get_achievements',
+      'pay_bounty',
+      'arena_challenges',
+    ]);
+    const playerHelp = captureHelp('get_player');
+    expect(playerHelp).toContain(
+      'See also: player_profile, get_player_profile, get_skills, get_achievements, pay_bounty, arena challenges',
+    );
+  });
+
   test('pay_bounty is curated under Taxes with empire aliases', () => {
     const config = COMMANDS.pay_bounty;
     expect(config).toBeDefined();
