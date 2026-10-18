@@ -1,0 +1,57 @@
+{
+  "achievements": {
+    "earned": 2,
+    "total": 72,
+    "points": 90
+  },
+  "clan_tag": "WOLF",
+  "created_at": "2026-03-02T09:30:00Z",
+  "empire": "voidborn",
+  "empire_name": "Voidborn Collective",
+  "faction": {
+    "name": "Wolfpack",
+    "tag": "WOLF",
+    "role": "Officer",
+    "joined_at": "2026-04-01T00:00:00Z"
+  },
+  "online": true,
+  "primary_color": "#00d4ff",
+  "ranks": [
+    {
+      "category": "ore_mined",
+      "label": "Ore Mined",
+      "rank": 7,
+      "value": 250000
+    }
+  ],
+  "ranks_generated_at": "2026-10-17T12:00:00Z",
+  "ranks_top_n": 30,
+  "secondary_color": "#0a0e17",
+  "stats": {
+    "credits_earned": 4200000,
+    "ships_destroyed": 12,
+    "ships_lost": 3,
+    "pirates_destroyed": 0,
+    "damage_dealt": 0,
+    "ore_mined": 250000,
+    "items_crafted": 340,
+    "trades_completed": 95,
+    "exchange_credits_earned": 0,
+    "missions_completed": 0,
+    "systems_explored": 41,
+    "jumps_completed": 610,
+    "distance_traveled": 52000,
+    "wormholes_traversed": 0,
+    "time_played": 864000,
+    "times_docked": 420,
+    "arena_wins": 0,
+    "arena_losses": 0,
+    "arena_knockouts": 0
+  },
+  "status_message": "Hiring miners. DM me.",
+  "titles": [
+    "Gastronome",
+    "Master Distiller"
+  ],
+  "username": "Vex Caldera"
+}

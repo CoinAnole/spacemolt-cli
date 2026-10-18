@@ -613,6 +613,144 @@ function emitScanRevealedInfo(result: Record<string, unknown>): void {
   }
 }
 
+function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): void {
+  const header = kind === 'web' ? 'Public Player Profile' : 'Pilot Profile';
+  emitLine(`\n${c.bright}=== ${header} ===${c.reset}`);
+
+  if (kind === 'web') {
+    emitLine(`Username: ${c.bright}${record.username}${c.reset}`);
+  } else if (typeof record.username === 'string' && record.username.trim() !== '') {
+    emitLine(`Username: ${c.bright}${record.username}${c.reset}`);
+  }
+
+  if (record.empire_name !== undefined || record.empire !== undefined) {
+    const empire =
+      record.empire_name && record.empire && record.empire_name !== record.empire
+        ? `${record.empire_name} (${record.empire})`
+        : (record.empire_name ?? record.empire);
+    emitLine(`Empire: ${formatDisplayValue(empire)}`);
+  }
+
+  if (kind === 'web') {
+    if (record.online !== undefined) {
+      emitLine(`Online: ${record.online === true ? 'yes' : record.online === false ? 'no' : record.online}`);
+    }
+  } else if (typeof record.online === 'boolean') {
+    emitLine(`Online: ${record.online ? 'yes' : 'no'}`);
+  }
+
+  if (kind === 'v2') {
+    if (typeof record.clan_tag === 'string' && record.clan_tag.trim() !== '') {
+      emitLine(`Clan tag: ${record.clan_tag}`);
+    }
+    if (typeof record.status_message === 'string') {
+      const status = record.status_message.replaceAll(/[\r\n]+/g, ' ').trim();
+      if (status) emitLine(`Status: ${status}`);
+    }
+  }
+
+  if (kind === 'web') {
+    if (record.primary_color !== undefined || record.secondary_color !== undefined) {
+      emitLine(`Colors: ${record.primary_color ?? '—'} / ${record.secondary_color ?? '—'}`);
+    }
+  } else {
+    const primary =
+      typeof record.primary_color === 'string' && record.primary_color.trim() !== '' ? record.primary_color : undefined;
+    const secondary =
+      typeof record.secondary_color === 'string' && record.secondary_color.trim() !== ''
+        ? record.secondary_color
+        : undefined;
+    if (primary !== undefined || secondary !== undefined) {
+      emitLine(`Colors: ${primary ?? '—'} / ${secondary ?? '—'}`);
+    }
+  }
+
+  if (record.created_at !== undefined) {
+    emitLine(`Created: ${formatTimestampPreview(record.created_at) || record.created_at}`);
+  }
+
+  if (isRecord(record.faction)) {
+    const faction = record.faction;
+    const name = faction.name ?? 'Unknown';
+    const tag = faction.tag ? ` [${faction.tag}]` : '';
+    const role = faction.role ? ` (${faction.role})` : '';
+    emitLine(`Faction: ${name}${tag}${role}`);
+    if (kind === 'v2' && typeof faction.joined_at === 'string' && faction.joined_at !== '') {
+      emitLine(`Joined: ${faction.joined_at}`);
+    }
+  }
+
+  if (kind === 'v2' && Array.isArray(record.titles)) {
+    const titles = record.titles
+      .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+      .map((item) => item.trim());
+    if (titles.length) emitLine(`Titles: ${titles.join(', ')}`);
+  }
+
+  if (kind === 'web' && isRecord(record.location)) {
+    const loc = record.location;
+    const system = loc.system_name ?? loc.system_id;
+    const station = loc.docked_station_name ?? loc.docked_station_id;
+    if (system || station) {
+      emitLine(`\n${c.bright}Location:${c.reset}`);
+      if (system) emitLine(`  System: ${system}`);
+      if (station) emitLine(`  Station: ${station}`);
+    }
+  }
+
+  if (isRecord(record.stats)) {
+    const rows = Object.entries(record.stats)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => ({
+        stat: key
+          .split('_')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' '),
+        value: typeof value === 'number' ? formatNumber(value) : String(value),
+      }));
+    if (rows.length) {
+      printCompactTable('Lifetime Stats', rows, [
+        ['Stat', ['stat']],
+        ['Value', ['value']],
+      ]);
+    }
+  }
+
+  if (kind === 'v2' && typeof record.ranks_generated_at === 'string' && record.ranks_generated_at !== '') {
+    emitLine(`\nLeaderboard snapshot: ${record.ranks_generated_at}`);
+  }
+
+  const ranks = Array.isArray(record.ranks) ? record.ranks.filter(isRecord) : [];
+  if (ranks.length) {
+    const rankRows = ranks.map((row) => ({
+      ...row,
+      value_display: typeof row.value === 'number' ? formatNumber(row.value) : row.value,
+    }));
+    printCompactTable('Leaderboard Ranks', rankRows, [
+      ['Category', ['label', 'category']],
+      ['Rank', ['rank']],
+      ['Value', ['value_display', 'value']],
+    ]);
+  } else if (
+    kind === 'web'
+      ? record.ranks_top_n !== undefined
+      : typeof record.ranks_top_n === 'number' && Number.isFinite(record.ranks_top_n)
+  ) {
+    emitLine(`\n${c.dim}No top-${record.ranks_top_n} leaderboard placements.${c.reset}`);
+  }
+
+  if (isRecord(record.achievements)) {
+    const achievements = record.achievements;
+    emitLine(`\n${c.bright}Achievements:${c.reset}`);
+    if (achievements.earned !== undefined || achievements.total !== undefined) {
+      emitLine(
+        `  Earned: ${achievements.earned ?? '?'}${achievements.total !== undefined ? ` / ${achievements.total}` : ''}`,
+      );
+    }
+    if (achievements.points !== undefined) emitLine(`  Points: ${formatNumber(achievements.points)}`);
+  }
+}
+
 export const statusFormatters = [
   // Queue state
   formatter(
@@ -709,90 +847,19 @@ export const statusFormatters = [
     (r, command) => {
       if (!commandNameEquals(command, 'player_profile')) return false;
       if (typeof r.username !== 'string' || !r.username) return false;
-
-      emitLine(`\n${c.bright}=== Public Player Profile ===${c.reset}`);
-      emitLine(`Username: ${c.bright}${r.username}${c.reset}`);
-      if (r.empire_name !== undefined || r.empire !== undefined) {
-        const empire =
-          r.empire_name && r.empire && r.empire_name !== r.empire
-            ? `${r.empire_name} (${r.empire})`
-            : (r.empire_name ?? r.empire);
-        emitLine(`Empire: ${formatDisplayValue(empire)}`);
-      }
-      if (r.online !== undefined) {
-        emitLine(`Online: ${r.online === true ? 'yes' : r.online === false ? 'no' : r.online}`);
-      }
-      if (r.primary_color !== undefined || r.secondary_color !== undefined) {
-        emitLine(`Colors: ${r.primary_color ?? '—'} / ${r.secondary_color ?? '—'}`);
-      }
-      if (r.created_at !== undefined) {
-        emitLine(`Created: ${formatTimestampPreview(r.created_at) || r.created_at}`);
-      }
-
-      if (isRecord(r.faction)) {
-        const faction = r.faction;
-        const name = faction.name ?? 'Unknown';
-        const tag = faction.tag ? ` [${faction.tag}]` : '';
-        const role = faction.role ? ` (${faction.role})` : '';
-        emitLine(`Faction: ${name}${tag}${role}`);
-      }
-
-      if (isRecord(r.location)) {
-        const loc = r.location;
-        const system = loc.system_name ?? loc.system_id;
-        const station = loc.docked_station_name ?? loc.docked_station_id;
-        if (system || station) {
-          emitLine(`\n${c.bright}Location:${c.reset}`);
-          if (system) emitLine(`  System: ${system}`);
-          if (station) emitLine(`  Station: ${station}`);
-        }
-      }
-
-      if (isRecord(r.stats)) {
-        const rows = Object.entries(r.stats)
-          .filter(([, value]) => value !== undefined && value !== null && value !== '')
-          .map(([key, value]) => ({
-            stat: key
-              .split('_')
-              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-              .join(' '),
-            value: typeof value === 'number' ? formatNumber(value) : String(value),
-          }));
-        if (rows.length) {
-          printCompactTable('Lifetime Stats', rows, [
-            ['Stat', ['stat']],
-            ['Value', ['value']],
-          ]);
-        }
-      }
-
-      const ranks = Array.isArray(r.ranks) ? r.ranks.filter(isRecord) : [];
-      if (ranks.length) {
-        const rankRows = ranks.map((row) => ({
-          ...row,
-          value_display: typeof row.value === 'number' ? formatNumber(row.value) : row.value,
-        }));
-        printCompactTable('Leaderboard Ranks', rankRows, [
-          ['Category', ['label', 'category']],
-          ['Rank', ['rank']],
-          ['Value', ['value_display', 'value']],
-        ]);
-      } else if (r.ranks_top_n !== undefined) {
-        emitLine(`\n${c.dim}No top-${r.ranks_top_n} leaderboard placements.${c.reset}`);
-      }
-
-      if (isRecord(r.achievements)) {
-        const a = r.achievements;
-        emitLine(`\n${c.bright}Achievements:${c.reset}`);
-        if (a.earned !== undefined || a.total !== undefined) {
-          emitLine(`  Earned: ${a.earned ?? '?'}${a.total !== undefined ? ` / ${a.total}` : ''}`);
-        }
-        if (a.points !== undefined) emitLine(`  Points: ${formatNumber(a.points)}`);
-      }
-
+      emitPilotProfile(r, 'web');
       return true;
     },
     { commands: ['player_profile'] },
+  ),
+
+  // Always matches. Declining falls through to === Response ===.
+  formatter(
+    (r) => {
+      emitPilotProfile(r, 'v2');
+      return true;
+    },
+    { commands: ['get_player_profile'] },
   ),
 
   // Compact player status summary
