@@ -858,4 +858,85 @@ describe('notification presentation', () => {
       data: { command: 'mission_objective_completed' },
     });
   });
+
+  test('does not summarize a pair of pathfinder_arrival frames', () => {
+    const arrivalA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'pathfinder_arrival', tick: 1523 },
+    };
+    const arrivalB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'pathfinder_arrival', tick: 1524 },
+    };
+
+    const presented = presentNotifications([arrivalA, arrivalB]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual([
+      'pathfinder_arrival',
+      'pathfinder_arrival',
+    ]);
+  });
+
+  test('two dock frames still collapse while pathfinder_arrival stays beside the summary', () => {
+    const dockA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'dock', tick: 1523, result: { details: { action: 'dock' } } },
+    };
+    const arrival = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'pathfinder_arrival', tick: 1524 },
+    };
+    const dockB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:10.000Z',
+      data: { command: 'dock', tick: 1525, result: { details: { action: 'dock' } } },
+    };
+
+    const presented = presentNotifications([dockA, arrival, dockB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result_summary', 'action_result']);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'action_result_summary',
+      data: { count: 2, commands: { dock: 2 } },
+    });
+    expect(presented.notifications[1]).toMatchObject({
+      data: { command: 'pathfinder_arrival' },
+    });
+  });
+
+  test('a following jump action_result stays its own line beside pathfinder_arrival', () => {
+    const arrival = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { command: 'pathfinder_arrival', tick: 1523 },
+    };
+    const jump = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { command: 'jump', tick: 1524, result: { details: { action: 'jumped' } } },
+    };
+
+    const presented = presentNotifications([arrival, jump]);
+
+    expect(presented.summarizedCount).toBe(0);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['action_result', 'action_result']);
+    expect(presented.notifications.map((n) => (n.data as { command?: string }).command)).toEqual([
+      'pathfinder_arrival',
+      'jump',
+    ]);
+  });
 });

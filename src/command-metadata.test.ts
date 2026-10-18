@@ -739,6 +739,10 @@ describe('command metadata', () => {
     expect(config?.description).toContain('This CLI does not open a WebSocket.');
     expect(config?.description).not.toContain('Kill and crafting still need get_active_missions');
     expect(config?.description).not.toContain('next get_notifications poll');
+    expect(config?.description).toContain('returns on this call');
+    expect(config?.description).toContain('poll get_location');
+    expect(config?.description).toContain('A numeric bearing, including a mid-drift replot, returns on this call.');
+    expect(config?.description).toContain('The drift continues until you poll get_location.');
     expect(config?.description).toContain('unknown_system');
     expect(config?.description).toContain('survey_system');
     expect(config?.description).toContain('faction intel');
@@ -764,6 +768,8 @@ describe('command metadata', () => {
     expect(help).toContain('unknown_system');
     expect(help).toContain('survey_system');
     expect(help).toContain('faction intel');
+    expect(help).toContain('returns on this call');
+    expect(help).toContain('poll get_location');
     expect(help).not.toContain('invalid_poi');
     expect(help).not.toContain('`');
   });
@@ -4636,10 +4642,13 @@ describe('command metadata', () => {
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('exchange_fill is under trade');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain('starts muted');
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toBe(
-      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax. mission_objective_completed is the command on an action_result, not its own type. It uses that system fallback: omit types, or pass types=system; types=combat does not include it.',
+      'Filter by notification types (chat, combat, trade, market, crafting, observation, system). Omit for all types. action_result, action_error, error, drone_adrift, server_restart_warning, battle_damage, drone_scan, drone_survey, pirate_radio, arena_challenge, arena_objective, personnel_update, refueled_by, and repaired_by fall back to system, not combat; types=combat does not include them. exchange_fill is under trade, so types=trade includes it. The exchange_fills channel starts muted and is sent on no transport, including this poll, until unmute_notifications channels=exchange_fills or all=true. order_id on that frame is the resting order; pass it to cancel_order or modify_order while a remainder remains. total is quantity times price_each and excludes sales tax. mission_objective_completed is the command on an action_result, not its own type. It uses that system fallback: omit types, or pass types=system; types=combat does not include it. pathfinder_arrival is the command on an action_result, not its own type. It uses that system fallback: omit types, or pass types=system; types=combat does not include it.',
     );
     expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain(
       'mission_objective_completed is the command on an action_result, not its own type.',
+    );
+    expect(NOTIFICATION_TYPES_FIELD_DESCRIPTION).toContain(
+      'pathfinder_arrival is the command on an action_result, not its own type. It uses that system fallback: omit types, or pass types=system; types=combat does not include it.',
     );
     expect(captureHelp('get_notifications')).toContain('action_error, error, drone_adrift');
     expect(captureHelp('notifications')).toContain('action_error, error, drone_adrift');
@@ -4674,12 +4683,27 @@ describe('command metadata', () => {
       'When an action_result in this response has command mission_objective_completed, table output prints the tick headline Mission objective completed (tick N).',
     );
     expect(COMMANDS.get_notifications?.description).toContain('This CLI does not open a WebSocket.');
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'Cached gameserver text sends that unsolicited frame on a v2 WebSocket.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'When an action_result in this response has command pathfinder_arrival, table output prints the tick headline Pathfinder arrival (tick N).',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'The CLI prints that frame when a notifications array already contains it.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'Cached gameserver text describes that unsolicited frame as a WebSocket v2 push.',
+    );
     expect(COMMANDS.get_notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.notifications?.description).toContain(
       'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
     );
     expect(COMMANDS.notifications?.description).toContain(
       'When an action_result has command mission_objective_completed, it is formatted the same way as on get_notifications.',
+    );
+    expect(COMMANDS.notifications?.description).toContain(
+      'When an action_result has command pathfinder_arrival, it is formatted the same way as on get_notifications.',
     );
     expect(COMMANDS.notifications?.description).toContain('This CLI does not open a WebSocket.');
     expect(COMMANDS.notifications?.description).not.toContain('next get_notifications poll');
@@ -4702,6 +4726,7 @@ describe('command metadata', () => {
     );
     const getNotificationsHelp = captureHelp('get_notifications');
     expect(getNotificationsHelp).toContain('Mission objective completed (tick N)');
+    expect(getNotificationsHelp).toContain('Pathfinder arrival (tick N)');
     expect(getNotificationsHelp).toContain('not its own type');
     expect(getNotificationsHelp).toContain('types=system');
     expect(getNotificationsHelp).not.toContain('next get_notifications poll');
