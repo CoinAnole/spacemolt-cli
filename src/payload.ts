@@ -310,6 +310,7 @@ function resolvedStationBaseId(
 
 function reservedIdValue(command: string, field: string, value: string, kind: string | undefined): string | undefined {
   if (isReservedStorageTarget(command, field, value, kind)) {
+    if (value.trim().toLowerCase() === 'fixer:tab') return 'fixer:tab';
     return value.trim();
   }
   if (command === 'jump' && (field === 'id' || field === 'target_system') && isNumericJumpBearing(value)) {
@@ -318,6 +319,15 @@ function reservedIdValue(command: string, field: string, value: string, kind: st
   if (kind === 'item') {
     const normalized = value.trim().toLowerCase();
     if (normalized === 'fuel' || normalized === 'tank_fuel') return 'fuel';
+    if (
+      normalized === 'credits' &&
+      (command === 'storage_deposit' ||
+        command === 'storage_withdraw' ||
+        command === 'faction_deposit_credits' ||
+        command === 'faction_withdraw_credits')
+    ) {
+      return 'credits';
+    }
   }
   return undefined;
 }
@@ -328,6 +338,7 @@ function isReservedStorageTarget(command: string, field: string, value: string, 
   if (
     normalized === 'self' ||
     normalized === 'faction' ||
+    normalized === 'fixer:tab' ||
     normalized.startsWith('faction:') ||
     normalized.startsWith('station:')
   ) {

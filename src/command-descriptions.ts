@@ -177,7 +177,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage: 'Run station and faction storage actions.',
   storage_view: 'View personal or faction station storage.',
   storage_deposit:
-    'Deposit cargo into station/faction storage, gift items/credits/ships to players, donate materials to a docked NPC station (target=station:<id>), or move between faction compartments.',
+    'Deposit cargo into station/faction storage, gift items/credits/ships to players, donate materials to a docked NPC station (target=station:<id>), or move between faction compartments. Pay fixer debt with storage deposit credits 500 target=fixer:tab at an empire station with mission services.',
   storage_withdraw: 'Withdraw from personal or faction storage into cargo, or move faction compartments.',
   storage_loot:
     'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot. A wreck at another POI returns not_found, the same as a wreck that is already gone.',
