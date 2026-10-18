@@ -22,6 +22,7 @@ import {
   missionsFixture,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
+  storageDepositFixerTabFixture,
   storageDepositStationGiftFixture,
   storageWithdrawAutoDockedFixture,
   undockFixture,
@@ -872,7 +873,266 @@ test('keeps player send_gift on the scalar dump', () => {
   expect(stdout).toContain('=== Send Gift ===');
   expect(stdout).toContain('Recipient: PlayerName');
   expect(stdout).toContain('Base Id: earth_station');
+  expect(stdout).not.toContain('Fixer:');
   expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each(['storage_deposit', 'storage deposit'])('prints the fixer snapshot under a %s gift receipt', (command) => {
+  const stdout = renderStructuredResult(command, storageDepositFixerTabFixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Action: send_gift');
+  expect(stdout).toContain('Recipient: fixer:tab');
+  expect(stdout).toContain('Base Id: earth_station');
+  expect(stdout).toContain('Credits Sent: 500');
+  expect(stdout).toContain('Wallet Remaining: 1500');
+  expect(stdout).not.toContain('Wallet Remaining: 1,500');
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).toContain('Debt: 1,500');
+  expect(stdout).toContain('Allowance: 5,000');
+  expect(stdout).toContain('Exposure: 1,500');
+  expect(stdout).toContain('Available: 3,500');
+  expect(stdout.indexOf('Wallet Remaining: 1500')).toBeLessThan(stdout.indexOf('Fixer:'));
+  expect(stdout).not.toContain('Paid at');
+  expect(stdout).not.toContain('Station:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('storage deposit fixer tab json stays the raw object', () => {
+  const rendered = renderStructuredResult(
+    'storage_deposit',
+    storageDepositFixerTabFixture,
+    { ...options, json: true },
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(JSON.parse(stdout)).toEqual(storageDepositFixerTabFixture);
+  expect(stdout).not.toContain('=== Send Gift ===');
+  expect(stdout).not.toContain('Fixer:');
+});
+
+test('prints the deposit fixer once when the envelope also has missions', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: { ...storageDepositFixerTabFixture },
+      missions: {
+        active: [{ mission_id: 'mission-rest', title: 'Settle Tab', type: 'courier' }],
+        max_missions: 5,
+        fixer: { debt: 9, allowance: 2500, exposure: 9, available: 2491 },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Wallet Remaining: 1500');
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).toContain('Debt: 1,500');
+  expect(stdout).not.toContain('Debt: 9');
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).toContain('Settle Tab');
+  expect(stdout.indexOf('Fixer:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+  expect(stdout).not.toContain('Paid at');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints an explicit zero wallet ungrouped and a zero debt in the account', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      action: 'send_gift',
+      recipient: 'fixer:tab',
+      base_id: 'earth_station',
+      credits_sent: 0,
+      wallet_remaining: 0,
+      fixer: { debt: 0, allowance: 5000, exposure: 0, available: 5000 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Credits Sent: 0');
+  expect(stdout).toContain('Wallet Remaining: 0');
+  expect(stdout).toContain('Debt: 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits wallet remaining when a fixer tab payment does not send it', () => {
+  const withoutWallet: Record<string, unknown> = { ...storageDepositFixerTabFixture };
+  delete withoutWallet.wallet_remaining;
+  const stdout = renderStructuredResult('storage_deposit', withoutWallet, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Credits Sent: 500');
+  expect(stdout).not.toContain('Wallet Remaining');
+  expect(stdout).toContain('Fixer:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits the fixer block when the deposit account is not integers', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      action: 'send_gift',
+      recipient: 'fixer:tab',
+      base_id: 'earth_station',
+      wallet_remaining: 1500,
+      fixer: { debt: '1500', allowance: '5000', exposure: '1500', available: '3500' },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Wallet Remaining: 1500');
+  expect(stdout).not.toContain('Wallet Remaining: 1,500');
+  expect(stdout).not.toContain('Fixer:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('keeps a scalar fixer on the storage deposit dump', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      action: 'send_gift',
+      recipient: 'PlayerName',
+      base_id: 'earth_station',
+      fixer: 'note',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Fixer: note');
+  expect(stdout).not.toContain('Debt:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('keeps an array fixer on the storage deposit item count', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      action: 'send_gift',
+      recipient: 'PlayerName',
+      base_id: 'earth_station',
+      fixer: ['a', 'b'],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Fixer: 2 item(s)');
+  expect(stdout).not.toContain('Debt:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('still dumps raw JSON when a storage deposit has another nested object', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      action: 'send_gift',
+      recipient: 'fixer:tab',
+      base_id: 'earth_station',
+      credits_sent: 500,
+      fixer: storageDepositFixerTabFixture.fixer,
+      audit: { reason: 'extra' },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Send Gift ===');
+  expect(stdout).not.toContain('Fixer:');
+});
+
+test('does not peel a record fixer on storage_withdraw', () => {
+  const stdout = renderStructuredResult(
+    'storage_withdraw',
+    {
+      action: 'withdraw_items',
+      item_id: 'ore_iron',
+      quantity: 7,
+      storage_remaining: 35,
+      fixer: storageDepositFixerTabFixture.fixer,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Fixer:');
+  expect(stdout).not.toContain('=== Withdraw Items ===');
+});
+
+test.each(['accept_mission', 'abandon_mission'])('does not peel a record fixer on a flat %s body', (command) => {
+  const stdout = renderStructuredResult(
+    command,
+    {
+      mission_id: 'mission-haul',
+      title: 'Haul Samples',
+      message: 'Mission accepted.',
+      expires_at: '2026-10-18T18:00:00Z',
+      fixer: storageDepositFixerTabFixture.fixer,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Fixer:');
+  expect(stdout).not.toContain('Message:');
+  expect(stdout).not.toContain('=== Accept Mission ===');
+  expect(stdout).not.toContain('=== Abandon Mission ===');
+});
+
+test('prints a record fixer at the end of a station gift', () => {
+  const stdout = renderStructuredResult(
+    'storage_deposit',
+    {
+      details: {
+        action: 'send_gift',
+        recipient: 'station:grand_exchange_station',
+        base_id: 'grand_exchange_station',
+        item_id: 'steel_plate',
+        quantity: 20,
+        cargo_remaining: 80,
+        fixer: storageDepositFixerTabFixture.fixer,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Item: steel_plate');
+  expect(stdout).not.toContain('=== Send Gift ===');
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).toContain('Debt: 1,500');
+  expect(stdout).not.toContain('Paid at');
+  expect(stdout.indexOf('Cargo remaining: 80')).toBeLessThan(stdout.indexOf('Fixer:'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints one fixer after a bulk station gift without changing the result columns', () => {
+  const fixture = {
+    details: {
+      ...structuredClone(storageDepositBulkStationGiftFixture.details),
+      fixer: storageDepositFixerTabFixture.fixer,
+    },
+  };
+  const stdout = renderStructuredResult('storage_deposit', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('=== Results ===');
+  expect(stdout).toContain('steel_plate');
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout.indexOf('=== Results ===')).toBeLessThan(stdout.indexOf('Fixer:'));
   expect(stdout).not.toContain('=== Response ===');
 });
 

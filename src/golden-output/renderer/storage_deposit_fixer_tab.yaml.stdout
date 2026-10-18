@@ -1,0 +1,11 @@
+
+action: send_gift
+recipient: "fixer:tab"
+base_id: earth_station
+credits_sent: 500
+wallet_remaining: 1500
+fixer:
+  debt: 1500
+  allowance: 5000
+  exposure: 1500
+  available: 3500

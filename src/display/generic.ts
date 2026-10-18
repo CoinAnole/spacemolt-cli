@@ -838,6 +838,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
     emitOptionalValue('Source', result.source);
     emitStationGiftRemaining(result);
     if (typeof result.message === 'string' && result.message) emitLine(result.message);
+    emitFixerAccount(result.fixer, true);
     return true;
   }
 
@@ -860,6 +861,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
 
   if (results.length === 0) {
     emitLine('No results.');
+    emitFixerAccount(result.fixer, true);
     return true;
   }
 
@@ -886,6 +888,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
     rows.some((row) => row.remaining_display !== undefined) ? 'Remaining' : 'OK',
   );
   printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
+  emitFixerAccount(result.fixer, true);
   return true;
 }
 
@@ -1746,10 +1749,12 @@ export const genericFormatters = [
   // Conservative fallback for scalar-only action responses.
   formatter(
     (r, command) => {
+      const depositFixer = commandNameEquals(command, 'storage_deposit') && isRecord(r.fixer) ? r.fixer : undefined;
       // Skip dest keys flattened from sibling location; keep native details fields.
-      const entries = Object.entries(r).filter(
-        ([key, value]) => value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key),
-      );
+      const entries = Object.entries(r).filter(([key, value]) => {
+        if (depositFixer && key === 'fixer') return false;
+        return value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key);
+      });
       const isStorageTransfer =
         commandNameEquals(command, 'storage_deposit') || commandNameEquals(command, 'storage_withdraw');
       const maxEntries = isStorageTransfer ? 24 : 16;
@@ -1771,6 +1776,7 @@ export const genericFormatters = [
         }
       }
       if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
+      if (depositFixer) emitFixerAccount(depositFixer, true);
       return true;
     },
     { commands: ['storage_deposit', 'storage_withdraw'], shapeFallback: true },
