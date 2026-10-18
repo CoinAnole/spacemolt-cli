@@ -1749,7 +1749,6 @@ export const genericFormatters = [
   // Conservative fallback for scalar-only action responses.
   formatter(
     (r, command) => {
-      // Also a shape fallback, so only this command may drop a record fixer.
       const depositFixer = commandNameEquals(command, 'storage_deposit') && isRecord(r.fixer) ? r.fixer : undefined;
       // Skip dest keys flattened from sibling location; keep native details fields.
       const entries = Object.entries(r).filter(([key, value]) => {
