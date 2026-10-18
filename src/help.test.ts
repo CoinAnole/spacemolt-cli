@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { CliRuntimeContext, CliWriter } from './cli-context';
+import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions';
 import { BUNDLED_COMMAND_REGISTRY, type CommandRegistrySnapshot } from './command-registry';
 import { COMMANDS } from './commands';
 import type { PlayerState } from './help';
@@ -4224,6 +4225,55 @@ describe('help output branches', () => {
     expect(threadOutput).toContain('replaces the body and drops the flag value');
     expect(threadOutput).not.toContain('changes only the body');
     expect(threadOutput).toContain('Category cannot change');
+  });
+
+  test('showCommandHelp documents forum upvote repeat success and failure rules', () => {
+    const description =
+      "Upvote a thread, or a reply in that thread (gameserver 0.630.6). thread_id is required and is sent as target. Omit reply_id to vote the thread. With reply_id the reply is voted, not the thread, and thread_id must be that reply's thread (reply_not_in_thread). There is no reply lookup. forum get_thread opens only a thread id from the page where the reply was read. It does not take reply_id, and a rejected thread_id is not that page. You cannot upvote your own thread or reply (cannot_upvote_own). Each player's upvote counts once: a repeat upvote succeeds, the server message says it was already upvoted, and the count does not change. A failed save is persist_failed. The vote is not counted, so retry the same command. The usual one-mutation-per-tick limit still applies.";
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_upvote).toBe(description);
+
+    const capture = captureWriter();
+    expect(showCommandHelp('forum upvote', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    const lines = output.split('\n');
+    expect(lines).toContain(description);
+    const descriptionLine = lines.find((line) => line === description);
+    expect(descriptionLine).toBe(description);
+    expect(descriptionLine).toContain('gameserver 0.630.6');
+    expect(descriptionLine).toContain('Omit reply_id');
+    expect(descriptionLine).toContain('the reply is voted, not the thread');
+    expect(descriptionLine).toContain('There is no reply lookup');
+    expect(descriptionLine).toContain('not counted');
+    expect(descriptionLine).toContain('retry the same command');
+    expect(descriptionLine).toContain('one-mutation-per-tick');
+    expect(output).toContain('Your own posts cannot be upvoted');
+    expect(output).toContain("must be the reply's thread");
+    expect(output).toContain('<thread_id> [reply_id=..]');
+    expect(output).toContain('thread_id -> target');
+    expect(output).not.toContain('thread_id is optional');
+    expect(output).not.toContain('1 per tick');
+    expect(output).not.toContain('Rate limited');
+    expect(output).not.toContain('right away');
+    expect(output).not.toContain('10-minute');
+    expect(showCommandHelp('forum_upvote', captureWriter().writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(
+      false,
+    );
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_create_thread).toBe('Create a new forum thread');
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_reply).toBe('Reply to a forum thread');
+    for (const [command, oneLiner] of [
+      ['forum create_thread', 'Create a new forum thread'],
+      ['forum reply', 'Reply to a forum thread'],
+    ] as const) {
+      const help = captureWriter();
+      expect(showCommandHelp(command, help.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+      const helpLines = help.stdout.join('\n').split('\n');
+      expect(helpLines).toContain(oneLiner);
+      const oneLinerLine = helpLines.find((line) => line === oneLiner);
+      expect(oneLinerLine).toBe(oneLiner);
+      expect(oneLinerLine).not.toContain('persist_failed');
+      expect(oneLinerLine).not.toContain('cooldown');
+    }
   });
 
   test('showCommandExplanation keeps the forum edit example and prints the API route', () => {
