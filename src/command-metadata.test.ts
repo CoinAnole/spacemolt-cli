@@ -4132,7 +4132,6 @@ describe('command metadata', () => {
       'auth_login_link',
       'auth_login_link_poll',
       'battle_self_destruct',
-      'get_player_profile',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',
