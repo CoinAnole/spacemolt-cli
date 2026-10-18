@@ -1,0 +1,14 @@
+
+=== Active Missions ===
+
+  Title        | ID           | Type    | Difficulty | Issuing Base  | Objectives | Rewards | Expires
+  -------------+--------------+---------+------------+---------------+------------+---------+--------
+  Haul Samples | mission-haul | courier | 2          | Earth Station |            | 400 cr  | 40     
+
+Haul Samples (mission-haul): Deliver the sealed samples before the contract expires.
+missions 1/5
+Fixer:
+  Debt: 2,000
+  Allowance: 5,000
+  Exposure: 3,000
+  Available: 2,000

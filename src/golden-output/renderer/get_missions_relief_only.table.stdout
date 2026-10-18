@@ -1,0 +1,9 @@
+Station: Earth Station (earth_station)
+
+=== Missions ===
+
+  Title      | ID           | Type    | Difficulty | Relief | Expires | Rewards
+  -----------+--------------+---------+------------+--------+---------+--------
+  Settle Tab | mission-rest | courier | 3          | 400    | 60      | 100 cr 
+
+Settle Tab (mission-rest): Finish the restitution job and reduce the shared fixer tab.

@@ -1,0 +1,11 @@
+
+mission_id: "mission-rest"
+title: "Settle Tab"
+credits_earned: 0
+debt_repaid: 400
+message: "Mission complete."
+fixer:
+  debt: 1600
+  allowance: 5000
+  exposure: 1600
+  available: 3400

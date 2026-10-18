@@ -1,0 +1,14 @@
+
+=== Active Missions ===
+
+  Title      | ID           | Type    | Difficulty | Relief | Issuing Base  | Objectives | Rewards | Expires
+  -----------+--------------+---------+------------+--------+---------------+------------+---------+--------
+  Settle Tab | mission-rest | courier | 3          | 400    | Earth Station |            | 100 cr  | 60     
+
+Settle Tab (mission-rest): Finish the restitution job and reduce the shared fixer tab.
+missions 1/5
+Fixer:
+  Debt: 2,000
+  Allowance: 5,000
+  Exposure: 3,000
+  Available: 2,000
