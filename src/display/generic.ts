@@ -14,6 +14,7 @@ import {
 } from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
+import { emitFixerAccount, fixerAccountLines, formatFixerInteger } from './fixer.ts';
 import { emitGiftEntries } from './gifts.ts';
 import {
   c,
@@ -888,6 +889,64 @@ function renderStationGift(result: Record<string, unknown>): boolean {
   return true;
 }
 
+function insertMissionLiabilityColumns(columns: Array<[string, string[]]>, rows: Array<Record<string, unknown>>): void {
+  insertOptionalColumn(columns, rows, 'Liability', ['liability_display'], 'Difficulty');
+  insertOptionalColumn(
+    columns,
+    rows,
+    'Relief',
+    ['relief_display'],
+    columns.some(([label]) => label === 'Liability') ? 'Liability' : 'Difficulty',
+  );
+}
+
+function missionLedgerDisplays(mission: Record<string, unknown>): {
+  liability_display?: string;
+  relief_display?: string;
+} {
+  return {
+    liability_display: formatFixerInteger(mission.cargo_liability),
+    relief_display: formatFixerInteger(mission.restitution_relief),
+  };
+}
+
+/** A line break would split the one-line station header. */
+function usableStationToken(value: unknown): string | undefined {
+  if (typeof value !== 'string' || /[\r\n]/.test(value)) return undefined;
+  const text = value.trim();
+  return text === '' ? undefined : text;
+}
+
+function missionBoardStationLine(result: Record<string, unknown>): string | undefined {
+  const name = usableStationToken(result.base_name);
+  const id = usableStationToken(result.base_id);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+function emitMissionsBoard(result: Record<string, unknown>, beforeTable?: () => void): boolean {
+  if (!Array.isArray(result.missions)) return false;
+  if (result.missions.some((mission) => !isRecord(mission))) return false;
+  const missions = result.missions.filter(isRecord);
+  const rows = missions.map((mission) => ({
+    ...mission,
+    rewards_summary: summarizeRewards(mission.rewards),
+    objectives_summary: objectivesSummary(mission.objectives),
+    community_summary: summarizeCommunityStatus(mission),
+    ...missionLedgerDisplays(mission),
+  }));
+  const columns = scalarColumns(rows, GENERIC_LIST_COLUMNS_BY_KEY.missions ?? []);
+  if (rows.length > 0 && columns.length < 1) return false;
+  beforeTable?.();
+  const tableColumns: Array<[string, string[]]> = columns.length > 0 ? columns : [['ID', ['id']]];
+  insertMissionLiabilityColumns(tableColumns, rows);
+  printCompactTable('Missions', rows, tableColumns);
+  emitIssuedMissionText(rows, { posters: true });
+  printMetadata(result);
+  if (result.message) emitLine(`${c.dim}${result.message}${c.reset}`);
+  return true;
+}
+
 function insertOptionalColumn(
   columns: Array<[string, string[]]>,
   rows: Array<Record<string, unknown>>,
@@ -922,6 +981,7 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
     objectives_summary: objectivesSummary(mission.objectives),
     rewards_summary: summarizeRewards(mission.rewards),
     community_summary: summarizeCommunityStatus(mission),
+    ...missionLedgerDisplays(mission),
   }));
 
   const columns: Array<[string, string[]]> = [
@@ -941,12 +1001,46 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
       columns.splice(objectivesIndex, 0, ['Issuing Base', ['issuing_base', 'issuing_base_id']]);
     }
   }
+  insertMissionLiabilityColumns(columns, rows);
 
   printCompactTable('Active Missions', rows, columns, { maxCellWidth: 64 });
   emitIssuedMissionText(missions);
 
   const capacity = activeMissionCapacity(result, missions.length);
   if (capacity) emitLine(`${c.dim}missions ${capacity}${c.reset}`);
+  return true;
+}
+
+/** No row container: this is the unwrapped action body, not the envelope. */
+function isMissionDetailsWithoutRows(result: Record<string, unknown>): boolean {
+  if (Array.isArray(result.missions) || isRecord(result.missions)) return false;
+  if (Array.isArray(result.active) || Array.isArray(result.active_missions)) return false;
+  if (isRecord(result.details)) return false;
+  return true;
+}
+
+function presentFixerAccount(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) && fixerAccountLines(value) ? value : undefined;
+}
+
+function missionViewFixerAccount(result: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (isRecord(result.details)) {
+    const detailsAccount = presentFixerAccount(result.details.fixer);
+    if (detailsAccount) return detailsAccount;
+  }
+  if (isRecord(result.missions)) {
+    const missionsAccount = presentFixerAccount(result.missions.fixer);
+    if (missionsAccount) return missionsAccount;
+  }
+  return presentFixerAccount(result.fixer);
+}
+
+function emitActiveMissionView(result: Record<string, unknown>): boolean {
+  if (isMissionDetailsWithoutRows(result)) return false;
+  const printedTable = emitActiveMissionsTable(result);
+  const account = missionViewFixerAccount(result);
+  if (!printedTable && !account) return false;
+  if (account) emitFixerAccount(account);
   return true;
 }
 
@@ -1331,7 +1425,18 @@ export const genericFormatters = [
     { commands: ['faction_list_missions'] },
   ),
 
-  formatter((r) => emitActiveMissionsTable(r), {
+  formatter(
+    (result) =>
+      emitMissionsBoard(result, () => {
+        const station = missionBoardStationLine(result);
+        if (station) emitLine(`Station: ${station}`);
+        if (station && fixerAccountLines(result.fixer)) emitLine('');
+        emitFixerAccount(result.fixer);
+      }),
+    { commands: ['get_missions'] },
+  ),
+
+  formatter((result) => emitActiveMissionView(result), {
     commands: ['get_active_missions', 'accept_mission', 'abandon_mission'],
   }),
 
@@ -1521,16 +1626,13 @@ export const genericFormatters = [
       if (!key) return false;
       const rows = r[key] as unknown[];
       if (!rows.every(isRecord)) return false;
+      if (key === 'missions') {
+        if (!emitMissionsBoard(r)) return false;
+        printCatalogTruncationWarning(command, r);
+        return true;
+      }
       const recordRows = (rows as Array<Record<string, unknown>>).map((row) => {
         if (key === 'items') return { ...row, effects_summary: summarizeCatalogItemEffects(row) };
-        if (key === 'missions') {
-          return {
-            ...row,
-            rewards_summary: summarizeRewards(row.rewards),
-            objectives_summary: objectivesSummary(row.objectives),
-            community_summary: summarizeCommunityStatus(row),
-          };
-        }
         return row;
       });
       const columnCandidates = GENERIC_LIST_COLUMNS_BY_KEY[key] ?? GENERIC_LIST_COLUMNS;
@@ -1541,7 +1643,6 @@ export const genericFormatters = [
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
         maxCellWidth: key === 'items' ? 80 : undefined,
       });
-      if (key === 'missions') emitIssuedMissionText(recordRows, { posters: true });
       const onlyItem = key === 'items' && recordRows.length === 1 ? recordRows[0] : undefined;
       if (
         onlyItem &&

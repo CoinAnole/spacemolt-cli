@@ -4177,3 +4177,116 @@ test('enveloped jump without nearby_players falls through to Jumped', () => {
   expect(stdout).not.toContain('Players here');
   expect(stdout).not.toContain('offline collapsed');
 });
+
+function renderCompleteMission(fixture: Record<string, unknown>): string {
+  return renderStructuredResult('complete_mission', fixture, options, context).stdout.join('\n');
+}
+
+test('complete_mission omits Debt repaid when debt_repaid is 0, 0n, or absent', () => {
+  const base = {
+    mission_id: 'mission-delivery-1',
+    title: 'Food Delivery',
+    credits_earned: 2500,
+    message: 'Mission complete. Rewards claimed.',
+  };
+  for (const fixture of [base, { ...base, debt_repaid: 0 }, { ...base, debt_repaid: 0n }]) {
+    const stdout = renderCompleteMission(fixture);
+    expect(stdout).toContain('Credits earned: 2,500');
+    expect(stdout).not.toContain('Debt repaid');
+    expect(stdout).not.toContain('Fixer:');
+  }
+});
+
+test('complete_mission prints non-zero debt repaid without changing Credits earned', () => {
+  const stdout = renderCompleteMission({
+    mission_id: 'mission-rest',
+    title: 'Settle Tab',
+    credits_earned: 0,
+    debt_repaid: 400,
+    items_received: { repair_patch: 1 },
+    message: 'Mission complete.',
+    fixer: { debt: 1600, allowance: 5000, exposure: 1600, available: 3400 },
+  });
+  const creditsAt = stdout.indexOf('Credits earned: 0');
+  const repaidAt = stdout.indexOf('Debt repaid: 400');
+  const itemsAt = stdout.indexOf('Items received:');
+  const messageAt = stdout.indexOf('Mission complete.');
+  const fixerAt = stdout.indexOf('Fixer:');
+  expect(creditsAt).toBeGreaterThanOrEqual(0);
+  expect(creditsAt).toBeLessThan(repaidAt);
+  expect(repaidAt).toBeLessThan(itemsAt);
+  expect(itemsAt).toBeLessThan(messageAt);
+  expect(messageAt).toBeLessThan(fixerAt);
+  expect(stdout).toContain('Debt: 1,600');
+  expect(stdout).not.toContain('Credits earned: 400');
+  expect(stdout).not.toContain('Credits earned: 1,600');
+});
+
+test('complete_mission groups a large debt repaid and still prints it when credits are omitted', () => {
+  const grouped = renderCompleteMission({
+    mission_id: 'mission-rest',
+    title: 'Settle Tab',
+    credits_earned: 2500,
+    debt_repaid: 1200,
+    message: 'Mission complete.',
+  });
+  expect(grouped).toContain('Credits earned: 2,500');
+  expect(grouped).toContain('Debt repaid: 1,200');
+  expect(grouped).not.toContain('Fixer:');
+
+  const identityOnly = renderCompleteMission({
+    mission_id: 'mission-rest',
+    title: 'Settle Tab',
+    message: 'Mission complete.',
+    debt_repaid: 400n,
+  });
+  expect(identityOnly).not.toContain('Credits earned');
+  expect(identityOnly).toContain('Debt repaid: 400');
+});
+
+test('complete_mission ignores a non-numeric debt_repaid and prints a negative amount as sent', () => {
+  const ignored = renderCompleteMission({
+    mission_id: 'mission-rest',
+    title: 'Settle Tab',
+    credits_earned: 10,
+    debt_repaid: '400',
+    message: 'Mission complete.',
+  });
+  expect(ignored).toContain('Credits earned: 10');
+  expect(ignored).not.toContain('Debt repaid');
+
+  const negative = renderCompleteMission({
+    mission_id: 'mission-rest',
+    title: 'Settle Tab',
+    credits_earned: 10,
+    debt_repaid: -50,
+    message: 'Mission complete.',
+  });
+  expect(negative).toContain('Credits earned: 10');
+  expect(negative).toContain('Debt repaid: -50');
+});
+
+test('complete_mission prints details.fixer once and does not repeat an envelope account', () => {
+  const stdout = renderCompleteMission({
+    details: {
+      mission_id: 'mission-rest',
+      title: 'Settle Tab',
+      credits_earned: 0,
+      debt_repaid: 400,
+      message: 'Mission complete.',
+      fixer: { debt: 1600, allowance: 5000, exposure: 1600, available: 3400 },
+    },
+    missions: {
+      active: [{ mission_id: 'mission-other', title: 'Other', type: 'courier' }],
+      max_missions: 5,
+      fixer: { debt: 9, allowance: 2500, exposure: 9, available: 2491 },
+    },
+  });
+  expect(stdout).toContain('=== Mission Complete: Settle Tab ===');
+  expect(stdout).toContain('=== Active Missions ===');
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).toContain('Debt: 1,600');
+  expect(stdout).not.toContain('Debt: 9');
+  expect(stdout.indexOf('=== Mission Complete:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+  expect(stdout.indexOf('Fixer:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+});

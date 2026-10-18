@@ -1,0 +1,24 @@
+{
+  "base_id": "earth_station",
+  "base_name": "Earth Station",
+  "fixer": {
+    "debt": 2000,
+    "allowance": 5000,
+    "exposure": 3000,
+    "available": 2000
+  },
+  "missions": [
+    {
+      "mission_id": "mission-haul",
+      "type": "courier",
+      "title": "Haul Samples",
+      "description": "Deliver the sealed samples before the contract expires.",
+      "difficulty": 2,
+      "expires_in_ticks": 40,
+      "rewards": {
+        "credits": 400
+      },
+      "cargo_liability": 800
+    }
+  ]
+}

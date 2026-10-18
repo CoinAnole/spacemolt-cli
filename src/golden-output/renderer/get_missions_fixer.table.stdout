@@ -1,0 +1,15 @@
+Station: Earth Station (earth_station)
+
+Fixer:
+  Debt: 2,000
+  Allowance: 5,000
+  Exposure: 3,000
+  Available: 2,000
+
+=== Missions ===
+
+  Title        | ID           | Type    | Difficulty | Liability | Expires | Rewards
+  -------------+--------------+---------+------------+-----------+---------+--------
+  Haul Samples | mission-haul | courier | 2          | 800       | 40      | 400 cr 
+
+Haul Samples (mission-haul): Deliver the sealed samples before the contract expires.

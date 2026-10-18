@@ -1,0 +1,1 @@
+{"base_id":"earth_station","base_name":"Earth Station","missions":[{"mission_id":"mission-rest","type":"courier","title":"Settle Tab","description":"Finish the restitution job and reduce the shared fixer tab.","difficulty":3,"expires_in_ticks":60,"rewards":{"credits":100},"restitution_relief":400}]}

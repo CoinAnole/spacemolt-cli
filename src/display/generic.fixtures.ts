@@ -1471,6 +1471,109 @@ export const storageDepositBulkStationGiftFixture = {
   },
 };
 
+const exampleFixerAccount = {
+  debt: 2000,
+  allowance: 5000,
+  exposure: 3000,
+  available: 2000,
+};
+
+export const getMissionsFixerFixture = {
+  base_id: 'earth_station',
+  base_name: 'Earth Station',
+  fixer: exampleFixerAccount,
+  missions: [
+    {
+      mission_id: 'mission-haul',
+      type: 'courier',
+      title: 'Haul Samples',
+      description: 'Deliver the sealed samples before the contract expires.',
+      difficulty: 2,
+      expires_in_ticks: 40,
+      rewards: { credits: 400 },
+      cargo_liability: 800,
+    },
+  ],
+};
+
+export const getMissionsReliefOnlyFixture = {
+  base_id: 'earth_station',
+  base_name: 'Earth Station',
+  missions: [
+    {
+      mission_id: 'mission-rest',
+      type: 'courier',
+      title: 'Settle Tab',
+      description: 'Finish the restitution job and reduce the shared fixer tab.',
+      difficulty: 3,
+      expires_in_ticks: 60,
+      rewards: { credits: 100 },
+      restitution_relief: 400,
+    },
+  ],
+};
+
+export const getActiveMissionsFixerFixture = {
+  missions: {
+    active: [
+      {
+        mission_id: 'mission-rest',
+        type: 'courier',
+        title: 'Settle Tab',
+        description: 'Finish the restitution job and reduce the shared fixer tab.',
+        difficulty: 3,
+        percent_complete: 0,
+        expires_in_ticks: 60,
+        accepted_at: '2026-10-17T12:00:00Z',
+        issuing_base: 'Earth Station',
+        rewards: { credits: 100 },
+        restitution_relief: 400,
+      },
+    ],
+    max_missions: 5,
+    fixer: exampleFixerAccount,
+  },
+};
+
+export const acceptMissionFixerFixture = {
+  details: {
+    mission_id: 'mission-haul',
+    title: 'Haul Samples',
+    type: 'courier',
+    expires_at: '2026-10-18T18:00:00Z',
+    message: 'Mission accepted.',
+  },
+  missions: {
+    active: [
+      {
+        mission_id: 'mission-haul',
+        type: 'courier',
+        title: 'Haul Samples',
+        description: 'Deliver the sealed samples before the contract expires.',
+        difficulty: 2,
+        percent_complete: 0,
+        expires_in_ticks: 40,
+        accepted_at: '2026-10-17T12:00:00Z',
+        issuing_base: 'Earth Station',
+        rewards: { credits: 400 },
+      },
+    ],
+    max_missions: 5,
+    fixer: exampleFixerAccount,
+  },
+};
+
+export const acceptMissionFixerNoRowsFixture = {
+  details: {
+    mission_id: 'mission-haul',
+    title: 'Haul Samples',
+    type: 'courier',
+    expires_at: '2026-10-18T18:00:00Z',
+    message: 'Mission accepted.',
+    fixer: exampleFixerAccount,
+  },
+};
+
 export const genericFixtureCases = {};
 
 export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
@@ -1500,6 +1603,11 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_missions_bounty: { command: 'get_missions', fixture: missionsBountyFixture },
   get_missions_community: { command: 'get_missions', fixture: missionsCommunityFixture },
   get_missions_exchange: { command: 'get_missions', fixture: missionsExchangeFixture },
+  get_missions_fixer: { command: 'get_missions', fixture: getMissionsFixerFixture },
+  get_missions_relief_only: { command: 'get_missions', fixture: getMissionsReliefOnlyFixture },
+  get_active_missions_fixer: { command: 'get_active_missions', fixture: getActiveMissionsFixerFixture },
+  accept_mission_fixer: { command: 'accept_mission', fixture: acceptMissionFixerFixture },
+  accept_mission_fixer_no_rows: { command: 'accept_mission', fixture: acceptMissionFixerNoRowsFixture },
   faction_list_missions: { command: 'faction_list_missions', fixture: factionListMissionsFixture },
   faction_list_missions_empty: { command: 'faction_list_missions', fixture: factionListMissionsEmptyFixture },
   get_mobile_base: { command: 'get_mobile_base', fixture: mobileBaseFixture },

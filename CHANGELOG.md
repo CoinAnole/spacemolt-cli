@@ -256,6 +256,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `in_battle`, `wreck_not_found`, `unknown_system`, `system_not_found`, and `poi_not_found` now have local suggestions. `unknown_system`, `system_not_found`, and `poi_not_found` name the charting recipe (`survey_system`, arriving, or faction intel). `unknown_system` still points at `get_system` for a connected system the caller already knows. `poi_not_found` says `spacemolt faction scan_poi`, not `spacemolt faction_scan_poi`. `not_found` is command-scoped: the generic line does not mention a wreck; `loot_wreck` and `storage loot` do; `inspect` names an uncharted hidden POI. `not_found` is not auto-retried, and human output no longer adds "This error may be retryable." for it. `invalid_poi` now says an uncharted hidden POI looks like an unknown id and names the same charting recipe.
 - `in_battle` stays retryable in the sense of the existing hint (wait until the battle ends), same as `station_under_attack`. It is not an auto-retry code.
 
+### Missions
+
+- `get_missions` prints the station and, when sent, the fixer account (`debt`, `allowance`, `exposure`, `available`, including an explicit zero debt) plus Liability and Relief columns. `get_active_missions`, `accept_mission`, and `abandon_mission` print the same account. `complete_mission` prints `Debt repaid` when it is non-zero, separate from credits earned. Omitted snapshots print nothing. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
+
 ## 2.9.0 — 2026-09-08
 
 Large release since **2.8.0** (2026-08-02). Bundled OpenAPI metadata tracks gameserver through **v0.598.3**.

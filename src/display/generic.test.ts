@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import {
+  acceptMissionFixerFixture,
+  acceptMissionFixerNoRowsFixture,
+  acceptMissionPostActionFixture,
   catalogDumpFixture,
   catalogDumpRecipeVenuesFixture,
   catalogItemsFixture,
@@ -13,6 +16,10 @@ import {
   dockFixture,
   dockGiftsFixture,
   dockMissionCargoItems,
+  getActiveMissionsFixerFixture,
+  getMissionsFixerFixture,
+  getMissionsReliefOnlyFixture,
+  missionsFixture,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
   storageDepositStationGiftFixture,
@@ -3649,5 +3656,423 @@ describe('isV2MissionsEnvelope', () => {
 
   test('rejects non-array active', () => {
     expect(isV2MissionsEnvelope({ active: { count: 1 } })).toBe(false);
+  });
+});
+
+const exampleFixer = {
+  debt: 2000,
+  allowance: 5000,
+  exposure: 3000,
+  available: 2000,
+};
+
+function renderPlain(command: string, fixture: Record<string, unknown>, extra: Partial<GlobalOptions> = {}): string {
+  return renderStructuredResult(command, fixture, { ...options, ...extra }, context).stdout.join('\n');
+}
+
+function headerCells(stdout: string, label: string): string[] {
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes(label));
+  return header?.split('|').map((cell) => cell.trim()) ?? [];
+}
+
+describe('get_missions fixer board', () => {
+  test('existing board gains the station line and not a fixer block or Liability', () => {
+    const stdout = renderPlain('get_missions', missionsFixture);
+    expect(stdout).toContain('Station: Nova Terra Central (nova_terra_central)');
+    expect(stdout).toContain('=== Missions ===');
+    expect(stdout).not.toContain('Fixer:');
+    expect(stdout).not.toContain('Liability');
+    expect(stdout).not.toContain('Relief');
+    expect(stdout.indexOf('Station:')).toBeLessThan(stdout.indexOf('=== Missions ==='));
+  });
+
+  test('prints the account and Liability when present, and neither when the keys are absent', () => {
+    const withFixer = renderPlain('get_missions', {
+      base_name: 'Earth Station',
+      base_id: 'earth_station',
+      fixer: { ...exampleFixer, debt: 0 },
+      missions: [
+        {
+          mission_id: 'mission-haul',
+          title: 'Haul Samples',
+          type: 'courier',
+          difficulty: 2,
+          expires_in_ticks: 40,
+          rewards: { credits: 400 },
+          cargo_liability: 800,
+          restitution_relief: 400,
+        },
+        {
+          mission_id: 'mission-plain',
+          title: 'Plain Run',
+          type: 'courier',
+          difficulty: 1,
+          expires_in_ticks: 10,
+          rewards: { credits: 50 },
+        },
+      ],
+    });
+    const cells = headerCells(withFixer, 'Difficulty');
+    expect(withFixer).toContain('Station: Earth Station (earth_station)');
+    expect(withFixer).toContain('Debt: 0');
+    expect(withFixer).toContain('Allowance: 5,000');
+    expect(cells.indexOf('Liability')).toBe(cells.indexOf('Difficulty') + 1);
+    expect(cells.indexOf('Relief')).toBe(cells.indexOf('Liability') + 1);
+    expect(withFixer.indexOf('Fixer:')).toBeLessThan(withFixer.indexOf('=== Missions ==='));
+
+    const absent = renderPlain('get_missions', {
+      base_name: 'Earth Station',
+      base_id: 'earth_station',
+      missions: [
+        {
+          mission_id: 'mission-plain',
+          title: 'Plain Run',
+          type: 'courier',
+          difficulty: 1,
+          expires_in_ticks: 10,
+          rewards: { credits: 50 },
+        },
+      ],
+    });
+    expect(absent).toContain('Station: Earth Station (earth_station)');
+    expect(absent).not.toContain('Fixer:');
+    expect(headerCells(absent, 'Difficulty')).not.toContain('Liability');
+    expect(headerCells(absent, 'Difficulty')).not.toContain('Relief');
+  });
+
+  test('places Relief immediately after Difficulty when the only row has no liability', () => {
+    const stdout = renderPlain('get_missions', {
+      base_name: 'Earth Station',
+      base_id: 'earth_station',
+      missions: [
+        {
+          mission_id: 'mission-rest',
+          title: 'Settle Tab',
+          type: 'courier',
+          difficulty: 3,
+          expires_in_ticks: 60,
+          rewards: { credits: 100 },
+          restitution_relief: 400,
+        },
+      ],
+    });
+    const cells = headerCells(stdout, 'Difficulty');
+    expect(cells.indexOf('Relief')).toBe(cells.indexOf('Difficulty') + 1);
+    expect(cells).not.toContain('Liability');
+    expect(stdout).not.toContain('Fixer:');
+  });
+
+  test('shows an explicit zero liability and ignores objects and numeric strings', () => {
+    const zero = renderPlain('get_missions', {
+      base_id: 'earth_station',
+      missions: [
+        {
+          title: 'Zero',
+          mission_id: 'mission-zero',
+          type: 'courier',
+          difficulty: 1,
+          cargo_liability: 0,
+        },
+      ],
+    });
+    expect(headerCells(zero, 'Difficulty')).toContain('Liability');
+    expect(zero).toContain('| 0');
+
+    const ignored = renderPlain('get_missions', {
+      missions: [
+        {
+          title: 'Bad',
+          mission_id: 'mission-bad',
+          type: 'courier',
+          difficulty: 1,
+          cargo_liability: { credits: 800 },
+          restitution_relief: '400',
+        },
+      ],
+    });
+    expect(ignored).not.toContain('Liability');
+    expect(ignored).not.toContain('Relief');
+    expect(ignored).not.toContain('[object Object]');
+  });
+
+  test('prints a usable station name or id alone, and skips line breaks and blank tokens', () => {
+    const nameOnly = renderPlain('get_missions', { base_name: 'Earth Station', missions: [] });
+    expect(nameOnly).toContain('Station: Earth Station');
+    expect(nameOnly).not.toContain('Station: Earth Station (');
+    const idOnly = renderPlain('get_missions', { base_id: 'earth_station', missions: [] });
+    expect(idOnly).toContain('Station: earth_station');
+    expect(idOnly).not.toContain('Station: earth_station (');
+    const same = renderPlain('get_missions', { base_name: 'earth_station', base_id: 'earth_station', missions: [] });
+    expect(same).toContain('Station: earth_station');
+    expect(same).not.toContain('earth_station (earth_station)');
+
+    const broken = renderPlain('get_missions', {
+      base_name: 'Earth\nStation',
+      base_id: 'earth_station',
+      missions: [],
+    });
+    expect(broken).toContain('Station: earth_station');
+    expect(broken).not.toContain('Earth');
+
+    const blank = renderPlain('get_missions', { base_name: '   ', base_id: '\n', missions: [] });
+    expect(blank).not.toContain('Station:');
+    expect(blank).toContain('(None)');
+  });
+
+  test('claims an empty board even when another empty list is present', () => {
+    const stdout = renderPlain('get_missions', {
+      base_name: 'Nova Terra Central',
+      base_id: 'nova_terra_central',
+      fixer: exampleFixer,
+      missions: [],
+      items: [],
+    });
+    expect(stdout).toContain('Station: Nova Terra Central (nova_terra_central)');
+    expect(stdout).toContain('Fixer:');
+    expect(stdout).toContain('=== Missions ===');
+    expect(stdout).toContain('(None)');
+    expect(stdout).not.toContain('=== Items ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('does not claim a board whose rows are not records', () => {
+    const stdout = renderPlain('get_missions', {
+      base_name: 'Earth Station',
+      base_id: 'earth_station',
+      fixer: exampleFixer,
+      missions: ['not-a-mission'],
+    });
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('Station:');
+    expect(stdout).not.toContain('Fixer:');
+  });
+
+  test('json output stays the raw payload', () => {
+    const rendered = renderStructuredResult(
+      'get_missions',
+      getMissionsFixerFixture,
+      { ...options, json: true },
+      context,
+    );
+    expect(JSON.parse(rendered.stdout.join('\n'))).toEqual(getMissionsFixerFixture);
+    expect(rendered.stdout.join('\n')).not.toContain('=== Missions ===');
+    expect(rendered.stdout.join('\n')).not.toContain('Fixer:');
+  });
+});
+
+describe('active mission fixer account', () => {
+  test('get_active_missions prints Relief and one account after the table', () => {
+    const stdout = renderPlain('get_active_missions', getActiveMissionsFixerFixture);
+    const cells = headerCells(stdout, 'Difficulty');
+    expect(cells.indexOf('Relief')).toBe(cells.indexOf('Difficulty') + 1);
+    expect(cells).not.toContain('Liability');
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout.split('Fixer:').length - 1).toBe(1);
+    expect(stdout).toContain('Debt: 2,000');
+    expect(stdout.indexOf('=== Active Missions ===')).toBeLessThan(stdout.indexOf('Fixer:'));
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints the account after an empty active list and alone when active is absent', () => {
+    const empty = renderPlain('get_active_missions', {
+      missions: { active: [], max_missions: 5, fixer: exampleFixer },
+    });
+    expect(empty).toContain('=== Active Missions ===');
+    expect(empty).toContain('(None)');
+    expect(empty).toContain('missions 0/5');
+    expect(empty.indexOf('(None)')).toBeLessThan(empty.indexOf('Fixer:'));
+
+    const absent = renderPlain('get_active_missions', {
+      missions: { max_missions: 5, fixer: exampleFixer },
+    });
+    expect(absent).toContain('Fixer:');
+    expect(absent).toContain('Debt: 2,000');
+    expect(absent).not.toContain('=== Active Missions ===');
+    expect(absent).not.toContain('=== Response ===');
+  });
+
+  test('does not claim a body with no rows and no account', () => {
+    const stdout = renderPlain('get_active_missions', { marker: { nested: 1 } });
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('Fixer:');
+    expect(stdout).not.toContain('=== Active Missions ===');
+  });
+
+  test('accept with both snapshots prints details.fixer once and still one active table', () => {
+    const stdout = renderPlain('accept_mission', {
+      ...acceptMissionPostActionFixture,
+      details: {
+        ...acceptMissionPostActionFixture.details,
+        fixer: exampleFixer,
+      },
+      missions: {
+        ...acceptMissionPostActionFixture.missions,
+        fixer: { debt: 9, allowance: 2500, exposure: 9, available: 2491 },
+      },
+    });
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout.split('Fixer:').length - 1).toBe(1);
+    expect(stdout).toContain('Debt: 2,000');
+    expect(stdout).not.toContain('Debt: 9');
+    expect(stdout).not.toContain('Mission accepted.');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Send Gift ===');
+  });
+
+  test('falls through to missions.fixer when details.fixer does not format', () => {
+    const stdout = renderPlain('accept_mission', {
+      ...acceptMissionPostActionFixture,
+      details: {
+        ...acceptMissionPostActionFixture.details,
+        fixer: { debt: '2000' },
+      },
+      missions: {
+        ...acceptMissionPostActionFixture.missions,
+        fixer: exampleFixer,
+      },
+    });
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(stdout.split('Fixer:').length - 1).toBe(1);
+    expect(stdout).toContain('Debt: 2,000');
+  });
+
+  test('accept with details.fixer and no missions prints only the account', () => {
+    const body = {
+      details: {
+        mission_id: 'mission-haul',
+        title: 'Haul Samples',
+        type: 'courier',
+        expires_at: '2026-10-18T18:00:00Z',
+        message: 'Mission accepted.',
+        fixer: exampleFixer,
+      },
+    };
+    const stdout = renderPlain('accept_mission', body);
+    expect(stdout).toContain('Fixer:');
+    expect(stdout).toContain('Debt: 2,000');
+    expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('Mission accepted.');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('=== Send Gift ===');
+    expect(renderPlain('accept_mission', acceptMissionFixerNoRowsFixture)).not.toContain('=== Response ===');
+  });
+
+  test('abandon prints one account after the table and not the details message', () => {
+    const stdout = renderPlain('abandon_mission', {
+      details: {
+        mission_id: 'mission-haul',
+        title: 'Haul Samples',
+        message: 'Mission abandoned.',
+      },
+      missions: {
+        active: [{ mission_id: 'mission-survey', title: 'Survey Run', type: 'survey' }],
+        max_missions: 5,
+        fixer: exampleFixer,
+      },
+    });
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout.split('Fixer:').length - 1).toBe(1);
+    expect(stdout.indexOf('=== Active Missions ===')).toBeLessThan(stdout.indexOf('Fixer:'));
+    expect(stdout).not.toContain('Mission abandoned.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('a jump reprint of active missions does not print the account', () => {
+    const stdout = renderPlain('jump', {
+      details: {
+        action: 'jump',
+        poi_id: 'procyon_a',
+        poi: 'Procyon A',
+        online_players: [],
+        message: 'Jumped to Procyon.',
+      },
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-rest',
+            title: 'Settle Tab',
+            type: 'courier',
+            difficulty: 3,
+            restitution_relief: 400,
+          },
+        ],
+        max_missions: 5,
+        fixer: exampleFixer,
+      },
+    });
+    expect(stdout).toContain('=== Active Missions ===');
+    expect(headerCells(stdout, 'Difficulty')).toContain('Relief');
+    expect(stdout).not.toContain('Fixer:');
+    expect(stdout).not.toContain('Debt:');
+  });
+
+  test('shape-fallback mission tables may show Relief but not the account or station', () => {
+    const stdout = renderPlain('not_a_command', {
+      base_name: 'Earth Station',
+      base_id: 'earth_station',
+      fixer: exampleFixer,
+      missions: [
+        {
+          mission_id: 'mission-rest',
+          title: 'Settle Tab',
+          type: 'courier',
+          difficulty: 3,
+          expires_in_ticks: 60,
+          rewards: { credits: 100 },
+          restitution_relief: 400,
+          description: 'Finish the restitution job and reduce the shared fixer tab.',
+        },
+      ],
+    });
+    expect(stdout).toContain('=== Missions ===');
+    expect(headerCells(stdout, 'Difficulty')).toContain('Relief');
+    expect(stdout).not.toContain('Fixer:');
+    expect(stdout).not.toContain('Station:');
+  });
+
+  test('faction mission boards stay on reward credits', () => {
+    const stdout = renderPlain('faction_list_missions', {
+      missions: [
+        {
+          template_id: 'faction-delivery-iron',
+          title: 'Deliver Iron Ore',
+          type: 'delivery',
+          difficulty: 2,
+          reward_credits: 1500,
+          cargo_liability: 800,
+          restitution_relief: 400,
+        },
+      ],
+    });
+    expect(stdout).toContain('=== Faction Missions ===');
+    expect(stdout).not.toContain('Liability');
+    expect(stdout).not.toContain('Relief');
+    expect(stdout).not.toContain('Fixer:');
+  });
+});
+
+describe('schema-clean mission fixer fixtures', () => {
+  test('get_missions_fixer prints the station, the account, and Liability', () => {
+    const stdout = renderPlain('get_missions', getMissionsFixerFixture);
+    expect(stdout).toContain('Station: Earth Station (earth_station)');
+    expect(stdout).toContain('Debt: 2,000');
+    expect(headerCells(stdout, 'Difficulty')).toContain('Liability');
+    expect(headerCells(stdout, 'Difficulty')).not.toContain('Relief');
+  });
+
+  test('get_missions_relief_only places Relief after Difficulty and omits the account', () => {
+    const stdout = renderPlain('get_missions', getMissionsReliefOnlyFixture);
+    const cells = headerCells(stdout, 'Difficulty');
+    expect(cells.indexOf('Relief')).toBe(cells.indexOf('Difficulty') + 1);
+    expect(cells).not.toContain('Liability');
+    expect(stdout).not.toContain('Fixer:');
+  });
+
+  test('accept_mission_fixer prints the missions account after one table', () => {
+    const stdout = renderPlain('accept_mission', acceptMissionFixerFixture);
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout.split('Fixer:').length - 1).toBe(1);
+    expect(stdout).toContain('Debt: 2,000');
+    expect(stdout).not.toContain('Mission accepted.');
   });
 });

@@ -4,6 +4,7 @@ import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import { formatCreatureLine } from './creatures.ts';
+import { emitFixerAccount, formatFixerInteger } from './fixer.ts';
 import {
   c,
   commandNameEquals,
@@ -1462,12 +1463,17 @@ export const statusFormatters = [
 
       const rewards = summarizeCompletionRewards(r);
       if (rewards.creditsLine) emitLine(rewards.creditsLine);
+      const debtRepaid = formatFixerInteger(r.debt_repaid);
+      if (debtRepaid !== undefined && r.debt_repaid !== 0 && r.debt_repaid !== 0n) {
+        emitLine(`Debt repaid: ${debtRepaid}`);
+      }
       if (rewards.itemsLine) emitLine(rewards.itemsLine);
       if (rewards.reputationLine) emitLine(rewards.reputationLine);
       if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
       if (rewards.communityLine) emitLine(rewards.communityLine);
       if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
       if (r.message) emitLine(String(r.message));
+      emitFixerAccount(r.fixer);
       return true;
     },
     { commands: ['complete_mission'] },

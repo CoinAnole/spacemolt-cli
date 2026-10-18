@@ -1047,6 +1047,21 @@ export const completedMissionBountyFixture = {
   rewards: { credits: 50000 },
 };
 
+/** Top-level CompleteMissionResponse (no missions, player, or cargo). */
+export const completeMissionRestitutionFixture = {
+  mission_id: 'mission-rest',
+  title: 'Settle Tab',
+  credits_earned: 0,
+  debt_repaid: 400,
+  message: 'Mission complete.',
+  fixer: {
+    debt: 1600,
+    allowance: 5000,
+    exposure: 1600,
+    available: 3400,
+  },
+};
+
 /** Live-shaped nested SC for complete_mission (P1 envelope: details only, no schemaTarget). */
 export const completeMissionFixture = {
   details: {
@@ -1318,6 +1333,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   view_completed_mission_bounty: { command: 'view_completed_mission', fixture: completedMissionBountyFixture },
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
   complete_mission_shortfall: { command: 'complete_mission', fixture: completeMissionShortfallFixture },
+  complete_mission_restitution: { command: 'complete_mission', fixture: completeMissionRestitutionFixture },
   completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },
   decline_mission: { command: 'decline_mission', fixture: declineMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
