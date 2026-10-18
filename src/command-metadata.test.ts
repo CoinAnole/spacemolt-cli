@@ -780,6 +780,13 @@ describe('command metadata', () => {
     expect(COMMANDS.find_route?.description).toContain('system_not_found');
     expect(COMMANDS.find_route?.description).toContain('survey_system');
     expect(COMMANDS.find_route?.description).toContain('faction intel');
+    expect(COMMANDS.find_route?.description).toContain('entrance_poi');
+    expect(COMMANDS.find_route?.description).toContain('previous system');
+    expect(COMMANDS.find_route?.description).toContain('route null');
+    expect(COMMANDS.find_route?.description).toContain('fuel fields at 0');
+    expect(COMMANDS.find_route?.description).toContain('fuel_per_jump times total_jumps');
+    expect(COMMANDS.find_route?.description).toContain('fuel_on_arrival');
+    expect(COMMANDS.find_route?.description).toContain('including yours');
     expect(COMMANDS.find_route?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.find_route);
     expect(COMMANDS.cloak?.description).toContain('in_battle');
     expect(COMMANDS.cloak?.description).not.toContain('scan');
