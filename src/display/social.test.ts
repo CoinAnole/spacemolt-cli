@@ -4297,6 +4297,12 @@ test('forum delete, reply, upvote, and create stay on their current formatters',
   expect(renderForumEdit('forum_upvote', { message: 'Upvoted.', thread_id: FORUM_EDIT_THREAD_ID })).toBe(
     'OK: Upvoted.',
   );
+  expect(renderForumEdit('forum_upvote', { message: 'Already upvoted.', thread_id: FORUM_EDIT_THREAD_ID })).toBe(
+    'OK: Already upvoted.',
+  );
+  expect(renderForumEdit('forum upvote', { message: 'Already upvoted.', reply_id: FORUM_EDIT_REPLY_ID })).toBe(
+    'OK: Already upvoted.',
+  );
 
   const reply = renderForumEdit('forum_reply', {
     message: 'Reply posted.',

@@ -489,6 +489,29 @@ describe('command metadata', () => {
     });
   });
 
+  test('forum upvote help documents repeat success, persist_failed, and reply_not_in_thread', () => {
+    const forumUpvote =
+      "Upvote a thread, or a reply in that thread (gameserver 0.630.6). thread_id is required and is sent as target. Omit reply_id to vote the thread. With reply_id the reply is voted, not the thread, and thread_id must be that reply's thread (reply_not_in_thread). There is no reply lookup. forum get_thread opens only a thread id from the page where the reply was read. It does not take reply_id, and a rejected thread_id is not that page. You cannot upvote your own thread or reply (cannot_upvote_own). Each player's upvote counts once: a repeat upvote succeeds, the server message says it was already upvoted, and the count does not change. A failed save is persist_failed. The vote is not counted, so retry the same command. The usual one-mutation-per-tick limit still applies.";
+    const upvote = BUNDLED_COMMAND_REGISTRY.commandGroups.forum?.actions.upvote;
+
+    expect(upvote?.displayName).toBe('forum upvote');
+    expect(upvote?.command).toBe('forum_upvote');
+    expect(upvote?.config.required).toEqual(['thread_id']);
+    expect(upvote?.config.aliases).toEqual({ thread_id: 'target' });
+    expect(upvote?.config.usage).toBe('<thread_id> [reply_id=..]  (upvote thread or reply)');
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_upvote).toBe(forumUpvote);
+    expect(upvote?.config.description).toBe(forumUpvote);
+    expect(upvote?.config.description).toBe(CURATED_COMMAND_DESCRIPTIONS.forum_upvote);
+    expect(upvote?.config.description).not.toBe('Upvote a thread or reply');
+    expect(upvote?.config.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'forum_upvote',
+      method: 'POST',
+    });
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_create_thread).toBe('Create a new forum thread');
+    expect(CURATED_COMMAND_DESCRIPTIONS.forum_reply).toBe('Reply to a forum thread');
+  });
+
   test('top-level command metadata has human descriptions', () => {
     const priorityCommands = [
       'register',
