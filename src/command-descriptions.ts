@@ -131,7 +131,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_version: 'Get game version and release notes.',
   get_wrecks: 'List wrecks and jettison containers at the current POI',
   install_mod:
-    'Install a module on your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+    'Install a module on your ship. Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:
     'Dump cargo into a lootable container; matching ore settles back into the belt when the container despawns.',
   join_faction:

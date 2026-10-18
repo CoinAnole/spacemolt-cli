@@ -1799,6 +1799,23 @@ describe('help output branches', () => {
     expect(output).not.toContain('all cargo and modules');
     expect(output).not.toContain('onto your ship');
     expect(output).not.toContain('fit a module onto your ship');
+    expect(output).not.toContain('do not gate');
+  });
+
+  test('install_mod help states skills do not gate fitting a module you own', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('install_mod', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit.',
+    );
+    expect(output).toContain(
+      'When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+    );
+
+    const uninstall = captureWriter();
+    expect(showCommandHelp('uninstall_mod', uninstall.writer)).toBe(true);
+    expect(uninstall.stdout.join('\n')).not.toContain('do not gate');
   });
 
   test('storage loot help documents named module_id= cargo loot', () => {
@@ -1816,6 +1833,7 @@ describe('help output branches', () => {
     );
     expect(output).not.toContain('onto your ship');
     expect(output).not.toContain('fit a module onto your ship');
+    expect(output).not.toContain('do not gate');
   });
 
   test('help misc documents loot_wreck module_id cargo loot', () => {
@@ -2184,6 +2202,10 @@ describe('help output branches', () => {
     expect(output).toContain(
       'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
     );
+    expect(output).toContain(
+      'Module entries do not list skill requirements. Skills do not gate fitting a module you own; slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit.',
+    );
+    expect(output).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
     expect(output).toContain('commissionable');
     expect(output).toContain('(ships|skills|recipes|items|facilities)');
     expect(output).toContain('type=skills id=refining');
@@ -2231,6 +2253,7 @@ describe('help output branches', () => {
     expect(output).toContain('rare_ore_access');
     expect(output).toContain('deep_core_access');
     expect(output).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(output).toContain('no longer include required_skills');
     expect(output).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
     expect(output).toContain("--jq '.skills[] | {id,name,description}'");
   });
