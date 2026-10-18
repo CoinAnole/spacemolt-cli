@@ -84,6 +84,10 @@ function formatScanPirateLine(p: Record<string, unknown>): string {
   return `${name}${ship}${role}${crew}`;
 }
 
+export function emitSignatureDetectedLine(): void {
+  emitLine(`${c.yellow}Cloaked signature sensed, not identified (10 power below detection).${c.reset}`);
+}
+
 export function emitFactionScanHeader(result: Record<string, unknown>): void {
   const poiId = nativeScalarText(nativeScanField(result, 'poi_id'));
   const poiName = nativeScalarText(nativeScanField(result, 'poi_name'));
@@ -103,7 +107,7 @@ export function emitFactionScanHeader(result: Record<string, unknown>): void {
   emitNativePresentLine('Hops', nativeScanField(result, 'hops'));
 
   if (nativeScanField(result, 'signature_detected') === true) {
-    emitLine(`${c.yellow}Signature detected.${c.reset}`);
+    emitSignatureDetectedLine();
   }
 
   const message = nativeScanField(result, 'message');

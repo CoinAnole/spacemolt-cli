@@ -186,6 +186,8 @@ function renderScan(fixture: Record<string, unknown>, renderOptions: GlobalOptio
   return rendered.stdout.join('\n');
 }
 
+const SENSED_SIGNATURE_LINE = 'Cloaked signature sensed, not identified (10 power below detection).';
+
 const scanColorOptions: GlobalOptions = { ...options, plain: false };
 
 test('remote poi scan prints the contact layout under Scan Result', () => {
@@ -195,7 +197,8 @@ test('remote poi scan prints the contact layout under Scan Result', () => {
   expect(stdout).not.toContain('=== Faction Scan ===');
   expect(stdout).toContain('POI: sol_central');
   expect(stdout).toContain('Scan power: 20');
-  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain(SENSED_SIGNATURE_LINE);
+  expect(stdout).not.toContain('Signature detected.');
   expect(stdout).toContain('Target: earth_station');
   expect(stdout).toContain('=== Players ===');
   expect(stdout).toContain('Wisp');
@@ -213,13 +216,13 @@ test('remote poi scan prints the contact layout under Scan Result', () => {
   expect(stdout).not.toContain('Branded:');
   expect(stdout).not.toContain('Target Id:');
   expect(stdout).not.toContain('=== Response ===');
-  expect(stdout.indexOf('Signature detected.')).toBeLessThan(stdout.indexOf('Target: earth_station'));
+  expect(stdout.indexOf(SENSED_SIGNATURE_LINE)).toBeLessThan(stdout.indexOf('Target: earth_station'));
   expect(stdout.indexOf('Target: earth_station')).toBeLessThan(stdout.indexOf('=== Players ==='));
   expect(stdout.indexOf('=== Players ===')).toBeLessThan(stdout.indexOf('=== Empire NPCs ==='));
   expect(stdout.indexOf('=== Empire NPCs ===')).toBeLessThan(stdout.indexOf('Pirates (1):'));
   expect(stdout.indexOf('Pirates (1):')).toBeLessThan(stdout.indexOf('Leviathans (1):'));
   expect(stdout.indexOf('Leviathans (1):')).toBeLessThan(stdout.indexOf('Revealed:'));
-  expect(stdout.split('\n').find((line) => line.includes('Signature detected.'))).toBe('Signature detected.');
+  expect(stdout.split('\n').find((line) => line.includes(SENSED_SIGNATURE_LINE))).toBe(SENSED_SIGNATURE_LINE);
   expect(stdout).not.toContain('\x1b');
 });
 
@@ -236,7 +239,7 @@ test('remote poi scan with omitted lists prints only the header', () => {
   expect(stdout).not.toContain('Leviathans');
   expect(stdout).not.toContain('Revealed:');
   expect(stdout).not.toContain('Success:');
-  expect(stdout).not.toContain('Signature detected.');
+  expect(stdout).not.toContain(SENSED_SIGNATURE_LINE);
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -317,13 +320,125 @@ test('remote poi scan prints signature only when it is exactly true', () => {
   const omitted = structuredClone(scanPoiFixture) as Record<string, unknown>;
   delete omitted.signature_detected;
 
-  expect(renderScan(hidden)).not.toContain('Signature detected.');
-  expect(renderScan(omitted)).not.toContain('Signature detected.');
+  expect(renderScan(hidden)).not.toContain(SENSED_SIGNATURE_LINE);
+  expect(renderScan(omitted)).not.toContain(SENSED_SIGNATURE_LINE);
+  const nonBoolean = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  nonBoolean.signature_detected = 'true';
+  expect(renderScan(nonBoolean)).not.toContain(SENSED_SIGNATURE_LINE);
 
   const colored = renderScan(scanPoiFixture, scanColorOptions);
-  const line = colored.split('\n').find((entry) => entry.includes('Signature detected.'));
-  expect(line).toContain('Signature detected.');
+  const line = colored.split('\n').find((entry) => entry.includes(SENSED_SIGNATURE_LINE));
+  expect(line).toContain(SENSED_SIGNATURE_LINE);
   expect(line).toContain('\x1b[33m');
+});
+
+test.each([
+  ['an empty string', ''],
+  ['null', null],
+] as const)('scan with %s target_id and signature_detected true prints the sensed line and no Target', (_label, targetId) => {
+  const stdout = renderScan({ target_id: targetId, signature_detected: true });
+
+  expect(stdout).toContain(SENSED_SIGNATURE_LINE);
+  expect(stdout.split('=== Scan Result ===')).toHaveLength(2);
+  expect(stdout.indexOf('=== Scan Result ===')).toBeLessThan(stdout.indexOf(SENSED_SIGNATURE_LINE));
+  expect(stdout).not.toContain('Target:');
+  expect(stdout).not.toContain('=== Faction Scan ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout.split('\n').find((line) => line.includes(SENSED_SIGNATURE_LINE))).toBe(SENSED_SIGNATURE_LINE);
+});
+
+test('non-remote scan prints the sensed line before Target for a resolved username', () => {
+  const stdout = renderScan({
+    username: 'Nyx',
+    target_id: 'player-9',
+    ship_class: 'scout',
+    cloaked: true,
+    signature_detected: true,
+  });
+
+  expect(stdout.split('=== Scan Result ===')).toHaveLength(2);
+  expect(stdout).toContain('Target: Nyx (player-9)');
+  expect(stdout).toContain('Ship: scout');
+  expect(stdout).toContain('Cloaked: true');
+  expect(stdout.indexOf('=== Scan Result ===')).toBeLessThan(stdout.indexOf(SENSED_SIGNATURE_LINE));
+  expect(stdout.indexOf(SENSED_SIGNATURE_LINE)).toBeLessThan(stdout.indexOf('Target: Nyx (player-9)'));
+  expect(stdout.indexOf('Target: Nyx (player-9)')).toBeLessThan(stdout.indexOf('Ship: scout'));
+  expect(stdout.indexOf('Ship: scout')).toBeLessThan(stdout.indexOf('Cloaked: true'));
+  expect(stdout.split('\n').find((line) => line.includes(SENSED_SIGNATURE_LINE))).toBe(SENSED_SIGNATURE_LINE);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([
+  ['false', false],
+  ['a non-boolean string', 'true'],
+  ['a non-boolean number', 1],
+  ['null', null],
+] as const)('non-remote scan omits the sensed line when signature_detected is %s', (_label, flag) => {
+  const stdout = renderScan({ username: 'Nyx', ship_class: 'scout', signature_detected: flag });
+
+  expect(stdout).not.toContain(SENSED_SIGNATURE_LINE);
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).toContain('Target: Nyx');
+  expect(stdout).toContain('Ship: scout');
+});
+
+test('non-remote scan omits the sensed line when signature_detected is omitted', () => {
+  const stdout = renderScan({ username: 'Nyx', ship_class: 'scout' });
+
+  expect(stdout).not.toContain(SENSED_SIGNATURE_LINE);
+  expect(stdout).toContain('Target: Nyx');
+});
+
+test('scan prints only the sensed line when a declined body has signature_detected true', () => {
+  const stdout = renderScan({ signature_detected: true });
+
+  expect(stdout).toBe(SENSED_SIGNATURE_LINE);
+  expect(stdout).not.toContain('=== Scan Result ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Target:');
+});
+
+test('scan decline with extra fields and signature_detected true still prints only the sensed line', () => {
+  const stdout = renderScan({
+    signature_detected: true,
+    message: 'Cloak margin held.',
+    revealed_info: ['Species: Ember Grazer'],
+    success: false,
+    swept: true,
+  });
+
+  expect(stdout).toBe(SENSED_SIGNATURE_LINE);
+  expect(stdout).not.toContain('Cloak margin held.');
+  expect(stdout).not.toContain('Ember Grazer');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('Swept');
+});
+
+test.each([
+  ['false', { revealed_info: ['Species: Ember Grazer'], signature_detected: false }],
+  ['omitted', { revealed_info: ['Species: Ember Grazer'] }],
+  ['a non-boolean', { revealed_info: ['Species: Ember Grazer'], signature_detected: 'true' }],
+  ['false alone', { signature_detected: false }],
+  ['non-boolean alone', { signature_detected: 1 }],
+] as Array<
+  [string, Record<string, unknown>]
+>)('scan still dumps a declined body when signature_detected is %s', (_label, body) => {
+  const stdout = renderScan(body);
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain(SENSED_SIGNATURE_LINE);
+  expect(stdout).not.toContain('=== Scan Result ===');
+});
+
+test('swept true does not change the sensed line', () => {
+  expect(renderScan({ signature_detected: true, swept: true })).toBe(renderScan({ signature_detected: true }));
+
+  const identified = { username: 'Nyx', ship_class: 'scout', signature_detected: true };
+  const swept = renderScan({ ...identified, swept: true });
+  const plain = renderScan(identified);
+  expect(swept).toBe(plain);
+  expect(swept).toContain(SENSED_SIGNATURE_LINE);
+  expect(swept.indexOf(SENSED_SIGNATURE_LINE)).toBeLessThan(swept.indexOf('Target: Nyx'));
 });
 
 test('remote poi scan prints a native message and skips an empty or omitted one', () => {

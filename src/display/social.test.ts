@@ -6834,7 +6834,8 @@ test('faction_scan_poi nested details prints header and all three sections', () 
   expect(stdout).toContain('Facility: L2 at earth_station');
   expect(stdout).toContain('Scan power: 36');
   expect(stdout).toContain('Hops: 1');
-  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain('Cloaked signature sensed, not identified (10 power below detection).');
+  expect(stdout).not.toContain('Signature detected.');
   expect(stdout).toContain('Projected scan contested 2 cloaks.');
   expect(stdout).toContain('=== Players ===');
   expect(stdout).toContain('=== Empire NPCs ===');
@@ -6891,29 +6892,29 @@ test('faction_scan_poi omits signature line when signature_detected is false', (
   fixture.details.signature_detected = false;
   const stdout = renderFactionScan(fixture);
 
-  expect(stdout).not.toContain('Signature detected.');
+  expect(stdout).not.toContain('Cloaked signature sensed, not identified (10 power below detection).');
 });
 
 test('faction_scan_poi omits signature line when signature_detected is omitted', () => {
   const stdout = renderFactionScan(structuredClone(factionScanPoiEmptyFixture));
-  expect(stdout).not.toContain('Signature detected.');
+  expect(stdout).not.toContain('Cloaked signature sensed, not identified (10 power below detection).');
 });
 
 test('faction_scan_poi prints yellow Signature detected. when true', () => {
   const stdout = renderFactionScan(structuredClone(factionScanPoiFixture), scanColorOptions);
+  const sensed = 'Cloaked signature sensed, not identified (10 power below detection).';
 
-  expect(stdout).toContain('Signature detected.');
+  expect(stdout).toContain(sensed);
   expect(stdout).toContain('\x1b[33m');
-  expect(stdout.split('\n').some((line) => line.includes('Signature detected.') && line.includes('\x1b[33m'))).toBe(
-    true,
-  );
+  expect(stdout.split('\n').some((line) => line.includes(sensed) && line.includes('\x1b[33m'))).toBe(true);
 });
 
 test('faction_scan_poi --plain Signature detected. has no ANSI', () => {
   const stdout = renderFactionScan(structuredClone(factionScanPoiFixture), { ...options, plain: true });
-  const line = stdout.split('\n').find((entry) => entry.includes('Signature detected.'));
+  const sensed = 'Cloaked signature sensed, not identified (10 power below detection).';
+  const line = stdout.split('\n').find((entry) => entry.includes(sensed));
 
-  expect(line).toBe('Signature detected.');
+  expect(line).toBe(sensed);
   expect(stdout).not.toContain('\x1b');
 });
 
