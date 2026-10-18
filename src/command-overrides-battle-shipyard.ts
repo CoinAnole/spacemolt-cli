@@ -70,13 +70,19 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
     description:
-      'Join an existing battle. This command cannot start a battle; omit side_id for faction-based auto-assignment. Does not cost a tick — only reload does.',
+      "Join an existing battle. This command cannot start a battle. Pass side_id to choose a side. A passed side_id is not re-picked. A side_id that opposes your own faction's station returns own_faction_station. Omit side_id for faction-based auto-assignment. Omitting side_id joins your station's side when your faction's station is in the battle. When side_id is omitted, side selection no longer changes at random. Pirates join the lowest-numbered NPC side. If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's. 0.630.5 does not say whether an ally still comes first when that disagrees with those two sentences. Fleet and faction auto-joins no longer pull you into a fight against your own faction's station. Your drones no longer open a side against it. Does not cost a tick — only reload does.",
     example: 'spacemolt battle_engage 1',
     discoverWith: ['get_battle_status'],
     seeAlso: ['attack', 'get_battle_status', 'battle_target', 'battle_stance'],
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/engage',
     positionals: ['side_id'],
+    schemaExtensions: {
+      side_id: {
+        description:
+          "Numeric side. Passing side_id chooses that side and is not re-picked. A side that opposes your faction's station returns own_faction_station. Omit side_id to join your station's side when your faction's station is in the battle. Omitted side_id does not change at random: pirates join the lowest-numbered NPC side, and if your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's.",
+      },
+    },
   },
   battle_advance: {
     description: 'Advance toward the inner battle zone. Does not cost a tick — only reload does.',
