@@ -312,7 +312,7 @@ const MODULE_BONUS_LABELS: ReadonlyArray<{ key: string; label: string; sign: Bon
 
 const MODULE_BONUS_KEYS = new Set(MODULE_BONUS_LABELS.map((entry) => entry.key));
 
-const MODULE_BONUS_EXCLUSIONS = new Set([
+export const MODULE_BONUS_EXCLUSIONS = new Set([
   'damage',
   'damage_type',
   'cooldown',

@@ -191,14 +191,6 @@ function emitCatalogIdentity(entry: Record<string, unknown>, options: { category
   emitCatalogOptional('Tier', entry.tier);
 }
 
-function summarizeRequiredSkills(value: unknown): string {
-  if (!isRecord(value)) return '';
-  return Object.entries(value)
-    .filter(([, level]) => level !== undefined && level !== null && level !== '')
-    .map(([skill, level]) => `${skill} ${level}`)
-    .join(', ');
-}
-
 function summarizeLeftoverModuleBonuses(entry: Record<string, unknown>): string {
   const leftover: Record<string, unknown> = { ...entry };
   for (const key of DEDICATED_MODULE_BONUS_KEYS) delete leftover[key];
@@ -284,9 +276,6 @@ export function emitCatalogModuleDetail(entry: Record<string, unknown>, catalog:
   emitCatalogNumber('Cooldown', entry.cooldown);
   emitCatalogNumber('Magazine', entry.magazine_size);
   emitCatalogOptional('Ammo', entry.ammo_type);
-
-  const requiredSkills = summarizeRequiredSkills(entry.required_skills);
-  if (requiredSkills) emitLine(`Required skills: ${requiredSkills}`);
 
   const combat = summarizeCombatSpecialEffects(entry.combat_effects);
   if (combat) emitLine(`Combat: ${combat}`);

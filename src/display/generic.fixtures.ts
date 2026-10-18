@@ -108,7 +108,6 @@ export const catalogItemsModulesFixture = {
       combat_effects: {},
       cpu_usage: 6,
       power_usage: 8,
-      required_skills: { scanning: 3 },
     },
     {
       base_value: 21000,
@@ -130,7 +129,6 @@ export const catalogItemsModulesFixture = {
       combat_effects: {},
       cpu_usage: 5,
       power_usage: 10,
-      required_skills: { shields: 4 },
     },
     {
       base_value: 85,

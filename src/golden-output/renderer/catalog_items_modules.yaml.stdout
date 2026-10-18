@@ -17,7 +17,6 @@ items:
     combat_effects: {}
     cpu_usage: 6
     power_usage: 8
-    required_skills: {scanning: 3}
   - base_value: 21000
     category: module
     description: "Adds 60 maximum shield points and 10% flat/adaptive damage reduction. Flat and adaptive reductions add and cap at 75%, applied after typed resistance."
@@ -36,7 +35,6 @@ items:
     combat_effects: {}
     cpu_usage: 5
     power_usage: 10
-    required_skills: {shields: 4}
   - base_value: 85
     category: ammo
     description: "Ghost rounds are untraceable when used exclusively."

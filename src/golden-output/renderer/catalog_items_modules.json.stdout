@@ -17,10 +17,7 @@
       "scramble_power": 2,
       "combat_effects": {},
       "cpu_usage": 6,
-      "power_usage": 8,
-      "required_skills": {
-        "scanning": 3
-      }
+      "power_usage": 8
     },
     {
       "base_value": 21000,
@@ -40,10 +37,7 @@
       "special": "adaptive_resistance_10",
       "combat_effects": {},
       "cpu_usage": 5,
-      "power_usage": 10,
-      "required_skills": {
-        "shields": 4
-      }
+      "power_usage": 10
     },
     {
       "base_value": 85,
