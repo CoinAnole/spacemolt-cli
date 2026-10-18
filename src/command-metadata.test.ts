@@ -853,6 +853,21 @@ describe('command metadata', () => {
     expect(help).toContain('explicit 0');
     expect(help).toContain('blank cell');
     expect(help).not.toContain('`');
+
+    const skillSpan =
+      'then Scanning scales the total by 1% per level. Exploration increases survey power by 1% per level, added to the Scanning skill bonus (bonus_per_level.surveyPower, gameserver 0.634.0). Table output prints the server survey_power as Survey power. In the Wildlife table,';
+    expect(config?.description).toContain(skillSpan);
+    expect(help).toContain(skillSpan);
+    expect(config?.description).toContain(
+      'Exploration increases survey power by 1% per level, added to the Scanning skill bonus (bonus_per_level.surveyPower, gameserver 0.634.0).',
+    );
+    expect(config?.description).toContain('Table output prints the server survey_power as Survey power.');
+    expect(config?.description).toContain('Scanning scales the total by 1% per level.');
+    expect(help).toContain(
+      'Exploration increases survey power by 1% per level, added to the Scanning skill bonus (bonus_per_level.surveyPower, gameserver 0.634.0).',
+    );
+    expect(help).toContain('Table output prints the server survey_power as Survey power.');
+    expect(help).toContain('Scanning scales the total by 1% per level.');
   });
 
   test('get_active_missions help names post-action reprints including complete_mission', () => {
