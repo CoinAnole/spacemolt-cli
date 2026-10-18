@@ -3041,6 +3041,69 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives forum upvote cannot_upvote_own a do-not-retry suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'forum upvote',
+      { code: 'cannot_upvote_own', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [cannot_upvote_own]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt forum get_thread');
+    expect(output).toContain('Do not retry');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+
+    const flat = captureWriter();
+    displayError(
+      'forum_upvote',
+      { code: 'cannot_upvote_own', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(flat.writer) },
+    );
+    const flatOutput = flat.stderr.join('\n');
+    const suggestion = output.split('\n').find((line) => line.includes('Suggestion:'));
+    const flatSuggestion = flatOutput.split('\n').find((line) => line.includes('Suggestion:'));
+    expect(flatSuggestion).toBe(suggestion);
+    expect(flatOutput).not.toContain('Next:');
+  });
+
+  test('displayError gives forum upvote reply_not_in_thread a thread-id suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'forum upvote',
+      { code: 'reply_not_in_thread', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [reply_not_in_thread]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Do not omit thread_id');
+    expect(output).toContain('sent as target');
+    expect(output).toContain('There is no reply lookup');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain("Read the reply's thread");
+  });
+
+  test('displayError keeps the generic persist_failed sentence on forum upvote', () => {
+    const capture = captureWriter();
+    displayError(
+      'forum upvote',
+      { code: 'persist_failed', message: 'Could not confirm transaction persistence' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain(
+      'Suggestion: The server could not save the change. Nothing was charged, moved or changed. Check your state with "spacemolt get_status", then retry.',
+    );
+    expect(output).toContain('This error may be retryable.');
+  });
+
   test('displayError gives cloak in_battle a retryable cloak suggestion', () => {
     const capture = captureWriter();
     displayError(

@@ -418,6 +418,12 @@ describe('persist_failed', () => {
     expect(getErrorSuggestion('persist_failed', 'write_note')).toBe(suggestion);
     expect(getErrorSuggestion('persist_failed', 'delete_note')).toBe(suggestion);
     expect(getErrorSuggestion('persist_failed', 'mine')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum_upvote')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum upvote')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum_create_thread')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum create_thread')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum_reply')).toBe(suggestion);
+    expect(getErrorSuggestion('persist_failed', 'forum reply')).toBe(suggestion);
     expect(getRelatedCommands('persist_failed')).toEqual(['get_status']);
     const timeoutSuggestion = getErrorSuggestion('persist_timeout');
     expect(timeoutSuggestion).toContain('Verify your state');
@@ -607,6 +613,68 @@ describe('player_not_found', () => {
     }
     expect(getErrorSuggestion('player_not_found', 'arena_challenge')).toBe(suggestion);
     expect(getRelatedCommands('player_not_found')).toEqual(['get_nearby']);
+  });
+});
+
+describe('cannot_upvote_own', () => {
+  test('is not retryable and uses one sentence for every command', () => {
+    expect(ERROR_REGISTRY.cannot_upvote_own?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.cannot_upvote_own?.auth).toBe(false);
+    expect(isRetryableError('cannot_upvote_own')).toBe(false);
+    expect(isAuthError('cannot_upvote_own')).toBe(false);
+    expect(isKnownErrorCode('cannot_upvote_own')).toBe(true);
+    expect(ERROR_CODES).toContain('cannot_upvote_own');
+    expect(ERROR_REGISTRY.cannot_upvote_own?.message).toBe('You cannot upvote your own post.');
+    expect(ERROR_REGISTRY.cannot_upvote_own?.commandSuggestions).toBeUndefined();
+
+    const suggestion = getErrorSuggestion('cannot_upvote_own');
+    expect(suggestion).toBe(
+      'You cannot upvote your own thread or reply. Nothing changes. Do not retry "spacemolt forum upvote" on that post. Open the thread with "spacemolt forum get_thread" and upvote a different one.',
+    );
+    expect(getErrorSuggestion('cannot_upvote_own', 'forum upvote')).toBe(suggestion);
+    expect(getErrorSuggestion('cannot_upvote_own', 'forum_upvote')).toBe(suggestion);
+    expect(suggestion).toContain('spacemolt forum get_thread');
+    expect(suggestion).toContain('Do not retry');
+    expect(suggestion).not.toContain('forum_upvote');
+    expect(suggestion).not.toContain('get_status');
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(suggestion).not.toContain('fixture-not-a-server-quote');
+    expect(suggestion).not.toContain('11111111-1111-1111-1111-111111111111');
+    expect(getRelatedCommands('cannot_upvote_own')).toEqual(['forum_get_thread']);
+  });
+});
+
+describe('reply_not_in_thread', () => {
+  test('is not retryable and uses one sentence for every command', () => {
+    expect(ERROR_REGISTRY.reply_not_in_thread?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.reply_not_in_thread?.auth).toBe(false);
+    expect(isRetryableError('reply_not_in_thread')).toBe(false);
+    expect(isAuthError('reply_not_in_thread')).toBe(false);
+    expect(isKnownErrorCode('reply_not_in_thread')).toBe(true);
+    expect(ERROR_CODES).toContain('reply_not_in_thread');
+    expect(ERROR_REGISTRY.reply_not_in_thread?.message).toBe('That reply is not in this thread.');
+    expect(ERROR_REGISTRY.reply_not_in_thread?.commandSuggestions).toBeUndefined();
+
+    const suggestion = getErrorSuggestion('reply_not_in_thread');
+    expect(suggestion).toBe(
+      'That reply_id is not in this thread. Nothing was voted. thread_id must be the reply\'s thread. It is sent as target and is required. Do not omit thread_id, and do not retry the same pair. There is no reply lookup. "spacemolt forum get_thread" only opens a thread id from the page where the reply was read. Do not pass reply_id to it, and do not pass the thread_id that was just rejected. Retry "spacemolt forum upvote" with that page\'s thread id and the same reply_id.',
+    );
+    expect(getErrorSuggestion('reply_not_in_thread', 'forum upvote')).toBe(suggestion);
+    expect(getErrorSuggestion('reply_not_in_thread', 'forum_upvote')).toBe(suggestion);
+    expect(suggestion).toContain('Do not omit thread_id');
+    expect(suggestion).toContain('sent as target');
+    expect(suggestion).toContain('There is no reply lookup');
+    expect(suggestion).toContain('only opens a thread id');
+    expect(suggestion).toContain('Do not pass reply_id');
+    expect(suggestion).not.toContain('optional');
+    expect(suggestion).not.toContain('get_status');
+    expect(suggestion).not.toContain('This error may be retryable');
+    expect(suggestion).not.toContain("Read the reply's thread");
+    expect(suggestion).not.toContain('with that thread id');
+    expect(suggestion).toContain("with that page's thread id");
+    expect(suggestion).not.toContain('fixture-not-a-server-quote');
+    expect(suggestion).not.toContain('11111111-1111-1111-1111-111111111111');
+    expect(getRelatedCommands('reply_not_in_thread')).toEqual([]);
   });
 });
 
