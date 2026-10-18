@@ -31,10 +31,12 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   create_buy_order:
     'Place a buy offer on the station exchange. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
   create_faction: 'Create a new faction',
-  create_note: 'Create a new note document',
+  create_note:
+    'Create a new note document. Notes take no cargo space (gameserver 0.632.5). A full hold still accepts a new note, and create_note does not return cargo_full.',
   create_sell_order: 'List items for sale on the station exchange',
   decline_mission: 'Decline a mission and hear the NPC response.',
-  delete_note: 'Permanently delete a note document you own',
+  delete_note:
+    'Permanently delete a note document you own. Deleting a note leaves cargo unchanged and does not free a cargo unit (gameserver 0.632.5).',
   deploy_drone: 'Deploy a drone from your bay into space',
   distress_signal:
     'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel.',
