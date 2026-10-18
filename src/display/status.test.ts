@@ -684,12 +684,13 @@ test('get_status still prints populated citizenships', () => {
 test('player-shaped buy shapeFallback omits Citizenships when the key is absent', () => {
   const stdout = renderStructuredResult(
     'buy',
-    { player: { username: 'Marlowe', empire: 'Terran' } },
+    { player: { username: 'Marlowe', empire: 'Terran', fixer_debt: 2000 } },
     options,
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('=== Player Status ===');
   expect(stdout).not.toContain('Citizenships:');
+  expect(stdout).not.toContain('Fixer debt');
 });
 
 test('player-shaped buy shapeFallback prints Citizenships: none for a present empty array', () => {
@@ -700,6 +701,195 @@ test('player-shaped buy shapeFallback prints Citizenships: none for a present em
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('Citizenships: none');
+});
+
+function renderFixerStatus(command: string, result: Record<string, unknown>): string {
+  return renderStructuredResult(command, result, options, context).stdout.join('\n');
+}
+
+function fixerStatusPlayer(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { username: 'Marlowe', empire: 'Terran', credits: 4242, ...extra };
+}
+
+const missionsFixerDebt = {
+  fixer: { debt: 2000, allowance: 5000, exposure: 3000, available: 2000 },
+};
+
+function expectFixerDebtAfterCredits(command: string, stdout: string, debtLine: string): void {
+  const creditsLine = command === 'get_player' ? 'Credits: 4,242' : 'Credits: 4242';
+  const following = command === 'get_player' ? 'Empire:' : 'Faction:';
+  const creditsAt = stdout.indexOf(creditsLine);
+  const debtAt = stdout.indexOf(debtLine);
+  const followingAt = stdout.indexOf(following);
+  expect(creditsAt).toBeGreaterThanOrEqual(0);
+  expect(debtAt).toBeGreaterThan(creditsAt);
+  expect(followingAt).toBeGreaterThan(debtAt);
+  expect(stdout.split('\n')).toContain(debtLine);
+  if (command !== 'get_player') expect(stdout).not.toContain('Credits: 4,242');
+}
+
+test('player-shaped buy shapeFallback does not print Fixer debt', () => {
+  const stdout = renderFixerStatus('buy', {
+    player: fixerStatusPlayer({ fixer_debt: 2000, fixer_deliveries: 12 }),
+    missions: missionsFixerDebt,
+  });
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout).toContain('Credits: 4242');
+  expect(stdout).not.toContain('Credits: 4,242');
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('fixer_deliveries');
+  expect(stdout).not.toContain('Allowance:');
+  expect(stdout).not.toContain('Fixer:');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s prints non-zero player fixer debt after Credits and not the rest of the account', (command) => {
+  const stdout = renderFixerStatus(command, {
+    player: fixerStatusPlayer({ fixer_debt: 2000, fixer_deliveries: 12 }),
+    missions: { fixer: { debt: 9, allowance: 5000, exposure: 3000, available: 2000 } },
+  });
+  expectFixerDebtAfterCredits(command, stdout, 'Fixer debt: 2,000');
+  expect(stdout).not.toContain('Fixer debt: 9');
+  expect(stdout).not.toContain('fixer_deliveries');
+  expect(stdout).not.toContain('Allowance:');
+  expect(stdout).not.toContain('Exposure:');
+  expect(stdout).not.toContain('Available:');
+  expect(stdout).not.toContain('Fixer:');
+  if (command === 'get_player') expect(stdout).not.toContain('Location:');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s hides zero fixer debt, including when the player key blocks a missions debt', (command) => {
+  for (const fixerDebt of [0, 0n]) {
+    const stdout = renderFixerStatus(command, {
+      player: fixerStatusPlayer({ fixer_debt: fixerDebt }),
+      missions: missionsFixerDebt,
+    });
+    expect(stdout).not.toContain('Fixer debt');
+    expect(stdout).not.toContain('Allowance:');
+    expect(stdout).toContain(command === 'get_player' ? 'Credits: 4,242' : 'Credits: 4242');
+  }
+  const missionsZero = renderFixerStatus(command, {
+    player: fixerStatusPlayer(),
+    missions: { fixer: { debt: 0, allowance: 5000, exposure: 800, available: 4200 } },
+  });
+  expect(missionsZero).not.toContain('Fixer debt');
+  expect(missionsZero).not.toContain('Allowance:');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s prints missions fixer debt when player.fixer_debt is absent', (command) => {
+  const stdout = renderFixerStatus(command, {
+    player: fixerStatusPlayer(),
+    missions: missionsFixerDebt,
+  });
+  expectFixerDebtAfterCredits(command, stdout, 'Fixer debt: 2,000');
+  expect(stdout).not.toContain('Allowance:');
+  expect(stdout).not.toContain('=== Active Missions ===');
+  expect(stdout).not.toContain('=== Missions ===');
+  expect(stdout).not.toContain('undefined');
+  if (command !== 'get_player') {
+    expect(stdout).not.toContain('System:');
+    expect(stdout).not.toContain('POI:');
+    expect(stdout).toContain('Docked: No');
+  }
+});
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s hides fixer debt when both sources are absent', (command) => {
+  const stdout = renderFixerStatus(command, { player: fixerStatusPlayer() });
+  expect(stdout).not.toContain('Fixer debt');
+});
+
+test.each([
+  'get_status',
+  'get_state',
+  'get_player',
+] as const)('%s does not fall through when player.fixer_debt is a string', (command) => {
+  const stdout = renderFixerStatus(command, {
+    player: fixerStatusPlayer({ fixer_debt: '2000' }),
+    missions: missionsFixerDebt,
+  });
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('Allowance:');
+});
+
+test('get_status hides a non-numeric missions debt and a null or NaN player key', () => {
+  const stringDebt = renderFixerStatus('get_status', {
+    player: fixerStatusPlayer(),
+    missions: { fixer: { debt: '2000', allowance: 5000, exposure: 3000, available: 2000 } },
+  });
+  expect(stringDebt).not.toContain('Fixer debt');
+
+  const nullDebt = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer({ fixer_debt: null }),
+    missions: missionsFixerDebt,
+  });
+  expect(nullDebt).not.toContain('Fixer debt');
+
+  const nanDebt = renderFixerStatus('get_player', {
+    player: fixerStatusPlayer({ fixer_debt: Number.NaN }),
+    missions: missionsFixerDebt,
+  });
+  expect(nanDebt).not.toContain('Fixer debt');
+});
+
+test('get_status groups bigint debt and leaves Credits ungrouped', () => {
+  const stdout = renderFixerStatus('get_status', {
+    player: fixerStatusPlayer({ fixer_debt: 2000n }),
+  });
+  expectFixerDebtAfterCredits('get_status', stdout, 'Fixer debt: 2,000');
+});
+
+test('get_state prints a finite non-integer debt as sent', () => {
+  const stdout = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer({ fixer_debt: 2000.5 }),
+  });
+  expectFixerDebtAfterCredits('get_state', stdout, 'Fixer debt: 2,000.5');
+});
+
+test('get_player prints a negative missions debt and still prints it when credits are omitted', () => {
+  const negative = renderFixerStatus('get_player', {
+    player: fixerStatusPlayer(),
+    missions: { fixer: { debt: -50, allowance: 5000, exposure: 0, available: 5000 } },
+  });
+  expectFixerDebtAfterCredits('get_player', negative, 'Fixer debt: -50');
+
+  const omittedCredits = renderFixerStatus('get_player', {
+    player: { username: 'Marlowe', empire: 'Terran' },
+    missions: missionsFixerDebt,
+  });
+  expect(omittedCredits).not.toContain('Credits:');
+  const debtAt = omittedCredits.indexOf('Fixer debt: 2,000');
+  const empireAt = omittedCredits.indexOf('Empire:');
+  expect(debtAt).toBeGreaterThanOrEqual(0);
+  expect(empireAt).toBeGreaterThan(debtAt);
+  expect(omittedCredits).not.toContain('Allowance:');
+});
+
+test('get_status_summary does not contain Fixer debt', () => {
+  const stdout = renderFixerStatus('get_status_summary', {
+    player: fixerStatusPlayer({ fixer_debt: 2000, fixer_deliveries: 12 }),
+    missions: missionsFixerDebt,
+    ship: { class_id: 'prospector' },
+  });
+  expect(stdout).toContain('Player:');
+  expect(stdout).toContain('Credits:');
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('fixer_deliveries');
+  expect(stdout).not.toContain('Allowance:');
 });
 
 function statusWithPlayer(player: Record<string, unknown>) {

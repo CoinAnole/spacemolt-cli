@@ -4,7 +4,7 @@ import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import { formatCreatureLine } from './creatures.ts';
-import { emitFixerAccount } from './fixer.ts';
+import { emitFixerAccount, selectFixerDebt } from './fixer.ts';
 import {
   c,
   commandNameEquals,
@@ -597,6 +597,14 @@ function emitRemoteScanTargetLine(result: Record<string, unknown>): void {
   emitLine(`Target: ${targetId}`);
 }
 
+function emitNonZeroFixerDebt(result: Record<string, unknown>, command: string | undefined): void {
+  const debt = selectFixerDebt(result, command);
+  if (debt === undefined || debt === 0 || debt === 0n) return;
+  const text = formatIntegerText(debt);
+  if (text === undefined) return;
+  emitLine(`Fixer debt: ${text}`);
+}
+
 function emitScanRevealedInfo(result: Record<string, unknown>): void {
   if (Array.isArray(result.revealed_info)) {
     const revealed = result.revealed_info
@@ -808,13 +816,14 @@ export const statusFormatters = [
 
   // Player profile
   formatter(
-    (r) => {
+    (r, command) => {
       if (!isRecord(r.player)) return false;
       const player = r.player;
 
       emitLine(`\n${c.bright}=== Player ===${c.reset}`);
       if (player.username) emitLine(`Username: ${player.username}`);
       if (player.credits !== undefined) emitLine(`Credits: ${formatNumber(player.credits)}`);
+      emitNonZeroFixerDebt(r, command);
       if (player.empire) emitLine(`Empire: ${formatDisplayValue(player.empire)}`);
       emitCitizenshipsLine(player, true);
       if (player.faction_id || player.clan_tag || player.faction_rank) {
@@ -893,14 +902,18 @@ export const statusFormatters = [
         emitCitizenshipsLine(p, commandNameEquals(command, 'get_status') || commandNameEquals(command, 'get_state'));
       }
       emitLine(`Credits: ${p.credits}`);
+      emitNonZeroFixerDebt(r, command);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
       emitTradingRestriction(p);
       emitDetention(p);
       emitStandings(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);
-      emitLine(`  System: ${sys?.name || p.current_system}`);
-      emitLine(`  POI: ${poi?.name || p.current_poi}`);
+      const systemLabel = sys?.name || p.current_system;
+      const poiLabel = poi?.name || p.current_poi;
+      // No name is an omitted line, not the string "undefined".
+      if (systemLabel != null && systemLabel !== '') emitLine(`  System: ${systemLabel}`);
+      if (poiLabel != null && poiLabel !== '') emitLine(`  POI: ${poiLabel}`);
       emitLine(`  Docked: ${p.docked_at_base ? `Yes (${p.docked_at_base})` : 'No'}`);
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
       const location = isRecord(r.location) ? r.location : undefined;
