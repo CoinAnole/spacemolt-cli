@@ -6536,7 +6536,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain(
       'Pilot-Whale Pod [creature-pilot-whale-7] (pilot_whale) - grazer - hull 80/120 - brand smc, cloudbank-ranch',
     );
-    expect(stdout).toContain('Unknown cloaked signature detected');
+    expect(stdout).toContain('Unknown cloaked signature (not identified).');
     expect(stdout).toContain('Active scan: true');
     expect(stdout).not.toContain('Ibis');
     expect(stdout).not.toContain('=== Response ===');
@@ -6546,7 +6546,7 @@ describe('structuredContent formatters', () => {
     const { stdout, stderr } = captureStructuredOutput('subscribe_observation', subscribeObservationFixture);
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature detected. Run: scan');
+    expect(stdout).toContain('=== Nearby ===\nActive scan: true\nUnknown cloaked signature (not identified).');
   });
 
   test('subscribe_observation prints Active scan: false against a cloned fixture', () => {
@@ -10476,8 +10476,8 @@ describe('structuredContent formatters', () => {
     expect(location.stderr).toBe('');
     expect(status.stderr).toBe('');
     for (const output of [nearby.stdout, location.stdout, status.stdout]) {
-      expect(output).toContain('Unknown cloaked signature detected');
-      expect(output).toContain('scan');
+      expect(output).toContain('Unknown cloaked signature (not identified).');
+      expect(output).not.toContain('Run: scan');
     }
   });
 
