@@ -22,6 +22,7 @@ import {
   shipFixture,
   shipIncapacitatedFixture,
   shipOverCapacityFixture,
+  treatPersonnelFixture,
   wrecksFixture,
 } from './ship.fixtures.ts';
 import { emitCargoHold } from './ship.ts';
@@ -1119,6 +1120,263 @@ test('repair details-only auto_docked does not print a receipt line or banner', 
   expect(stdout).not.toContain('Auto-docked:');
   expect(stdout).not.toContain('Auto Docked:');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
+});
+
+const stationReceiptLines = [
+  'Target: Vex',
+  'Source: station',
+  'Crew treated: 5',
+  'Marines treated: 2',
+  'Crew rate: 38 cr/crew',
+  'Marine rate: 50 cr/marine',
+  'Cost: 290 cr',
+  'Medical pool remaining: 25',
+];
+
+function renderTreat(fixture: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {
+  return renderStructuredResult('treat_personnel', structuredClone(fixture), { ...options, ...extraOptions }, context);
+}
+
+function expectReceipt(fixture: Record<string, unknown>, lines: string[], extraOptions: Partial<GlobalOptions> = {}) {
+  const rendered = renderTreat(fixture, extraOptions);
+  expect(rendered.stderr.join('')).toBe('');
+  expect(rendered.stdout.join('\n')).toBe(['', '=== Treatment Complete ===', ...lines].join('\n'));
+}
+
+test('treat_personnel prints the station receipt and ignores extra keys', () => {
+  expectReceipt(treatPersonnelFixture, stationReceiptLines);
+  expectReceipt(
+    { ...treatPersonnelFixture, message: 'ignored', note: 'secret', ship_id: 'ship-1' },
+    stationReceiptLines,
+  );
+});
+
+test('treat_personnel details envelope prints the receipt without a response dump', () => {
+  expectReceipt({ details: treatPersonnelFixture, ship: { fuel: 10 } }, stationReceiptLines);
+});
+
+test('treat_personnel prints explicit zeros', () => {
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 0,
+      marines_treated: 0,
+      source: 'station',
+      crew_treatment_price: 38,
+      marine_treatment_price: 50,
+      cost: 0,
+      medical_pool_remaining: 0,
+      supplies_used: 0,
+    },
+    [
+      'Target: Vex',
+      'Source: station',
+      'Crew treated: 0',
+      'Marines treated: 0',
+      'Crew rate: 38 cr/crew',
+      'Marine rate: 50 cr/marine',
+      'Cost: 0 cr',
+      'Medical pool remaining: 0',
+      'Supplies used: 0',
+    ],
+  );
+});
+
+test('treat_personnel omits missing prices and does not invent a cost', () => {
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 5,
+      marines_treated: 2,
+      source: 'station',
+      cost: 290,
+      medical_pool_remaining: 25,
+    },
+    [
+      'Target: Vex',
+      'Source: station',
+      'Crew treated: 5',
+      'Marines treated: 2',
+      'Cost: 290 cr',
+      'Medical pool remaining: 25',
+    ],
+  );
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 5,
+      marines_treated: 2,
+      source: 'faction',
+      crew_treatment_price: 38,
+      marine_treatment_price: 50,
+    },
+    [
+      'Target: Vex',
+      'Source: faction',
+      'Crew treated: 5',
+      'Marines treated: 2',
+      'Crew rate: 38 cr/crew',
+      'Marine rate: 50 cr/marine',
+    ],
+  );
+});
+
+test('treat_personnel field receipt prints supplies and omits them when absent', () => {
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 5,
+      marines_treated: 0,
+      source: 'field',
+      supplies_used: 1,
+    },
+    ['Target: Vex', 'Source: field', 'Crew treated: 5', 'Marines treated: 0', 'Supplies used: 1'],
+  );
+  const omitted = renderTreat({
+    target: 'Vex',
+    crew_treated: 5,
+    marines_treated: 0,
+    source: 'field',
+  }).stdout.join('\n');
+  expect(omitted).toContain('Source: field');
+  expect(omitted).not.toContain('Supplies used:');
+  expect(omitted).not.toContain('medical_supplies');
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 5,
+      marines_treated: 0,
+      source: 'field',
+      supplies_used: 0,
+      cost: 0,
+    },
+    ['Target: Vex', 'Source: field', 'Crew treated: 5', 'Marines treated: 0', 'Cost: 0 cr', 'Supplies used: 0'],
+  );
+});
+
+test('treat_personnel prints faction_reserve and a faction pool count', () => {
+  expectReceipt(
+    {
+      target: 'faction_reserve',
+      crew_treated: 1,
+      marines_treated: 0,
+      source: 'faction',
+      medical_pool_remaining: 12,
+    },
+    [
+      'Target: faction_reserve',
+      'Source: faction',
+      'Crew treated: 1',
+      'Marines treated: 0',
+      'Medical pool remaining: 12',
+    ],
+  );
+});
+
+test('treat_personnel omits non-integer prices, counts, cost, and pool remaining', () => {
+  expectReceipt(
+    {
+      target: '  Vex  ',
+      source: ' station ',
+      crew_treated: 5,
+      marines_treated: '2',
+      crew_treatment_price: '38',
+      marine_treatment_price: 50.5,
+      cost: 290.5,
+      medical_pool_remaining: true,
+      supplies_used: '1',
+    },
+    ['Target: Vex', 'Source: station', 'Crew treated: 5'],
+  );
+  const rejected = renderTreat({ target: 12, source: null, crew_treated: '5' }).stdout.join('\n');
+  expect(rejected).toContain('=== Response ===');
+  expect(rejected).not.toContain('Treatment Complete');
+  expect(rejected).not.toContain('Target:');
+  expect(rejected).not.toContain('Crew treated:');
+});
+
+test('treat_personnel empty and fully rejected bodies fall through to the response dump', () => {
+  for (const fixture of [
+    {},
+    {
+      target: '   ',
+      source: '',
+      crew_treated: '5',
+      marines_treated: false,
+      crew_treatment_price: null,
+      cost: Number.NaN,
+      medical_pool_remaining: Number.POSITIVE_INFINITY,
+      supplies_used: { n: 1 },
+    },
+  ]) {
+    const stdout = renderTreat(fixture).stdout.join('\n');
+    expect(stdout).toContain('=== Response ===');
+    expect(stdout).not.toContain('Treatment Complete');
+  }
+});
+
+test('treat_personnel prints grouped and negative integers without recomputing cost', () => {
+  expectReceipt(
+    {
+      target: 'Vex',
+      crew_treated: 1250,
+      marines_treated: -2,
+      source: 'station',
+      crew_treatment_price: -5,
+      marine_treatment_price: 9007199254740993n,
+      cost: 1250,
+      medical_pool_remaining: 1000,
+      supplies_used: 1000,
+    },
+    [
+      'Target: Vex',
+      'Source: station',
+      'Crew treated: 1,250',
+      'Marines treated: -2',
+      'Crew rate: -5 cr/crew',
+      'Marine rate: 9,007,199,254,740,993 cr/marine',
+      'Cost: 1,250 cr',
+      'Medical pool remaining: 1,000',
+      'Supplies used: 1,000',
+    ],
+  );
+});
+
+test('treat_personnel json yaml structured jq field and text stay on their surfaces', () => {
+  const json = renderTreat(treatPersonnelFixture, { format: 'json' }).stdout.join('\n');
+  expect(json).toContain('"cost": 290');
+  expect(json).not.toContain('Treatment Complete');
+
+  const yaml = renderTreat(treatPersonnelFixture, { format: 'yaml' }).stdout.join('\n');
+  expect(yaml).toContain('cost: 290');
+  expect(yaml).not.toContain('Treatment Complete');
+
+  const structured = renderTreat(treatPersonnelFixture, { structured: true }).stdout.join('\n');
+  expect(structured).toContain('"cost": 290');
+  expect(structured).not.toContain('Treatment Complete');
+
+  const field = renderTreat(treatPersonnelFixture, { field: 'cost' }).stdout.join('\n');
+  expect(field).toBe('290');
+  expect(field).not.toContain('Treatment Complete');
+
+  const jq = renderTreat(treatPersonnelFixture, { jq: '.cost' }).stdout.join('\n');
+  expect(jq).toBe('290');
+  expect(jq).not.toContain('Treatment Complete');
+
+  expectReceipt(treatPersonnelFixture, stationReceiptLines, { format: 'text' });
+  const quiet = renderTreat(treatPersonnelFixture, { quiet: true }).stdout.join('\n');
+  expect(quiet).toContain('=== Treatment Complete ===');
+  expect(quiet).toContain('Cost: 290 cr');
+});
+
+test('treat_personnel does not claim an action-log body', () => {
+  const stdout = renderStructuredResult(
+    'get_action_log',
+    { crew_treated: 5, cost: 290, source: 'station', target: 'Vex' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).not.toContain('Treatment Complete');
 });
 
 function renderReload(fixture: Record<string, unknown>, extraOptions: Partial<GlobalOptions> = {}) {

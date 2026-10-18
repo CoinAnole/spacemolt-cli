@@ -2539,6 +2539,8 @@ test('renders station service pools after construction and before facility table
   expect(stdout).toContain('Service pools:');
   expect(stdout).toContain('Personnel: 12/20 remaining (+4/cycle, crew_rations)');
   expect(stdout).toContain('Medical: 3/10 remaining (+1/cycle)');
+  expect(stdout).not.toContain('cr/crew');
+  expect(stdout).not.toContain('cr/marine');
   expect(stdout).toContain('Marine training: 8/8 remaining (+2/cycle, marine_rations)');
   expect(stdout.indexOf('=== Construction ===')).toBeLessThan(stdout.indexOf('Service pools:'));
   expect(stdout.indexOf('Service pools:')).toBeLessThan(stdout.indexOf('=== Station Facilities ==='));
@@ -2576,6 +2578,167 @@ test('prints remaining 0 and next-cycle supply need for station service pools', 
   expect(stdout).toContain('Personnel: 0/20 remaining (+4/cycle, crew_rations)');
   expect(stdout).toContain('Medical: 3/10 remaining (+1/cycle) (need 2 next cycle)');
   expect(stdout).not.toContain('Marine training:');
+});
+
+function renderFacilityList(fixture: Record<string, unknown>): string {
+  return renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+}
+
+function clonedFacilityList(): Record<string, unknown> {
+  return structuredClone(facilityListFixture) as Record<string, unknown>;
+}
+
+function servicePoolLine(stdout: string, label: string): string | undefined {
+  return stdout.split('\n').find((line) => line.startsWith(`  ${label}:`));
+}
+
+const stockPersonnelLine = '  Personnel: 12/20 remaining (+4/cycle, crew_rations)';
+const stockMarineLine = '  Marine training: 8/8 remaining (+2/cycle, marine_rations)';
+const stockMedicalLine = '  Medical: 3/10 remaining (+1/cycle)';
+
+function withStrayNonMedicalPrices(fixture: Record<string, unknown>): Record<string, unknown> {
+  const pools = fixture.service_pools as Record<string, unknown>;
+  const personnel = pools.personnel as Record<string, unknown>;
+  const marine = pools.marine_training as Record<string, unknown>;
+  personnel.crew_treatment_price = 99;
+  personnel.marine_treatment_price = 77;
+  marine.crew_treatment_price = 99;
+  marine.marine_treatment_price = 77;
+  return fixture;
+}
+
+test('appends exact integer rates only on the Medical service-pool line', () => {
+  const both = '  Medical: 3/10 remaining (+1/cycle) — 30 cr/crew, 55 cr/marine';
+  const crewOnly = '  Medical: 3/10 remaining (+1/cycle) — 30 cr/crew';
+  const marineOnly = '  Medical: 3/10 remaining (+1/cycle) — 55 cr/marine';
+  const base = { remaining: 3, capacity: 10, refill_per_cycle: 1 };
+  const cases: Array<{ name: string; medical?: Record<string, unknown>; line?: string }> = [
+    {
+      name: 'both prices, supply, need',
+      medical: {
+        ...base,
+        supply_item: 'medical_supplies',
+        next_cycle_supply_required: 2,
+        crew_treatment_price: 30,
+        marine_treatment_price: 55,
+      },
+      line: '  Medical: 3/10 remaining (+1/cycle, medical_supplies) (need 2 next cycle) — 30 cr/crew, 55 cr/marine',
+    },
+    {
+      name: 'both prices, supply omitted, need omitted',
+      medical: { ...base, crew_treatment_price: 30, marine_treatment_price: 55 },
+      line: both,
+    },
+    { name: 'crew price only', medical: { ...base, crew_treatment_price: 30 }, line: crewOnly },
+    { name: 'marine price only', medical: { ...base, marine_treatment_price: 55 }, line: marineOnly },
+    {
+      name: 'explicit 0 prices',
+      medical: { ...base, crew_treatment_price: 0, marine_treatment_price: 0 },
+      line: '  Medical: 3/10 remaining (+1/cycle) — 0 cr/crew, 0 cr/marine',
+    },
+    {
+      name: 'negative crew price',
+      medical: { ...base, crew_treatment_price: -5, marine_treatment_price: 55 },
+      line: '  Medical: 3/10 remaining (+1/cycle) — -5 cr/crew, 55 cr/marine',
+    },
+    {
+      name: 'thousands grouping',
+      medical: { ...base, crew_treatment_price: 1250, marine_treatment_price: 50 },
+      line: '  Medical: 3/10 remaining (+1/cycle) — 1,250 cr/crew, 50 cr/marine',
+    },
+    {
+      name: 'bigint crew price',
+      medical: { ...base, crew_treatment_price: 9007199254740993n },
+      line: '  Medical: 3/10 remaining (+1/cycle) — 9,007,199,254,740,993 cr/crew',
+    },
+    { name: 'prices absent', line: stockMedicalLine },
+    {
+      name: 'prices null',
+      medical: { ...base, crew_treatment_price: null, marine_treatment_price: null },
+      line: stockMedicalLine,
+    },
+    {
+      name: 'string crew price',
+      medical: { ...base, crew_treatment_price: '30', marine_treatment_price: 55 },
+      line: marineOnly,
+    },
+    {
+      name: 'float crew price',
+      medical: { ...base, crew_treatment_price: 30.5, marine_treatment_price: 55 },
+      line: marineOnly,
+    },
+    {
+      name: 'boolean crew price',
+      medical: { ...base, crew_treatment_price: true, marine_treatment_price: 55 },
+      line: marineOnly,
+    },
+    {
+      name: 'object crew price',
+      medical: { ...base, crew_treatment_price: { n: 30 } },
+      line: stockMedicalLine,
+    },
+    {
+      name: 'NaN crew price',
+      medical: { ...base, crew_treatment_price: Number.NaN, marine_treatment_price: 55 },
+      line: marineOnly,
+    },
+    {
+      name: 'Infinity marine price',
+      medical: { ...base, crew_treatment_price: 30, marine_treatment_price: Number.POSITIVE_INFINITY },
+      line: crewOnly,
+    },
+    {
+      name: 'unsafe crew price',
+      medical: { ...base, crew_treatment_price: 9007199254740992, marine_treatment_price: 55 },
+      line: marineOnly,
+    },
+    {
+      name: 'remaining absent',
+      medical: { refill_per_cycle: 1, crew_treatment_price: 30, marine_treatment_price: 55 },
+      line: '  Medical: ?/? remaining (+1/cycle) — 30 cr/crew, 55 cr/marine',
+    },
+    {
+      name: 'need 0',
+      medical: { ...base, next_cycle_supply_required: 0, crew_treatment_price: 30, marine_treatment_price: 55 },
+      line: both,
+    },
+  ];
+
+  for (const entry of cases) {
+    const fixture = withStrayNonMedicalPrices(clonedFacilityList());
+    const pools = fixture.service_pools as Record<string, unknown>;
+    if (entry.medical) pools.medical = entry.medical;
+    const stdout = renderFacilityList(fixture);
+    expect(servicePoolLine(stdout, 'Personnel'), entry.name).toBe(stockPersonnelLine);
+    expect(servicePoolLine(stdout, 'Marine training'), entry.name).toBe(stockMarineLine);
+    expect(servicePoolLine(stdout, 'Medical'), entry.name).toBe(entry.line);
+    if (entry.name === 'unsafe crew price') {
+      expect(stdout, entry.name).not.toContain('9007199254740992');
+      expect(stdout, entry.name).not.toContain('9,007,199,254,740,992');
+    }
+  }
+});
+
+test('omits Medical when the pool is not a record and the heading when every pool is skipped', () => {
+  for (const medical of ['infirmary', null, [], 3]) {
+    const fixture = withStrayNonMedicalPrices(clonedFacilityList());
+    (fixture.service_pools as Record<string, unknown>).medical = medical;
+    const stdout = renderFacilityList(fixture);
+    expect(stdout).toContain('Service pools:');
+    expect(servicePoolLine(stdout, 'Medical')).toBeUndefined();
+    expect(servicePoolLine(stdout, 'Personnel')).toBe(stockPersonnelLine);
+    expect(servicePoolLine(stdout, 'Marine training')).toBe(stockMarineLine);
+  }
+
+  const skipped = clonedFacilityList();
+  skipped.service_pools = { personnel: 1, medical: null, marine_training: 'x' };
+  expect(renderFacilityList(skipped)).not.toContain('Service pools:');
+
+  for (const servicePools of [null, 'pools', []]) {
+    const fixture = clonedFacilityList();
+    fixture.service_pools = servicePools;
+    expect(renderFacilityList(fixture)).not.toContain('Service pools:');
+  }
 });
 
 const facilityTypeRentQuote =
