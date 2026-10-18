@@ -515,6 +515,7 @@ const MUTATION_DOCK_STATE_QUERY_COMMANDS = [
   'scan',
   'get_skills',
   'player_profile',
+  'get_player_profile',
 ] as const;
 
 /** Snapshots like get_status also carry V2Missions; print only after these mutations. */

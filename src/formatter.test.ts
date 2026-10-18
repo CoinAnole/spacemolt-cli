@@ -39,6 +39,8 @@ import {
   formatterFixtureCases,
   getLocationFixture,
   getNotificationsFixture,
+  getPlayerProfileFixture,
+  getPlayerProfileSparseFixture,
   getStatusFixture,
   highValueCommandFixtures,
   jumpFixture,
@@ -55,6 +57,7 @@ import {
   nearbyBossFixture,
   nearbyFixture,
   poiInfoFixture,
+  publicPlayerProfileFixture,
   repairFixture,
   repairFleetFixture,
   repairStationFixture,
@@ -2008,6 +2011,223 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Points: 65');
     expect(stdout).not.toContain('[object Object]');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('public player_profile prints a whitespace username and skips v2-only lines', () => {
+    const whitespace = captureStructuredOutput('player_profile', { username: '   ' });
+    expect(whitespace.stdout).toContain('=== Public Player Profile ===');
+    expect(whitespace.stdout).toContain('Username:');
+    expect(whitespace.stdout).not.toContain('=== Response ===');
+
+    const { stdout, stderr } = captureStructuredOutput('player_profile', publicPlayerProfileFixture);
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Public Player Profile ===');
+    expect(stdout).toContain("System: Trader's Rest");
+    expect(stdout).not.toContain('Joined:');
+    expect(stdout).not.toContain('Leaderboard snapshot');
+    expect(stdout).not.toContain('Titles:');
+    expect(stdout).not.toContain('23:51:36');
+    expect(stdout).not.toContain('2026-07-14');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats get_player_profile from the OpenAPI example without location', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_player_profile', getPlayerProfileFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Pilot Profile ===');
+    expect(stdout).not.toContain('=== Public Player Profile ===');
+    expect(stdout).toContain('Username: Vex Caldera');
+    expect(stdout).toContain('Empire: Voidborn Collective (voidborn)');
+    expect(stdout).toContain('Online: yes');
+    expect(stdout).toContain('Clan tag: WOLF');
+    expect(stdout).toContain('Status: Hiring miners. DM me.');
+    expect(stdout).toContain('Colors: #00d4ff / #0a0e17');
+    expect(stdout).toContain('Created: 2026-03-02 09:30:00');
+    expect(stdout).toContain('Faction: Wolfpack [WOLF] (Officer)');
+    expect(stdout).toContain('Joined: 2026-04-01 00:00:00');
+    expect(stdout).toContain('Titles: Gastronome, Master Distiller');
+    expect(stdout).toContain('=== Lifetime Stats ===');
+    expect(stdout).toContain('Credits Earned');
+    expect(stdout).toContain('4,200,000');
+    expect(stdout).toContain('Ships Destroyed');
+    expect(stdout).toMatch(/Pirates Destroyed\s+\|\s+0/);
+    expect(stdout).toContain('Leaderboard snapshot: 2026-10-17 12:00:00');
+    expect(stdout).toContain('=== Leaderboard Ranks ===');
+    expect(stdout).toContain('Ore Mined');
+    expect(stdout).toContain('250,000');
+    expect(stdout).toContain('Earned: 2 / 72');
+    expect(stdout).toContain('Points: 90');
+    expect(stdout).not.toContain('Location:');
+    expect(stdout).not.toContain('System:');
+    expect(stdout).not.toContain('Docked at:');
+    expect(stdout).not.toContain("Trader's Rest");
+    expect(stdout).not.toContain('[object Object]');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats a sparse get_player_profile without optional lines', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_player_profile', getPlayerProfileSparseFixture);
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('=== Pilot Profile ===');
+    expect(stdout).toContain('Username: Ada');
+    expect(stdout).toContain('Empire: solarian');
+    expect(stdout).not.toContain('Empire: solarian (');
+    expect(stdout).toContain('Online: no');
+    expect(stdout).toContain('Created: 2026-01-01 00:00:00');
+    expect(stdout).toContain('=== Lifetime Stats ===');
+    expect(stdout).toMatch(/Credits Earned\s+\|\s+0/);
+    expect(stdout).toMatch(/Arena Knockouts\s+\|\s+0/);
+    expect(stdout).toContain('No top-30 leaderboard placements.');
+    expect(stdout).toContain('Earned: 0 / 0');
+    expect(stdout).toContain('Points: 0');
+    expect(stdout).not.toContain('Clan tag:');
+    expect(stdout).not.toContain('Status:');
+    expect(stdout).not.toContain('Colors:');
+    expect(stdout).not.toContain('Faction:');
+    expect(stdout).not.toContain('Joined:');
+    expect(stdout).not.toContain('Titles:');
+    expect(stdout).not.toContain('Leaderboard snapshot');
+    expect(stdout).not.toContain('Location:');
+    expect(stdout).not.toContain('System:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits empty get_player_profile titles and prints trimmed ones', () => {
+    const empty = captureStructuredOutput('get_player_profile', { ...getPlayerProfileFixture, titles: [] });
+    const blank = captureStructuredOutput('get_player_profile', { ...getPlayerProfileFixture, titles: ['  ', ''] });
+    const single = captureStructuredOutput('get_player_profile', {
+      ...getPlayerProfileFixture,
+      titles: ['Gastronome'],
+    });
+    const mixed = captureStructuredOutput('get_player_profile', {
+      ...getPlayerProfileFixture,
+      titles: ['  Gastronome  ', '  ', 3, null, 'Master Distiller'],
+    });
+
+    expect(empty.stdout).not.toContain('Titles:');
+    expect(blank.stdout).not.toContain('Titles:');
+    expect(empty.stdout).not.toContain('Titles: (none)');
+    expect(single.stdout).toContain('Titles: Gastronome');
+    expect(mixed.stdout).toContain('Titles: Gastronome, Master Distiller');
+    expect(mixed.stdout).not.toContain('null');
+    for (const output of [empty, blank, single, mixed]) {
+      expect(output.stdout).not.toContain('=== Response ===');
+    }
+  });
+
+  test('omits a whitespace get_player_profile username without raw fallback', () => {
+    const blank = captureStructuredOutput('get_player_profile', { username: '   ' });
+    const padded = captureStructuredOutput('get_player_profile', { username: ' Ada ' });
+    const missing = captureStructuredOutput('get_player_profile', {});
+
+    expect(blank.stdout).toContain('=== Pilot Profile ===');
+    expect(blank.stdout).not.toContain('Username:');
+    expect(blank.stdout).not.toContain('=== Response ===');
+    expect(padded.stdout).toContain('Username:  Ada ');
+    expect(padded.stdout).not.toContain('=== Response ===');
+    expect(missing.stdout).toContain('=== Pilot Profile ===');
+    expect(missing.stdout).not.toContain('Username:');
+    expect(missing.stdout).not.toContain('=== Response ===');
+  });
+
+  test('omits non-boolean get_player_profile online values', () => {
+    const text = captureStructuredOutput('get_player_profile', { ...getPlayerProfileFixture, online: 'yes' });
+    const number = captureStructuredOutput('get_player_profile', { ...getPlayerProfileFixture, online: 1 });
+
+    expect(text.stdout).not.toContain('Online:');
+    expect(number.stdout).not.toContain('Online:');
+    expect(text.stdout).not.toContain('=== Response ===');
+    expect(number.stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints get_player_profile top-n only for a finite number', () => {
+    const zero = captureStructuredOutput('get_player_profile', { username: 'Ada', ranks: [], ranks_top_n: 0 });
+    const text = captureStructuredOutput('get_player_profile', { username: 'Ada', ranks: [], ranks_top_n: '30' });
+    const bigint = captureStructuredOutput('get_player_profile', { username: 'Ada', ranks: [], ranks_top_n: 30n });
+
+    expect(zero.stdout).toContain('No top-0 leaderboard placements.');
+    expect(text.stdout).not.toContain('No top-');
+    expect(bigint.stdout).not.toContain('No top-');
+    expect(bigint.stdout).not.toContain('30');
+    expect(text.stdout).not.toContain('=== Response ===');
+    expect(bigint.stdout).not.toContain('=== Response ===');
+  });
+
+  test('prints get_player_profile colors and status without raw objects', () => {
+    const colors = captureStructuredOutput('get_player_profile', {
+      username: 'Ada',
+      primary_color: { hex: '#fff' },
+      secondary_color: '#0a0e17',
+    });
+    const blankColors = captureStructuredOutput('get_player_profile', {
+      username: 'Ada',
+      primary_color: '   ',
+      secondary_color: { hex: '#fff' },
+    });
+    const oneSide = captureStructuredOutput('get_player_profile', { username: 'Ada', primary_color: '#00d4ff' });
+    const status = captureStructuredOutput('get_player_profile', {
+      username: 'Ada',
+      status_message: ' Hiring\r\nminers. ',
+    });
+    const blankStatus = captureStructuredOutput('get_player_profile', { username: 'Ada', status_message: ' \n ' });
+    const clan = captureStructuredOutput('get_player_profile', {
+      username: 'Ada',
+      clan_tag: ' WOLF ',
+      faction: { name: 'Wolfpack', tag: 'PACK', role: 'Officer' },
+    });
+
+    expect(colors.stdout).toContain('Colors: — / #0a0e17');
+    expect(colors.stdout).not.toContain('[object Object]');
+    expect(blankColors.stdout).not.toContain('Colors:');
+    expect(blankColors.stdout).not.toContain('[object Object]');
+    expect(oneSide.stdout).toContain('Colors: #00d4ff / —');
+    expect(status.stdout).toContain('Status: Hiring miners.');
+    expect(status.stdout).not.toContain('"Hiring');
+    expect(blankStatus.stdout).not.toContain('Status:');
+    expect(clan.stdout).toContain('Clan tag:  WOLF ');
+    expect(clan.stdout).toContain('Faction: Wolfpack [PACK] (Officer)');
+    expect(clan.stdout).not.toContain('[WOLF]');
+    expect(clan.stdout).not.toContain('[ WOLF ]');
+  });
+
+  test('does not print place names on get_player_profile tables', () => {
+    const placed = {
+      ...getPlayerProfileFixture,
+      auto_docked: true,
+      location: {
+        system_name: "Trader's Rest",
+        poi_name: 'Hidden Belt',
+        docked_at: 'traders_rest_resort_station',
+      },
+    };
+    const withoutUsername: Record<string, unknown> = { ...getPlayerProfileFixture };
+    delete withoutUsername.username;
+    const missingUsername = {
+      ...withoutUsername,
+      location: {
+        system_name: "Trader's Rest",
+        poi_name: 'Hidden Belt',
+        docked_at: 'traders_rest_resort_station',
+      },
+    };
+
+    const table = captureStructuredOutput('get_player_profile', placed);
+    const missing = captureStructuredOutput('get_player_profile', missingUsername);
+    const json = captureStructuredOutput('get_player_profile', placed, { format: 'json' });
+
+    expect(table.stderr).toBe('');
+    expect(table.stdout).toContain('=== Pilot Profile ===');
+    expect(table.stdout).toContain('Username: Vex Caldera');
+    for (const token of ['Docked at:', 'Undocked at:', "Trader's Rest", 'Hidden Belt', 'Location:', 'System:']) {
+      expect(table.stdout, token).not.toContain(token);
+    }
+    expect(missing.stdout).not.toContain('=== Response ===');
+    for (const token of ['Docked at:', 'Undocked at:', "Trader's Rest", 'Hidden Belt']) {
+      expect(missing.stdout, token).not.toContain(token);
+    }
+    expect(json.stdout).toContain("Trader's Rest");
   });
 
   test('formats public faction_profile without raw JSON fallback', () => {
