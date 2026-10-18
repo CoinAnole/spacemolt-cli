@@ -1702,7 +1702,51 @@ test('renders catalog item slot and module effects when present', () => {
   expect(stdout).toContain('shield +60, damage reduction 10, adaptive_resistance_10');
   expect(stdout).toContain('Ghost Rounds Box');
   expect(stdout).toContain('damage 90%, armor bypass 30%, untraceable');
+  expect(stdout).not.toContain('Required skills');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('catalog module table stays quiet when a row still has required_skills', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          base_value: 4500,
+          category: 'module',
+          description: 'Prevents target from jumping to hyperspace.',
+          id: 'warp_scrambler_stale',
+          name: 'Warp Scrambler',
+          rarity: 'uncommon',
+          size: 10,
+          slot: 'utility',
+          stackable: false,
+          tradeable: true,
+          type: 'utility',
+          type_id: 'warp_scrambler',
+          reach: 3,
+          scramble_power: 2,
+          combat_effects: {},
+          cpu_usage: 6,
+          power_usage: 8,
+          required_skills: { scanning: 3 },
+        },
+      ],
+      message: 'Items: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('reach 3, scramble 2');
+  expect(stdout).not.toContain('Required skills');
 });
 
 test('omits catalog item slot when no item declares it', () => {

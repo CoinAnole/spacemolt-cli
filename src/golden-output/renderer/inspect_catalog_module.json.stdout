@@ -25,9 +25,6 @@
         "special": "lifesteal_20",
         "combat_effects": {
           "lifesteal_pct": 20
-        },
-        "required_skills": {
-          "weapons": 4
         }
       }
     ],

@@ -775,7 +775,8 @@ test('module inspect prints scramble, reach, CPU 0, and omits empty Combat', () 
   expect(stdout).toContain('CPU: 0');
   expect(stdout).toContain('Reach: 3');
   expect(stdout).toContain('Scramble: 2');
-  expect(stdout).toContain('Required skills: scanning 3');
+  expect(stdout).not.toContain('Required skills');
+  expect(stdout).not.toContain('scanning');
   expect(stdout).not.toContain('Combat:');
   expect(stdout).not.toContain('Bonuses:');
 });
@@ -806,6 +807,8 @@ test('Adaptive Shield leftover Bonuses do not duplicate Special', () => {
 
   expect(stdout).toContain('Bonuses: shield +60, damage reduction 10');
   expect(stdout).toContain('Special: adaptive_resistance_10');
+  expect(stdout).not.toContain('Required skills');
+  expect(stdout).not.toContain('shields 4');
   expect(stdout).not.toContain('Combat:');
   expect(stdout.match(/adaptive_resistance_10/g)?.length).toBe(1);
 });

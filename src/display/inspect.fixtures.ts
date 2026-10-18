@@ -91,7 +91,6 @@ export const inspectCatalogModuleFixture = {
         magazine_size: 1000,
         special: 'lifesteal_20',
         combat_effects: { lifesteal_pct: 20 },
-        required_skills: { weapons: 4 },
       },
     ],
     page: 1,

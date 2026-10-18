@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import {
+  MODULE_BONUS_EXCLUSIONS,
   summarizeAmmoEffects,
   summarizeCatalogItemEffects,
   summarizeCombatSpecialEffects,
@@ -24,7 +25,6 @@ const adaptiveShieldI: Record<string, unknown> = {
   damage_reduction: 10,
   special: 'adaptive_resistance_10',
   combat_effects: {},
-  required_skills: { shields: 4 },
 };
 
 const warpScrambler: Record<string, unknown> = {
@@ -41,7 +41,6 @@ const warpScrambler: Record<string, unknown> = {
   reach: 3,
   combat_effects: {},
   scramble_power: 2,
-  required_skills: { scanning: 3 },
 };
 
 const bloodReaver: Record<string, unknown> = {
@@ -63,7 +62,6 @@ const bloodReaver: Record<string, unknown> = {
   magazine_size: 1000,
   special: 'lifesteal_20',
   combat_effects: { lifesteal_pct: 20 },
-  required_skills: { weapons: 4 },
 };
 
 const cloakingDeviceI: Record<string, unknown> = {
@@ -79,7 +77,6 @@ const cloakingDeviceI: Record<string, unknown> = {
   power_usage: 10,
   combat_effects: {},
   cloak_strength: 40,
-  required_skills: { stealth: 1 },
 };
 
 const armorRepairerI: Record<string, unknown> = {
@@ -95,7 +92,6 @@ const armorRepairerI: Record<string, unknown> = {
   power_usage: 8,
   armor_repair_rate: 5,
   combat_effects: {},
-  required_skills: { armor: 2 },
 };
 
 const emHullHardener: Record<string, unknown> = {
@@ -112,7 +108,6 @@ const emHullHardener: Record<string, unknown> = {
   power_usage: 4,
   resistance_bonus: { em: 30 },
   combat_effects: {},
-  required_skills: { armor: 2 },
 };
 
 const antimatterTorpedoes: Record<string, unknown> = {
@@ -167,7 +162,6 @@ const advancedTowRig: Record<string, unknown> = {
   power_usage: 15,
   combat_effects: {},
   tow_speed_penalty: 30,
-  required_skills: { salvaging: 3 },
 };
 
 const entropyBeam: Record<string, unknown> = {
@@ -190,7 +184,6 @@ const entropyBeam: Record<string, unknown> = {
   magazine_size: 15,
   special: 'dot_damage_10,dot_duration_5',
   combat_effects: { dot_damage: 10, dot_duration: 5 },
-  required_skills: { gunnery: 2, weapons: 3 },
 };
 
 const heavyMassDriver: Record<string, unknown> = {
@@ -214,7 +207,6 @@ const heavyMassDriver: Record<string, unknown> = {
   special: 'armor_bypass_80,hull_damage_bonus_50',
   armor_bypass_bonus: 0.8,
   combat_effects: { hull_damage_pct: 50 },
-  required_skills: { gunnery: 4, weapons: 4 },
 };
 
 test('summarizeCombatSpecialEffects uses integer percents without scaling 1 to 100%', () => {
@@ -276,6 +268,11 @@ test('special is kept only when combat special effects are empty', () => {
   expect(summarizeModuleBonuses(bloodReaver)).not.toContain('lifesteal_20');
   expect(summarizeModuleBonuses({ special: 'kept', combat_effects: {} })).toBe('kept');
   expect(summarizeModuleBonuses({ special: 'dropped', combat_effects: { shield_phase: true } })).toBe('');
+});
+
+test('MODULE_BONUS_EXCLUSIONS includes required_skills', () => {
+  expect(MODULE_BONUS_EXCLUSIONS.has('required_skills')).toBe(true);
+  expect(summarizeModuleBonuses({ reach: 3, required_skills: { scanning: 3 } })).toBe('reach 3');
 });
 
 test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses', () => {
