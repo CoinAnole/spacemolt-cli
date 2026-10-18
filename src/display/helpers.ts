@@ -633,7 +633,6 @@ export function emitStationLifeSupport(lifeSupport: unknown): boolean {
   return true;
 }
 
-/** Safe integer or bigint. Floats, numeric strings, booleans, null, and unsafe numbers return undefined. */
 export function formatExactGroupedInteger(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toLocaleString();
   if (typeof value === 'number' && Number.isSafeInteger(value)) return value.toLocaleString();
