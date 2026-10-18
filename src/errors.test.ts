@@ -528,6 +528,56 @@ describe('invalid_target', () => {
   });
 });
 
+describe('own_faction_station', () => {
+  test('is not retryable, with attack, battle_engage, and join_faction overlays', () => {
+    expect(ERROR_REGISTRY.own_faction_station?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.own_faction_station?.auth).toBe(false);
+    expect(isRetryableError('own_faction_station')).toBe(false);
+    expect(isAuthError('own_faction_station')).toBe(false);
+    expect(isKnownErrorCode('own_faction_station')).toBe(true);
+    expect(ERROR_CODES).toContain('own_faction_station');
+    expect(ERROR_REGISTRY.own_faction_station?.message).toBe('You cannot fight a station your own faction owns.');
+    expect(Object.keys(ERROR_REGISTRY.own_faction_station?.commandSuggestions ?? {})).toEqual([
+      'attack',
+      'battle_engage',
+      'join_faction',
+    ]);
+
+    const generic = getErrorSuggestion('own_faction_station');
+    expect(generic).toBe(
+      'You cannot fight a station your own faction owns. Do not attack that station. On battle_engage, omit side_id to join your station\'s side. On join_faction, leave the battle first, then retry. Run "spacemolt get_battle_status" to see the fight.',
+    );
+    expect(getErrorSuggestion('own_faction_station', 'repair')).toBe(generic);
+    expect(getErrorSuggestion('own_faction_station', 'faction join')).toBe(generic);
+    expect(generic).not.toContain('faction join');
+    expect(generic).toContain('join_faction');
+    expect(generic).toContain('battle_engage');
+    expect(generic).toContain('get_battle_status');
+    expect(generic).toContain('On battle_engage, omit side_id');
+    expect(generic).not.toContain('Do not retry "spacemolt attack"');
+    expect(generic).not.toContain('This error may be retryable');
+
+    const attack = getErrorSuggestion('own_faction_station', 'attack');
+    expect(attack).toContain('spacemolt attack');
+    expect(attack).not.toContain('omit side_id');
+    expect(attack).not.toContain('This error may be retryable');
+
+    const engage = getErrorSuggestion('own_faction_station', 'battle_engage');
+    expect(getErrorSuggestion('own_faction_station', 'battle engage')).toBe(engage);
+    expect(engage).toContain('Omit side_id');
+    expect(engage).not.toContain('join_faction');
+    expect(engage).not.toContain('This error may be retryable');
+
+    const join = getErrorSuggestion('own_faction_station', 'join_faction');
+    expect(join).toContain('spacemolt join_faction');
+    expect(join).toContain('get_battle_status');
+    expect(join).not.toContain('omit side_id');
+    expect(join).not.toContain('This error may be retryable');
+
+    expect(getRelatedCommands('own_faction_station')).toEqual(['get_battle_status']);
+  });
+});
+
 describe('player_not_found', () => {
   test('is one global suggestion for every documented caller', () => {
     expect(ERROR_REGISTRY.player_not_found?.retryable).toBe(false);

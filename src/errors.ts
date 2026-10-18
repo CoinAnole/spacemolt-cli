@@ -297,6 +297,23 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
       hunt: 'Target not found. attack and hunt return this for a missing id and for a target you cannot see (another POI, in transit, or cloaked). Run "spacemolt get_nearby" for ships at your POI. Joining a battle already running in this system uses a participant from "spacemolt get_battle_status" and does not return this error.',
     },
   },
+  own_faction_station: {
+    code: 'own_faction_station',
+    message: 'You cannot fight a station your own faction owns.',
+    suggestion:
+      'You cannot fight a station your own faction owns. Do not attack that station. On battle_engage, omit side_id to join your station\'s side. On join_faction, leave the battle first, then retry. Run "spacemolt get_battle_status" to see the fight.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_battle_status'],
+    commandSuggestions: {
+      attack:
+        'A station owned by your own faction cannot be attacked. Do not retry "spacemolt attack" on that station. Run "spacemolt get_battle_status" if a fight is already running.',
+      battle_engage:
+        'That side_id opposes a station your own faction owns. Omit side_id so "spacemolt battle_engage" joins your station\'s side. Do not pass a side that fights it.',
+      join_faction:
+        'You are fighting a station this faction owns. Leave the battle first, then retry "spacemolt join_faction". Run "spacemolt get_battle_status" to see the fight.',
+    },
+  },
   player_not_found: {
     code: 'player_not_found',
     message: 'Player not found.',
