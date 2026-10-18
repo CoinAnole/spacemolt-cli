@@ -1210,6 +1210,26 @@ describe('command metadata', () => {
     expect(help).toContain('Loot is unchanged');
     expect(help).toContain('[RNC] Belt-Grazer');
     expect(help).not.toContain('other targets only need to be in the same system');
+
+    for (const text of [config?.description ?? '', help]) {
+      expect(text).toContain('own_faction_station');
+      expect(text).toContain('Pirates join the lowest-numbered NPC side.');
+      expect(text).toContain(
+        "If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's.",
+      );
+      expect(text).toContain(
+        "Fleet and faction auto-joins no longer pull you into a fight against your own faction's station.",
+      );
+      expect(text).toContain('Your drones no longer open a side against it.');
+      expect(text).toContain('0.630.5 does not say whether an ally still comes first');
+      expect(text).toContain('target_docked');
+      expect(text).toContain('normal side rules');
+      expect(text).toContain('joins their side');
+      expect(text).toContain('armed faction station');
+      expect(text).not.toContain('`');
+      expect(text).not.toContain('a war joins');
+      expect(text).not.toContain('and your drones, no longer open a side');
+    }
   });
 
   test('battle_engage help only offers joining an existing battle', () => {
@@ -1228,11 +1248,63 @@ describe('command metadata', () => {
     expect(COMMANDS.battle_engage?.schema?.side_id?.type).toBe('integer');
     expect(convertPayloadTypes({ side_id: '2' }, 'battle_engage')).toEqual({ side_id: 2 });
 
+    const sideId = COMMANDS.battle_engage?.schema?.side_id;
+    expect(sideId?.description).toContain('own_faction_station');
+    expect(sideId?.description).toContain('Passing side_id chooses that side and is not re-picked');
+    expect(sideId?.description).toContain('Omitted side_id does not change at random');
+    expect(sideId?.description).not.toContain('`');
+    expect(sideId?.description).not.toContain('a war joins');
+    expect(sideId?.description).not.toContain('and your drones, no longer open a side');
+
     const help = captureHelp('battle_engage');
     expect(help).toContain('[side_id]');
     expect(help).toContain('cannot start a battle');
     expect(help).toContain('faction-based auto-assignment');
     expect(help).toContain('Does not cost a tick');
+    expect(help).toContain('numeric');
+    expect(config?.usage).toContain('omit for faction-based');
+    expect(help).toContain('omit for faction-based');
+
+    const warSide =
+      "If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's.";
+    for (const text of [config?.description ?? '', help]) {
+      expect(text).toContain('own_faction_station');
+      expect(text).toContain('A passed side_id is not re-picked');
+      expect(text).toContain('Omit side_id for faction-based auto-assignment');
+      expect(text.toLowerCase()).toContain('omit side_id');
+      expect(text).toContain("joins your station's side");
+      expect(text).toContain('When side_id is omitted');
+      expect(text).toContain('Pirates join the lowest-numbered NPC side.');
+      expect(text).toContain(warSide);
+      expect(text).toContain(
+        "Fleet and faction auto-joins no longer pull you into a fight against your own faction's station.",
+      );
+      expect(text).toContain('Your drones no longer open a side against it.');
+      expect(text).toContain('Does not cost a tick');
+      expect(text.indexOf('A passed side_id is not re-picked')).toBeLessThan(text.indexOf('When side_id is omitted'));
+      expect(text.indexOf('When side_id is omitted')).toBeLessThan(
+        text.indexOf('Pirates join the lowest-numbered NPC side.'),
+      );
+      expect(text).not.toContain('`');
+      expect(text).not.toContain('a war joins');
+      expect(text).not.toContain('and your drones, no longer open a side');
+    }
+  });
+
+  test('join_faction help says to leave a battle against that faction station first', () => {
+    const description = CURATED_COMMAND_DESCRIPTIONS.join_faction;
+    expect(COMMANDS.join_faction?.description).toBe(description);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.join_faction?.description).toBeUndefined();
+
+    const help = captureHelp('join_faction');
+    for (const text of [description, help]) {
+      expect(text).toContain('own_faction_station');
+      expect(text).toContain('Leave the battle first');
+      expect(text).toContain('join_faction');
+      expect(text).not.toContain('faction join');
+      expect(text).not.toContain('rent-free');
+      expect(text).not.toContain('`');
+    }
   });
 
   test('tactical battle commands document that only reload costs a tick', () => {

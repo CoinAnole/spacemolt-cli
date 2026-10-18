@@ -133,7 +133,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Install a module on your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:
     'Dump cargo into a lootable container; matching ore settles back into the belt when the container despawns.',
-  join_faction: 'Join a faction via invitation',
+  join_faction:
+    "Join a faction via invitation. You must have a pending invite. While you fight in a battle against one of that faction's stations, join_faction returns own_faction_station. Leave the battle first, then retry.",
   leave_faction: 'Leave your faction',
   list_ship_for_sale: 'List a stored ship for sale on the exchange',
   list_ships:
