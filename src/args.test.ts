@@ -784,6 +784,35 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.server_request_sent).toBe(false);
   });
 
+  test('get_player_profile takes one username token and does not accept name', () => {
+    const quoted = parseArgs(['get_player_profile', 'Vex Caldera']);
+    expect(quoted.ok).toBe(true);
+    if (!quoted.ok) throw new Error(quoted.errors.map((error) => error.message).join('; '));
+    expect(quoted.payload).toEqual({ username: 'Vex Caldera' });
+    expect(quoted.payload.username).not.toBe('vex caldera');
+
+    const split = parseArgs(['get_player_profile', 'Vex', 'Caldera']);
+    expect(split.ok).toBe(true);
+    if (!split.ok) throw new Error(split.errors.map((error) => error.message).join('; '));
+    expect(split.payload.username).toBe('Vex');
+    expect(split.payload.username).not.toBe('Vex Caldera');
+
+    const missing = parseArgs(['get_player_profile']);
+    expect(missing.ok).toBe(true);
+    if (!missing.ok) throw new Error(missing.errors.map((error) => error.message).join('; '));
+    expect(validateRequiredArgs(missing.command, missing.payload)).toBe('username');
+
+    const publicProfile = parseArgs(['player_profile', 'Arbiter47']);
+    expect(publicProfile.ok).toBe(true);
+    if (!publicProfile.ok) throw new Error(publicProfile.errors.map((error) => error.message).join('; '));
+    expect(publicProfile.payload).toEqual({ name: 'Arbiter47' });
+
+    const named = parseArgs(['get_player_profile', 'name=Vex Caldera']);
+    expect(named.ok).toBe(false);
+    if (named.ok) throw new Error('expected name= to be rejected');
+    expect(named.errors[0]).toMatchObject({ field: 'name', code: 'unknown_field' });
+  });
+
   test('faction_build previews the faction facility build endpoint', () => {
     const response = createDryRunResponse('faction_build', { facility_type: 'ore_refinery' });
     expect(response.structuredContent?.server_request_sent).toBe(false);
