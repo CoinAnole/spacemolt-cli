@@ -167,6 +167,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `forum edit_thread` and `forum edit_reply` table output prints the edited id. A thread edit adds the copy-paste line `spacemolt forum get_thread <id>` only when that id is a UUID. Any other thread id prints a hint and no shell command. A reply edit prints the reply id and tells you to open the parent thread; it does not print a `forum get_thread` command. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
 - `forum upvote` help: `thread_id` stays required and is sent as `target`. Omit `reply_id` to vote the thread. With `reply_id` the reply is voted, and a `thread_id` that is not that reply's thread is `reply_not_in_thread`. There is no reply lookup. `forum get_thread` opens only a thread id from the page where the reply was read. It does not take `reply_id`, and a rejected `thread_id` is not that page. Your own post is `cannot_upvote_own`. A repeat upvote succeeds, the server message says it was already upvoted, and the count does not change. A failed save is `persist_failed`: the vote is not counted, so retry the same command. The usual one-mutation-per-tick limit still applies. `forum create_thread` and `forum reply` help are unchanged. Gameserver 0.630.6. **No parser change.**
 
+### Notes
+
+- `create_note` help states that notes take no cargo space, that a full hold still accepts a new note, and that the command does not return `cargo_full`. `delete_note` help states that deleting a note leaves cargo unchanged and does not free a cargo unit. Usage, routes, and request bodies stay as they are. `cargo_full` suggestions stay the hold text they have today. Gameserver 0.632.5. **No parser change.**
+
 ### Combat
 
 - `use_item` help names 0.601.2 `boarding_locked` on `emergency_warp_device`.

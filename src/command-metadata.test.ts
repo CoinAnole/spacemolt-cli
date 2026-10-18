@@ -512,6 +512,73 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.forum_reply).toBe('Reply to a forum thread');
   });
 
+  test('create_note and delete_note help state that notes take no cargo space', () => {
+    const createNote =
+      'Create a new note document. Notes take no cargo space (gameserver 0.632.5). A full hold still accepts a new note, and create_note does not return cargo_full.';
+    const deleteNote =
+      'Permanently delete a note document you own. Deleting a note leaves cargo unchanged and does not free a cargo unit (gameserver 0.632.5).';
+
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.create_note?.description).toBeUndefined();
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.delete_note?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.create_note).toBe(createNote);
+    expect(COMMANDS.create_note?.description).toBe(createNote);
+    expect(CURATED_COMMAND_DESCRIPTIONS.create_note).toBe(COMMANDS.create_note?.description);
+    expect(CURATED_COMMAND_DESCRIPTIONS.delete_note).toBe(deleteNote);
+    expect(COMMANDS.delete_note?.description).toBe(deleteNote);
+    expect(CURATED_COMMAND_DESCRIPTIONS.delete_note).toBe(COMMANDS.delete_note?.description);
+    expect(COMMANDS.create_note?.usage).toBe('<title> <content>  (create tradeable note)');
+    expect(COMMANDS.delete_note?.usage).toBe('<note_id>  (delete note permanently)');
+    expect(COMMANDS.create_note?.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'create_note',
+      method: 'POST',
+    });
+    expect(COMMANDS.delete_note?.route).toEqual({
+      tool: 'spacemolt_social',
+      action: 'delete_note',
+      method: 'POST',
+    });
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.create_note?.positionals).toEqual(['title', { rest: 'content' }]);
+    expect(COMMANDS.create_note?.args).toEqual(['title', { rest: 'content' }]);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.delete_note?.positionals).toEqual(['note_id']);
+    expect(FACTION_SOCIAL_COMMAND_OVERRIDES.delete_note?.aliases).toEqual({ note_id: 'target' });
+    expect(COMMANDS.delete_note?.args).toEqual(['note_id']);
+    expect(COMMANDS.delete_note?.aliases).toEqual({ note_id: 'target' });
+
+    const createHelp = captureHelp('create_note');
+    expect(createHelp).toContain('Notes take no cargo space');
+    expect(createHelp).toContain('full hold');
+    expect(createHelp).toContain('cargo_full');
+    expect(createHelp).not.toContain('`');
+
+    const deleteHelp = captureHelp('delete_note');
+    expect(deleteHelp).toContain('leaves cargo unchanged');
+    expect(deleteHelp).toContain('does not free a cargo unit');
+    expect(deleteHelp).not.toContain('`');
+
+    const groupStdout: string[] = [];
+    expect(
+      showCommandGroup(
+        'social',
+        {
+          out(message = '') {
+            groupStdout.push(message);
+          },
+          err() {},
+        },
+        BUNDLED_COMMAND_REGISTRY,
+        { plain: true },
+      ),
+    ).toBe(true);
+    const groupHelp = groupStdout.join('\n').replace(ANSI_PATTERN, '');
+    expect(groupHelp).toContain(createNote);
+    expect(groupHelp).toContain(deleteNote);
+
+    const fullHelp = captureFullHelp();
+    expect(fullHelp).not.toContain('create_note');
+    expect(fullHelp).not.toContain('delete_note');
+  });
+
   test('top-level command metadata has human descriptions', () => {
     const priorityCommands = [
       'register',

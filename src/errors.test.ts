@@ -202,6 +202,8 @@ describe('fit capacity errors', () => {
     expect(getErrorSuggestion('cargo_full')).toContain('delivery=storage');
     expect(getErrorSuggestion('cargo_full')).not.toContain('storage_loot');
     expect(getErrorSuggestion('cargo_full')).not.toContain('deliver_to');
+    expect(getErrorSuggestion('cargo_full')).not.toContain('create_note');
+    expect(getErrorSuggestion('cargo_full')).not.toContain('note');
     expect(getRelatedCommands('cargo_full')).toEqual(['get_ship', 'sell', 'jettison', 'buy', 'uninstall_mod']);
   });
 
