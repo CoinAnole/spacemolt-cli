@@ -1,5 +1,8 @@
 import type { CommandOverride } from './commands';
 
+export const WILDLIFE_FLEE_WINDOW_HELP =
+  'After you flee wildlife combat, wildlife cannot automatically attack you again during the escape tick or the next two ticks (three ticks, starting with the tick you escape; gameserver 0.628.10). Use that window to jump or travel away. Fleet members entering wildlife combat cannot automatically pull you back during this window. You can still deliberately attack wildlife. attack still starts or joins that combat, and hunt still starts it. This is not immunity. This window does not apply to a player, pirate, empire NPC, station, or arena battle.';
+
 export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   register: {
     usage: '<username> <empire> <registration_code>  (get code from spacemolt.com/dashboard)',
@@ -145,7 +148,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   hunt: {
     usage: '<creature_id>',
     description:
-      "Hunt a wildlife creature from get_nearby and start a battle with that single creature. The creature must be at your current POI; one elsewhere returns invalid_target (Target not found), the same as a missing id. The creature_id you pass is the creature id from get_nearby; for a leviathan it is that leviathan's leviathan_id, stable for its whole life and the creature_id to attack while you are at its POI. Damage you deal stays on that leviathan between fights and heals slowly out of battle. Adult Molt, Rainbow, and Hoarfrost Leviathans attack ships on sight and fight to the death; young leviathans flee; Cloudwhales do not attack first. An aggressive stage attacks ships at its POI and does not join a fight already in progress. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not. Branded ranch livestock already has the owner's faction tag in its name, for example [RNC] Belt-Grazer. Killing it is legal. The owners are told who killed it. The kill does not count toward a hunt mission. Loot is unchanged.",
+      "Hunt a wildlife creature from get_nearby and start a battle with that single creature. The creature must be at your current POI; one elsewhere returns invalid_target (Target not found), the same as a missing id. The creature_id you pass is the creature id from get_nearby; for a leviathan it is that leviathan's leviathan_id, stable for its whole life and the creature_id to attack while you are at its POI. Damage you deal stays on that leviathan between fights and heals slowly out of battle. Adult Molt, Rainbow, and Hoarfrost Leviathans attack ships on sight and fight to the death; young leviathans flee; Cloudwhales do not attack first. An aggressive stage attacks ships at its POI and does not join a fight already in progress. A leviathan hunt may pull an armed faction station in the same system; other wildlife hunts do not. Branded ranch livestock already has the owner's faction tag in its name, for example [RNC] Belt-Grazer. Killing it is legal. The owners are told who killed it. The kill does not count toward a hunt mission. Loot is unchanged. " +
+      WILDLIFE_FLEE_WINDOW_HELP,
     example: 'spacemolt hunt <creature_id>',
     discoverWith: ['get_nearby', 'survey_system'],
     seeAlso: ['get_nearby', 'scan', 'get_battle_status'],
