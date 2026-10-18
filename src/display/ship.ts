@@ -17,6 +17,8 @@ import {
   emitStationRepairs,
   finiteNumber,
   firstArray,
+  formatCreditRate,
+  formatExactGroupedInteger,
   formatter,
   isRecord,
   namedFormatter,
@@ -830,6 +832,34 @@ export const shipFormatters = [
       return true;
     },
     { commands: ['reload'] },
+  ),
+
+  formatter(
+    (r) => {
+      const lines: string[] = [];
+      if (typeof r.target === 'string' && r.target.trim()) lines.push(`Target: ${r.target.trim()}`);
+      if (typeof r.source === 'string' && r.source.trim()) lines.push(`Source: ${r.source.trim()}`);
+      const crewTreated = formatExactGroupedInteger(r.crew_treated);
+      if (crewTreated !== undefined) lines.push(`Crew treated: ${crewTreated}`);
+      const marinesTreated = formatExactGroupedInteger(r.marines_treated);
+      if (marinesTreated !== undefined) lines.push(`Marines treated: ${marinesTreated}`);
+      const crewRate = formatCreditRate(r.crew_treatment_price, 'crew');
+      if (crewRate !== undefined) lines.push(`Crew rate: ${crewRate}`);
+      const marineRate = formatCreditRate(r.marine_treatment_price, 'marine');
+      if (marineRate !== undefined) lines.push(`Marine rate: ${marineRate}`);
+      const cost = formatExactGroupedInteger(r.cost);
+      if (cost !== undefined) lines.push(`Cost: ${cost} cr`);
+      const poolRemaining = formatExactGroupedInteger(r.medical_pool_remaining);
+      if (poolRemaining !== undefined) lines.push(`Medical pool remaining: ${poolRemaining}`);
+      const suppliesUsed = formatExactGroupedInteger(r.supplies_used);
+      if (suppliesUsed !== undefined) lines.push(`Supplies used: ${suppliesUsed}`);
+      if (!lines.length) return false;
+
+      emitLine(`\n${c.bright}=== Treatment Complete ===${c.reset}`);
+      for (const line of lines) emitLine(line);
+      return true;
+    },
+    { commands: ['treat_personnel'] },
   ),
 
   // Wrecks

@@ -4125,6 +4125,7 @@ describe('command metadata', () => {
       'auth_login_link',
       'auth_login_link_poll',
       'battle_self_destruct',
+      'get_player_profile',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',
@@ -5661,6 +5662,11 @@ describe('command metadata', () => {
     expect(config.seeAlso).toContain('get_guide');
     expect(CURATED_COMMAND_DESCRIPTIONS.treat_personnel).toBe(config.description);
     expect(CORE_COMMAND_OVERRIDES.treat_personnel?.description).toBe(config.description);
+    expect(config.description).toContain('at least 25 credits per crew');
+    expect(config.description).toContain('facility list shows the current rates');
+    expect(config.description).not.toContain('costs 25 credits per crew and 50 per marine');
+    expect(config.schema?.provider?.description).toContain('at least 25 credits per crew');
+    expect(config.schema?.provider?.description).toContain('facility list shows the current rates');
 
     expect(config.description).toContain('provider=field');
     expect(config.description).toContain('out of combat');

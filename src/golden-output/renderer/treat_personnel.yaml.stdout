@@ -1,0 +1,9 @@
+
+target: Vex
+crew_treated: 5
+marines_treated: 2
+source: station
+crew_treatment_price: 38
+marine_treatment_price: 50
+cost: 290
+medical_pool_remaining: 25

@@ -633,13 +633,24 @@ export function emitStationLifeSupport(lifeSupport: unknown): boolean {
   return true;
 }
 
+export function formatExactGroupedInteger(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toLocaleString();
+  if (typeof value === 'number' && Number.isSafeInteger(value)) return value.toLocaleString();
+  return undefined;
+}
+
+export function formatCreditRate(value: unknown, per: 'crew' | 'marine'): string | undefined {
+  const text = formatExactGroupedInteger(value);
+  return text === undefined ? undefined : `${text} cr/${per}`;
+}
+
 const STATION_SERVICE_POOL_KEYS: ReadonlyArray<[string, string]> = [
   ['personnel', 'Personnel'],
   ['medical', 'Medical'],
   ['marine_training', 'Marine training'],
 ];
 
-function formatStationServicePoolLine(label: string, pool: Record<string, unknown>): string {
+function formatStationServicePoolLine(key: string, label: string, pool: Record<string, unknown>): string {
   const remaining = finiteNumber(pool.remaining);
   const capacity = finiteNumber(pool.capacity);
   const remainingText = remaining === undefined ? '?' : String(remaining);
@@ -654,6 +665,14 @@ function formatStationServicePoolLine(label: string, pool: Record<string, unknow
   }
   const need = finiteNumber(pool.next_cycle_supply_required);
   if (need !== undefined && need > 0) line += ` (need ${need} next cycle)`;
+  if (key === 'medical') {
+    const rates: string[] = [];
+    const crewRate = formatCreditRate(pool.crew_treatment_price, 'crew');
+    const marineRate = formatCreditRate(pool.marine_treatment_price, 'marine');
+    if (crewRate !== undefined) rates.push(crewRate);
+    if (marineRate !== undefined) rates.push(marineRate);
+    if (rates.length) line += ` — ${rates.join(', ')}`;
+  }
   return line;
 }
 
@@ -663,7 +682,7 @@ export function emitStationServicePools(pools: unknown): boolean {
   for (const [key, label] of STATION_SERVICE_POOL_KEYS) {
     const pool = pools[key];
     if (!isRecord(pool)) continue;
-    lines.push(formatStationServicePoolLine(label, pool));
+    lines.push(formatStationServicePoolLine(key, label, pool));
   }
   if (!lines.length) return false;
 

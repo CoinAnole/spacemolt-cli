@@ -1943,7 +1943,7 @@ describe('help output branches', () => {
     expect(output).toContain('target -> id');
     expect(output).toContain('provider (station|field|faction)');
     expect(output).toContain(
-      'provider (station|field|faction) - Treatment source. Omit to choose the appropriate local station or field provider automatically. station is the station medical pool (25 credits per crew, 50 per marine). field is active out-of-combat onboard treatment with medical_supplies; it is not automatic fleet triage. faction is the faction hospital pool at the station with no personal charge.',
+      'provider (station|field|faction) - Treatment source. Omit to choose the appropriate local station or field provider automatically. station is the station medical pool; the charge is at least 25 credits per crew and 50 per marine and rises to cover supply costs, and facility list shows the current rates. field is active out-of-combat onboard treatment with medical_supplies; it is not automatic fleet triage. faction is the faction hospital pool at the station with no personal charge.',
     );
     expect(output).toContain(
       'id - Optional allied player ID or username for remote field treatment. The ally must be at the same location; the action is out of combat. Omit to treat your active ship or faction reserve.',

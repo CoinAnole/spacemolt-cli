@@ -775,6 +775,17 @@ export const repairFleetFixture = {
   message: 'Fleet hull status.',
 };
 
+export const treatPersonnelFixture = {
+  target: 'Vex',
+  crew_treated: 5,
+  marines_treated: 2,
+  source: 'station',
+  crew_treatment_price: 38,
+  marine_treatment_price: 50,
+  cost: 290,
+  medical_pool_remaining: 25,
+};
+
 export const shipDroneBayFixture = {
   ...shipFixture,
   drone_bay: {
@@ -967,6 +978,11 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   reload: { command: 'reload', fixture: reloadFixture },
   reload_bulk: { command: 'reload', fixture: reloadBulkFixture, schemaTarget: 'details' },
   reload_bulk_mixed: { command: 'reload', fixture: reloadBulkMixedFixture, schemaTarget: 'details' },
+  treat_personnel: {
+    command: 'treat_personnel',
+    fixture: treatPersonnelFixture,
+    schemaTarget: 'details',
+  },
   list_drones: { command: 'list_drones', fixture: dronesFixture },
   get_drone: { command: 'get_drone', fixture: droneFixture },
   list_ships: { command: 'list_ships', fixture: listShipsFixture },
