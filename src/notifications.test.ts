@@ -1351,6 +1351,7 @@ describe('notification formatting', () => {
       fleet_disbanded: 'Fleet disbanded (tick 1523)',
       mobile_capital_transit: 'Mobile Capital jumped (tick 1523)',
       mission_objective_completed: 'Mission objective completed (tick 1523)',
+      pathfinder_arrival: 'Pathfinder arrival (tick 1523)',
     };
     const STATUS_HINT_COMMANDS = new Set(['passenger_stranded', 'fleet_kicked', 'fleet_disbanded']);
 
@@ -1880,6 +1881,184 @@ describe('notification formatting', () => {
       expect(preview.details.join('\n')).not.toContain('Deliver Food Rations');
       expect(preview.details.join('\n')).not.toContain('Active missions:');
       expect(omittedKeys(preview.omittedHint)).toContain('missions');
+    });
+
+    test('pathfinder_arrival object message is a detail and does not say completed', () => {
+      const notification = actionResultNote('pathfinder_arrival', {
+        tick: 42,
+        result: { message: 'Dropped out at Procyon.' },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+
+      expect(preview.headline).toBe('Pathfinder arrival (tick 42)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details).toEqual(['Dropped out at Procyon.']);
+      expect(output).toContain('[ACTION RESULT]');
+      expect(output).toContain('Pathfinder arrival (tick 42)');
+      expect(output).toContain('Dropped out at Procyon.');
+      expect(tableMessageFromPreview(preview)).toBe('Pathfinder arrival (tick 42); Dropped out at Procyon.');
+    });
+
+    test('pathfinder_arrival string result is the first line only', () => {
+      const notification = actionResultNote('pathfinder_arrival', {
+        tick: 42,
+        result: 'Dropped out at Procyon.\nXP gained',
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+
+      expect(preview.headline).toBe('Pathfinder arrival (tick 42)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details).toEqual(['Dropped out at Procyon.']);
+      expect(output).not.toContain('XP gained');
+      expect(tableMessageFromPreview(preview)).toBe('Pathfinder arrival (tick 42); Dropped out at Procyon.');
+    });
+
+    test('pathfinder_arrival without a result is headline only', () => {
+      const preview = formatNotificationPreview(actionResultNote('pathfinder_arrival', { tick: 42 }));
+      expect(preview.headline).toBe('Pathfinder arrival (tick 42)');
+      expect(preview.details).toEqual([]);
+      expect(tableMessageFromPreview(preview)).toBe('Pathfinder arrival (tick 42)');
+    });
+
+    test('pathfinder_arrival whitespace string adds no detail', () => {
+      for (const result of ['   ', '\nDropped out at Procyon.', ' \t ']) {
+        const preview = formatNotificationPreview(actionResultNote('pathfinder_arrival', { result }));
+        expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+        expect(preview.details).toEqual([]);
+      }
+    });
+
+    test('pathfinder_arrival missing tick prints tick ?', () => {
+      expect(actionResultEventHeadline('pathfinder_arrival', undefined)).toBe('Pathfinder arrival (tick ?)');
+      const preview = formatNotificationPreview({
+        type: 'action_result',
+        msg_type: 'action_result',
+        timestamp: '2026-07-24T19:05:05.000Z',
+        data: { command: 'pathfinder_arrival' },
+      });
+      expect(preview.headline).toBe('Pathfinder arrival (tick ?)');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('mixed-case Pathfinder_Arrival matches the arrival headline', () => {
+      const preview = formatNotificationPreview(actionResultNote('Pathfinder_Arrival', { tick: 42 }));
+      expect(preview.headline).toBe('Pathfinder arrival (tick 42)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.headline).not.toContain('pathfinder_arrival completed');
+    });
+
+    test('a pathfinder detail longer than 80 stays on the following line only', () => {
+      const message = `Dropped out at ${'Procyon'.padEnd(70, 'x')}.`;
+      const notification = actionResultNote('pathfinder_arrival', { tick: 42, result: message });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const headlineLine = output.split('\n').find((line) => line.includes('[ACTION RESULT]'));
+
+      expect(message.length).toBeGreaterThan(80);
+      expect(preview.headline).toBe('Pathfinder arrival (tick 42)');
+      expect(preview.details).toEqual([message]);
+      expect(tableMessageFromPreview(preview)).toBe('Pathfinder arrival (tick 42)');
+      expect(formatNotificationMessage(notification)).toBe('Pathfinder arrival (tick 42)');
+      expect(headlineLine).toContain('Pathfinder arrival (tick 42)');
+      expect(headlineLine).not.toContain(message);
+      expect(output).toContain(`  ${message}`);
+    });
+
+    test('pathfinder_arrival bulky ship and location stay on the omitted hint', () => {
+      const notification = actionResultNote('pathfinder_arrival', {
+        result: {
+          message: 'Dropped out at Procyon.',
+          ship: bulkyShip,
+          location: bulkyLocation,
+        },
+      });
+      const preview = formatNotificationPreview(notification);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const keys = omittedKeys(preview.omittedHint);
+
+      expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+      expect(preview.headline).not.toContain('completed');
+      expect(preview.details[0]).toBe('Dropped out at Procyon.');
+      expect(preview.details).toContain('Docked at: Haven Exchange (haven_exchange)');
+      expect(keys).toContain('ship');
+      expect(keys).toContain('location');
+      expect(output).not.toContain('Dust Devil');
+      expect(output).not.toContain('ILC Knurl');
+      expect(output).not.toContain('omitted:');
+      expectNoNestedJsonDump(output);
+    });
+
+    test('pathfinder_arrival does not print a missions envelope', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('pathfinder_arrival', {
+          result: {
+            ship: bulkyShip,
+            missions: {
+              active: [
+                {
+                  title: 'Survey Belt',
+                  mission_id: 'mission-survey-1',
+                  objectives: [{ description: 'Survey Sol', current: 3, required: 3, completed: true }],
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+      expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+      expect(preview.details.join('\n')).not.toContain('Survey Belt');
+      expect(preview.details.join('\n')).not.toContain('Survey Sol');
+      expect(preview.details.join('\n')).not.toContain('Active missions:');
+      expect(omittedKeys(preview.omittedHint)).toContain('missions');
+      expect(omittedKeys(preview.omittedHint)).toContain('ship');
+    });
+
+    test('pathfinder_arrival object details use the shared summary', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('pathfinder_arrival', {
+          result: { details: { action: 'arrived', system: 'Procyon' } },
+        }),
+      );
+      expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+      expect(preview.details).toEqual(['arrived → Procyon']);
+    });
+
+    test('pathfinder_arrival string result still prints auto-dock flags', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('pathfinder_arrival', {
+          auto_docked: true,
+          auto_undocked: true,
+          result: 'Dropped out at Procyon.',
+        }),
+      );
+      expect(preview.details).toEqual(['Dropped out at Procyon.', 'auto-docked', 'auto-undocked']);
+    });
+
+    test('a string result that already starts the headline is not repeated', () => {
+      const preview = formatNotificationPreview(
+        actionResultNote('pathfinder_arrival', { result: 'Pathfinder arrival' }),
+      );
+      expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('pathfinder_arrival non-text result adds no message line', () => {
+      // Nested arrays are arguments to test.each, so keep the array case in this loop.
+      const cases: unknown[] = [null, 1, false, ['Dropped out at Procyon.']];
+      for (const result of cases) {
+        const preview = formatNotificationPreview(actionResultNote('pathfinder_arrival', { result }));
+        expect(preview.headline).toBe('Pathfinder arrival (tick 1523)');
+        expect(preview.details).toEqual([]);
+      }
+    });
+
+    test('a string result on jump does not become a detail', () => {
+      const preview = formatNotificationPreview(actionResultNote('jump', { result: 'Dropped out at Procyon.' }));
+      expect(preview.headline).toBe('jump completed (tick 1523)');
+      expect(preview.details).toEqual([]);
     });
   });
 

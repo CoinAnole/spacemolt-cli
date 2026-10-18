@@ -480,6 +480,9 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('travel <poi_or_station>');
     expect(output).not.toContain('travel <poi_id>');
+    expect(output).toContain('poll get_location');
+    expect(output).toContain('Lane jump, or Pathfinder bearing (returns now; poll get_location)');
+    expect(output).not.toContain('Jump lane or Pathfinder bearing');
   });
 
   test('full help facility section does not describe facility build as player-only', () => {

@@ -1087,7 +1087,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Navigation:${c.reset}
     travel <poi_or_station>   Travel within system
-    jump <system|bearing>     Jump lane or Pathfinder bearing
+    jump <system|bearing>     Lane jump, or Pathfinder bearing (returns now; poll get_location)
     dock                      Enter station
     undock                    Leave station
     System/POI IDs: exact id/name by default; --fuzzy-ids allows unique prefix only (never substring)

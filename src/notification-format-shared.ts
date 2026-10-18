@@ -600,6 +600,8 @@ export function actionResultEventHeadline(command: string, tick: unknown, data?:
     }
     case 'mission_objective_completed':
       return `Mission objective completed (tick ${tickLabel})`;
+    case 'pathfinder_arrival':
+      return `Pathfinder arrival (tick ${tickLabel})`;
     default:
       return `${command} (tick ${tickLabel})`;
   }
@@ -621,7 +623,12 @@ function previewActionResult(
       : `${command ?? 'action'} completed (tick ${tick ?? '?'})`;
 
   const details: string[] = [];
-  if (result) {
+  if (command === 'pathfinder_arrival' && typeof data.result === 'string') {
+    const messageLine = firstLine(data.result);
+    if (messageLine && !headline.startsWith(messageLine)) {
+      details.push(truncate(messageLine, options));
+    }
+  } else if (result) {
     const resultMessage = safeScalar(result.message);
     if (resultMessage !== undefined) {
       const messageLine = firstLine(String(resultMessage));

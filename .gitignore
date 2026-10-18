@@ -53,5 +53,3 @@ official-client
 docs/**
 !docs/README.md
 reports/**
-
-docs_issues.md
