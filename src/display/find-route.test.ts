@@ -412,26 +412,41 @@ describe('find_route formatter', () => {
   });
 
   test('prints explicit zero fuel on a found one-step route', () => {
-    const stdout = stdoutOf(
-      foundBody({
-        fuel_per_jump: 0,
-        estimated_fuel: 0,
-        fuel_available: 0,
-        cargo_used: 0,
-        total_jumps: 0,
-      }),
-    );
-    expect(stdout).toContain('Route: found');
-    expect(stdout).toContain('Fuel per jump: 0');
-    expect(stdout).toContain('Estimated fuel: 0');
-    expect(stdout).toContain('Fuel available: 0');
-    expect(stdout).toContain('Cargo used: 0');
-    expect(cells(rowByText(stdout, 'Route', 'Sol'))[0]).toBe('Sol');
-    expect(
-      section(stdout, 'Route')
-        .split('\n')
-        .filter((line) => line.includes('|') && !line.includes('System')),
-    ).toHaveLength(1);
+    for (const zero of [0, 0n]) {
+      const stdout = stdoutOf(
+        foundBody({
+          fuel_per_jump: zero,
+          estimated_fuel: zero,
+          fuel_available: zero,
+          cargo_used: zero,
+          total_jumps: zero,
+          route: [{ system_id: 'sol', name: 'Sol', jumps: zero }],
+          fleet_fuel: [
+            fleetMember({
+              fuel_per_jump: zero,
+              estimated_fuel: zero,
+              fuel_available: zero,
+              fuel_on_arrival: zero,
+            }),
+          ],
+        }),
+      );
+      expect(stdout).toContain('Route: found');
+      expect(stdout).toContain('Total jumps: 0');
+      expect(stdout).toContain('Fuel per jump: 0');
+      expect(stdout).toContain('Estimated fuel: 0');
+      expect(stdout).toContain('Fuel available: 0');
+      expect(stdout).toContain('Cargo used: 0');
+      expect(cells(rowByText(stdout, 'Route', 'Sol'))[2]).toBe('0');
+      const fleet = cells(rowByText(stdout, 'Fleet Fuel', 'Pilot'));
+      expect(fleet[3]).toBe('0');
+      expect(fleet[6]).toBe('0');
+      expect(
+        section(stdout, 'Route')
+          .split('\n')
+          .filter((line) => line.includes('|') && !line.includes('System')),
+      ).toHaveLength(1);
+    }
   });
 
   test('omits the fleet block when fleet_fuel is absent', () => {

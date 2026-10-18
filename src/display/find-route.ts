@@ -47,7 +47,6 @@ type RouteStatus = 'found' | 'not found' | '(omitted)' | '(invalid)';
 function integerCell(value: unknown): string {
   if (value === undefined) return '(omitted)';
   if (value === null) return '(null)';
-  if (value === 0 || value === 0n) return '0';
   return formatIntegerText(value) ?? '(invalid)';
 }
 
@@ -110,28 +109,18 @@ function travelLine(result: Record<string, unknown>): string | undefined {
   return 'Then travel: (empty)';
 }
 
-function wormholeCell(step: Record<string, unknown>): string {
-  if (!Object.hasOwn(step, 'via_wormhole')) return '';
-  if (step.via_wormhole === true) return 'yes';
-  if (step.via_wormhole === false) return 'no';
+function yesNoCell(record: Record<string, unknown>, key: string): string {
+  if (!Object.hasOwn(record, key)) return '';
+  if (record[key] === true) return 'yes';
+  if (record[key] === false) return 'no';
   return '(invalid)';
 }
 
 function entranceCell(step: Record<string, unknown>): string {
-  const wormhole = step.via_wormhole === true;
   const present = Object.hasOwn(step, 'entrance_poi');
-  const entrance = step.entrance_poi;
-  if (wormhole) {
-    if (!present || entrance === null) return '(missing)';
-    if (typeof entrance !== 'string') return '(invalid)';
-    const trimmed = entrance.trim();
-    return trimmed === '' ? '(empty)' : trimmed;
-  }
+  if (step.via_wormhole === true && (!present || step.entrance_poi === null)) return '(missing)';
   if (!present) return '';
-  if (entrance === null) return '(null)';
-  if (typeof entrance !== 'string') return '(invalid)';
-  const trimmed = entrance.trim();
-  return trimmed === '' ? '(empty)' : trimmed;
+  return stringCell(step.entrance_poi, '');
 }
 
 function projectStep(value: unknown): Record<string, unknown> {
@@ -142,7 +131,7 @@ function projectStep(value: unknown): Record<string, unknown> {
     system: stringCell(value.name, ''),
     id: stringCell(value.system_id, ''),
     jumps: integerCell(value.jumps),
-    wormhole: wormholeCell(value),
+    wormhole: yesNoCell(value, 'via_wormhole'),
     entrance: entranceCell(value),
   };
 }
@@ -151,13 +140,6 @@ function fleetIdentity(value: unknown): string {
   if (value === undefined || value === '') return '';
   if (value === null) return '(null)';
   return typeof value === 'string' ? value : '(invalid)';
-}
-
-function canCompleteCell(member: Record<string, unknown>): string {
-  if (!Object.hasOwn(member, 'can_complete')) return '';
-  if (member.can_complete === true) return 'yes';
-  if (member.can_complete === false) return 'no';
-  return '(invalid)';
 }
 
 function projectFleetMember(value: unknown): Record<string, unknown> {
@@ -181,7 +163,7 @@ function projectFleetMember(value: unknown): Record<string, unknown> {
     estimated: integerCell(value.estimated_fuel),
     available: integerCell(value.fuel_available),
     on_arrival: integerCell(value.fuel_on_arrival),
-    can_complete: canCompleteCell(value),
+    can_complete: yesNoCell(value, 'can_complete'),
   };
 }
 
