@@ -2960,6 +2960,71 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives attack own_faction_station a do-not-attack overlay', () => {
+    const capture = captureWriter();
+    displayError(
+      'attack',
+      { code: 'own_faction_station', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [own_faction_station]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt attack');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives battle_engage own_faction_station an omit-side overlay', () => {
+    const capture = captureWriter();
+    displayError(
+      'battle_engage',
+      { code: 'own_faction_station', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [own_faction_station]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('Omit side_id');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives join_faction own_faction_station a leave-then-retry overlay', () => {
+    const capture = captureWriter();
+    displayError(
+      'join_faction',
+      { code: 'own_faction_station', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [own_faction_station]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('spacemolt join_faction');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives repair own_faction_station the generic three-way suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'repair',
+      { code: 'own_faction_station', message: 'fixture-not-a-server-quote' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [own_faction_station]');
+    expect(output).toContain('fixture-not-a-server-quote');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('On battle_engage, omit side_id');
+    expect(output).not.toContain('Do not retry "spacemolt attack"');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayError gives repair player_not_found a shared unseen-pilot suggestion', () => {
     const capture = captureWriter();
     displayError(
