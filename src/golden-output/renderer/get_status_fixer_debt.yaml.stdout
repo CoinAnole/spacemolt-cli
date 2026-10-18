@@ -1,0 +1,21 @@
+
+player:
+  id: "player-1"
+  username: Marlowe
+  empire: Terran
+  credits: 4242
+  status_message: hauling
+  clan_tag: ""
+  primary_color: #FFFFFF
+  secondary_color: #000000
+  is_cloaked: false
+  home_base: earth_station
+  stats: {}
+missions:
+  active: []
+  max_missions: 3
+  fixer:
+    debt: 2000
+    allowance: 5000
+    exposure: 3000
+    available: 2000

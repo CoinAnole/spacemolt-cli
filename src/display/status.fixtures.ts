@@ -1266,6 +1266,33 @@ export const getStatusDetainedFixture = {
   },
 };
 
+/** V2Player has no fixer_debt key; the integer is missions.fixer.debt. */
+export const getStatusFixerDebtFixture = {
+  player: {
+    id: 'player-1',
+    username: 'Marlowe',
+    empire: 'Terran',
+    credits: 4242,
+    status_message: 'hauling',
+    clan_tag: '',
+    primary_color: '#FFFFFF',
+    secondary_color: '#000000',
+    is_cloaked: false,
+    home_base: 'earth_station',
+    stats: {},
+  },
+  missions: {
+    active: [],
+    max_missions: 3,
+    fixer: {
+      debt: 2000,
+      allowance: 5000,
+      exposure: 3000,
+      available: 2000,
+    },
+  },
+};
+
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   // Covers get_state on the shared status formatter
@@ -1280,6 +1307,8 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_state_leviathans: { command: 'get_state', fixture: getStateLeviathansFixture },
   get_status_detained: { command: 'get_status', fixture: getStatusDetainedFixture },
   get_player: { command: 'get_player', fixture: playerProfileFixture },
+  get_status_fixer_debt: { command: 'get_status', fixture: getStatusFixerDebtFixture },
+  get_player_fixer_debt: { command: 'get_player', fixture: getStatusFixerDebtFixture },
   get_player_arena: { command: 'get_player', fixture: playerArenaFixture },
   pay_bounty: {
     command: 'pay_bounty',
