@@ -10915,7 +10915,7 @@ describe('structuredContent formatters', () => {
       Facility: L2 at earth_station
       Scan power: 36
       Hops: 1
-      Signature detected.
+      Cloaked signature sensed, not identified (10 power below detection).
       Projected scan contested 2 cloaks.
 
       === Players ===

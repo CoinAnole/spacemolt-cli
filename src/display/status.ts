@@ -38,6 +38,7 @@ import {
   emitFactionScanHeader,
   emitFactionScanNpcs,
   emitFactionScanPirates,
+  emitSignatureDetectedLine,
   nativeRemotePoiId,
   nativeScanField,
 } from './scan-contacts.ts';
@@ -1407,8 +1408,15 @@ export const statusFormatters = [
         if (r.success === false) emitLine('Success: false');
         return true;
       }
-      if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) return false;
+      if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) {
+        if (nativeScanField(r, 'signature_detected') === true) {
+          emitSignatureDetectedLine();
+          return true;
+        }
+        return false;
+      }
       emitLine(`\n${c.bright}=== Scan Result ===${c.reset}`);
+      if (nativeScanField(r, 'signature_detected') === true) emitSignatureDetectedLine();
       if (r.username) emitLine(`Target: ${r.username}${r.target_id ? ` (${r.target_id})` : ''}`);
       else if (r.target_id) emitLine(`Target: ${r.target_id}`);
       if (r.faction_id) emitLine(`Faction: ${r.faction_id}`);
