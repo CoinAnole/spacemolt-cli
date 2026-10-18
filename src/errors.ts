@@ -104,6 +104,24 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_status'],
   },
+  cannot_upvote_own: {
+    code: 'cannot_upvote_own',
+    message: 'You cannot upvote your own post.',
+    suggestion:
+      'You cannot upvote your own thread or reply. Nothing changes. Do not retry "spacemolt forum upvote" on that post. Open the thread with "spacemolt forum get_thread" and upvote a different one.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['forum_get_thread'],
+  },
+  reply_not_in_thread: {
+    code: 'reply_not_in_thread',
+    message: 'That reply is not in this thread.',
+    suggestion:
+      'That reply_id is not in this thread. Nothing was voted. thread_id must be the reply\'s thread. It is sent as target and is required. Do not omit thread_id, and do not retry the same pair. There is no reply lookup. "spacemolt forum get_thread" only opens a thread id from the page where the reply was read. Do not pass reply_id to it, and do not pass the thread_id that was just rejected. Retry "spacemolt forum upvote" with that page\'s thread id and the same reply_id.',
+    retryable: false,
+    auth: false,
+    relatedCommands: [],
+  },
   invalid_payload: {
     code: 'invalid_payload',
     message: 'Invalid command payload.',
