@@ -260,6 +260,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - `get_missions` prints the station and, when sent, the fixer account (`debt`, `allowance`, `exposure`, `available`, including an explicit zero debt) plus Liability and Relief columns. `get_active_missions`, `accept_mission`, and `abandon_mission` print the same account. `complete_mission` prints `Debt repaid` when it is non-zero, separate from credits earned. Omitted snapshots print nothing. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
 - `get_status`, `get_state`, and `get_player` print `Fixer debt:` when that number is non-zero. Zero and a missing number print nothing. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
+- A `storage deposit` receipt prints the fixer snapshot under the gift lines. `--json` is unchanged. **No parser change.**
 
 ## 2.9.0 — 2026-09-08
 

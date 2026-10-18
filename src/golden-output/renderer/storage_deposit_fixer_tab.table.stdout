@@ -1,0 +1,13 @@
+
+=== Send Gift ===
+Action: send_gift
+Recipient: fixer:tab
+Base Id: earth_station
+Credits Sent: 500
+Wallet Remaining: 1500
+
+Fixer:
+  Debt: 1,500
+  Allowance: 5,000
+  Exposure: 1,500
+  Available: 3,500

@@ -1437,6 +1437,21 @@ export const storageDepositStationGiftFixture = {
   },
 };
 
+/** Top-level SendGiftResponse for a fixer tab payment (no missions, player, or cargo). */
+export const storageDepositFixerTabFixture = {
+  action: 'send_gift',
+  recipient: 'fixer:tab',
+  base_id: 'earth_station',
+  credits_sent: 500,
+  wallet_remaining: 1500,
+  fixer: {
+    debt: 1500,
+    allowance: 5000,
+    exposure: 1500,
+    available: 3500,
+  },
+};
+
 /** Live-shaped nested SC: details = BulkStorageResponse mixed station-gift success/failure. */
 export const storageDepositBulkStationGiftFixture = {
   details: {
@@ -1677,5 +1692,9 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     command: 'storage_deposit',
     fixture: storageDepositBulkStationGiftFixture,
     schemaTarget: 'details',
+  },
+  storage_deposit_fixer_tab: {
+    command: 'storage_deposit',
+    fixture: storageDepositFixerTabFixture,
   },
 };
