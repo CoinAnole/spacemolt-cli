@@ -1,0 +1,53 @@
+{
+  "cargo_used": 18,
+  "estimated_fuel": 12,
+  "fleet_fuel": [
+    {
+      "player_id": "1a3c5e7b9d2f4a6c8e0b2d4f6a8c0e35",
+      "username": "VegaDrift",
+      "ship_class": "Theoria",
+      "fuel_per_jump": 6,
+      "estimated_fuel": 12,
+      "fuel_available": 85,
+      "fuel_on_arrival": 73,
+      "can_complete": true
+    },
+    {
+      "player_id": "8f2d4b6a0c9e4f1a3b5d7c9e1f3a5b72",
+      "username": "OreHauler7",
+      "ship_class": "Axiom",
+      "fuel_per_jump": 9,
+      "estimated_fuel": 18,
+      "fuel_available": 14,
+      "fuel_on_arrival": -4,
+      "can_complete": false
+    }
+  ],
+  "found": true,
+  "fuel_available": 85,
+  "fuel_per_jump": 6,
+  "message": "Route found: 2 jump(s). Then travel to Fomalhaut 4675g I (fomalhaut_4675g_i).",
+  "route": [
+    {
+      "system_id": "sol",
+      "name": "Sol",
+      "jumps": 0
+    },
+    {
+      "system_id": "alpha_centauri",
+      "name": "Alpha Centauri",
+      "jumps": 1,
+      "via_wormhole": true,
+      "entrance_poi": "sol_wormhole_alpha"
+    },
+    {
+      "system_id": "tau_ceti",
+      "name": "Tau Ceti",
+      "jumps": 2
+    }
+  ],
+  "target_poi": "fomalhaut_4675g_i",
+  "target_poi_name": "Fomalhaut 4675g I",
+  "target_system": "tau_ceti",
+  "total_jumps": 2
+}

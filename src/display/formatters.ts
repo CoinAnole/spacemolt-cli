@@ -2,6 +2,7 @@ import { arenaFormatters } from './arena.ts';
 import { citizenshipFormatters } from './citizenship.ts';
 import { combatFormatters } from './combat.ts';
 import { empireFormatters } from './empire.ts';
+import { findRouteFormatters } from './find-route.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
 import { inspectFormatters } from './inspect.ts';
@@ -36,5 +37,6 @@ export const resultFormatters: ResultFormatter[] = [
   ...arenaFormatters,
   ...citizenshipFormatters,
   ...combatFormatters,
+  ...findRouteFormatters,
   ...genericFormatters,
 ];

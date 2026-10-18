@@ -1,5 +1,6 @@
 import { arenaFixtureCases, arenaHighValueFixtures } from './arena.fixtures.ts';
 import { citizenshipHighValueFixtures } from './citizenship.fixtures.ts';
+import { findRouteHighValueFixtures } from './find-route.fixtures.ts';
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
 import { inspectHighValueFixtures } from './inspect.fixtures.ts';
 import { lootFixtureCases, lootHighValueFixtures } from './loot.fixtures.ts';
@@ -17,6 +18,7 @@ import { surveyFixtureCases, surveyHighValueFixtures } from './survey.fixtures.t
 
 export * from './arena.fixtures.ts';
 export * from './citizenship.fixtures.ts';
+export * from './find-route.fixtures.ts';
 export * from './generic.fixtures.ts';
 export * from './inspect.fixtures.ts';
 export * from './loot.fixtures.ts';
@@ -77,4 +79,5 @@ export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...inspectHighValueFixtures,
   ...arenaHighValueFixtures,
   ...citizenshipHighValueFixtures,
+  ...findRouteHighValueFixtures,
 };
