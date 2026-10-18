@@ -12,7 +12,7 @@ import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
-import { CORE_COMMAND_OVERRIDES } from './command-overrides-core';
+import { CORE_COMMAND_OVERRIDES, WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import {
   NOTIFICATION_TYPE_ENUM,
@@ -1424,6 +1424,25 @@ describe('command metadata', () => {
     expect(hunt?.description).not.toContain('leviathan_id=');
     expect(hunt?.description).not.toContain('target_id');
     expect(hunt?.description).not.toContain('`');
+    const huntDescription = hunt?.description ?? '';
+    expect(huntDescription).toContain(WILDLIFE_FLEE_WINDOW_HELP);
+    expect(huntDescription.indexOf('Loot is unchanged.')).toBeLessThan(
+      huntDescription.indexOf(WILDLIFE_FLEE_WINDOW_HELP),
+    );
+    expect(huntDescription).toContain('This is not immunity.');
+    expect(huntDescription).toContain('attack still starts or joins that combat, and hunt still starts it.');
+    expect(huntDescription).toContain('attack ships on sight');
+    for (const text of [huntDescription, WILDLIFE_FLEE_WINDOW_HELP]) {
+      expect(text).not.toContain('flee_required');
+      expect(text).not.toContain('cannot be attacked');
+      expect(text).not.toContain('30 second');
+      expect(text).not.toContain('`');
+      expect(text).not.toContain('attack or hunt still starts or joins');
+      expect(text).not.toContain('hunt still starts or joins');
+    }
+    expect(WILDLIFE_FLEE_WINDOW_HELP).toContain('This is not immunity.');
+    expect(WILDLIFE_FLEE_WINDOW_HELP).toContain('attack still starts or joins that combat, and hunt still starts it.');
+    expect(CURATED_COMMAND_DESCRIPTIONS.hunt).toBeUndefined();
     expect(hunt?.example).toBe('spacemolt hunt <creature_id>');
     expect(hunt?.seeAlso).toEqual(expect.arrayContaining(['get_nearby', 'scan', 'get_battle_status']));
 
@@ -1457,6 +1476,10 @@ describe('command metadata', () => {
     expect(help).not.toContain('leviathan_id=');
     expect(help).not.toContain('target_id');
     expect(help).not.toContain('`');
+    expect(help).toContain(WILDLIFE_FLEE_WINDOW_HELP);
+    expect(help.indexOf('Loot is unchanged.')).toBeLessThan(help.indexOf(WILDLIFE_FLEE_WINDOW_HELP));
+    expect(help).toContain('This is not immunity.');
+    expect(help).toContain('attack still starts or joins that combat, and hunt still starts it.');
   });
 
   test('get_nearby help lists intact prizes and prize id fields', () => {
@@ -1554,7 +1577,7 @@ describe('command metadata', () => {
     const generatedId = GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/stance']?.schema?.id?.description;
     expect(generatedId).toBeDefined();
     const adaptedId = generatedId?.replace('requires target_id and marines', 'the server requires target and marines');
-    expect(config?.schema?.id?.description).toBe(adaptedId);
+    expect(config?.schema?.id?.description).toBe(`${adaptedId} ${WILDLIFE_FLEE_WINDOW_HELP}`);
     expect(config?.schema?.id?.description).not.toContain('target_id');
 
     expect(config?.description).toContain('effective speed');
@@ -1571,7 +1594,17 @@ describe('command metadata', () => {
     expect(config?.schema?.target?.description).toContain('pirate-1');
     expect(config?.schema?.target?.description?.startsWith(generatedTarget ?? '')).toBe(true);
 
+    const description = config?.description ?? '';
     const help = captureHelp('battle_stance');
+    for (const text of [description, help]) {
+      expect(text).toContain(WILDLIFE_FLEE_WINDOW_HELP);
+      expect(text.indexOf('Set your battle stance')).toBeLessThan(text.indexOf(WILDLIFE_FLEE_WINDOW_HELP));
+      expect(text.indexOf(WILDLIFE_FLEE_WINDOW_HELP)).toBeLessThan(text.indexOf('For board'));
+      expect(text).not.toContain('flee_required');
+      expect(text).not.toContain('`');
+      expect(text).not.toContain('attack or hunt still starts or joins');
+    }
+    expect(config?.schema?.id?.description).not.toContain('target_id');
     expect(help).toContain('[target]');
     expect(help).toContain('[marines=N]');
     expect(help).toContain('server requires');
