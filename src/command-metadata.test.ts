@@ -12,7 +12,7 @@ import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
-import { CORE_COMMAND_OVERRIDES, WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
+import { CORE_COMMAND_OVERRIDES, TIERED_MODULE_RECIPE_HELP, WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import {
   NOTIFICATION_TYPE_ENUM,
@@ -2193,6 +2193,15 @@ describe('command metadata', () => {
     expect(help).not.toContain('server-capped by crafting skill level');
     expect(help).not.toContain('1-10');
     expect(help).not.toContain('If cargo is full');
+    expect(config?.description).toContain(TIERED_MODULE_RECIPE_HELP);
+    expect(help).toContain(TIERED_MODULE_RECIPE_HELP);
+    expect(help.split(TIERED_MODULE_RECIPE_HELP).length - 1).toBe(1);
+    expect(help).toContain('complete_queued_<module>_order');
+    expect(help).toContain('build_<module>');
+    expect(help).not.toContain('complete_queued_autocannon_ii_order');
+    expect(help).not.toContain('Mining Laser');
+    expect(help).not.toContain('Afterburner III');
+    expect(help).not.toContain('Plasma Cannon');
   });
 
   test('recycle help documents queued lossy reverse production', () => {
@@ -2261,6 +2270,38 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt recycle job_id=recycle-job-1 deliver_to=faction:Scrap');
     expect(help).toContain('preset');
     expect(help).toContain('prefer_own');
+    expect(config?.description).toContain(TIERED_MODULE_RECIPE_HELP);
+    expect(help).toContain(TIERED_MODULE_RECIPE_HELP);
+    expect(help.split(TIERED_MODULE_RECIPE_HELP).length - 1).toBe(1);
+    expect(help).toContain('complete_queued_<module>_order');
+    expect(help).toContain('build_<module>');
+    expect(help).not.toContain('complete_queued_autocannon_ii_order');
+    expect(help).not.toContain('Mining Laser');
+    expect(help).not.toContain('Afterburner III');
+    expect(help).not.toContain('Plasma Cannon');
+  });
+
+  test('tier II+ module sentence is only on craft and recycle help', () => {
+    expect(CURATED_COMMAND_DESCRIPTIONS.craft).not.toContain('complete_queued_');
+    expect(CURATED_COMMAND_DESCRIPTIONS.recycle).not.toContain('complete_queued_');
+    for (const command of [
+      'catalog',
+      'catalog_dump',
+      'install_mod',
+      'uninstall_mod',
+      'loot_wreck',
+      'scrap_wreck',
+      'sell_wreck',
+    ]) {
+      expect(captureHelp(command)).not.toContain(TIERED_MODULE_RECIPE_HELP);
+    }
+    const facilityActions = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions;
+    expect(captureHelp(facilityActions?.job_add?.displayName || 'facility job_add')).not.toContain(
+      TIERED_MODULE_RECIPE_HELP,
+    );
+    expect(captureHelp(facilityActions?.job_list?.displayName || 'facility job_list')).not.toContain(
+      TIERED_MODULE_RECIPE_HELP,
+    );
   });
 
   test('inspect is curated with route and package-aware docs', () => {
