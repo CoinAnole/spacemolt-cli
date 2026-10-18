@@ -9,9 +9,9 @@ const exampleAccount = {
   available: 2000,
 };
 
-function renderAccount(value: unknown): { printed: boolean; stdout: string } {
+function renderAccount(value: unknown, leadingBlank = false): { printed: boolean; stdout: string } {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
-  const printed = withDisplayRenderBuffer(buffer, () => emitFixerAccount(value), { plain: true });
+  const printed = withDisplayRenderBuffer(buffer, () => emitFixerAccount(value, leadingBlank), { plain: true });
   return { printed, stdout: buffer.stdout.join('\n') };
 }
 
@@ -54,6 +54,17 @@ describe('emitFixerAccount', () => {
       expect(rendered.printed).toBe(false);
       expect(rendered.stdout).toBe('');
     }
+  });
+
+  test('leading blank is emitted only when the account prints', () => {
+    const printed = renderAccount(exampleAccount, true);
+    expect(printed.printed).toBe(true);
+    expect(printed.stdout.startsWith('\nFixer:')).toBe(true);
+    expect(printed.stdout).toContain('Debt: 2,000');
+
+    const empty = renderAccount({ debt: '2000' }, true);
+    expect(empty.printed).toBe(false);
+    expect(empty.stdout).toBe('');
   });
 
   test('ignores extra keys', () => {

@@ -14,7 +14,7 @@ import {
 } from './catalog-detail.ts';
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
-import { emitFixerAccount, fixerAccountLines, formatFixerInteger } from './fixer.ts';
+import { emitFixerAccount } from './fixer.ts';
 import { emitGiftEntries } from './gifts.ts';
 import {
   c,
@@ -905,8 +905,8 @@ function missionLedgerDisplays(mission: Record<string, unknown>): {
   relief_display?: string;
 } {
   return {
-    liability_display: formatFixerInteger(mission.cargo_liability),
-    relief_display: formatFixerInteger(mission.restitution_relief),
+    liability_display: formatIntegerText(mission.cargo_liability),
+    relief_display: formatIntegerText(mission.restitution_relief),
   };
 }
 
@@ -1011,7 +1011,6 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
   return true;
 }
 
-/** No row container: this is the unwrapped action body, not the envelope. */
 function isMissionDetailsWithoutRows(result: Record<string, unknown>): boolean {
   if (Array.isArray(result.missions) || isRecord(result.missions)) return false;
   if (Array.isArray(result.active) || Array.isArray(result.active_missions)) return false;
@@ -1019,29 +1018,14 @@ function isMissionDetailsWithoutRows(result: Record<string, unknown>): boolean {
   return true;
 }
 
-function presentFixerAccount(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) && fixerAccountLines(value) ? value : undefined;
-}
-
-function missionViewFixerAccount(result: Record<string, unknown>): Record<string, unknown> | undefined {
-  if (isRecord(result.details)) {
-    const detailsAccount = presentFixerAccount(result.details.fixer);
-    if (detailsAccount) return detailsAccount;
-  }
-  if (isRecord(result.missions)) {
-    const missionsAccount = presentFixerAccount(result.missions.fixer);
-    if (missionsAccount) return missionsAccount;
-  }
-  return presentFixerAccount(result.fixer);
-}
-
 function emitActiveMissionView(result: Record<string, unknown>): boolean {
   if (isMissionDetailsWithoutRows(result)) return false;
   const printedTable = emitActiveMissionsTable(result);
-  const account = missionViewFixerAccount(result);
-  if (!printedTable && !account) return false;
-  if (account) emitFixerAccount(account);
-  return true;
+  const printedAccount =
+    (isRecord(result.details) && emitFixerAccount(result.details.fixer)) ||
+    (isRecord(result.missions) && emitFixerAccount(result.missions.fixer)) ||
+    emitFixerAccount(result.fixer);
+  return printedTable || printedAccount;
 }
 
 export const genericFormatters = [
@@ -1430,8 +1414,7 @@ export const genericFormatters = [
       emitMissionsBoard(result, () => {
         const station = missionBoardStationLine(result);
         if (station) emitLine(`Station: ${station}`);
-        if (station && fixerAccountLines(result.fixer)) emitLine('');
-        emitFixerAccount(result.fixer);
+        emitFixerAccount(result.fixer, station !== undefined);
       }),
     { commands: ['get_missions'] },
   ),

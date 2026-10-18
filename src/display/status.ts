@@ -4,7 +4,7 @@ import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import { formatCreatureLine } from './creatures.ts';
-import { emitFixerAccount, formatFixerInteger } from './fixer.ts';
+import { emitFixerAccount } from './fixer.ts';
 import {
   c,
   commandNameEquals,
@@ -18,6 +18,7 @@ import {
   emitStationIds,
   formatDeepCoreLine,
   formatDeepCoreMark,
+  formatIntegerText,
   formatLiveryName,
   formatPlayer,
   formatReputationChangesSummary,
@@ -1463,7 +1464,7 @@ export const statusFormatters = [
 
       const rewards = summarizeCompletionRewards(r);
       if (rewards.creditsLine) emitLine(rewards.creditsLine);
-      const debtRepaid = formatFixerInteger(r.debt_repaid);
+      const debtRepaid = formatIntegerText(r.debt_repaid);
       if (debtRepaid !== undefined && r.debt_repaid !== 0 && r.debt_repaid !== 0n) {
         emitLine(`Debt repaid: ${debtRepaid}`);
       }
