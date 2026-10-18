@@ -907,6 +907,11 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.jettison).not.toContain(sentence);
     expect(CORE_COMMAND_OVERRIDES.install_mod?.description).toBeUndefined();
     expect(CORE_COMMAND_OVERRIDES.uninstall_mod?.description).toBeUndefined();
+
+    const installHelp = captureHelp('install_mod');
+    expect(installHelp).toContain('Skills do not gate fitting a module you own');
+    expect(installHelp).toContain('one boarding-contact defense');
+    expect(installHelp).toContain(sentence);
   });
 
   test('distress_signal help documents the 0.608.0 claimable rescue', () => {
@@ -1951,6 +1956,10 @@ describe('command metadata', () => {
     expect(catalog?.description).toContain(
       'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
     );
+    expect(catalog?.description).toContain(
+      'Module entries do not list skill requirements. Skills do not gate fitting a module you own; slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit.',
+    );
+    expect(catalog?.description).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
     expect(catalog?.schema?.commissionable?.type).toBe('boolean');
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
     expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
@@ -1996,6 +2005,8 @@ describe('command metadata', () => {
     expect(config?.description).toContain('rare_ore_access');
     expect(config?.description).toContain('deep_core_access');
     expect(config?.description).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(config?.description).toContain('no longer include required_skills');
+    expect(config?.description).toContain('0.630.7');
     expect(config?.example).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
     expect(config?.example).toContain("--jq '.skills[] | {id,name,description}'");
 
@@ -5092,11 +5103,11 @@ describe('command metadata', () => {
     expect(config).toBeDefined();
     if (!config) throw new Error('hunt command is missing from the bundled registry');
     const stateSections = (config as { stateSections?: string[] }).stateSections;
-    expect(stateSections).toEqual(['player', 'ship', 'cargo', 'location', 'queue', 'skills']);
+    expect(stateSections).toEqual(['player', 'ship', 'cargo', 'location', 'missions', 'queue', 'skills']);
 
     const dryRun = createCommandConfigDryRunResponse('hunt', config, { creature_id: 'creature_pilot_whale_1' });
     expect(dryRun.structuredContent?.state_sections).toEqual(stateSections);
-    expect(dryRun.result).toContain('State sections: player, ship, cargo, location, queue, skills');
+    expect(dryRun.result).toContain('State sections: player, ship, cargo, location, missions, queue, skills');
   });
 
   test('command override positionals and aliases map to generated schema fields', () => {

@@ -188,7 +188,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### Fitting
 
-- `inspect` of a module no longer prints `Required skills:`, including when a payload still has `required_skills`. Module catalog fixtures drop that field. `--json`, `--yaml`, and `--structured` stay pass-through. **No parser change.** Gameserver 0.630.7.
+- `inspect` of a module no longer prints `Required skills:`, including when a payload still has `required_skills`. Module catalog fixtures drop that field. `install_mod` and `catalog` help: skills do not gate fitting a module you own; slots, CPU, power, and limits such as one boarding-contact defense decide the fit. That does not change ship Piloting, recipe gates, or facility gates. `catalog_dump` help notes that module entries no longer include `required_skills` (gameserver 0.630.7). `scrap_wreck` Salvaging 2+ is unchanged. `--json`, `--yaml`, and `--structured` stay pass-through. **No parser change.** The count "one" is the 0.630.7 changelog's example, not an OpenAPI cardinality.
 
 ### Storage
 
