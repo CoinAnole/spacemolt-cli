@@ -676,7 +676,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
     const role = faction.role ? ` (${faction.role})` : '';
     emitLine(`Faction: ${name}${tag}${role}`);
     if (kind === 'v2' && typeof faction.joined_at === 'string' && faction.joined_at !== '') {
-      emitLine(`Joined: ${faction.joined_at}`);
+      emitLine(`Joined: ${formatTimestampPreview(faction.joined_at) || faction.joined_at}`);
     }
   }
 
@@ -717,7 +717,9 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
   }
 
   if (kind === 'v2' && typeof record.ranks_generated_at === 'string' && record.ranks_generated_at !== '') {
-    emitLine(`\nLeaderboard snapshot: ${record.ranks_generated_at}`);
+    emitLine(
+      `\nLeaderboard snapshot: ${formatTimestampPreview(record.ranks_generated_at) || record.ranks_generated_at}`,
+    );
   }
 
   const ranks = Array.isArray(record.ranks) ? record.ranks.filter(isRecord) : [];
@@ -853,7 +855,7 @@ export const statusFormatters = [
     { commands: ['player_profile'] },
   ),
 
-  // Always matches. Declining falls through to === Response ===.
+  // Always returns true.
   formatter(
     (r) => {
       emitPilotProfile(r, 'v2');

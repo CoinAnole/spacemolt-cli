@@ -2045,14 +2045,14 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Colors: #00d4ff / #0a0e17');
     expect(stdout).toContain('Created: 2026-03-02 09:30:00');
     expect(stdout).toContain('Faction: Wolfpack [WOLF] (Officer)');
-    expect(stdout).toContain('Joined: 2026-04-01T00:00:00Z');
+    expect(stdout).toContain('Joined: 2026-04-01 00:00:00');
     expect(stdout).toContain('Titles: Gastronome, Master Distiller');
     expect(stdout).toContain('=== Lifetime Stats ===');
     expect(stdout).toContain('Credits Earned');
     expect(stdout).toContain('4,200,000');
     expect(stdout).toContain('Ships Destroyed');
     expect(stdout).toMatch(/Pirates Destroyed\s+\|\s+0/);
-    expect(stdout).toContain('Leaderboard snapshot: 2026-10-17T12:00:00Z');
+    expect(stdout).toContain('Leaderboard snapshot: 2026-10-17 12:00:00');
     expect(stdout).toContain('=== Leaderboard Ranks ===');
     expect(stdout).toContain('Ore Mined');
     expect(stdout).toContain('250,000');
