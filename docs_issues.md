@@ -1,6 +1,6 @@
 # Docs issues
 
-Complaints about OpenAPI gaps and documentation lag that affect the SpaceMolt CLI. This file did not exist at the repo root or under `spacemolt-docs/` when the 2026-10-18 Pathfinder design was written. A normal `git add` includes `docs_issues.md`.
+Complaints about OpenAPI gaps and documentation lag that affect the SpaceMolt CLI.
 
 No live server responses were collected. Nothing below invents a response body.
 
