@@ -83,7 +83,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_withdraw_invite: 'Withdraw a pending invite you sent',
   faction_write_room: 'Create or update a room in your faction common space.',
   find_route:
-    'Find the shortest route to a destination system, POI, or station. An uncharted hidden POI is not found (system_not_found), the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel.',
+    'Find the shortest route to a destination system, POI, or station. An uncharted hidden POI is not found (system_not_found), the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel. A wormhole step (via_wormhole true) is a jump to entrance_poi in the previous system. A missing route is route null with the fuel fields at 0. estimated_fuel is fuel_per_jump times total_jumps. A negative fuel_on_arrival means that ship, including yours, runs out on the way. fleet_fuel is sent only when you lead a fleet with more than one member and a route was found; the rows include your ship, and members without a ship are skipped.',
   facility_job_add: 'Queue production work on a facility you own.',
   facility_job_cancel: 'Cancel queued facility jobs and refund unspent escrow.',
   facility_job_list: 'List queued production jobs on a facility you own.',
