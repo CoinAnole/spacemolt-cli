@@ -219,7 +219,7 @@ export const getStateLeviathansFixture = {
   },
 };
 
-/** Every top-level V2GameState property, including sections the short status view skips. */
+/** Every top-level V2GameState property. */
 export const getStateSnapshotFixture = {
   bay_capacity: 2,
   bay_used: 1,
@@ -1510,8 +1510,7 @@ export const getStatusFixerDebtFixture = {
 
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
-  // The golden entry stays on getStatusFixture so the schema baseline does not grow.
-  // The full snapshot is getStateSnapshotFixture and is not a golden fixture.
+  // Replacing this entry with a fuller object grows the schema baseline.
   get_state: {
     command: 'get_state',
     fixture: getStatusFixture,
