@@ -845,6 +845,70 @@ export function emitSkillMap(skills: unknown): boolean {
   return true;
 }
 
+function usableLabel(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function shortStatusPlaceLabel(
+  location: Record<string, unknown> | undefined,
+  locationNameKey: string,
+  locationIdKey: string,
+  namedRecord: unknown,
+  playerValue: unknown,
+): string | undefined {
+  if (location) {
+    const locatedName = usableLabel(location[locationNameKey]);
+    if (locatedName !== undefined) return locatedName;
+    const locatedId = usableLabel(location[locationIdKey]);
+    if (locatedId !== undefined) return locatedId;
+  }
+  if (isRecord(namedRecord)) {
+    const recordName = usableLabel(namedRecord.name);
+    if (recordName !== undefined) return recordName;
+  }
+  return usableLabel(playerValue);
+}
+
+function shortStatusDockedLine(
+  location: Record<string, unknown> | undefined,
+  player: Record<string, unknown> | undefined,
+): string {
+  if (location) {
+    const dockedAt = usableLabel(location.docked_at);
+    return dockedAt !== undefined ? `  Docked: Yes (${dockedAt})` : '  Docked: No';
+  }
+  const dockedBase = player?.docked_at_base;
+  return dockedBase ? `  Docked: Yes (${dockedBase})` : '  Docked: No';
+}
+
+function shortStatusNearby(
+  location: Record<string, unknown> | undefined,
+  nearby: unknown,
+): { heading: string; rows: Array<Record<string, unknown>> } | undefined {
+  const listed = location !== undefined && Object.hasOwn(location, 'nearby_players') ? location.nearby_players : nearby;
+  const rows = Array.isArray(listed) ? listed.filter(isRecord) : [];
+  const count = location?.nearby_player_count;
+  const total = typeof count === 'number' && Number.isFinite(count) ? count : rows.length;
+  if (rows.length === 0 && !(total > 0)) return undefined;
+  return { heading: String(total), rows };
+}
+
+export function resolveShortStatusLocation(result: Record<string, unknown>): {
+  system: string | undefined;
+  poi: string | undefined;
+  docked: string;
+  nearby: { heading: string; rows: Array<Record<string, unknown>> } | undefined;
+} {
+  const location = isRecord(result.location) ? result.location : undefined;
+  const player = isRecord(result.player) ? result.player : undefined;
+  return {
+    system: shortStatusPlaceLabel(location, 'system_name', 'system_id', result.system, player?.current_system),
+    poi: shortStatusPlaceLabel(location, 'poi_name', 'poi_id', result.poi, player?.current_poi),
+    docked: shortStatusDockedLine(location, player),
+    nearby: shortStatusNearby(location, result.nearby),
+  };
+}
+
 function locationHasIdentity(loc: Record<string, unknown>): boolean {
   return Boolean(loc.system_id || loc.system_name || loc.poi_id || loc.poi_name);
 }
