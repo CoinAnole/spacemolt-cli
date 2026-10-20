@@ -30,7 +30,7 @@ function readFixerInteger(value: unknown): number | bigint | undefined {
   return undefined;
 }
 
-/** Debt integer for get_status, get_state, and get_player. Any other command returns undefined. */
+/** Debt integer for get_status and get_player. get_state display no longer uses it. Any other command returns undefined. */
 export function selectFixerDebt(
   result: Record<string, unknown>,
   command: string | undefined,

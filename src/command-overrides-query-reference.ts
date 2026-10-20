@@ -379,7 +379,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_state: {
     description:
-      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.',
+      'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.',
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },
