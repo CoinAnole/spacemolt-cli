@@ -1325,7 +1325,6 @@ export const statusFormatters = [
       if (!r.player) return false;
       const p = r.player as Record<string, unknown>;
       const s = isRecord(r.ship) ? r.ship : undefined;
-      const sys = r.system as Record<string, unknown> | undefined;
       const poi = r.poi as Record<string, unknown> | undefined;
 
       emitLine(`\n${c.bright}=== Player Status ===${c.reset}`);
@@ -1342,12 +1341,10 @@ export const statusFormatters = [
       emitStandings(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);
-      const systemLabel = sys?.name || p.current_system;
-      const poiLabel = poi?.name || p.current_poi;
-      // No name is an omitted line, not the string "undefined".
-      if (systemLabel != null && systemLabel !== '') emitLine(`  System: ${systemLabel}`);
-      if (poiLabel != null && poiLabel !== '') emitLine(`  POI: ${poiLabel}`);
-      emitLine(`  Docked: ${p.docked_at_base ? `Yes (${p.docked_at_base})` : 'No'}`);
+      const shortLocation = resolveShortStatusLocation(r);
+      if (shortLocation.system !== undefined) emitLine(`  System: ${shortLocation.system}`);
+      if (shortLocation.poi !== undefined) emitLine(`  POI: ${shortLocation.poi}`);
+      emitLine(shortLocation.docked);
       if (p.is_cloaked) emitLine(`  ${c.cyan}[CLOAKED]${c.reset}`);
       const location = isRecord(r.location) ? r.location : undefined;
       emitLocationResources(location?.resources, { indent: '  ', leadingNewline: false });
@@ -1396,11 +1393,10 @@ export const statusFormatters = [
         );
       }
 
-      const nearby = r.nearby as Array<Record<string, unknown>> | undefined;
-      if (nearby?.length) {
-        emitLine(`\n${c.bright}Nearby Players:${c.reset} ${nearby.length}`);
-        for (const player of nearby) {
-          emitLine(`  - ${formatPlayer(player)}`);
+      if (shortLocation.nearby) {
+        emitLine(`\n${c.bright}Nearby Players:${c.reset} ${shortLocation.nearby.heading}`);
+        for (const row of shortLocation.nearby.rows) {
+          emitLine(`  - ${formatPlayer(row)}`);
         }
       }
       const offlineCollapsed = formatOfflineCollapsedText(location?.offline_collapsed);
