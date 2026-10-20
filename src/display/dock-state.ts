@@ -82,6 +82,11 @@ export function rememberOriginalDetailKeys(details: Record<string, unknown>): vo
   });
 }
 
+export function isFlattenedDetailsView(record: Record<string, unknown>): boolean {
+  const original = Object.getOwnPropertyDescriptor(record, ORIGINAL_DETAIL_KEYS)?.value;
+  return original instanceof Set;
+}
+
 /** True when `key` is a location-alias dest that was flattened onto details, not a native details field. */
 export function isAliasCopiedDumpKey(record: Record<string, unknown>, key: string): boolean {
   if (!LOCATION_ALIAS_DUMP_KEYS.has(key)) return false;

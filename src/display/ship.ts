@@ -1,3 +1,4 @@
+import { stringifyApiJson } from '../json-number.ts';
 import { formatBerthSummary } from './berths.ts';
 import { joinStringIds } from './catalog-detail.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
@@ -339,30 +340,120 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
   return columns;
 }
 
-export function emitCargoHold(result: Record<string, unknown>): boolean {
+export interface CargoHoldOptions {
+  credits?: boolean; // default true
+  usage?: boolean; // default true; the Used: line
+  emptyItems?: 'table' | 'none'; // default 'table'
+}
+
+export function emitCargoHold(result: Record<string, unknown>, options?: CargoHoldOptions): boolean {
   const cargo = Array.isArray(result.cargo) ? (result.cargo as Array<Record<string, unknown>>) : [];
   emitLine(`\n${c.bright}=== Cargo ===${c.reset}`);
-  emitCreditBalance(result);
-  const used = result.used ?? result.cargo_used ?? (result.ship as Record<string, unknown> | undefined)?.cargo_used;
-  const capacity =
-    result.capacity ?? result.cargo_capacity ?? (result.ship as Record<string, unknown> | undefined)?.cargo_capacity;
-  const available = result.available ?? result.cargo_available;
-  if (used !== undefined || capacity !== undefined) {
-    const suffix = available !== undefined ? ` (${available} available)` : '';
-    emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${overCapacitySuffix(used, capacity)}${suffix}\n`);
+  if (options?.credits !== false) emitCreditBalance(result);
+  if (options?.usage !== false) {
+    const used = result.used ?? result.cargo_used ?? (result.ship as Record<string, unknown> | undefined)?.cargo_used;
+    const capacity =
+      result.capacity ?? result.cargo_capacity ?? (result.ship as Record<string, unknown> | undefined)?.cargo_capacity;
+    const available = result.available ?? result.cargo_available;
+    if (used !== undefined || capacity !== undefined) {
+      const suffix = available !== undefined ? ` (${available} available)` : '';
+      emitLine(`Used: ${used ?? '?'}/${capacity ?? '?'}${overCapacitySuffix(used, capacity)}${suffix}\n`);
+    }
   }
   if (result.bay_used !== undefined || result.bay_capacity !== undefined) {
     emitLine(`Carrier bay: ${result.bay_used ?? '?'}/${result.bay_capacity ?? '?'}`);
   }
   const carriedShips = firstArray(result, ['carried_ships']);
   if (carriedShips) {
-    printCompactTable('Carried Ships', carriedShips, [
+    const columns: Array<[string, string[]]> = [
       ['Name', ['name', 'custom_name', 'ship_name', 'class_name']],
       ['Class', ['class_id', 'class_name']],
       ['ID', ['ship_id', 'id']],
-    ]);
+    ];
+    if (carriedShips.some((row) => isRecord(row) && isStrictFiniteNumber(row.scale))) {
+      columns.push(['Scale', ['scale']]);
+    }
+    if (carriedShips.some((row) => isRecord(row) && isStrictFiniteNumber(row.slots_used))) {
+      columns.push(['Slots', ['slots_used']]);
+    }
+    printCompactTable('Carried Ships', carriedShips, columns);
   }
-  printItemTable(cargo, '  ', 'Cargo');
+  if (options?.emptyItems === 'none') {
+    if (Array.isArray(result.cargo)) {
+      const records = cargo.filter(isRecord);
+      if (records.length === 0) emitLine('none');
+      else printItemTable(records, '  ', 'Cargo');
+    }
+  } else {
+    printItemTable(cargo, '  ', 'Cargo');
+  }
+  return true;
+}
+
+function formatModuleStatValue(value: unknown, nested: boolean): string {
+  if (isStrictFiniteNumber(value)) return value.toLocaleString();
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (typeof value === 'string') return value.replaceAll(/\s+/g, ' ').trim();
+  if (Array.isArray(value)) return stringifyApiJson(value) ?? '';
+  if (isRecord(value)) {
+    if (nested) return stringifyApiJson(value) ?? '';
+    const parts = Object.entries(value).map(([key, inner]) => `${key} ${formatModuleStatValue(inner, true)}`);
+    return `(${parts.join(', ')})`;
+  }
+  return String(value);
+}
+
+export function emitInstalledModules(
+  modules: unknown,
+  options?: { stats?: boolean; empty?: 'table' | 'none' },
+): boolean {
+  if (!Array.isArray(modules)) return false;
+  const rows = modules as Array<Record<string, unknown>>;
+  const records = rows.filter(isRecord);
+  if (options?.empty === 'none' && records.length === 0) {
+    emitLine(`\n${c.bright}=== Modules ===${c.reset}`);
+    emitLine('none');
+    return true;
+  }
+  printCompactTable('Modules', rows, [
+    ['Slot', ['slot']],
+    ['Name', ['name', 'type_name']],
+    ['Type', ['type', 'type_id']],
+    ['CPU', ['cpu_usage', 'cpu']],
+    ['Power', ['power_usage', 'power']],
+    ['Size', ['size']],
+    ['ID', ['module_id', 'id']],
+  ]);
+  if (options?.stats === true) {
+    const label = (value: unknown) => (value === undefined || value === null || value === '' ? '' : String(value));
+    for (const row of rows) {
+      if (!isRecord(row) || !isRecord(row.stats)) continue;
+      const entries = Object.entries(row.stats);
+      if (entries.length === 0) continue;
+      const slot = label(row.slot);
+      const name = label(row.name);
+      const moduleId = label(row.module_id);
+      const rendered = entries.map(([key, inner]) => `${key} ${formatModuleStatValue(inner, false)}`).join(', ');
+      emitLine(`  ${slot} ${name} (${moduleId}): ${rendered}`);
+    }
+  }
+  return true;
+}
+
+export function emitDroneBay(droneBay: unknown): boolean {
+  if (!isRecord(droneBay)) return false;
+  emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
+  emitLine(
+    `Bay: ${droneBay.bay_count ?? '?'}  Capacity: ${droneBay.bay_capacity ?? '?'}  Deployed: ${droneBay.deployed_count ?? '?'}`,
+  );
+  emitLine(`Bandwidth: ${droneBay.bandwidth_used ?? '?'}/${droneBay.bandwidth_total ?? '?'}`);
+  const inBay = Array.isArray(droneBay.in_bay) ? (droneBay.in_bay as Array<Record<string, unknown>>) : [];
+  printCompactTable('In Bay', inBay, [
+    ['Name', ['name']],
+    ['Type', ['type']],
+    ['ID', ['id']],
+  ]);
+  emitLine(`${c.dim}Use list_drones / get_drone for hull, cargo, and script.${c.reset}`);
   return true;
 }
 
@@ -594,35 +685,11 @@ export const shipFormatters = [
       if (passiveRecipes) emitLine(`Passive Recipes: ${passiveRecipes}`);
 
       const modules = preferPopulatedArray(firstArray(r, ['modules']), firstArray(ship, ['modules']));
-      if (modules) {
-        printCompactTable('Modules', modules, [
-          ['Slot', ['slot']],
-          ['Name', ['name', 'type_name']],
-          ['Type', ['type', 'type_id']],
-          ['CPU', ['cpu_usage', 'cpu']],
-          ['Power', ['power_usage', 'power']],
-          ['Size', ['size']],
-          ['ID', ['module_id', 'id']],
-        ]);
-      }
+      if (modules) emitInstalledModules(modules);
       const passiveRecipeDetails = firstArray(r, ['passive_recipe_details']);
       if (passiveRecipeDetails) printPassiveRecipeTable(passiveRecipeDetails);
 
-      const droneBay = isRecord(r.drone_bay) ? r.drone_bay : undefined;
-      if (droneBay) {
-        emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
-        emitLine(
-          `Bay: ${droneBay.bay_count ?? '?'}  Capacity: ${droneBay.bay_capacity ?? '?'}  Deployed: ${droneBay.deployed_count ?? '?'}`,
-        );
-        emitLine(`Bandwidth: ${droneBay.bandwidth_used ?? '?'}/${droneBay.bandwidth_total ?? '?'}`);
-        const inBay = Array.isArray(droneBay.in_bay) ? (droneBay.in_bay as Array<Record<string, unknown>>) : [];
-        printCompactTable('In Bay', inBay, [
-          ['Name', ['name']],
-          ['Type', ['type']],
-          ['ID', ['id']],
-        ]);
-        emitLine(`${c.dim}Use list_drones / get_drone for hull, cargo, and script.${c.reset}`);
-      }
+      emitDroneBay(r.drone_bay);
       if (remoteLocation && typeof r.message === 'string' && r.message && r.message !== remoteLocation) {
         emitLine(`${c.dim}${r.message}${c.reset}`);
       }
