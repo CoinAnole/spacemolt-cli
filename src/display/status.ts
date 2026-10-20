@@ -634,17 +634,19 @@ function emitScanRevealedInfo(result: Record<string, unknown>): void {
 function formatLifetimeNonNumber(value: unknown): string {
   if (Array.isArray(value)) return stringifyApiJson(value) ?? '';
   if (isRecord(value)) {
-    // String(record) is "[object Object]", which golden checks reject.
     return Object.entries(value)
-      .map(([key, inner]) => `${key} ${formatLifetimeNested(inner)}`)
+      .map(([key, inner]) => {
+        const rendered =
+          Array.isArray(inner) || isRecord(inner)
+            ? (stringifyApiJson(inner) ?? '')
+            : typeof inner === 'number'
+              ? formatNumber(inner)
+              : String(inner);
+        return `${key} ${rendered}`;
+      })
       .join(', ');
   }
   return String(value);
-}
-
-function formatLifetimeNested(value: unknown): string {
-  if (Array.isArray(value) || isRecord(value)) return stringifyApiJson(value) ?? '';
-  return typeof value === 'number' ? formatNumber(value) : String(value);
 }
 
 export function emitLifetimeStats(stats: unknown): boolean {

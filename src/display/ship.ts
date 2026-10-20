@@ -403,11 +403,6 @@ function formatModuleStatValue(value: unknown, nested: boolean): string {
   return String(value);
 }
 
-function moduleStatLabel(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '';
-  return String(value);
-}
-
 export function emitInstalledModules(
   modules: unknown,
   options?: { stats?: boolean; empty?: 'table' | 'none' },
@@ -430,13 +425,14 @@ export function emitInstalledModules(
     ['ID', ['module_id', 'id']],
   ]);
   if (options?.stats === true) {
+    const label = (value: unknown) => (value === undefined || value === null || value === '' ? '' : String(value));
     for (const row of rows) {
       if (!isRecord(row) || !isRecord(row.stats)) continue;
       const entries = Object.entries(row.stats);
       if (entries.length === 0) continue;
-      const slot = moduleStatLabel(row.slot);
-      const name = moduleStatLabel(row.name);
-      const moduleId = moduleStatLabel(row.module_id);
+      const slot = label(row.slot);
+      const name = label(row.name);
+      const moduleId = label(row.module_id);
       const rendered = entries.map(([key, inner]) => `${key} ${formatModuleStatValue(inner, false)}`).join(', ');
       emitLine(`  ${slot} ${name} (${moduleId}): ${rendered}`);
     }
