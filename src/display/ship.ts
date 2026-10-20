@@ -403,6 +403,13 @@ function formatModuleStatValue(value: unknown, nested: boolean): string {
   return String(value);
 }
 
+function formatModuleStats(stats: unknown): string {
+  if (!isRecord(stats)) return '';
+  const entries = Object.entries(stats);
+  if (entries.length === 0) return '';
+  return entries.map(([key, inner]) => `${key} ${formatModuleStatValue(inner, false)}`).join(', ');
+}
+
 export function emitInstalledModules(
   modules: unknown,
   options?: { stats?: boolean; empty?: 'table' | 'none' },
@@ -415,7 +422,7 @@ export function emitInstalledModules(
     emitLine('none');
     return true;
   }
-  printCompactTable('Modules', rows, [
+  const columns: Array<[string, string[]]> = [
     ['Slot', ['slot']],
     ['Name', ['name', 'type_name']],
     ['Type', ['type', 'type_id']],
@@ -423,20 +430,26 @@ export function emitInstalledModules(
     ['Power', ['power_usage', 'power']],
     ['Size', ['size']],
     ['ID', ['module_id', 'id']],
-  ]);
+  ];
+  let tableRows = rows;
+  let maxCellWidth: number | undefined;
   if (options?.stats === true) {
-    const label = (value: unknown) => (value === undefined || value === null || value === '' ? '' : String(value));
-    for (const row of rows) {
-      if (!isRecord(row) || !isRecord(row.stats)) continue;
-      const entries = Object.entries(row.stats);
-      if (entries.length === 0) continue;
-      const slot = label(row.slot);
-      const name = label(row.name);
-      const moduleId = label(row.module_id);
-      const rendered = entries.map(([key, inner]) => `${key} ${formatModuleStatValue(inner, false)}`).join(', ');
-      emitLine(`  ${slot} ${name} (${moduleId}): ${rendered}`);
+    tableRows = rows.map((row) => {
+      if (!isRecord(row)) return row;
+      return { ...row, stats_display: formatModuleStats(row.stats) };
+    });
+    let longest = 0;
+    for (const row of tableRows) {
+      if (!isRecord(row) || typeof row.stats_display !== 'string') continue;
+      if (row.stats_display.length > longest) longest = row.stats_display.length;
+    }
+    if (longest > 0) {
+      columns.push(['Stats', ['stats_display']]);
+      // Default cells stop at 32, which cuts a stats list. Widen to the longest stats cell.
+      if (longest > 32) maxCellWidth = longest;
     }
   }
+  printCompactTable('Modules', tableRows, columns, maxCellWidth === undefined ? undefined : { maxCellWidth });
   return true;
 }
 

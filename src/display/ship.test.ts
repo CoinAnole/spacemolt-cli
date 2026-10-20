@@ -475,6 +475,19 @@ test('get_ship flags only over-capacity ratios', () => {
   expect(stdout).not.toContain('Power: 23/75 (over capacity)');
 });
 
+test('get_ship keeps module stats off the table', () => {
+  const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+  const expander = fixture.modules[0];
+  if (!expander) throw new Error('ship fixture is missing its first module');
+  expander.stats = { cargo_bonus: 50 };
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  expect(modulesHalf).not.toContain('Stats');
+  expect(modulesHalf).not.toContain('cargo_bonus');
+  expect(modulesHalf.split('Cargo Expander III').length - 1).toBe(1);
+  expect(modulesHalf).not.toContain('Cargo Expander III (module-1)');
+});
+
 test('get_ship does not flag per-module CPU or Power', () => {
   const stdout = renderShip(shipOverCapacityFixture).stdout.join('\n');
   const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';

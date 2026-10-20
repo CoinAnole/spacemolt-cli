@@ -5147,7 +5147,9 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   }
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('[object Object]');
-  expect(stdout).toContain('  weapon Pulse Laser III (module-2): damage 12, reach 2, shield_bonus 0');
+  expect(stdout).toContain('damage 12, reach 2, shield_bonus 0');
+  expect(stdout).not.toContain('Pulse Laser III (module-2)');
+  expect(stdout.split('module-2').length - 1).toBe(1);
   expect(stdout).toContain('Debt: 2,000');
   expect(stdout).toContain('Ships Destroyed');
   expect(stdout).toContain('mission 40');
@@ -5155,6 +5157,82 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   expect(stdout).toContain('Queue: 1 action pending');
   expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
   expect(stdout.split('Credits: 4242').length - 1).toBe(1);
+});
+
+test('get_state lists each module once and keeps stats on that row', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'b077062ec8fda82f998bfe60863de6d0',
+          name: 'Shield Booster IV',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 8,
+          power_usage: 15,
+          stats: { shield_bonus: 200 },
+        },
+        {
+          module_id: 'plain-1',
+          name: 'Bare Scanner',
+          type: 'utility',
+          slot: 'utility',
+          size: 10,
+          cpu_usage: 1,
+          power_usage: 1,
+          stats: {},
+        },
+        {
+          module_id: 'nested-1',
+          name: 'Adaptive Shield',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 5,
+          power_usage: 10,
+          stats: { resistance_bonus: { kinetic: 10 }, active: true, note: 'line\nbreak' },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  const header = modulesHalf.split('\n').find((line) => line.includes('Slot') && line.includes('Stats'));
+  expect(header).toBeDefined();
+  expect(modulesHalf).toContain('shield_bonus 200');
+  expect(modulesHalf).toContain('resistance_bonus (kinetic 10), active yes, note line break');
+  expect(modulesHalf).not.toContain('Shield Booster IV (b077062ec8fda82f998bfe60863de6d0)');
+  expect(modulesHalf).not.toContain('Bare Scanner (plain-1)');
+  expect(modulesHalf.split('Shield Booster IV').length - 1).toBe(1);
+  expect(modulesHalf.split('b077062ec8fda82f998bfe60863de6d0').length - 1).toBe(1);
+  expect(modulesHalf.split('Bare Scanner').length - 1).toBe(1);
+  expect(modulesHalf).not.toContain('...');
+
+  const quiet = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'plain-1',
+          name: 'Bare Scanner',
+          type: 'utility',
+          slot: 'utility',
+          size: 10,
+          cpu_usage: 1,
+          power_usage: 1,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const quietModules = quiet.split('=== Modules ===')[1] ?? '';
+  expect(quietModules).toContain('Bare Scanner');
+  expect(quietModules).not.toContain('Stats');
 });
 
 const SHORT_DOCKED_NO = '  Docked: No';
