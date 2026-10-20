@@ -8,31 +8,33 @@ Faction: smc (captain)
 Trading restricted until: 2026-07-18T12:34:56Z
 
 Standings:
-  solarian: 12, crimson: 94, pirate_voss: -10 (bounty 500), pirate_kael: 5
+  solarian: 12, crimson: 94 (baseline 10), pirate_voss: -10 (bounty 500), pirate_kael: 5
 
-Location:
-  System: Sol
-  POI: Earth
-  Docked: Yes (earth_station)
-  Resources:
-    - Iron Ore: richness 3, 750, supports power 12
-    - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse
+=== Ship: Surveyor ===
+Class: prospector
+Hull: 90/100
+Shield: 35/50 (+5/tick)
+Armor: 10
+Fuel: 80/100
+Cargo: 12/60
+CPU: 8/20
+Power: 10/25
+Crew: 4/6 fit (min 3)
+Marines: 2/4 fit
+Efficiency: 67%
+Operational speed: 8
 
-Ship: Surveyor (prospector)
-  Hull: 90/100
-  Shield: 35/50 (+5/tick)
-  Armor: 10
-  Fuel: 80/100
-  Cargo: 12/60
-  CPU: 8/20
-  Power: 10/25
-  Crew: 4/6 fit (min 3)
-  Marines: 2/4 fit
-  Efficiency: 67%
-  Operational speed: 8
+=== Location ===
+System: Sol (sol)
+POI: Earth (sol_earth)
+Docked at: earth_station
 
-Nearby Players: 1
-  - Ibis (hauler)
+Resources:
+  - Iron Ore: richness 3, 750, supports power 12
+  - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse
+
+Nearby Players (1):
+  Ibis (hauler)
 
 Nearby Prizes (1):
 
@@ -41,6 +43,9 @@ Nearby Prizes (1):
   Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
   -------------+---------------+------------+---------+-----------+-------+--------+-------
   prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
+
+=== Queue ===
+Queue: empty
 
 === Prize recoveries ===
 

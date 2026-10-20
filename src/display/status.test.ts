@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { GlobalOptions } from '../types.ts';
 import { hexColor } from './ansi.ts';
 import { renderStructuredResult } from './index.ts';
@@ -11,6 +13,7 @@ import {
   getMapStarlessFixture,
   getMapSystemFixture,
   getStateLeviathansFixture,
+  getStateSnapshotFixture,
   getStatusDetainedFixture,
   getStatusFixture,
   getStatusOverCapacityFixture,
@@ -668,12 +671,9 @@ test('get_status prints Standings when player.standings is present including pir
   expect(stdout).not.toContain('baseline');
 });
 
-test.each([
-  'get_status',
-  'get_state',
-] as const)('%s with V2Missions still prints status and omits Active Missions', (command) => {
+test('get_status with V2Missions still prints status and omits Active Missions', () => {
   const stdout = renderStructuredResult(
-    command,
+    'get_status',
     { ...structuredClone(getStatusFixture), missions: jumpSurveyMissionsEnvelope },
     options,
     context,
@@ -682,6 +682,21 @@ test.each([
   expect(stdout).toContain('Standings:');
   expect(stdout).toContain('Location:');
   expect(stdout).not.toContain('=== Active Missions ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_state with V2Missions prints one Active Missions table', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { ...structuredClone(getStatusFixture), missions: jumpSurveyMissionsEnvelope },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Standings:');
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).toContain('Local Sector Survey');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -748,14 +763,16 @@ test('get_status and get_player share emitStandings output shape', () => {
   expect(playerSection).toMatch(/pirate_\w+: -?\d+/);
 });
 
-test('get_state uses the status formatter and prints Standings', () => {
+test('get_state prints standings including a non-zero baseline', () => {
   const rendered = renderStructuredResult('get_state', structuredClone(getStatusFixture), options, context);
   const stdout = rendered.stdout.join('\n');
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('=== Player Status ===');
   expect(stdout).toContain('Standings:');
+  expect(stdout).toContain('crimson: 94 (baseline 10)');
   expect(stdout).toContain('pirate_voss: -10 (bounty 500)');
+  expect(stdout).not.toContain('baseline 0');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -860,7 +877,6 @@ test('player-shaped buy shapeFallback does not print Fixer debt', () => {
 
 test.each([
   'get_status',
-  'get_state',
   'get_player',
 ] as const)('%s prints non-zero player fixer debt after Credits and not the rest of the account', (command) => {
   const stdout = renderFixerStatus(command, {
@@ -877,9 +893,24 @@ test.each([
   if (command === 'get_player') expect(stdout).not.toContain('Location:');
 });
 
+test('get_state prints the missions fixer account and ignores player.fixer_debt', () => {
+  const stdout = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer({ fixer_debt: 2000, fixer_deliveries: 12 }),
+    missions: { fixer: { debt: 9, allowance: 5000, exposure: 3000, available: 2000 } },
+  });
+  expect(stdout).toContain('Credits: 4242');
+  expect(stdout).not.toContain('Credits: 4,242');
+  expect(stdout).toContain('Fixer:');
+  expect(stdout).toContain('Debt: 9');
+  expect(stdout).toContain('Allowance: 5,000');
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('fixer_deliveries');
+  expect(stdout.indexOf('Standings:')).toBe(-1);
+  expect(stdout.indexOf('Fixer:')).toBeGreaterThan(stdout.indexOf('Credits: 4242'));
+});
+
 test.each([
   'get_status',
-  'get_state',
   'get_player',
 ] as const)('%s hides zero fixer debt, including when the player key blocks a missions debt', (command) => {
   for (const fixerDebt of [0, 0n]) {
@@ -899,9 +930,30 @@ test.each([
   expect(missionsZero).not.toContain('Allowance:');
 });
 
+test('get_state prints the missions fixer account when player.fixer_debt is zero', () => {
+  for (const fixerDebt of [0, 0n]) {
+    const stdout = renderFixerStatus('get_state', {
+      player: fixerStatusPlayer({ fixer_debt: fixerDebt }),
+      missions: missionsFixerDebt,
+    });
+    expect(stdout).toContain('Fixer:');
+    expect(stdout).toContain('Debt: 2,000');
+    expect(stdout).toContain('Allowance: 5,000');
+    expect(stdout).not.toContain('Fixer debt');
+    expect(stdout).toContain('Credits: 4242');
+  }
+  const missionsZero = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer(),
+    missions: { fixer: { debt: 0, allowance: 5000, exposure: 800, available: 4200 } },
+  });
+  expect(missionsZero).toContain('Fixer:');
+  expect(missionsZero).toContain('Debt: 0');
+  expect(missionsZero).toContain('Allowance: 5,000');
+  expect(missionsZero).not.toContain('Fixer debt');
+});
+
 test.each([
   'get_status',
-  'get_state',
   'get_player',
 ] as const)('%s prints missions fixer debt when player.fixer_debt is absent', (command) => {
   const stdout = renderFixerStatus(command, {
@@ -920,6 +972,23 @@ test.each([
   }
 });
 
+test('get_state prints the four fixer lines when player.fixer_debt is absent', () => {
+  const stdout = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer(),
+    missions: missionsFixerDebt,
+  });
+  expect(stdout).toContain('Fixer:');
+  expect(stdout).toContain('Debt: 2,000');
+  expect(stdout).toContain('Allowance: 5,000');
+  expect(stdout).toContain('Exposure: 3,000');
+  expect(stdout).toContain('Available: 2,000');
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('System:');
+  expect(stdout).not.toContain('POI:');
+  expect(stdout).not.toContain('Docked: No');
+  expect(stdout).not.toContain('undefined');
+});
+
 test.each([
   'get_status',
   'get_state',
@@ -931,7 +1000,6 @@ test.each([
 
 test.each([
   'get_status',
-  'get_state',
   'get_player',
 ] as const)('%s does not fall through when player.fixer_debt is a string', (command) => {
   const stdout = renderFixerStatus(command, {
@@ -942,24 +1010,41 @@ test.each([
   expect(stdout).not.toContain('Allowance:');
 });
 
-test('get_status hides a non-numeric missions debt and a null or NaN player key', () => {
+test('get_state still prints the missions fixer account when player.fixer_debt is a string', () => {
+  const stdout = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer({ fixer_debt: '2000' }),
+    missions: missionsFixerDebt,
+  });
+  expect(stdout).toContain('Fixer:');
+  expect(stdout).toContain('Debt: 2,000');
+  expect(stdout).toContain('Allowance: 5,000');
+  expect(stdout).not.toContain('Fixer debt');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_status hides a non-numeric missions debt and get_player hides a NaN player key', () => {
   const stringDebt = renderFixerStatus('get_status', {
     player: fixerStatusPlayer(),
     missions: { fixer: { debt: '2000', allowance: 5000, exposure: 3000, available: 2000 } },
   });
   expect(stringDebt).not.toContain('Fixer debt');
 
-  const nullDebt = renderFixerStatus('get_state', {
-    player: fixerStatusPlayer({ fixer_debt: null }),
-    missions: missionsFixerDebt,
-  });
-  expect(nullDebt).not.toContain('Fixer debt');
-
   const nanDebt = renderFixerStatus('get_player', {
     player: fixerStatusPlayer({ fixer_debt: Number.NaN }),
     missions: missionsFixerDebt,
   });
   expect(nanDebt).not.toContain('Fixer debt');
+});
+
+test('get_state prints the missions fixer account when player.fixer_debt is null', () => {
+  const stdout = renderFixerStatus('get_state', {
+    player: fixerStatusPlayer({ fixer_debt: null }),
+    missions: missionsFixerDebt,
+  });
+  expect(stdout).toContain('Fixer:');
+  expect(stdout).toContain('Debt: 2,000');
+  expect(stdout).toContain('Allowance: 5,000');
+  expect(stdout).not.toContain('Fixer debt');
 });
 
 test('get_status groups bigint debt and leaves Credits ungrouped', () => {
@@ -971,9 +1056,13 @@ test('get_status groups bigint debt and leaves Credits ungrouped', () => {
 
 test('get_state prints a finite non-integer debt as sent', () => {
   const stdout = renderFixerStatus('get_state', {
-    player: fixerStatusPlayer({ fixer_debt: 2000.5 }),
+    player: fixerStatusPlayer(),
+    missions: { fixer: { debt: 2000.5, allowance: 5000, exposure: 3000, available: 2000 } },
   });
-  expectFixerDebtAfterCredits('get_state', stdout, 'Fixer debt: 2,000.5');
+  expect(stdout).toContain('Debt: 2,000.5');
+  expect(stdout).toContain('Credits: 4242');
+  expect(stdout).not.toContain('Credits: 4,242');
+  expect(stdout).not.toContain('Fixer debt');
 });
 
 test('get_player prints a negative missions debt and still prints it when credits are omitted', () => {
@@ -2437,14 +2526,19 @@ test('get_location prints pathfinder drift details', () => {
 });
 
 test('get_status and get_state print location.nearby_prizes', () => {
-  for (const command of ['get_status', 'get_state'] as const) {
-    const stdout = renderStructuredResult(command, structuredClone(getStatusFixture), options, context).stdout.join(
-      '\n',
-    );
+  const status = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  const state = renderStructuredResult('get_state', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  for (const stdout of [status, state]) {
     expect(stdout).toContain('=== Player Status ===');
     assertCopyablePrizeIds(stdout, 'Nearby Prizes');
-    expect(stdout).toContain('Nearby Players:');
   }
+  expect(status).toContain('Nearby Players:');
+  expect(state).toContain('Nearby Players (1):');
+  expect(state).not.toContain('Nearby Players:');
 });
 
 test('get_status falls back to top-level nearby_prizes when location omits them', () => {
@@ -2750,7 +2844,7 @@ test('get_status inserts resources after cloak and before unknown-signature and 
   expect(prizesIdx).toBeGreaterThan(nearbyIdx);
 });
 
-test('get_state prints location.resources with the status formatter', () => {
+test('get_state prints location.resources under the location heading', () => {
   const stdout = renderStructuredResult(
     'get_state',
     structuredClone(getStatusResourcesFixture),
@@ -2758,9 +2852,11 @@ test('get_state prints location.resources with the status formatter', () => {
     context,
   ).stdout.join('\n');
 
-  expect(stdout).toContain('=== Player Status ===');
-  expect(stdout).toContain('    - Iron Ore: richness 3, 750, supports power 12');
-  expect(stdout).toContain('    - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse');
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Resources:');
+  expect(stdout.split('\n')).toContain('  - Iron Ore: richness 3, 750, supports power 12');
+  expect(stdout.split('\n')).toContain('  - Gold Ore: richness 1, 74, supports power 3, lock min 200, too sparse');
+  expect(stdout).not.toContain('    - Iron Ore');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -3894,15 +3990,10 @@ test('get_location colors the leviathan heading and leaves the contact line plai
   expect(plainHeading).not.toContain('\x1b');
 });
 
-test.each([
-  'get_status',
-  'get_state',
-] as const)('%s prints location leviathans between prizes and recoveries', (command) => {
+test('get_status prints location leviathans between prizes and recoveries', () => {
   const stdout = renderStructuredResult(
-    command,
-    structuredClone(
-      command === 'get_state' ? getStateLeviathansFixture : statusWithLeviathans([adultLeviathanContact]),
-    ),
+    'get_status',
+    statusWithLeviathans([adultLeviathanContact]),
     options,
     context,
   ).stdout.join('\n');
@@ -3917,6 +4008,29 @@ test.each([
   const recoveriesIdx = stdout.indexOf('=== Prize recoveries ===');
   expect(leviathansIdx).toBeGreaterThan(prizesIdx);
   expect(recoveriesIdx).toBeGreaterThan(leviathansIdx);
+});
+
+test('get_state prints location leviathans before prize recoveries', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateLeviathansFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Leviathans (1):');
+  expect(leviathanLine(stdout, 'lev-molt-1')).toBe(adultLeviathanLine);
+  expect(stdout).toContain('Nearby Players (1):');
+  expect(stdout).toContain('  Ibis (hauler)');
+  expect(stdout).not.toContain('  - Ibis (hauler)');
+  expect(stdout).toContain('prize-dust-1');
+  const prizesIdx = stdout.indexOf('Nearby Prizes');
+  const leviathansIdx = stdout.indexOf('Nearby Leviathans');
+  const queueIdx = stdout.indexOf('=== Queue ===');
+  const recoveriesIdx = stdout.indexOf('=== Prize recoveries ===');
+  expect(leviathansIdx).toBeGreaterThan(prizesIdx);
+  expect(queueIdx).toBeGreaterThan(leviathansIdx);
+  expect(recoveriesIdx).toBeGreaterThan(queueIdx);
 });
 
 test.each(['get_status', 'get_state'] as const)('%s omits leviathans when the array is empty or absent', (command) => {
@@ -3951,12 +4065,9 @@ test('get_status_summary does not print leviathans', () => {
   expect(stdout).not.toContain('lev-molt');
 });
 
-test.each([
-  'get_status',
-  'get_state',
-] as const)('%s with leviathans still omits the Active Missions appendix', (command) => {
+test('get_status with leviathans still omits the Active Missions appendix', () => {
   const stdout = renderStructuredResult(
-    command,
+    'get_status',
     { ...statusWithLeviathans([adultLeviathanContact]), missions: jumpSurveyMissionsEnvelope },
     options,
     context,
@@ -3964,6 +4075,19 @@ test.each([
 
   expect(stdout).toContain(adultLeviathanLine);
   expect(stdout).not.toContain('=== Active Missions ===');
+});
+
+test('get_state with leviathans prints one Active Missions table', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { ...statusWithLeviathans([adultLeviathanContact]), missions: jumpSurveyMissionsEnvelope },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(adultLeviathanLine);
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 function herdCreatures(count: number): Array<{ name: string; creature_id: string; species: string }> {
@@ -4373,10 +4497,7 @@ test('get_location prints offline collapsed when the player section is skipped',
   expect(stdout.indexOf('offline collapsed 2')).toBeLessThan(stdout.indexOf('Nearby Pirates'));
 });
 
-test.each([
-  'get_status',
-  'get_state',
-] as const)('%s reads location.offline_collapsed and prints every copied nearby player', (command) => {
+test('get_status reads location.offline_collapsed and prints every copied nearby player', () => {
   const positive = structuredClone(getStatusFixture) as {
     location: Record<string, unknown>;
     offline_collapsed?: unknown;
@@ -4386,7 +4507,7 @@ test.each([
   positive.location.offline_collapsed = 4;
   positive.offline_collapsed = 99;
   delete positive.nearby;
-  const positiveOut = renderStructuredResult(command, positive, options, context).stdout.join('\n');
+  const positiveOut = renderStructuredResult('get_status', positive, options, context).stdout.join('\n');
 
   expect(positiveOut).toContain('Nearby Players: 11');
   expect(positiveOut).toContain('  - Pilot 11');
@@ -4399,14 +4520,50 @@ test.each([
   const zero = structuredClone(getStatusFixture) as { location: Record<string, unknown>; offline_collapsed?: unknown };
   zero.location.offline_collapsed = 0;
   zero.offline_collapsed = 7;
-  const zeroOut = renderStructuredResult(command, zero, options, context).stdout.join('\n');
+  const zeroOut = renderStructuredResult('get_status', zero, options, context).stdout.join('\n');
   expect(zeroOut).toContain('offline collapsed 0');
   expect(zeroOut).not.toContain('offline collapsed 7');
 
   const omitted = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
   delete omitted.location.offline_collapsed;
-  const omittedOut = renderStructuredResult(command, omitted, options, context).stdout.join('\n');
+  const omittedOut = renderStructuredResult('get_status', omitted, options, context).stdout.join('\n');
   expect(omittedOut).toContain('  - Ibis');
+  expect(omittedOut).not.toContain('offline collapsed');
+});
+
+test('get_state reads location.offline_collapsed and prints every nearby player row', () => {
+  const positive = structuredClone(getStatusFixture) as {
+    location: Record<string, unknown>;
+    offline_collapsed?: unknown;
+    nearby?: unknown;
+  };
+  positive.location.nearby_players = Array.from({ length: 11 }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+  positive.location.offline_collapsed = 4;
+  positive.offline_collapsed = 99;
+  delete positive.nearby;
+  const positiveOut = renderStructuredResult('get_state', positive, options, context).stdout.join('\n');
+
+  expect(positiveOut).toContain('Nearby Players (11):');
+  expect(positiveOut.split('\n').some((line) => line === '  Pilot 11')).toBe(true);
+  expect(positiveOut).not.toContain('  - Pilot 11');
+  expect(positiveOut).toContain('offline collapsed 4');
+  expect(positiveOut).not.toContain('offline collapsed 99');
+  expect(positiveOut).not.toContain('... and');
+  expect(positiveOut.indexOf('Nearby Players (11):')).toBeLessThan(positiveOut.indexOf('offline collapsed 4'));
+  expect(positiveOut.indexOf('offline collapsed 4')).toBeLessThan(positiveOut.indexOf('Nearby Prizes'));
+
+  const zero = structuredClone(getStatusFixture) as { location: Record<string, unknown>; offline_collapsed?: unknown };
+  zero.location.offline_collapsed = 0;
+  zero.offline_collapsed = 7;
+  const zeroOut = renderStructuredResult('get_state', zero, options, context).stdout.join('\n');
+  expect(zeroOut).toContain('offline collapsed 0');
+  expect(zeroOut).not.toContain('offline collapsed 7');
+
+  const omitted = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  delete omitted.location.offline_collapsed;
+  const omittedOut = renderStructuredResult('get_state', omitted, options, context).stdout.join('\n');
+  expect(omittedOut).toContain('  Ibis (hauler)');
+  expect(omittedOut).not.toContain('  - Ibis');
   expect(omittedOut).not.toContain('offline collapsed');
 });
 
@@ -4804,4 +4961,197 @@ test('complete_mission prints details.fixer once and does not repeat an envelope
   expect(stdout).not.toContain('Debt: 9');
   expect(stdout.indexOf('=== Mission Complete:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
   expect(stdout.indexOf('Fixer:')).toBeLessThan(stdout.indexOf('=== Active Missions ==='));
+});
+
+test('get_location prints a nearby NPC count and not empire NPC rows', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby NPCs: 1');
+  expect(stdout).not.toContain('Nearby Empire NPCs');
+  expect(stdout).not.toContain('Patrol');
+});
+
+test('get_state prints none for empty lists and stays quiet when those keys are absent', () => {
+  const present = structuredClone(getStatusFixture) as Record<string, unknown>;
+  present.modules = [];
+  present.cargo = [];
+  present.skills = {};
+  present.missions = { active: [], max_missions: 3 };
+  const presentOut = renderStructuredResult('get_state', present, options, context).stdout.join('\n');
+
+  for (const heading of ['=== Modules ===', '=== Cargo ===', '=== Your Skills ===', '=== Active Missions ===']) {
+    expect(presentOut).toContain(heading);
+  }
+  expect(presentOut.split('\n').filter((line) => line === 'none')).toHaveLength(4);
+  expect(presentOut).toContain('missions 0/3');
+  expect(presentOut).not.toContain('(None)');
+  expect(presentOut).not.toContain('Cargo (0):');
+
+  delete present.modules;
+  delete present.cargo;
+  delete present.skills;
+  delete present.missions;
+  const absentOut = renderStructuredResult('get_state', present, options, context).stdout.join('\n');
+  for (const heading of ['=== Modules ===', '=== Cargo ===', '=== Your Skills ===', '=== Active Missions ===']) {
+    expect(absentOut).not.toContain(heading);
+  }
+  expect(absentOut.split('\n').filter((line) => line === 'none')).toHaveLength(0);
+  expect(absentOut).toContain('Queue: empty');
+});
+
+test('get_state prints empire NPC rows and combat only for the fighting contact', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const warden = stdout.split('\n').find((line) => line.includes('Warden'));
+  const clerk = stdout.split('\n').find((line) => line.includes('Clerk'));
+
+  expect(stdout).toContain('Nearby Empire NPCs (2):');
+  expect(stdout).not.toContain('Nearby NPCs:');
+  expect(warden).toBe('  Warden [npc-1] (Aegis / enforcer) - patrol - solarian - in combat');
+  expect(clerk).toBe('  Clerk [npc-2] (Quill / courier) - customs - solarian');
+  expect(clerk).not.toContain('in combat');
+});
+
+test('get_state with empty details still prints the envelope player', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { ...structuredClone(getStatusFixture), details: {} },
+    options,
+    context,
+  ).stdout.join('\n');
+  const username = stdout.split('\n').find((line) => line.startsWith('Username:'));
+
+  expect(username).toContain('Marlowe');
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout).toContain('Docked at: earth_station');
+  expect(stdout).not.toContain('=== Details ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_state prints non-empty details without replacing the envelope player', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { ...structuredClone(getStatusFixture), details: { player: { username: 'OtherPilot' }, note: 'kept' } },
+    options,
+    context,
+  ).stdout.join('\n');
+  const username = stdout.split('\n').find((line) => line.startsWith('Username:'));
+
+  expect(username).toContain('Marlowe');
+  expect(username).not.toContain('OtherPilot');
+  expect(stdout).toContain('=== Details ===');
+  expect(stdout).toContain('OtherPilot');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_state without a player does not fall through to the short status view', () => {
+  const stdout = renderStructuredResult('get_state', { version: 'v2' }, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain('=== Player Status ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).toContain('Version: v2');
+  expect(stdout).toContain('Queue: empty');
+  expect(stdout).toContain('Ship:');
+});
+
+test('get_state prints grouped State credits only when they differ from the player', () => {
+  const duplicate = renderStructuredResult(
+    'get_state',
+    { ...structuredClone(getStatusFixture), credits: 4242 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(duplicate).toContain('Credits: 4242');
+  expect(duplicate).not.toContain('State credits:');
+
+  const drifted = structuredClone(getStatusFixture) as Record<string, unknown>;
+  drifted.credits = 9000;
+  const driftedOut = renderStructuredResult('get_state', drifted, options, context).stdout.join('\n');
+  expect(driftedOut).toContain('Credits: 4242');
+  expect(driftedOut).toContain('State credits: 9,000');
+  expect(driftedOut.indexOf('State credits: 9,000')).toBeGreaterThan(driftedOut.indexOf('Credits: 4242'));
+
+  const topOnly = renderStructuredResult('get_state', { credits: 9000 }, options, context).stdout.join('\n');
+  expect(topOnly).toContain('State credits: 9,000');
+  expect(topOnly).not.toContain('=== Player Status ===');
+  expect(topOnly).not.toContain('=== Response ===');
+});
+
+test('get_state prints an empty queue when has_pending is false', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { ...structuredClone(getStatusFixture), queue: { has_pending: false } },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Queue ===');
+  expect(stdout).toContain('Queue: empty');
+  expect(stdout).not.toContain('1 action pending');
+});
+
+test('get_state snapshot covers every V2GameState property except duplicate credits', () => {
+  const spec = JSON.parse(readFileSync(join(import.meta.dir, '../../spacemolt-docs/openapi.json'), 'utf8')) as {
+    components: { schemas: { V2GameState: { properties: Record<string, unknown> } } };
+  };
+  const properties = spec.components.schemas.V2GameState.properties;
+  const skippedTopLevelKeys = ['credits'] as const;
+  const markers: Record<string, string> = {
+    bay_capacity: 'Carrier bay: 1/2',
+    bay_used: 'Carrier bay: 1/2',
+    cargo: '=== Cargo ===',
+    carried_ships: '=== Carried Ships ===',
+    details: '=== Details ===',
+    drone_bay: '=== Drone Bay ===',
+    hints: '=== Hints ===',
+    location: '=== Location ===',
+    message: 'State snapshot ready',
+    missions: '=== Active Missions ===',
+    modules: '=== Modules ===',
+    player: 'Username:',
+    prize_recoveries: '=== Prize recoveries ===',
+    queue: '=== Queue ===',
+    riding: 'Riding aboard:',
+    ship: '=== Ship:',
+    skills: '=== Your Skills ===',
+    version: 'Version:',
+  };
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect([...skippedTopLevelKeys]).toEqual(['credits']);
+  for (const key of Object.keys(properties)) {
+    expect(getStateSnapshotFixture).toHaveProperty(key);
+    if ((skippedTopLevelKeys as readonly string[]).includes(key)) {
+      expect(key).toBe('credits');
+      expect(getStateSnapshotFixture.credits).toBe(getStateSnapshotFixture.player.credits);
+      expect(stdout).not.toContain('State credits:');
+      continue;
+    }
+    expect(markers[key], key).toBeTruthy();
+    expect(stdout, key).toContain(markers[key] ?? '');
+  }
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).toContain('  weapon Pulse Laser III (module-2): damage 12, reach 2, shield_bonus 0');
+  expect(stdout).toContain('Debt: 2,000');
+  expect(stdout).toContain('Ships Destroyed');
+  expect(stdout).toContain('mission 40');
+  expect(stdout).toContain('Arena trials: trial_alpha ×2');
+  expect(stdout).toContain('Queue: 1 action pending');
+  expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+  expect(stdout.split('Credits: 4242').length - 1).toBe(1);
 });

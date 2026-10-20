@@ -4802,17 +4802,27 @@ describe('structuredContent formatters', () => {
     expect(board.stdout).not.toContain('=== Active Missions ===');
   });
 
-  test('get_status and get_state with V2Missions omit the Active Missions appendix', () => {
-    const fixture = { ...getStatusFixture, missions: jumpSurveyMissionsEnvelope };
-    const status = captureStructuredOutput('get_status', fixture);
-    const state = captureStructuredOutput('get_state', fixture);
+  test('get_status with V2Missions omits the Active Missions appendix', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_status', {
+      ...getStatusFixture,
+      missions: jumpSurveyMissionsEnvelope,
+    });
 
-    expect(status.stderr).toBe('');
-    expect(state.stderr).toBe('');
-    expect(status.stdout).toContain('Standings:');
-    expect(state.stdout).toContain('Standings:');
-    expect(status.stdout).not.toContain('=== Active Missions ===');
-    expect(state.stdout).not.toContain('=== Active Missions ===');
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Standings:');
+    expect(stdout).not.toContain('=== Active Missions ===');
+  });
+
+  test('get_state with V2Missions prints one Active Missions table', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_state', {
+      ...getStatusFixture,
+      missions: jumpSurveyMissionsEnvelope,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Standings:');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).not.toContain('=== Response ===');
   });
 
   test('scrap_wreck envelope cargo does not print a cargo hold', () => {
@@ -5033,7 +5043,6 @@ describe('structuredContent formatters', () => {
     ['storage view', { ...storageFixture, missions: partialCargoStorageMissions }, '=== Storage'],
     ['storage_view', { ...storageFixture, missions: partialCargoStorageMissions }, '=== Storage'],
     ['get_status', { ...getStatusFixture, missions: partialCargoStorageMissions }, 'Standings:'],
-    ['get_state', { ...getStatusFixture, missions: partialCargoStorageMissions }, 'Standings:'],
     ['travel', { ...arrivalFixture, missions: partialCargoStorageMissions }, 'Arrived at Earth'],
     [
       'faction_deposit_credits',
@@ -5099,6 +5108,19 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain(marker);
     expect(stdout).not.toContain('=== Active Missions ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_state prints one Active Missions table when envelope missions is present', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_state', {
+      ...getStatusFixture,
+      missions: partialCargoStorageMissions,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Standings:');
+    expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
+    expect(stdout).toContain('Food Delivery');
     expect(stdout).not.toContain('=== Response ===');
   });
 

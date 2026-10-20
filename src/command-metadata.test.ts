@@ -6264,7 +6264,7 @@ describe('command metadata', () => {
       'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule;
     const state =
-      'Show a full player status snapshot with location, ship, cargo, nearby players, and leviathans at your POI. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
+      'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule;
     const factionSensed =
       'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. false and an omitted field print nothing.';

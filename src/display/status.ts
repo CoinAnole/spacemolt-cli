@@ -1,10 +1,13 @@
 import { stringifyApiJson } from '../json-number.ts';
 import { formatOfflineCollapsedText, formatShipCountsLine } from '../notification-format-shared.ts';
-import { arenaStatLines, formatArenaPoiLine } from './arena.ts';
+import { arenaStatLines, formatArenaPoiLine, formatArenaWonLine, formatArenaXpLine } from './arena.ts';
+import { formatBerthSummary } from './berths.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import { formatCreatureLine } from './creatures.ts';
+import { isFlattenedDetailsView } from './dock-state.ts';
 import { emitFixerAccount, selectFixerDebt } from './fixer.ts';
+import { emitActiveMissionsTable } from './generic.ts';
 import {
   c,
   commandNameEquals,
@@ -42,6 +45,7 @@ import {
   nativeRemotePoiId,
   nativeScanField,
 } from './scan-contacts.ts';
+import { emitCargoHold, emitDroneBay, emitInstalledModules } from './ship.ts';
 
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
 
@@ -940,6 +944,201 @@ export function emitLocationSnapshot(
   return true;
 }
 
+function formatGetState(result: Record<string, unknown>, command: string | undefined): boolean {
+  if (!commandNameEquals(command, 'get_state')) return false;
+  if (isFlattenedDetailsView(result)) return false;
+  const finiteShipNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+  const player = isRecord(result.player) ? result.player : undefined;
+  const stateCredits =
+    Object.hasOwn(result, 'credits') && !(player && player.credits === result.credits)
+      ? formatIntegerText(result.credits)
+      : undefined;
+
+  if (player) {
+    emitLine(`\n${c.bright}=== Player Status ===${c.reset}`);
+    emitLine(`Username: ${c.bright}${player.username}${c.reset}`);
+    if (typeof player.id === 'string' && player.id !== '') emitLine(`ID: ${player.id}`);
+    if (player.empire !== undefined && player.empire !== '') emitLine(`Empire: ${player.empire}`);
+    emitCitizenshipsLine(player, true);
+    if (player.credits !== undefined && !isRecord(player.credits) && !Array.isArray(player.credits)) {
+      emitLine(`Credits: ${player.credits}`);
+    }
+    if (stateCredits !== undefined) emitLine(`State credits: ${stateCredits}`);
+    if (player.faction_id || player.clan_tag || player.faction_rank) {
+      const faction = player.faction_id || 'None';
+      const clan = player.clan_tag ? ` [${player.clan_tag}]` : '';
+      const rank = player.faction_rank ? ` (${player.faction_rank})` : '';
+      emitLine(`Faction: ${faction}${clan}${rank}`);
+    }
+    const primary =
+      typeof player.primary_color === 'string' && player.primary_color.trim() !== '' ? player.primary_color : undefined;
+    const secondary =
+      typeof player.secondary_color === 'string' && player.secondary_color.trim() !== ''
+        ? player.secondary_color
+        : undefined;
+    if (primary !== undefined || secondary !== undefined) {
+      emitLine(`Colors: ${primary ?? '—'} / ${secondary ?? '—'}`);
+    }
+    if (typeof player.status_message === 'string') {
+      const status = player.status_message.replaceAll(/[\r\n]+/g, ' ').trim();
+      if (status) emitLine(`Status: ${status}`);
+    }
+    if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
+    if (typeof player.home_poi === 'string' && player.home_poi !== '') emitLine(`Home POI: ${player.home_poi}`);
+    if (typeof player.home_system === 'string' && player.home_system !== '') {
+      emitLine(`Home System: ${player.home_system}`);
+    }
+    emitTradingRestriction(player);
+    emitDetention(player);
+    if (player.is_cloaked) emitLine(`${c.cyan}[CLOAKED]${c.reset}`);
+    if (player.towing_wreck_id) {
+      emitLine(`\n${c.bright}Towing wreck:${c.reset} ${player.towing_wreck_id}`);
+      emitLine(`  (release with release_tow)`);
+    } else if (player.towing_ship_id) {
+      emitLine(`\n${c.bright}Towing ship:${c.reset} ${player.towing_ship_id}`);
+      emitLine(`  (release when docked: storage withdraw ${player.towing_ship_id})`);
+    }
+
+    emitLifetimeStats(player.stats);
+    const arenaWon = formatArenaWonLine(player.arena_won);
+    if (arenaWon) emitLine(arenaWon);
+    const arenaXp = formatArenaXpLine(player.arena_xp);
+    if (arenaXp) emitLine(arenaXp);
+    emitStandings(player, { baseline: true });
+  } else if (stateCredits !== undefined) {
+    emitLine(`State credits: ${stateCredits}`);
+  }
+
+  if (isRecord(result.missions)) emitFixerAccount(result.missions.fixer);
+
+  const riding = isRecord(result.riding) ? result.riding : undefined;
+  const ship = isRecord(result.ship) ? result.ship : undefined;
+  if (riding) {
+    emitLine(
+      `\n${c.bright}Riding aboard: ${riding.carrier || '?'}'s ship ${riding.ship_id ? `(${riding.ship_id})` : ''}${c.reset}`,
+    );
+    emitLine(`  (passenger; use 'fleet disembark' or switch_ship at station to exit)`);
+  }
+  if (ship) {
+    emitLine(`\n${c.bright}=== Ship: ${ship.name || ship.custom_name || ship.class_name || ship.id} ===${c.reset}`);
+    const shipId =
+      typeof ship.id === 'string' && ship.id !== ''
+        ? ship.id
+        : typeof ship.ship_id === 'string' && ship.ship_id !== ''
+          ? ship.ship_id
+          : undefined;
+    if (shipId) emitLine(`ID: ${shipId}`);
+    if (ship.class_name || ship.class_id) emitLine(`Class: ${ship.class_name || ship.class_id}`);
+    if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
+    if (typeof ship.location === 'string' && ship.location !== '') emitLine(`Ship location: ${ship.location}`);
+    emitLine(`Hull: ${ship.hull}/${ship.max_hull}`);
+    emitLine(`Shield: ${ship.shield}/${ship.max_shield} (+${ship.shield_recharge}/tick)`);
+    emitLine(`Armor: ${ship.armor || 0}`);
+    emitLine(`Fuel: ${ship.fuel}/${ship.max_fuel}`);
+    emitLine(
+      `Cargo: ${ship.cargo_used}/${ship.cargo_capacity}${overCapacitySuffix(ship.cargo_used, ship.cargo_capacity)}`,
+    );
+    emitLine(`CPU: ${ship.cpu_used}/${ship.cpu_capacity}${overCapacitySuffix(ship.cpu_used, ship.cpu_capacity)}`);
+    emitLine(
+      `Power: ${ship.power_used}/${ship.power_capacity}${overCapacitySuffix(ship.power_used, ship.power_capacity)}`,
+    );
+    if (
+      Object.hasOwn(ship, 'weapon_slots') ||
+      Object.hasOwn(ship, 'defense_slots') ||
+      Object.hasOwn(ship, 'utility_slots')
+    ) {
+      emitLine(
+        `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
+      );
+    }
+    const berths = formatBerthSummary(ship.berths);
+    if (berths) emitLine(`Berths: ${berths}`);
+    for (const [key, label] of [
+      ['ore_cargo_efficiency', 'Ore cargo'],
+      ['gas_cargo_efficiency', 'Gas cargo'],
+      ['ice_cargo_efficiency', 'Ice cargo'],
+    ] as const) {
+      const value = ship[key];
+      if (finiteShipNumber(value)) emitLine(`${label}: ${String(value)}%`);
+    }
+    if (finiteShipNumber(ship.speed)) emitLine(`Speed: ${ship.speed}`);
+    if (finiteShipNumber(ship.damage_penalty)) emitLine(`Damage penalty: ${ship.damage_penalty}`);
+    if (finiteShipNumber(ship.speed_penalty)) emitLine(`Speed penalty: ${ship.speed_penalty}`);
+    emitShipPersonnel(ship);
+    emitShipCombatEffects(ship);
+    if (ship.class_id === 'escape_pod') {
+      emitLine(`\n${c.yellow}WARNING: You are in an Escape Pod!${c.reset}`);
+      emitLine(`  - No cargo capacity, no weapons, no defenses`);
+      emitLine(`  - Infinite fuel - travel anywhere`);
+      emitLine(`  - Get to a station and commission or buy a ship with 'commission_ship' or 'browse_ships'`);
+    }
+  } else if (!riding) {
+    emitLine(`\n${c.bright}Ship:${c.reset} (none)`);
+  }
+
+  if (Object.hasOwn(result, 'modules')) {
+    emitInstalledModules(result.modules, { stats: true, empty: 'none' });
+  }
+  if (Object.hasOwn(result, 'drone_bay')) emitDroneBay(result.drone_bay);
+  if (
+    Object.hasOwn(result, 'cargo') ||
+    Object.hasOwn(result, 'bay_used') ||
+    Object.hasOwn(result, 'bay_capacity') ||
+    Object.hasOwn(result, 'carried_ships')
+  ) {
+    emitCargoHold(result, { credits: false, usage: false, emptyItems: 'none' });
+  }
+  if (isRecord(result.location)) {
+    emitLocationSnapshot(result, { empireNpcs: 'rows', credits: false, combatEffects: false });
+  }
+
+  if (Object.hasOwn(result, 'skills') && isRecord(result.skills) && !emitSkillMap(result.skills)) {
+    emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
+    emitLine('none');
+  }
+
+  emitQueue(result.queue, { always: true });
+
+  if (Object.hasOwn(result, 'missions')) {
+    const missions = result.missions;
+    const missionRows = Array.isArray(missions)
+      ? missions.filter(isRecord)
+      : isRecord(missions) && Array.isArray(missions.active)
+        ? missions.active.filter(isRecord)
+        : [];
+    if (missionRows.length > 0) {
+      emitActiveMissionsTable(result);
+    } else {
+      emitLine(`\n${c.bright}=== Active Missions ===${c.reset}`);
+      emitLine('none');
+      const maxMissions = isRecord(missions) ? missions.max_missions : undefined;
+      if (typeof maxMissions === 'number' && Number.isFinite(maxMissions)) {
+        emitLine(`${c.dim}missions 0/${maxMissions}${c.reset}`);
+      }
+    }
+  }
+
+  emitPrizeRecoveries(result.prize_recoveries);
+
+  if (Array.isArray(result.hints)) {
+    const hints = result.hints.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '');
+    if (hints.length > 0) {
+      emitLine(`\n${c.bright}=== Hints ===${c.reset}`);
+      for (const hint of hints) emitLine(`  - ${hint.trim()}`);
+    }
+  }
+  if (typeof result.message === 'string' && result.message !== '') emitLine(`${c.dim}${result.message}${c.reset}`);
+  if (typeof result.version === 'string' && result.version !== '') emitLine(`Version: ${result.version}`);
+
+  if (isRecord(result.details) && Object.keys(result.details).length > 0) {
+    emitLine(`\n${c.bright}=== Details ===${c.reset}`);
+    emitLine(stringifyApiJson(result.details, 2));
+  }
+
+  return true;
+}
+
 export const statusFormatters = [
   // Queue state
   formatter((r) => emitQueue(r.queue), { commands: ['get_queue'] }),
@@ -1054,6 +1253,8 @@ export const statusFormatters = [
     { commands: ['get_status_summary'] },
   ),
 
+  formatter(formatGetState, { commands: ['get_state'] }),
+
   // Player status
   formatter(
     (r, command) => {
@@ -1149,7 +1350,7 @@ export const statusFormatters = [
       emitPrizeRecoveries(r.prize_recoveries);
       return true;
     },
-    { commands: ['get_status', 'get_state'], shapeFallback: true },
+    { commands: ['get_status'], shapeFallback: true },
   ),
 
   // Registration
