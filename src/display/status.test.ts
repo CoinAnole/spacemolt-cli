@@ -978,16 +978,61 @@ test('get_state prints the four fixer lines when player.fixer_debt is absent', (
     player: fixerStatusPlayer(),
     missions: missionsFixerDebt,
   });
+  const missionsAt = stdout.indexOf('=== Active Missions ===');
+  const noneAt = stdout.indexOf('\nnone', missionsAt);
   expect(stdout).toContain('Fixer:');
   expect(stdout).toContain('Debt: 2,000');
   expect(stdout).toContain('Allowance: 5,000');
   expect(stdout).toContain('Exposure: 3,000');
   expect(stdout).toContain('Available: 2,000');
+  expect(missionsAt).toBeGreaterThanOrEqual(0);
+  expect(noneAt).toBeGreaterThan(missionsAt);
+  expect(stdout.indexOf('Fixer:')).toBeGreaterThan(noneAt);
   expect(stdout).not.toContain('Fixer debt');
   expect(stdout).not.toContain('System:');
   expect(stdout).not.toContain('POI:');
   expect(stdout).not.toContain('Docked: No');
   expect(stdout).not.toContain('undefined');
+});
+
+test('get_state prints the fixer account after Active Missions and before prize recoveries', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      ...structuredClone(getStatusFixture),
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-survey-local-1',
+            title: 'Local Sector Survey',
+            type: 'survey',
+          },
+        ],
+        max_missions: 5,
+        fixer: { debt: 0, allowance: 7750, exposure: 2850, available: 4900 },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const standingsAt = stdout.indexOf('Standings:');
+  const shipAt = stdout.indexOf('=== Ship: Surveyor ===');
+  const missionsAt = stdout.indexOf('=== Active Missions ===');
+  const titleAt = stdout.indexOf('Local Sector Survey');
+  const fixerAt = stdout.indexOf('Fixer:');
+  const prizesAt = stdout.indexOf('=== Prize recoveries ===');
+  expect(standingsAt).toBeGreaterThanOrEqual(0);
+  expect(shipAt).toBeGreaterThan(standingsAt);
+  expect(missionsAt).toBeGreaterThan(shipAt);
+  expect(titleAt).toBeGreaterThan(missionsAt);
+  expect(fixerAt).toBeGreaterThan(titleAt);
+  expect(prizesAt).toBeGreaterThan(fixerAt);
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).toContain('Debt: 0');
+  expect(stdout).toContain('Allowance: 7,750');
+  expect(stdout).toContain('Exposure: 2,850');
+  expect(stdout).toContain('Available: 4,900');
 });
 
 test.each([

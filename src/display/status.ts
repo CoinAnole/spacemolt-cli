@@ -1074,8 +1074,6 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
     emitLine(`State credits: ${stateCredits}`);
   }
 
-  if (isRecord(result.missions)) emitFixerAccount(result.missions.fixer);
-
   const riding = isRecord(result.riding) ? result.riding : undefined;
   const ship = isRecord(result.ship) ? result.ship : undefined;
   if (riding) {
@@ -1181,6 +1179,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
         emitLine(`${c.dim}missions 0/${maxMissions}${c.reset}`);
       }
     }
+    if (isRecord(missions)) emitFixerAccount(missions.fixer);
   }
 
   emitPrizeRecoveries(result.prize_recoveries);
