@@ -5450,3 +5450,306 @@ test('a non-integer nearby count is printed without grouping separators', () => 
     { nearby: { heading: '1000', rows: [] } },
   );
 });
+
+function renderStatusTable(command: string, result: Record<string, unknown>): string {
+  return renderStructuredResult(command, result, options, context).stdout.join('\n');
+}
+
+function statusDashRows(stdout: string): string[] {
+  return stdout.split('\n').filter((line) => line.startsWith('  - '));
+}
+
+const idOnlyStatusLocation = {
+  system_id: 'sol',
+  poi_id: 'sol_earth',
+  docked_at: 'earth_station',
+  nearby_players: [{ username: 'Ibis', ship_class: 'hauler' }],
+};
+
+const idOnlyStatusPayload = {
+  player: { username: 'Marlowe' },
+  location: idOnlyStatusLocation,
+};
+
+test('get_status prints location ids when names are omitted', () => {
+  const stdout = renderStatusTable('get_status', idOnlyStatusPayload);
+  const lines = stdout.split('\n');
+
+  expect(lines).toContain('  System: sol');
+  expect(lines).toContain('  POI: sol_earth');
+  expect(lines).toContain('  Docked: Yes (earth_station)');
+  expect(lines).toContain('Nearby Players: 1');
+  expect(lines).toContain('  - Ibis (hauler)');
+  expect(stdout).not.toContain('System: Sol');
+  expect(stdout).not.toContain('Sol (sol)');
+  expect(stdout).not.toContain('Earth (sol_earth)');
+  expect(stdout).not.toContain('Nearby Players (1):');
+});
+
+test('named get_status fixture keeps name-only short location lines', () => {
+  const stdout = renderStatusTable('get_status', structuredClone(getStatusFixture));
+  const lines = stdout.split('\n');
+
+  expect(lines).toContain('  System: Sol');
+  expect(lines).toContain('  POI: Earth');
+  expect(lines).toContain('  Docked: Yes (earth_station)');
+  expect(lines).toContain('Nearby Players: 1');
+  expect(lines).toContain('  - Ibis (hauler)');
+  expect(stdout).not.toContain('Sol (sol)');
+  expect(stdout).not.toContain('Nearby Players (1):');
+});
+
+test('get_status nearby heading uses the count and prints every row', () => {
+  const one = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: {
+      nearby_players: [{ username: 'Ibis', ship_class: 'hauler' }],
+      nearby_player_count: 11,
+    },
+  });
+  expect(one.split('\n')).toContain('Nearby Players: 11');
+  expect(statusDashRows(one)).toEqual(['  - Ibis (hauler)']);
+  expect(one).not.toContain('... and');
+
+  const eleven = nearbyPilots(11);
+  const all = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: eleven, nearby_player_count: 11 },
+  });
+  expect(all.split('\n')).toContain('Nearby Players: 11');
+  expect(statusDashRows(all)).toEqual(eleven.map((row) => `  - ${row.username as string}`));
+  expect(all).toContain('  - Pilot 11');
+  expect(all).not.toContain('... and');
+});
+
+test('get_status empty location nearby_players does not use top-level nearby', () => {
+  const hidden = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: [] },
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(hidden).not.toContain('Nearby Players');
+  expect(hidden).not.toContain('Ibis');
+
+  const counted = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: [], nearby_player_count: 4 },
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(counted.split('\n')).toContain('Nearby Players: 4');
+  expect(statusDashRows(counted)).toEqual([]);
+  expect(counted).not.toContain('...');
+  expect(counted).not.toContain('Ibis');
+
+  const collapsed = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: [], offline_collapsed: 3 },
+    offline_collapsed: 99,
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(collapsed).toContain('offline collapsed 3');
+  expect(collapsed).not.toContain('offline collapsed 99');
+  expect(collapsed).not.toContain('Nearby Players');
+  expect(collapsed).not.toContain('Ibis');
+});
+
+test('get_status uses top-level nearby only when location omits nearby_players', () => {
+  const rows = [
+    { username: 'Ibis', ship_class: 'hauler' },
+    { username: 'Nyx', ship_class: 'fighter' },
+  ];
+  const omitted = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { system_name: 'Sol' },
+    nearby: rows,
+  });
+  expect(omitted.split('\n')).toContain('Nearby Players: 2');
+  expect(statusDashRows(omitted)).toEqual(['  - Ibis (hauler)', '  - Nyx (fighter)']);
+
+  const counted = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_player_count: 9 },
+    nearby: rows,
+  });
+  expect(counted.split('\n')).toContain('Nearby Players: 9');
+  expect(statusDashRows(counted)).toEqual(['  - Ibis (hauler)', '  - Nyx (fighter)']);
+});
+
+test.each([
+  ['null', null],
+  ['a string', 'not-a-list'],
+  ['an object', { username: 'Buried' }],
+] as const)('get_status nearby_players %s does not fall through to top-level nearby', (_label, nearbyPlayers) => {
+  const stdout = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: nearbyPlayers },
+    nearby: [{ username: 'Nyx', ship_class: 'hauler' }],
+  });
+  expect(stdout).not.toContain('Nearby Players');
+  expect(stdout).not.toContain('Nyx');
+  expect(statusDashRows(stdout)).toEqual([]);
+});
+
+test.each([
+  ['a numeric string', '11'],
+  ['an empty string', ''],
+  ['null', null],
+  ['true', true],
+  ['false', false],
+  ['NaN', Number.NaN],
+  ['Infinity', Number.POSITIVE_INFINITY],
+] as const)('get_status nearby_player_count %s does not override the row count', (_label, count) => {
+  const rows = [
+    { username: 'Ibis', ship_class: 'hauler' },
+    { username: 'Nyx', ship_class: 'fighter' },
+  ];
+  const stdout = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: rows, nearby_player_count: count },
+  });
+  const lines = stdout.split('\n');
+  expect(lines).toContain('Nearby Players: 2');
+  expect(lines).not.toContain('Nearby Players: 0');
+  expect(lines).not.toContain('Nearby Players: 1');
+  expect(lines).not.toContain('Nearby Players: 11');
+  expect(lines).toContain('  - Ibis (hauler)');
+  expect(lines).toContain('  - Nyx (fighter)');
+
+  const empty = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { nearby_players: [], nearby_player_count: count },
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(empty).not.toContain('Nearby Players');
+  expect(empty).not.toContain('Nearby Players: 0');
+  expect(empty).not.toContain('Nearby Players: 1');
+  expect(empty).not.toContain('Ibis');
+});
+
+test('get_status dock line follows a location record and ignores player.docked_at_base', () => {
+  const player = { username: 'Marlowe', docked_at_base: 'earth_station' };
+  for (const dockedAt of [null, '']) {
+    const stdout = renderStatusTable('get_status', {
+      player,
+      location: { docked_at: dockedAt },
+    });
+    expect(stdout.split('\n')).toContain('  Docked: No');
+    expect(stdout).not.toContain('Docked: Yes');
+    expect(stdout).not.toContain('earth_station');
+  }
+
+  const omitted = renderStatusTable('get_status', {
+    player,
+    location: { system_name: 'Sol' },
+  });
+  expect(omitted.split('\n')).toContain('  Docked: No');
+  expect(omitted).not.toContain('Docked: Yes');
+  expect(omitted).not.toContain('earth_station');
+});
+
+test.each([
+  ['an array', []],
+  ['a non-empty string', 'sol-belt'],
+] as const)('get_status %s location keeps a truthy docked_at_base', (_label, location) => {
+  const stdout = renderStatusTable('get_status', {
+    player: { username: 'Marlowe', docked_at_base: 'earth_station' },
+    location,
+  });
+  expect(stdout.split('\n')).toContain('  Docked: Yes (earth_station)');
+});
+
+test('get_status without a location prints a truthy docked_at_base', () => {
+  const stdout = renderStatusTable('get_status', {
+    player: { username: 'Marlowe', docked_at_base: 'earth_station' },
+  });
+  expect(stdout.split('\n')).toContain('  Docked: Yes (earth_station)');
+});
+
+test('buy shape fallback uses the same short location lookup', () => {
+  const hoisted = renderStatusTable('buy', {
+    player: {
+      username: 'Marlowe',
+      current_system: 'Sol',
+      current_poi: 'Earth',
+      docked_at_base: 'earth_station',
+    },
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(hoisted.split('\n')).toContain('  System: Sol');
+  expect(hoisted.split('\n')).toContain('  POI: Earth');
+  expect(hoisted.split('\n')).toContain('  Docked: Yes (earth_station)');
+  expect(hoisted.split('\n')).toContain('  - Ibis (hauler)');
+  expect(hoisted).not.toContain('=== Buy Complete ===');
+
+  const located = renderStatusTable('buy', {
+    player: {
+      username: 'Marlowe',
+      current_system: 'Sol',
+      docked_at_base: 'earth_station',
+    },
+    location: { system_id: 'sol', poi_id: 'sol_earth', nearby_players: [] },
+    nearby: [{ username: 'Ibis', ship_class: 'hauler' }],
+  });
+  expect(located.split('\n')).toContain('  System: sol');
+  expect(located.split('\n')).toContain('  POI: sol_earth');
+  expect(located.split('\n')).toContain('  Docked: No');
+  expect(located).not.toContain('System: Sol');
+  expect(located).not.toContain('Ibis');
+  expect(located).not.toContain('Nearby Players');
+  expect(located).not.toContain('=== Buy Complete ===');
+});
+
+test('get_status prints a location name without its id', () => {
+  const stdout = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location: { system_name: 'Sol', system_id: 'sol', poi_name: 'Earth', poi_id: 'sol_earth' },
+  });
+  expect(stdout.split('\n')).toContain('  System: Sol');
+  expect(stdout.split('\n')).toContain('  POI: Earth');
+  expect(stdout).not.toContain('System: Sol (sol)');
+  expect(stdout).not.toContain('POI: Earth (sol_earth)');
+  expect(stdout).not.toContain('Sol (sol)');
+  expect(stdout).not.toContain('Earth (sol_earth)');
+});
+
+test('get_status does not print location transit and still prints top-level travel progress', () => {
+  const location = {
+    in_transit: true,
+    transit_type: 'jump',
+    transit_dest_system_id: 'antares',
+    transit_dest_system_name: 'Antares',
+  };
+  const quiet = renderStatusTable('get_status', { player: { username: 'Marlowe' }, location });
+  expect(quiet).toContain('Location:');
+  expect(quiet).not.toContain('Transit:');
+  expect(quiet).not.toContain('[TRAVELING]');
+
+  const traveling = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    location,
+    travel_progress: 0.5,
+    travel_destination: 'Antares',
+    travel_arrival_tick: 42,
+  });
+  expect(traveling).toContain('[TRAVELING]');
+  expect(traveling).not.toContain('Transit:');
+});
+
+test('get_state keeps the location snapshot for an id-only payload', () => {
+  const stdout = renderStatusTable('get_state', idOnlyStatusPayload);
+  const lines = stdout.split('\n');
+
+  expect(lines).toContain('System: sol');
+  expect(stdout).not.toContain('System: sol (');
+  expect(stdout).not.toContain('(sol)');
+  expect(lines).toContain('Nearby Players (1):');
+  expect(lines).toContain('  Ibis (hauler)');
+  expect(stdout).not.toContain('  - Ibis');
+  expect(stdout).not.toContain('Docked: Yes');
+});
+
+test('get_status_summary does not print the short POI or nearby lines', () => {
+  const stdout = renderStatusTable('get_status_summary', idOnlyStatusPayload);
+  expect(stdout).not.toContain('POI:');
+  expect(stdout).not.toContain('Nearby Players');
+});
