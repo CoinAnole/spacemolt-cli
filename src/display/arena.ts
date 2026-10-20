@@ -664,7 +664,7 @@ export function formatArenaRecord(record: ArenaRecord): string {
   return `${record.wins} wins / ${record.losses} loss${record.losses === 1 ? '' : 'es'} / ${record.knockouts} knockouts`;
 }
 
-function formatArenaXpLine(arenaXp: unknown): string | undefined {
+export function formatArenaXpLine(arenaXp: unknown): string | undefined {
   if (!isRecord(arenaXp) || !isRecord(arenaXp.by_skill)) return undefined;
   const usedToday = arenaXp.by_skill;
   const skills = Object.keys(usedToday)
@@ -676,7 +676,7 @@ function formatArenaXpLine(arenaXp: unknown): string | undefined {
   return day ? `Arena XP today (${day}): ${parts.join(', ')}` : `Arena XP today: ${parts.join(', ')}`;
 }
 
-function formatArenaWonLine(arenaWon: unknown): string | undefined {
+export function formatArenaWonLine(arenaWon: unknown): string | undefined {
   if (!isRecord(arenaWon)) return undefined;
   const parts = Object.keys(arenaWon)
     .filter((id) => id.length > 0)

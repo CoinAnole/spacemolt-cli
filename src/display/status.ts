@@ -334,7 +334,7 @@ function formatSkillSummary(stats: Record<string, unknown>, skillId: string, lab
   return `${label}: ${xp} XP`;
 }
 
-function formatStandingValue(value: unknown): string | undefined {
+function formatStandingValue(value: unknown, includeBaseline = false): string | undefined {
   if (isRecord(value)) {
     const reputation = value.reputation;
     if (reputation === undefined || reputation === null || reputation === '') return undefined;
@@ -342,6 +342,12 @@ function formatStandingValue(value: unknown): string | undefined {
     const bounty = value.outstanding_bounty;
     if (typeof bounty === 'number' && Number.isFinite(bounty) && bounty > 0) {
       parts.push(`bounty ${formatNumber(bounty)}`);
+    }
+    if (includeBaseline) {
+      const baseline = value.baseline;
+      if (typeof baseline === 'number' && Number.isFinite(baseline) && baseline !== 0) {
+        parts.push(`baseline ${formatNumber(baseline)}`);
+      }
     }
     const jailedUntil = value.jailed_until;
     if (typeof jailedUntil === 'string' && jailedUntil !== '') {
@@ -353,12 +359,13 @@ function formatStandingValue(value: unknown): string | undefined {
   return String(value);
 }
 
-function emitStandings(player: Record<string, unknown>): void {
+export function emitStandings(player: Record<string, unknown>, options?: { baseline?: boolean }): void {
   if (!isRecord(player.standings)) return;
+  const includeBaseline = options?.baseline === true;
   const standings = Object.entries(player.standings)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => {
-      const standing = formatStandingValue(value);
+      const standing = formatStandingValue(value, includeBaseline);
       return standing === undefined ? undefined : `${key}: ${standing}`;
     })
     .filter((standing): standing is string => Boolean(standing));
@@ -624,6 +631,41 @@ function emitScanRevealedInfo(result: Record<string, unknown>): void {
   }
 }
 
+function formatLifetimeNonNumber(value: unknown): string {
+  if (Array.isArray(value)) return stringifyApiJson(value) ?? '';
+  if (isRecord(value)) {
+    // String(record) is "[object Object]", which golden checks reject.
+    return Object.entries(value)
+      .map(([key, inner]) => `${key} ${formatLifetimeNested(inner)}`)
+      .join(', ');
+  }
+  return String(value);
+}
+
+function formatLifetimeNested(value: unknown): string {
+  if (Array.isArray(value) || isRecord(value)) return stringifyApiJson(value) ?? '';
+  return typeof value === 'number' ? formatNumber(value) : String(value);
+}
+
+export function emitLifetimeStats(stats: unknown): boolean {
+  if (!isRecord(stats)) return false;
+  const rows = Object.entries(stats)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => ({
+      stat: key
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' '),
+      value: typeof value === 'number' ? formatNumber(value) : formatLifetimeNonNumber(value),
+    }));
+  if (!rows.length) return false;
+  printCompactTable('Lifetime Stats', rows, [
+    ['Stat', ['stat']],
+    ['Value', ['value']],
+  ]);
+  return true;
+}
+
 function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): void {
   const header = kind === 'web' ? 'Public Player Profile' : 'Pilot Profile';
   emitLine(`\n${c.bright}=== ${header} ===${c.reset}`);
@@ -709,23 +751,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
     }
   }
 
-  if (isRecord(record.stats)) {
-    const rows = Object.entries(record.stats)
-      .filter(([, value]) => value !== undefined && value !== null && value !== '')
-      .map(([key, value]) => ({
-        stat: key
-          .split('_')
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' '),
-        value: typeof value === 'number' ? formatNumber(value) : String(value),
-      }));
-    if (rows.length) {
-      printCompactTable('Lifetime Stats', rows, [
-        ['Stat', ['stat']],
-        ['Value', ['value']],
-      ]);
-    }
-  }
+  emitLifetimeStats(record.stats);
 
   if (kind === 'v2' && typeof record.ranks_generated_at === 'string' && record.ranks_generated_at !== '') {
     emitLine(
@@ -764,18 +790,157 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
   }
 }
 
+export function emitQueue(queue: unknown, options?: { always?: boolean }): boolean {
+  const always = options?.always === true;
+  const record = isRecord(queue) ? queue : undefined;
+  if (!always && (record === undefined || record.has_pending === undefined)) return false;
+  const hasPending = record?.has_pending === true;
+  emitLine(`\n${c.bright}=== Queue ===${c.reset}`);
+  emitLine(`Queue: ${hasPending ? '1 action pending' : 'empty'}`);
+  return true;
+}
+
+type SkillMapEntry = {
+  name: string;
+  category: string;
+  level: number;
+  max_level: number;
+  xp: number;
+  next_level_xp?: number;
+};
+
+export function emitSkillMap(skills: unknown): boolean {
+  if (!skills || typeof skills !== 'object' || Array.isArray(skills)) return false;
+  const skillMap = skills as Record<string, SkillMapEntry>;
+  const skillEntries = Object.entries(skillMap);
+  if (skillEntries.length === 0) return false;
+  const firstSkill = skillEntries[0]?.[1];
+  // Verify this looks like a skills map (entries should have name/level)
+  if (!firstSkill?.name || firstSkill.level === undefined) return false;
+  emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
+  const byCategory: Record<string, typeof skillEntries> = {};
+  for (const entry of skillEntries) {
+    const [, skill] = entry;
+    const cat = skill.category || 'Other';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(entry);
+  }
+  for (const [category, entries] of Object.entries(byCategory)) {
+    emitLine(`\n${c.cyan}${category}:${c.reset}`);
+    for (const [, skill] of entries) {
+      const progress = skill.next_level_xp
+        ? ` (${skill.xp}/${skill.next_level_xp} XP to level ${skill.level + 1})`
+        : skill.level >= skill.max_level
+          ? ' (MAX)'
+          : ` (${skill.xp} XP)`;
+      emitLine(`  ${skill.name}: Level ${skill.level}/${skill.max_level}${progress}`);
+    }
+  }
+  return true;
+}
+
+function locationHasIdentity(loc: Record<string, unknown>): boolean {
+  return Boolean(loc.system_id || loc.system_name || loc.poi_id || loc.poi_name);
+}
+
+export function emitLocationSnapshot(
+  result: Record<string, unknown>,
+  options?: { empireNpcs?: 'count' | 'rows'; credits?: boolean; combatEffects?: boolean },
+): boolean {
+  if (!isRecord(result.location)) return false;
+  const loc = result.location;
+  const showCredits = options?.credits !== false;
+  const showCombatEffects = options?.combatEffects !== false;
+  const empireNpcRows = options?.empireNpcs === 'rows';
+  const connections = Array.isArray(loc.connections) ? loc.connections : [];
+  const nearbyPlayers = Array.isArray(loc.nearby_players) ? loc.nearby_players.filter(isRecord) : [];
+  const nearbyPlayerCount = numberOrDefault(loc.nearby_player_count, nearbyPlayers.length);
+  const nearbyPirates = Array.isArray(loc.nearby_pirates) ? loc.nearby_pirates.filter(isRecord) : [];
+  const nearbyPirateCount = numberOrDefault(loc.nearby_pirate_count, nearbyPirates.length);
+  const transitLines = locationTransitLines(loc);
+
+  emitLine(`\n${c.bright}=== Location ===${c.reset}`);
+  if (showCredits) emitCreditBalance(result);
+  if (loc.system_id || loc.system_name) {
+    const idText = loc.system_id && loc.system_name ? ` (${loc.system_id})` : '';
+    emitLine(`${c.cyan}System:${c.reset} ${loc.system_name ?? loc.system_id}${idText}`);
+  }
+  if (loc.empire) emitLine(`${c.cyan}Empire:${c.reset} ${loc.empire}`);
+  if (loc.security_status) emitLine(`${c.cyan}Security:${c.reset} ${loc.security_status}`);
+  if (connections.length > 0) {
+    emitLine(`${c.cyan}Connections:${c.reset} ${connections.join(', ')}`);
+  }
+  if (loc.poi_id || loc.poi_name || loc.poi_type) {
+    const typeText = loc.poi_type ? ` (${loc.poi_type})` : loc.poi_id && loc.poi_name ? ` (${loc.poi_id})` : '';
+    emitLine(`${c.cyan}POI:${c.reset} ${loc.poi_name ?? loc.poi_id}${typeText}`);
+  }
+  if (loc.docked_at) {
+    emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
+  }
+  emitLines(transitLines);
+  emitUnknownSignatureHint(loc);
+  if (showCombatEffects && isRecord(result.ship)) emitShipCombatEffects(result.ship);
+  emitLocationResources(loc.resources);
+  if (nearbyPlayerCount > 0) {
+    emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
+    for (const player of nearbyPlayers) {
+      emitLine(`  ${formatPlayer(player)}`);
+    }
+    if (nearbyPlayerCount > nearbyPlayers.length) {
+      emitLine(`  ... and ${nearbyPlayerCount - nearbyPlayers.length} more`);
+    }
+  }
+  const offlineCollapsed = formatOfflineCollapsedText(loc.offline_collapsed);
+  if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
+  emitNearbyPrizes({
+    prizes: loc.nearby_prizes,
+    prizeCount: loc.nearby_prize_count,
+    title: 'Nearby Prizes',
+  });
+  if (nearbyPirateCount > 0) {
+    emitLine(`\n${c.red}Nearby Pirates (${nearbyPirateCount}):${c.reset}`);
+    for (const pirate of nearbyPirates) {
+      emitLine(`  ${formatNearbyPirateLine(pirate)}`);
+    }
+    if (nearbyPirateCount > nearbyPirates.length) {
+      emitLine(`  ... and ${nearbyPirateCount - nearbyPirates.length} more`);
+    }
+  }
+  emitLeviathanContacts(loc.nearby_leviathans, 'Nearby Leviathans');
+  if (empireNpcRows) {
+    const npcRows = Array.isArray(loc.nearby_empire_npcs) ? loc.nearby_empire_npcs.filter(isRecord) : [];
+    const rawCount = loc.nearby_empire_npc_count;
+    const npcCount = typeof rawCount === 'number' && Number.isFinite(rawCount) ? rawCount : npcRows.length;
+    if (npcCount !== 0 || npcRows.length !== 0) {
+      const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
+      emitLine(`\n${c.dim}Nearby Empire NPCs (${npcCount}):${c.reset}`);
+      for (const npc of npcRows) {
+        const idText = text(npc.npc_id);
+        const name = text(npc.name) ?? idText ?? 'Unknown';
+        const shipName = text(npc.ship_name);
+        const shipClass = text(npc.ship_class);
+        const ship =
+          shipName && shipClass && shipName !== shipClass ? `${shipName} / ${shipClass}` : (shipName ?? shipClass);
+        const role = text(npc.role);
+        const empire = text(npc.empire);
+        emitLine(
+          `  ${name}${idText ? ` [${idText}]` : ''}${ship ? ` (${ship})` : ''}${role ? ` - ${role}` : ''}${empire ? ` - ${empire}` : ''}${npc.in_combat === true ? ' - in combat' : ''}`,
+        );
+      }
+      if (npcCount > npcRows.length) emitLine(`  ... and ${npcCount - npcRows.length} more`);
+    }
+  } else {
+    const nearbyEmpireNpcCount = numberOrDefault(loc.nearby_empire_npc_count, 0);
+    if (nearbyEmpireNpcCount > 0) {
+      emitLine(`\n${c.dim}Nearby NPCs: ${nearbyEmpireNpcCount}${c.reset}`);
+    }
+  }
+  return true;
+}
+
 export const statusFormatters = [
   // Queue state
-  formatter(
-    (r) => {
-      if (!isRecord(r.queue) || r.queue.has_pending === undefined) return false;
-      const hasPending = r.queue.has_pending === true;
-      emitLine(`\n${c.bright}=== Queue ===${c.reset}`);
-      emitLine(`Queue: ${hasPending ? '1 action pending' : 'empty'}`);
-      return true;
-    },
-    { commands: ['get_queue'] },
-  ),
+  formatter((r) => emitQueue(r.queue), { commands: ['get_queue'] }),
 
   formatter(
     (r) => {
@@ -1280,48 +1445,7 @@ export const statusFormatters = [
   ),
 
   // Skills state: skills as object map of skill_id -> skill data
-  formatter(
-    (r) => {
-      if (!r.skills || typeof r.skills !== 'object' || Array.isArray(r.skills)) return false;
-      const skills = r.skills as Record<
-        string,
-        {
-          name: string;
-          category: string;
-          level: number;
-          max_level: number;
-          xp: number;
-          next_level_xp?: number;
-        }
-      >;
-      const skillEntries = Object.entries(skills);
-      if (skillEntries.length === 0) return false;
-      const firstSkill = skillEntries[0]?.[1];
-      // Verify this looks like a skills map (entries should have name/level)
-      if (!firstSkill?.name || firstSkill.level === undefined) return false;
-      emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
-      const byCategory: Record<string, typeof skillEntries> = {};
-      for (const entry of skillEntries) {
-        const [, skill] = entry;
-        const cat = skill.category || 'Other';
-        if (!byCategory[cat]) byCategory[cat] = [];
-        byCategory[cat].push(entry);
-      }
-      for (const [category, entries] of Object.entries(byCategory)) {
-        emitLine(`\n${c.cyan}${category}:${c.reset}`);
-        for (const [, skill] of entries) {
-          const progress = skill.next_level_xp
-            ? ` (${skill.xp}/${skill.next_level_xp} XP to level ${skill.level + 1})`
-            : skill.level >= skill.max_level
-              ? ' (MAX)'
-              : ` (${skill.xp} XP)`;
-          emitLine(`  ${skill.name}: Level ${skill.level}/${skill.max_level}${progress}`);
-        }
-      }
-      return true;
-    },
-    { commands: ['get_skills'], shapeFallback: true },
-  ),
+  formatter((r) => emitSkillMap(r.skills), { commands: ['get_skills'], shapeFallback: true }),
 
   // Location info (get_location) — must come before simple message formatter since
   // the response has both r.location and r.message, which the simple formatter swallows
@@ -1330,65 +1454,8 @@ export const statusFormatters = [
       if (!isRecord(r.location)) return false;
       const loc = r.location;
       const transitLines = locationTransitLines(loc);
-      if (!loc.system_id && !loc.system_name && !loc.poi_id && !loc.poi_name && transitLines.length === 0) return false;
-      const connections = Array.isArray(loc.connections) ? loc.connections : [];
-      const nearbyPlayers = Array.isArray(loc.nearby_players) ? loc.nearby_players.filter(isRecord) : [];
-      const nearbyPlayerCount = numberOrDefault(loc.nearby_player_count, nearbyPlayers.length);
-      const nearbyPirates = Array.isArray(loc.nearby_pirates) ? loc.nearby_pirates.filter(isRecord) : [];
-      const nearbyPirateCount = numberOrDefault(loc.nearby_pirate_count, nearbyPirates.length);
-      const nearbyEmpireNpcCount = numberOrDefault(loc.nearby_empire_npc_count, 0);
-
-      emitLine(`\n${c.bright}=== Location ===${c.reset}`);
-      emitCreditBalance(r);
-      if (loc.system_id || loc.system_name) {
-        const idText = loc.system_id && loc.system_name ? ` (${loc.system_id})` : '';
-        emitLine(`${c.cyan}System:${c.reset} ${loc.system_name ?? loc.system_id}${idText}`);
-      }
-      if (loc.empire) emitLine(`${c.cyan}Empire:${c.reset} ${loc.empire}`);
-      if (loc.security_status) emitLine(`${c.cyan}Security:${c.reset} ${loc.security_status}`);
-      if (connections.length > 0) {
-        emitLine(`${c.cyan}Connections:${c.reset} ${connections.join(', ')}`);
-      }
-      if (loc.poi_id || loc.poi_name || loc.poi_type) {
-        const typeText = loc.poi_type ? ` (${loc.poi_type})` : loc.poi_id && loc.poi_name ? ` (${loc.poi_id})` : '';
-        emitLine(`${c.cyan}POI:${c.reset} ${loc.poi_name ?? loc.poi_id}${typeText}`);
-      }
-      if (loc.docked_at) {
-        emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
-      }
-      emitLines(transitLines);
-      emitUnknownSignatureHint(loc);
-      if (isRecord(r.ship)) emitShipCombatEffects(r.ship);
-      emitLocationResources(loc.resources);
-      if (nearbyPlayerCount > 0) {
-        emitLine(`\n${c.bright}Nearby Players (${nearbyPlayerCount}):${c.reset}`);
-        for (const player of nearbyPlayers) {
-          emitLine(`  ${formatPlayer(player)}`);
-        }
-        if (nearbyPlayerCount > nearbyPlayers.length) {
-          emitLine(`  ... and ${nearbyPlayerCount - nearbyPlayers.length} more`);
-        }
-      }
-      const offlineCollapsed = formatOfflineCollapsedText(loc.offline_collapsed);
-      if (offlineCollapsed !== undefined) emitLine(`${c.dim}${offlineCollapsed}${c.reset}`);
-      emitNearbyPrizes({
-        prizes: loc.nearby_prizes,
-        prizeCount: loc.nearby_prize_count,
-        title: 'Nearby Prizes',
-      });
-      if (nearbyPirateCount > 0) {
-        emitLine(`\n${c.red}Nearby Pirates (${nearbyPirateCount}):${c.reset}`);
-        for (const pirate of nearbyPirates) {
-          emitLine(`  ${formatNearbyPirateLine(pirate)}`);
-        }
-        if (nearbyPirateCount > nearbyPirates.length) {
-          emitLine(`  ... and ${nearbyPirateCount - nearbyPirates.length} more`);
-        }
-      }
-      emitLeviathanContacts(loc.nearby_leviathans, 'Nearby Leviathans');
-      if (nearbyEmpireNpcCount > 0) {
-        emitLine(`\n${c.dim}Nearby NPCs: ${nearbyEmpireNpcCount}${c.reset}`);
-      }
+      if (!locationHasIdentity(loc) && transitLines.length === 0) return false;
+      emitLocationSnapshot(r);
       return true;
     },
     { commands: ['get_location'], shapeFallback: true },
