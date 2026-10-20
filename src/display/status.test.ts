@@ -42,6 +42,7 @@ import {
   subscribeObservationFixture,
   systemInfoFixture,
 } from './status.fixtures.ts';
+import { resolveShortStatusLocation } from './status.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -5154,4 +5155,298 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   expect(stdout).toContain('Queue: 1 action pending');
   expect(stdout.split('=== Active Missions ===').length - 1).toBe(1);
   expect(stdout.split('Credits: 4242').length - 1).toBe(1);
+});
+
+const SHORT_DOCKED_NO = '  Docked: No';
+
+function expectShortLocation(
+  result: Record<string, unknown>,
+  expected: {
+    system?: string;
+    poi?: string;
+    docked?: string;
+    nearby?: { heading: string; rows: Array<Record<string, unknown>> };
+  },
+): void {
+  expect(resolveShortStatusLocation(result)).toEqual({
+    system: expected.system,
+    poi: expected.poi,
+    docked: expected.docked ?? SHORT_DOCKED_NO,
+    nearby: expected.nearby,
+  });
+}
+
+test('short status location uses location names and does not join them with ids', () => {
+  expectShortLocation(
+    {
+      location: { system_name: 'Sol', system_id: 'sol', poi_name: 'Earth', poi_id: 'sol_earth' },
+      system: { name: 'Alpha', id: 'alpha' },
+      poi: { name: 'Luna', id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'Sol', poi: 'Earth' },
+  );
+});
+
+test.each([
+  ['an empty string', ''],
+  ['null', null],
+  ['a number', 11],
+  ['a boolean', true],
+  ['an object', { name: 'Nested' }],
+] as const)('blank location names (%s) fall through to location ids', (_label, blank) => {
+  expectShortLocation(
+    {
+      location: { system_name: blank, system_id: 'sol', poi_name: blank, poi_id: 'sol_earth' },
+      system: { name: 'Alpha', id: 'alpha' },
+      poi: { name: 'Luna', id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'sol', poi: 'sol_earth' },
+  );
+});
+
+test('short status location walks record names, then the player, and skips record ids', () => {
+  expectShortLocation(
+    {
+      location: { system_id: '', poi_id: '' },
+      system: { name: 'Alpha', id: 'alpha' },
+      poi: { name: 'Luna', id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'Alpha', poi: 'Luna' },
+  );
+  expectShortLocation(
+    {
+      location: {},
+      system: { id: 'alpha' },
+      poi: { id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'Procyon', poi: 'Procyon A' },
+  );
+  expectShortLocation(
+    {
+      system: { id: 'alpha', name: '' },
+      poi: { id: 'luna', base_name: 'Luna Base', name: '' },
+      player: { current_system: '', current_poi: null },
+    },
+    {},
+  );
+});
+
+test('short status place labels resolve independently and keep untrimmed whitespace', () => {
+  expectShortLocation(
+    {
+      location: { system_name: 'Sol', poi_name: '', poi_id: '' },
+      poi: { name: '', id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Belt' },
+    },
+    { system: 'Sol', poi: 'Belt' },
+  );
+  expectShortLocation(
+    {
+      location: { system_name: ' ', system_id: 'sol', poi_id: ' ' },
+      system: { name: 'Alpha' },
+      poi: { name: 'Luna', base_name: 'Luna Base' },
+    },
+    { system: ' ', poi: ' ' },
+  );
+});
+
+test.each([
+  ['an absent', {}],
+  ['a null', { location: null }],
+  ['a string', { location: 'sol' }],
+  ['an array', { location: [{ system_name: 'Sol', poi_name: 'Earth' }] }],
+] as const)('%s location skips location fields and still uses record names', (_label, result) => {
+  expectShortLocation(
+    {
+      ...result,
+      system: { name: 'Alpha', id: 'alpha' },
+      poi: { name: 'Luna', id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'Alpha', poi: 'Luna' },
+  );
+});
+
+test('a non-record location falls through to the player when record names are blank', () => {
+  expectShortLocation(
+    {
+      location: [],
+      system: { name: '', id: 'alpha' },
+      poi: { name: 4, id: 'luna', base_name: 'Luna Base' },
+      player: { current_system: 'Procyon', current_poi: 'Procyon A' },
+    },
+    { system: 'Procyon', poi: 'Procyon A' },
+  );
+});
+
+test.each([
+  ['a station id', 'earth_station', '  Docked: Yes (earth_station)'],
+  ['whitespace', ' ', '  Docked: Yes ( )'],
+] as const)('location docked_at %s is a Yes line', (_label, dockedAt, docked) => {
+  expectShortLocation({ location: { docked_at: dockedAt }, player: { docked_at_base: 'player_base' } }, { docked });
+});
+
+test.each([
+  ['null', null],
+  ['an empty string', ''],
+  ['a number', 1],
+  ['a boolean', true],
+  ['an object', { id: 'earth_station' }],
+] as const)('location docked_at %s is No and ignores player.docked_at_base', (_label, dockedAt) => {
+  expectShortLocation({ location: { docked_at: dockedAt }, player: { docked_at_base: 'player_base' } }, {});
+});
+
+test('a location record with no docked_at key is No even when player.docked_at_base is set', () => {
+  expectShortLocation(
+    { location: { system_name: 'Sol' }, player: { docked_at_base: 'player_base' } },
+    { system: 'Sol' },
+  );
+});
+
+test.each([
+  ['an absent', {}],
+  ['a null', { location: null }],
+  ['an array', { location: [] }],
+] as const)('%s location prints a truthy player.docked_at_base', (_label, result) => {
+  expectShortLocation(
+    { ...result, player: { docked_at_base: 'earth_station' } },
+    { docked: '  Docked: Yes (earth_station)' },
+  );
+});
+
+test.each([
+  ['missing', {}],
+  ['null', { player: { docked_at_base: null } }],
+  ['an empty string', { player: { docked_at_base: '' } }],
+  ['zero', { player: { docked_at_base: 0 } }],
+  ['false', { player: { docked_at_base: false } }],
+] as const)('player docked_at_base %s without a location record is No', (_label, result) => {
+  expectShortLocation(result, {});
+});
+
+test('a truthy non-string player.docked_at_base is interpolated', () => {
+  expectShortLocation({ player: { docked_at_base: 2 } }, { docked: '  Docked: Yes (2)' });
+});
+
+function nearbyPilots(count: number): Array<Record<string, unknown>> {
+  return Array.from({ length: count }, (_, index) => ({ username: `Pilot ${index + 1}` }));
+}
+
+test('omitted nearby count uses the record rows', () => {
+  const eleven = nearbyPilots(11);
+  expectShortLocation({ location: { nearby_players: eleven } }, { nearby: { heading: '11', rows: eleven } });
+  const one = nearbyPilots(1);
+  expectShortLocation({ location: { nearby_players: one } }, { nearby: { heading: '1', rows: one } });
+});
+
+test('a higher finite nearby count keeps every row and adds no ellipsis', () => {
+  const rows = nearbyPilots(1);
+  expectShortLocation(
+    { location: { nearby_players: rows, nearby_player_count: 11 } },
+    { nearby: { heading: '11', rows } },
+  );
+});
+
+test('an empty location player list does not read top-level nearby', () => {
+  expectShortLocation({ location: { nearby_players: [] }, nearby: nearbyPilots(2) }, {});
+});
+
+test('an empty location player list with a positive count has a heading and no rows', () => {
+  expectShortLocation(
+    { location: { nearby_players: [], nearby_player_count: 4 }, nearby: nearbyPilots(2) },
+    { nearby: { heading: '4', rows: [] } },
+  );
+});
+
+test('an empty location player list with count 0 has no nearby block', () => {
+  expectShortLocation({ location: { nearby_players: [], nearby_player_count: 0 } }, {});
+});
+
+test('a missing nearby_players key uses top-level nearby and a finite location count', () => {
+  const rows = nearbyPilots(2);
+  expectShortLocation({ location: { nearby_player_count: 5 }, nearby: rows }, { nearby: { heading: '5', rows } });
+});
+
+test('nearby without a location uses the top-level row length as the heading', () => {
+  const rows = nearbyPilots(2);
+  expectShortLocation({ nearby: rows }, { nearby: { heading: '2', rows } });
+});
+
+test('nearby count 0 still prints every row', () => {
+  const rows = nearbyPilots(2);
+  expectShortLocation(
+    { location: { nearby_players: rows, nearby_player_count: 0 } },
+    { nearby: { heading: '0', rows } },
+  );
+});
+
+test('a negative nearby count with no rows omits the block', () => {
+  expectShortLocation({ location: { nearby_players: [], nearby_player_count: -1 }, nearby: nearbyPilots(1) }, {});
+});
+
+test('a negative nearby count still prints the rows under that heading', () => {
+  const rows = nearbyPilots(1);
+  expectShortLocation(
+    { location: { nearby_players: rows, nearby_player_count: -1 } },
+    { nearby: { heading: '-1', rows } },
+  );
+});
+
+test.each([
+  ['a numeric string', '11'],
+  ['an empty string', ''],
+  ['null', null],
+  ['true', true],
+  ['false', false],
+  ['NaN', Number.NaN],
+  ['Infinity', Number.POSITIVE_INFINITY],
+  ['a bigint', 11n],
+] as const)('nearby_player_count %s is not a finite count', (_label, count) => {
+  const row = { username: 'Ibis' };
+  expectShortLocation(
+    { location: { nearby_players: [row], nearby_player_count: count } },
+    { nearby: { heading: '1', rows: [row] } },
+  );
+  expectShortLocation(
+    { location: { nearby_players: [], nearby_player_count: count }, nearby: [{ username: 'Nyx' }] },
+    {},
+  );
+});
+
+test.each([
+  ['null', null],
+  ['a string', 'Ibis'],
+  ['an object', { username: 'Ibis' }],
+  ['undefined', undefined],
+] as const)('nearby_players set to %s does not fall through to top-level nearby', (_label, nearbyPlayers) => {
+  expectShortLocation({ location: { nearby_players: nearbyPlayers }, nearby: nearbyPilots(2) }, {});
+  expectShortLocation(
+    { location: { nearby_players: nearbyPlayers, nearby_player_count: 4 }, nearby: nearbyPilots(2) },
+    { nearby: { heading: '4', rows: [] } },
+  );
+});
+
+test('nearby rows keep records in order and ignore non-records', () => {
+  const first = { username: 'Ibis' };
+  const second = { username: 'Nyx' };
+  expectShortLocation(
+    { location: { nearby_players: ['nope', first, null, 1, second] } },
+    { nearby: { heading: '2', rows: [first, second] } },
+  );
+  expectShortLocation({ nearby: [first, 'nope', second] }, { nearby: { heading: '2', rows: [first, second] } });
+});
+
+test('a non-integer nearby count is printed without grouping separators', () => {
+  expectShortLocation(
+    { location: { nearby_players: [], nearby_player_count: 11.5 } },
+    { nearby: { heading: '11.5', rows: [] } },
+  );
+  expectShortLocation(
+    { location: { nearby_players: [], nearby_player_count: 1000 } },
+    { nearby: { heading: '1000', rows: [] } },
+  );
 });
