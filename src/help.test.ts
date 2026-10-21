@@ -1985,6 +1985,8 @@ describe('help output branches', () => {
     expect(output).toContain(
       'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
     );
+    expect(output).toContain('wreck_not_here');
+    expect(output).toContain('release_tow');
     expect(output).toContain('See also: sell_wreck, tow_wreck, get_wrecks, storage view');
     expect(output).not.toContain('storage_view');
   });
@@ -2029,8 +2031,62 @@ describe('help output branches', () => {
     expect(output).toContain('Player-owned');
     expect(output).toContain('scrap_wreck');
     expect(output).toContain('Modules still aboard the wreck are deposited to your storage at this station.');
+    expect(output).toContain('wreck_not_here');
+    expect(output).toContain('release_tow');
     expect(output).toContain('See also: scrap_wreck, tow_wreck, get_wrecks, storage view, view_market');
     expect(output).not.toContain('storage_view');
+  });
+
+  test('release_tow help clears a tow without moving the wreck', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('release_tow', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('without moving the wreck');
+    expect(output).toContain('wreck_busy');
+    expect(output).toContain('another tower');
+    expect(output).toContain('storage withdraw');
+    expect(output).toContain('same station');
+    expect(output).toContain('auto-dock');
+    expect(output).not.toContain('at your current location');
+    expect(output).not.toContain('while docked');
+  });
+
+  test('tow_wreck help distinguishes wreck_not_found from wreck_not_here', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('tow_wreck', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('wreck_not_found');
+    expect(output).toContain('wreck_not_here');
+  });
+
+  test('switch_ship and buy_listed_ship help name already_towing', () => {
+    for (const command of ['switch_ship', 'buy_listed_ship'] as const) {
+      const capture = captureWriter();
+
+      expect(showCommandHelp(command, capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+      const output = capture.stdout.join('\n');
+      expect(output).toContain('already_towing');
+      expect(output).toContain('storage withdraw');
+      expect(output).toContain('where it lies');
+      expect(output).toContain('same station');
+      expect(output).toContain('auto-dock');
+      expect(output).not.toContain('while docked');
+    }
+  });
+
+  test('complete_mission help names a stale wreck turn-in', () => {
+    const capture = captureWriter();
+
+    expect(showCommandHelp('complete_mission', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('wreck_not_here');
+    expect(output).toContain('release_tow');
   });
 
   test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {
