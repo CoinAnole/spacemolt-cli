@@ -847,10 +847,8 @@ function nestedStationGoodwillRejected(result: Record<string, unknown>): boolean
   for (const entry of result.results) {
     if (!isRecord(entry)) continue;
     const nestedResult = entry.result;
-    if (!isRecord(nestedResult) || !Object.hasOwn(nestedResult, 'goodwill')) continue;
-    const goodwill = nestedResult.goodwill;
-    if (goodwill === undefined || goodwill === null || goodwill === '') continue;
-    if (!isRecord(goodwill)) return true;
+    if (!isRecord(nestedResult)) continue;
+    if (isBadPresentGoodwill(nestedResult)) return true;
   }
   return false;
 }
