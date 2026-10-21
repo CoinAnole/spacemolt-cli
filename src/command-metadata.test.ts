@@ -2539,6 +2539,13 @@ describe('command metadata', () => {
     expect(description).toContain('Loot grammar is unchanged');
     expect(description).toContain('Expires tick');
     expect(description).not.toContain('`');
+    expect(description).toContain('A wreck or carcass stays at the POI where it died, including a hidden POI');
+    expect(description).toContain('pirate salvagers do not get a report for a hidden-POI wreck');
+    expect(description).toContain('an uncharted location');
+    expect(description).toContain('until that POI is charted');
+    expect(description).toContain('that phrase is the server message');
+    expect(description).toContain('does not synthesize, rewrite, or special-case it in a formatter');
+    expect(description).not.toContain('nearest charted');
 
     const help = captureHelp('get_wrecks');
     expect(help).toContain('Carrion');
@@ -2550,6 +2557,13 @@ describe('command metadata', () => {
     expect(help).toContain('Loot grammar is unchanged');
     expect(help).toContain('Expires tick');
     expect(help).not.toContain('`');
+    expect(help).toContain('A wreck or carcass stays at the POI where it died, including a hidden POI');
+    expect(help).toContain('pirate salvagers do not get a report for a hidden-POI wreck');
+    expect(help).toContain('an uncharted location');
+    expect(help).toContain('until that POI is charted');
+    expect(help).toContain('that phrase is the server message');
+    expect(help).toContain('does not synthesize, rewrite, or special-case it in a formatter');
+    expect(help).not.toContain('nearest charted');
   });
 
   test('faction info help documents faction_rent omit versus zero', () => {
