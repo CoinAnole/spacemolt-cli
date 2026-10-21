@@ -10968,6 +10968,32 @@ describe('structuredContent formatters', () => {
       Pirates (1):
         Raider (skiff) - raider - Admiral Kael"
       ,
+        "find_route": 
+      "Route: found
+      Target: tau_ceti
+      Total jumps: 2
+      Fuel per jump: 6
+      Estimated fuel: 12
+      Fuel available: 85
+      Cargo used: 18
+      Then travel: Fomalhaut 4675g I (fomalhaut_4675g_i)
+
+      === Route ===
+
+        System         | ID             | Jumps | Wormhole | Entrance
+        ---------------+----------------+-------+----------+-------------------
+        Sol            | sol            | 0     |          |
+        Alpha Centauri | alpha_centauri | 1     | yes      | sol_wormhole_alpha
+        Tau Ceti       | tau_ceti       | 2     |          |
+
+      === Fleet Fuel ===
+
+        Player     | ID                               | Ship    | Per jump | Estimated | Available | On arrival | Can complete
+        -----------+----------------------------------+---------+----------+-----------+-----------+------------+-------------
+        VegaDrift  | 1a3c5e7b9d2f4a6c8e0b2d4f6a8c0e35 | Theoria | 6        | 12        | 85        | 73         | yes
+        OreHauler7 | 8f2d4b6a0c9e4f1a3b5d7c9e1f3a5b72 | Axiom   | 9        | 18        | 14        | -4         | no
+      Route found: 2 jump(s). Then travel to Fomalhaut 4675g I (fomalhaut_4675g_i)."
+      ,
         "fleet": 
       "
       === Fleet ===
@@ -10988,6 +11014,22 @@ describe('structuredContent formatters', () => {
         Name | ID
         -----+---------
         Ibis | player-3"
+      ,
+        "get_faction_achievements": 
+      "Earned: 1 / 36
+      Points: 60
+
+      === Faction Achievements ===
+
+        Name             | ID               | Category    | Points | Earned | Progress | Earned at
+        -----------------+------------------+-------------+--------+--------+----------+--------------------
+        The Whole Bar    | the_whole_bar    | hospitality | 80     | no     | 12/40    |
+        House of Plenty  | house_of_plenty  | hospitality | 60     | yes    | 40/40    | 2026-10-20 15:04:05
+        Cottage Industry | cottage_industry | industry    | 10     | no     |          |
+
+      the_whole_bar: Stock every form of alcohol in the galaxy at your bars.
+      house_of_plenty: Put every dish in the galaxy on your faction's tables.
+      cottage_industry: Craft items as a faction."
       ,
         "intel": 
       "

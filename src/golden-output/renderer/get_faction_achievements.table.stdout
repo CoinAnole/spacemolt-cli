@@ -1,0 +1,14 @@
+Earned: 1 / 36
+Points: 60
+
+=== Faction Achievements ===
+
+  Name             | ID               | Category    | Points | Earned | Progress | Earned at          
+  -----------------+------------------+-------------+--------+--------+----------+--------------------
+  The Whole Bar    | the_whole_bar    | hospitality | 80     | no     | 12/40    |                    
+  House of Plenty  | house_of_plenty  | hospitality | 60     | yes    | 40/40    | 2026-10-20 15:04:05
+  Cottage Industry | cottage_industry | industry    | 10     | no     |          |                    
+
+the_whole_bar: Stock every form of alcohol in the galaxy at your bars.
+house_of_plenty: Put every dish in the galaxy on your faction's tables.
+cottage_industry: Craft items as a faction.

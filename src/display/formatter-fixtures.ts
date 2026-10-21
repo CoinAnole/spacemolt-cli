@@ -1,5 +1,6 @@
 import { arenaFixtureCases, arenaHighValueFixtures } from './arena.fixtures.ts';
 import { citizenshipHighValueFixtures } from './citizenship.fixtures.ts';
+import { factionAchievementFixtures } from './faction-achievements.fixtures.ts';
 import { findRouteHighValueFixtures } from './find-route.fixtures.ts';
 import { genericFixtureCases, genericHighValueFixtures } from './generic.fixtures.ts';
 import { inspectHighValueFixtures } from './inspect.fixtures.ts';
@@ -18,6 +19,7 @@ import { surveyFixtureCases, surveyHighValueFixtures } from './survey.fixtures.t
 
 export * from './arena.fixtures.ts';
 export * from './citizenship.fixtures.ts';
+export * from './faction-achievements.fixtures.ts';
 export * from './find-route.fixtures.ts';
 export * from './generic.fixtures.ts';
 export * from './inspect.fixtures.ts';
@@ -58,6 +60,8 @@ export const formatterFixtureCases = {
   ...marketFixtureCases,
   ...shipFixtureCases,
   ...socialFixtureCases,
+  ...factionAchievementFixtures,
+  ...findRouteHighValueFixtures,
   ...genericFixtureCases,
   ...arenaFixtureCases,
 };
@@ -72,6 +76,7 @@ export const highValueCommandFixtures: Record<string, HighValueFixtureEntry> = {
   ...shipHighValueFixtures,
   ...prizesHighValueFixtures,
   ...socialHighValueFixtures,
+  ...factionAchievementFixtures,
   ...notificationsHighValueFixtures,
   ...notificationSettingsHighValueFixtures,
   ...shippingHighValueFixtures,
