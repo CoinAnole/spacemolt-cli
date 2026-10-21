@@ -719,10 +719,91 @@ describe('wreck_not_found', () => {
     expect(ERROR_REGISTRY.wreck_not_found?.commandSuggestions).toBeUndefined();
     const suggestion = getErrorSuggestion('wreck_not_found');
     expect(suggestion).toContain('wreck_not_found');
+    expect(suggestion).toContain('wreck_not_here');
     expect(suggestion).toContain('get_wrecks');
     expect(suggestion).not.toMatch(/(^|\s)not_found(\s|$)/);
     expect(suggestion).not.toContain('returns not_found');
     expect(getRelatedCommands('wreck_not_found')).toEqual(['get_wrecks', 'tow_wreck']);
+  });
+});
+
+describe('wreck_not_here', () => {
+  test('is not retryable and names a stale tow', () => {
+    expect(ERROR_REGISTRY.wreck_not_here?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.wreck_not_here?.auth).toBe(false);
+    expect(isRetryableError('wreck_not_here')).toBe(false);
+    expect(isAuthError('wreck_not_here')).toBe(false);
+    expect(isKnownErrorCode('wreck_not_here')).toBe(true);
+    expect(ERROR_CODES).toContain('wreck_not_here');
+    expect(ERROR_REGISTRY.wreck_not_here?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('wreck_not_here');
+    expect(suggestion).toContain('wreck_not_here');
+    expect(suggestion).toContain('release_tow');
+    expect(suggestion).toContain('tow_wreck');
+    expect(suggestion).toContain('wreck_not_found');
+    expect(suggestion).not.toContain('action=');
+    expect(getErrorSuggestion('wreck_not_here', 'sell_wreck')).toBe(suggestion);
+    expect(getErrorSuggestion('wreck_not_here', 'scrap_wreck')).toBe(suggestion);
+    expect(getErrorSuggestion('wreck_not_here', 'complete_mission')).toBe(suggestion);
+    expect(getErrorSuggestion('wreck_not_here', 'jump')).toBe(suggestion);
+    expect(getRelatedCommands('wreck_not_here')).toEqual(['release_tow', 'tow_wreck', 'get_wrecks']);
+  });
+});
+
+describe('wreck_busy', () => {
+  test('is retryable and says to finish release_tow next tick', () => {
+    expect(ERROR_REGISTRY.wreck_busy?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.wreck_busy?.auth).toBe(false);
+    expect(isRetryableError('wreck_busy')).toBe(true);
+    expect(isAuthError('wreck_busy')).toBe(false);
+    expect(isKnownErrorCode('wreck_busy')).toBe(true);
+    expect(ERROR_CODES).toContain('wreck_busy');
+    expect(ERROR_REGISTRY.wreck_busy?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('wreck_busy');
+    expect(suggestion).toContain('next tick');
+    expect(suggestion).toContain('release_tow');
+    expect(suggestion).toContain('Do not resubmit immediately');
+    expect(suggestion).toContain('not wreck_not_here');
+    expect(suggestion).toContain('Finish "spacemolt release_tow" before "spacemolt tow_wreck"');
+    expect(suggestion).not.toContain('not a stale tow');
+    expect(suggestion).not.toContain('not stale');
+    expect(suggestion).not.toContain('someone else');
+    expect(suggestion).not.toContain('Do not run');
+    expect(suggestion).not.toMatch(/do not (?:run|retry)\b[^.]*release_tow/i);
+    expect(suggestion).not.toMatch(/retry\b[^.]*sell_wreck/i);
+    expect(getRelatedCommands('wreck_busy')).toEqual(['release_tow', 'get_status']);
+  });
+});
+
+describe('already_towing', () => {
+  test('is not retryable and points at storage withdraw', () => {
+    expect(ERROR_REGISTRY.already_towing?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.already_towing?.auth).toBe(false);
+    expect(isRetryableError('already_towing')).toBe(false);
+    expect(isAuthError('already_towing')).toBe(false);
+    expect(isKnownErrorCode('already_towing')).toBe(true);
+    expect(ERROR_CODES).toContain('already_towing');
+    expect(ERROR_REGISTRY.already_towing?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('already_towing');
+    expect(suggestion).toContain('storage withdraw');
+    expect(suggestion).toContain('same station');
+    expect(suggestion).toContain('auto-dock');
+    expect(suggestion).toContain('switch_ship');
+    expect(suggestion).toContain('buy_listed_ship');
+    expect(suggestion).toContain('release_tow');
+    expect(suggestion).toContain('where it lies');
+    expect(suggestion).not.toContain('action=');
+    expect(suggestion).not.toContain('while docked');
+    expect(getErrorSuggestion('already_towing', 'switch_ship')).toBe(suggestion);
+    expect(getErrorSuggestion('already_towing', 'buy_listed_ship')).toBe(suggestion);
+    expect(getErrorSuggestion('already_towing', 'jump')).toBe(suggestion);
+    expect(getRelatedCommands('already_towing')).toEqual(['storage_withdraw', 'list_ships', 'release_tow']);
+  });
+});
+
+describe('unregistered codes', () => {
+  test('stay retryable', () => {
+    expect(isRetryableError('not_a_tow_code')).toBe(true);
   });
 });
 
