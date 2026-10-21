@@ -235,7 +235,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   tow_wreck: {
     usage: '<wreck_id>  (use get_wrecks to see wrecks)',
     description:
-      'Attach a tow line to a wreck (tow rig required). You can tow only one thing at a time — a wreck or one of your own ships of equal or smaller class scale, never both. To tow an owned ship instead, use storage deposit <ship_id> target=self while docked at the same station. The wreck must be at your POI; a wreck elsewhere returns wreck_not_found.',
+      'Attach a tow line to a wreck (tow rig required). You can tow only one thing at a time — a wreck or one of your own ships of equal or smaller class scale, never both. To tow an owned ship instead, use storage deposit <ship_id> target=self while docked at the same station. The wreck must be at your POI; a wreck elsewhere returns wreck_not_found. wreck_not_found is only this miss. A stale tow on sell_wreck, scrap_wreck, or a complete_mission wreck turn-in is wreck_not_here, not this code.',
     example: 'spacemolt tow_wreck wreck-1',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['release_tow', 'storage_deposit', 'storage_withdraw', 'get_wrecks', 'get_status'],
@@ -284,7 +284,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   release_tow: {
     description:
-      'Release a towed wreck at your current location. To release a towed own ship, use storage withdraw <ship_id> while docked instead.',
+      "Clear a wreck tow without moving the wreck. The wreck stays where it lies, including when the tow is stale. A stale tow cannot release another tower's claim. During a wreck update this returns wreck_busy; retry release_tow next tick. To unload a towed own ship, use storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.",
     example: 'spacemolt release_tow',
     discoverWith: ['get_status', 'get_wrecks'],
     seeAlso: ['tow_wreck', 'storage_withdraw', 'storage_deposit', 'get_status'],
@@ -293,7 +293,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   scrap_wreck: {
     description:
-      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+. Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
+      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+. Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry scrap_wreck until then.',
     example: 'spacemolt scrap_wreck',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['sell_wreck', 'tow_wreck', 'get_wrecks', 'storage_view'],
@@ -302,7 +302,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   sell_wreck: {
     description:
-      "Sell a towed wreck to an NPC salvage yard for credits. The yard pays a fraction of the hull materials and remaining cargo at local market value from the station manager's credits. A broke manager may pay less than the offer (the message says so). Player-owned yards refuse; use scrap_wreck there instead. Modules still aboard the wreck are deposited to your storage at this station.",
+      "Sell a towed wreck to an NPC salvage yard for credits. The yard pays a fraction of the hull materials and remaining cargo at local market value from the station manager's credits. A broke manager may pay less than the offer (the message says so). Player-owned yards refuse; use scrap_wreck there instead. Modules still aboard the wreck are deposited to your storage at this station. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry sell_wreck until then.",
     example: 'spacemolt sell_wreck',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['scrap_wreck', 'tow_wreck', 'get_wrecks', 'storage_view', 'view_market'],

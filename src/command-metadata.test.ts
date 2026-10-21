@@ -3480,11 +3480,17 @@ describe('command metadata', () => {
     expect(tow?.description).toContain('storage deposit');
     expect(tow?.description).toContain('equal or smaller class scale');
     expect(tow?.description).toContain('wreck_not_found');
+    expect(tow?.description).toContain('wreck_not_here');
     expect(tow?.description).toContain('at your POI');
     expect(tow?.description).not.toContain('smaller-scale');
     expect(tow?.seeAlso).toContain('storage_deposit');
     const release = COMMANDS.release_tow;
     expect(release?.description).toContain('storage withdraw');
+    expect(release?.description).toContain('without moving the wreck');
+    expect(release?.description).toContain('wreck_busy');
+    expect(release?.description).toContain('same station');
+    expect(release?.description).toContain('auto-dock');
+    expect(release?.description).not.toContain('while docked');
   });
 
   test('storage deposit help documents the fixer tab payment and reserves credits off that field', () => {
@@ -4617,6 +4623,7 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.description).toContain(
       'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
     );
+    expect(COMMANDS.scrap_wreck?.description).toContain('wreck_not_here');
     expect(COMMANDS.scrap_wreck?.seeAlso).toEqual(['sell_wreck', 'tow_wreck', 'get_wrecks', 'storage_view']);
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
@@ -4628,6 +4635,7 @@ describe('command metadata', () => {
     expect(COMMANDS.sell_wreck?.description).toContain(
       'Modules still aboard the wreck are deposited to your storage at this station.',
     );
+    expect(COMMANDS.sell_wreck?.description).toContain('wreck_not_here');
     expect(COMMANDS.sell_wreck?.seeAlso).toEqual([
       'scrap_wreck',
       'tow_wreck',
@@ -4637,6 +4645,42 @@ describe('command metadata', () => {
     ]);
     expect(COMMANDS.sell_wreck?.seeAlso).toContain('view_market');
     expect(COMMANDS.sell_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'sell', method: 'POST' });
+  });
+
+  test('switch_ship, buy_listed_ship, and complete_mission help are curated descriptions', () => {
+    const switchShip =
+      'Switch to a different ship stored at this station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.';
+    const buyListed =
+      'Purchase a ship from the exchange. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.';
+    const completeMission =
+      'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.';
+
+    expect(CORE_COMMAND_OVERRIDES.switch_ship?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.switch_ship).toBe(switchShip);
+    expect(COMMANDS.switch_ship?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.switch_ship);
+    expect(COMMANDS.switch_ship?.description).not.toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/switch_ship']?.summary,
+    );
+    expect(switchShip).not.toContain('`');
+
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.buy_listed_ship?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.buy_listed_ship).toBe(buyListed);
+    expect(COMMANDS.buy_listed_ship?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.buy_listed_ship);
+    expect(COMMANDS.buy_listed_ship?.description).not.toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/buy_listed_ship']?.summary,
+    );
+    expect(buyListed).not.toContain('`');
+
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.complete_mission?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.complete_mission).toBe(completeMission);
+    expect(COMMANDS.complete_mission?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.complete_mission);
+    expect(COMMANDS.complete_mission?.description).not.toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt/complete_mission']?.summary,
+    );
+    expect(completeMission).not.toContain('`');
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).toBe('Clear a wreck tow without moving the wreck');
+    expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).not.toBe(COMMANDS.release_tow?.description);
   });
 
   test('get_map documents optional system_id and chart description', () => {

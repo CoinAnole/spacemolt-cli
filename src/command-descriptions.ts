@@ -6,7 +6,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.",
   browse_ships: 'Browse ships listed for sale at a station',
   buy_insurance: 'Purchase ship insurance',
-  buy_listed_ship: 'Purchase a ship from the exchange',
+  buy_listed_ship:
+    'Purchase a ship from the exchange. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.',
   cancel_commission: 'Cancel a pending or in-progress ship commission',
   cancel_order:
     'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.',
@@ -25,7 +26,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   commission_ship:
     "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station at a tier-four faction yard; ship modules and piloting do not apply, and the arguments are unchanged.",
   commission_status: 'Check the status of your ship commissions',
-  complete_mission: 'Complete a mission and claim rewards',
+  complete_mission:
+    'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.',
   completed_missions: 'List all missions you have completed',
   craft: 'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (storage/faction; cargo for packages).',
   create_buy_order:
@@ -156,7 +158,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   recall_drone: 'Recall a deployed drone back to your bay',
   refit_ship:
     'Dock at a shipyard and reset the active ship to the current class definition. Hull stats reset and the class default loadout is installed. Installed modules and all cargo go to station storage; they are not destroyed. Free. Irreversible. A response message of already_current means the ship already matches current class stats and the default-loadout version, and nothing is applied. To restore your own fit, withdraw a returned module from station storage, then install_mod.',
-  release_tow: 'Release a towed wreck at your current location',
+  release_tow: 'Clear a wreck tow without moving the wreck',
   recruit_personnel: 'Recruit fit crew and marines at a station personnel service',
   reload:
     'Reload one magazine, or up to 50 weapons with weapons=JSON, in one tick. Ammo names inside the array resolve; weapon instance ids do not. Other battle commands do not cost a tick.',
@@ -187,7 +189,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   supply_commission:
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
   survey_system: 'Read ore at charted POIs and scan the current system for hidden POIs',
-  switch_ship: 'Switch to a different ship stored at this station',
+  switch_ship:
+    'Switch to a different ship stored at this station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.',
   tow_wreck: 'Attach a tow line to a wreck for hauling',
   transfer_personnel: 'Transfer fit or injured crew and marines to an allied ship at the same POI',
   treat_personnel:
