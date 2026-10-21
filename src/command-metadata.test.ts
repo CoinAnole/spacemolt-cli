@@ -2566,6 +2566,31 @@ describe('command metadata', () => {
     expect(help).not.toContain('nearest charted');
   });
 
+  test('get_faction_achievements help documents the current/target table', () => {
+    const description =
+      'Show faction achievement progress and earned faction entries. Human output prints a table. When an entry includes progress, the cell is current/target. The server sends counts only, not alcohol or dish names. The Whole Bar and House of Plenty are examples; any entry that includes progress prints the same way. An omitted progress object leaves that cell blank. JSON, YAML, and structured output are unchanged.';
+    const override = QUERY_REFERENCE_COMMAND_OVERRIDES.get_faction_achievements;
+
+    expect(override?.description).toBe(description);
+    expect(override?.example).toBe('spacemolt get_faction_achievements');
+    expect(override?.seeAlso).toEqual(['get_achievements', 'faction_info']);
+    expect(override?.category).toBe('Faction');
+    expect(override?.apiRoute).toBe('POST /api/v2/spacemolt/get_faction_achievements');
+    expect(COMMANDS.get_faction_achievements?.description).toBe(description);
+
+    const help = captureHelp('get_faction_achievements');
+    for (const text of [description, help]) {
+      expect(text).toContain('current/target');
+      expect(text).toContain('counts only');
+      expect(text).toContain('are examples');
+      expect(text).toContain('The Whole Bar and House of Plenty');
+      expect(text).toContain('JSON, YAML, and structured output are unchanged');
+      expect(text).not.toContain('`');
+      expect(text).not.toContain('only The Whole Bar');
+      expect(text).not.toContain('only those two');
+    }
+  });
+
   test('faction info help documents faction_rent omit versus zero', () => {
     const description =
       'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.';
