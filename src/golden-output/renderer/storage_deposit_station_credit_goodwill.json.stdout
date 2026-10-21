@@ -1,0 +1,21 @@
+{
+  "details": {
+    "action": "send_gift",
+    "recipient": "station:stronghold_base",
+    "base_id": "stronghold_base",
+    "credits_sent": 5000,
+    "wallet_remaining": 12000,
+    "goodwill": {
+      "counterparty": "pirate_voss",
+      "need_value": 5000,
+      "bounty_paid": 100,
+      "bounty_remaining": 0,
+      "reputation_before": 0,
+      "reputation_after": 0,
+      "reputation_change": 0,
+      "situation": "stranger",
+      "reply": "Received.",
+      "reply_from": "Voss"
+    }
+  }
+}

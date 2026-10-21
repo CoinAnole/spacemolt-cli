@@ -1,0 +1,17 @@
+
+details:
+  action: gift_ship
+  ship_id: "ship-1"
+  class_id: hull_example
+  recipient: "station:stronghold_base"
+  base_id: stronghold_base
+  disposition: boss_ship
+  goodwill:
+    counterparty: nebula
+    need_value: 360
+    reputation_before: 10
+    reputation_after: 10
+    reputation_change: 0
+    situation: token_items
+    reply: "Booked into inventory: 20 x Steel Plate. Useful goods, small lot. Noted. When you want to move markets, darling, bring a bigger hold."
+    reply_from: "Nebula Trade Federation"
