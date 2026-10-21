@@ -358,10 +358,37 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'wreck_not_found',
     message: 'Wreck not found.',
     suggestion:
-      'That wreck was not found. It must be at your POI; a wreck elsewhere returns wreck_not_found. Run "spacemolt get_wrecks" for wrecks at your POI.',
+      'That wreck was not found. It must be at your POI; a wreck elsewhere returns wreck_not_found. Run "spacemolt get_wrecks" for wrecks at your POI. A stale tow on sell_wreck, scrap_wreck, or a complete_mission wreck turn-in is wreck_not_here, not this code.',
     retryable: false,
     auth: false,
     relatedCommands: ['get_wrecks', 'tow_wreck'],
+  },
+  wreck_not_here: {
+    code: 'wreck_not_here',
+    message: 'The towed wreck is not at your POI.',
+    suggestion:
+      'That tow is stale (wreck_not_here). The wreck is not on your tow line at your POI. Do not retry this command. Run "spacemolt release_tow", go to where the wreck lies, then "spacemolt tow_wreck" again. This is not wreck_not_found. wreck_not_found is what tow_wreck returns when the wreck is not at your POI.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['release_tow', 'tow_wreck', 'get_wrecks'],
+  },
+  wreck_busy: {
+    code: 'wreck_busy',
+    message: 'The wreck is busy.',
+    suggestion:
+      'The wreck is being updated (wreck_busy). Retry "spacemolt release_tow" next tick (one mutation per tick, about 10 seconds). Do not resubmit immediately. This is not wreck_not_here. Finish "spacemolt release_tow" before "spacemolt tow_wreck".',
+    retryable: true,
+    auth: false,
+    relatedCommands: ['release_tow', 'get_status'],
+  },
+  already_towing: {
+    code: 'already_towing',
+    message: 'You are already towing a ship.',
+    suggestion:
+      'You are towing one of your ships (already_towing). The ship must be at the same station. Unload it with "spacemolt storage withdraw <ship_id>". That command can auto-dock first. ship_id is an alias of item_id. Do not retry "spacemolt switch_ship" or "spacemolt buy_listed_ship" until that ship is unloaded. A towed wreck is not this error. Switching hulls, or buying a listed ship, releases a towed wreck where it lies. Use "spacemolt release_tow" only for a wreck.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['storage_withdraw', 'list_ships', 'release_tow'],
   },
   not_found: {
     code: 'not_found',

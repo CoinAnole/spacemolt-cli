@@ -3189,6 +3189,84 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError gives sell_wreck wreck_not_here a release_tow suggestion', () => {
+    const error = { code: 'wreck_not_here', message: 'Wreck not here.' };
+    const sell = captureWriter();
+    displayError('sell_wreck', error, { context: displayErrorContext(sell.writer) });
+    const sellOutput = sell.stderr.join('\n');
+    expect(sellOutput).toContain('Error [wreck_not_here]');
+    expect(sellOutput).toContain('Suggestion:');
+    expect(sellOutput).toContain('release_tow');
+    expect(sellOutput).not.toContain('This error may be retryable.');
+    const suggestion = sellOutput.split('\n').find((line) => line.includes('Suggestion:'));
+
+    for (const command of ['scrap_wreck', 'complete_mission'] as const) {
+      const capture = captureWriter();
+      displayError(command, error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('Error [wreck_not_here]');
+      expect(output).toContain('Suggestion:');
+      expect(output).toContain('release_tow');
+      expect(output).not.toContain('This error may be retryable.');
+      expect(output.split('\n').find((line) => line.includes('Suggestion:'))).toBe(suggestion);
+    }
+
+    const quiet = captureWriter();
+    displayError('sell_wreck', error, {
+      context: displayErrorContext(quiet.writer, { quiet: true, plain: true }),
+    });
+    const quietOutput = quiet.stderr.join('\n');
+    expect(quietOutput).toContain('Error [');
+    expect(quietOutput).not.toContain('Suggestion:');
+    expect(quietOutput).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives release_tow wreck_busy a next-tick suggestion', () => {
+    const capture = captureWriter();
+    displayError(
+      'release_tow',
+      { code: 'wreck_busy', message: 'Wreck busy.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Suggestion:');
+    expect(output).toContain('next tick');
+    expect(output).toContain('This error may be retryable.');
+    expect(output).not.toContain('not a stale tow');
+    expect(output).not.toContain('Do not run');
+
+    const quiet = captureWriter();
+    displayError(
+      'release_tow',
+      { code: 'wreck_busy', message: 'Wreck busy.' },
+      { context: displayErrorContext(quiet.writer, { quiet: true, plain: true }) },
+    );
+    const quietOutput = quiet.stderr.join('\n');
+    expect(quietOutput).toContain('Error [');
+    expect(quietOutput).not.toContain('Suggestion:');
+    expect(quietOutput).not.toContain('This error may be retryable.');
+  });
+
+  test('displayError gives switch_ship already_towing a storage withdraw suggestion', () => {
+    const error = { code: 'already_towing', message: 'Already towing.' };
+    const suggestions = new Map<string, string | undefined>();
+    for (const command of ['switch_ship', 'buy_listed_ship'] as const) {
+      const capture = captureWriter();
+      displayError(command, error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('storage withdraw');
+      expect(output).toContain('same station');
+      expect(output).toContain('auto-dock');
+      expect(output).not.toContain('while docked');
+      expect(output).not.toContain('This error may be retryable.');
+      suggestions.set(
+        command,
+        output.split('\n').find((line) => line.includes('Suggestion:')),
+      );
+    }
+    expect(suggestions.get('buy_listed_ship')).toBe(suggestions.get('switch_ship'));
+  });
+
   test('displayError scopes not_found to wreck loot and inspect', () => {
     const loot = captureWriter();
     displayError(
