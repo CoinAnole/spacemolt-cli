@@ -24,11 +24,6 @@ function exactIntegerText(value: unknown): string | undefined {
   return formatExactGroupedInteger(value) ?? '?';
 }
 
-function pointsCell(value: unknown): string {
-  if (value === undefined) return '';
-  return displayCount(value) ?? '?';
-}
-
 function earnedCell(value: unknown): string {
   if (value === undefined) return '';
   if (value === true) return 'yes';
@@ -45,11 +40,6 @@ function hiddenCell(value: unknown): string {
 function formatTimestampPreview(value: string): string {
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(value);
   return match ? `${match[1]} ${match[2]}` : value;
-}
-
-function earnedAtCell(value: unknown): string {
-  if (typeof value !== 'string' || value === '') return '';
-  return formatTimestampPreview(value);
 }
 
 function progressSide(value: unknown): string | undefined {
@@ -71,10 +61,10 @@ function displayRow(row: Record<string, unknown>): Record<string, unknown> {
     name_display: stringField(row.name),
     id_display: stringField(row.id),
     category_display: stringField(row.category),
-    points_display: pointsCell(row.points),
+    points_display: progressSide(row.points) ?? '',
     earned_display: earnedCell(row.earned),
     progress_display: progressCell(row.progress),
-    earned_at_display: earnedAtCell(row.earned_at),
+    earned_at_display: formatTimestampPreview(stringField(row.earned_at)),
     hidden_display: hiddenCell(row.hidden),
   };
 }
@@ -107,11 +97,9 @@ function emitSummary(summary: unknown): void {
 function emitDescriptions(rows: Array<Record<string, unknown>>): void {
   const lines: string[] = [];
   for (const row of rows) {
-    if (typeof row.description !== 'string') continue;
-    const text = row.description.replace(/\s+/g, ' ').trim();
+    const text = stringField(row.description).replace(/\s+/g, ' ').trim();
     if (text === '') continue;
-    const id = typeof row.id === 'string' && row.id !== '' ? row.id : '?';
-    lines.push(`${id}: ${text}`);
+    lines.push(`${stringField(row.id) || '?'}: ${text}`);
   }
   if (lines.length === 0) return;
   emitLine('');
@@ -119,8 +107,7 @@ function emitDescriptions(rows: Array<Record<string, unknown>>): void {
 }
 
 function emitMessage(message: unknown): void {
-  if (typeof message !== 'string') return;
-  const text = message.trim();
+  const text = stringField(message).trim();
   if (text === '') return;
   emitLine(`${c.dim}${text}${c.reset}`);
 }
