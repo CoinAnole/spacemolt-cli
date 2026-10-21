@@ -15,6 +15,7 @@ import {
 import { summarizeCatalogItemEffects } from './combat-effects.ts';
 import { isAliasCopiedDumpKey } from './dock-state.ts';
 import { emitFixerAccount } from './fixer.ts';
+import { emitGiftGoodwill, giftGoodwillLines } from './gift-goodwill.ts';
 import { emitGiftEntries } from './gifts.ts';
 import {
   c,
@@ -829,15 +830,93 @@ function stationGiftBulkDetail(entry: Record<string, unknown>): string | undefin
   return scalarText(entry.error) ?? scalarText(entry.message) ?? (nested ? scalarText(nested.message) : undefined);
 }
 
+function isBadPresentGoodwill(result: Record<string, unknown>): boolean {
+  if (!Object.hasOwn(result, 'goodwill')) return false;
+  const goodwill = result.goodwill;
+  if (goodwill === undefined || goodwill === null || goodwill === '') return false;
+  return !isRecord(goodwill);
+}
+
+function isRecordOrArray(value: unknown): boolean {
+  return isRecord(value) || Array.isArray(value);
+}
+
+function nestedStationGoodwillRejected(result: Record<string, unknown>): boolean {
+  if (isRecord(result.goodwill)) return false;
+  if (!Array.isArray(result.results)) return false;
+  for (const entry of result.results) {
+    if (!isRecord(entry)) continue;
+    const nestedResult = entry.result;
+    if (!isRecord(nestedResult)) continue;
+    if (isBadPresentGoodwill(nestedResult)) return true;
+  }
+  return false;
+}
+
+function stationGiftReceiptRejected(result: Record<string, unknown>): boolean {
+  return (
+    isBadPresentGoodwill(result) ||
+    isRecordOrArray(result.credits_sent) ||
+    isRecordOrArray(result.wallet_remaining) ||
+    nestedStationGoodwillRejected(result)
+  );
+}
+
+function storageDepositScalarRejected(result: Record<string, unknown>): boolean {
+  if (isStationSendGift(result) || isStationGiftBulk(result)) return stationGiftReceiptRejected(result);
+  return isBadPresentGoodwill(result);
+}
+
+function emitReceiptGoodwill(value: unknown, heading = 'Goodwill:'): boolean {
+  if (giftGoodwillLines(value).length === 0) return false;
+  emitLine('');
+  return emitGiftGoodwill(value, heading);
+}
+
+function bulkGiftAmountCell(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (
+    typeof value === 'bigint' ||
+    typeof value === 'number' ||
+    typeof value === 'string' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+  if (isRecord(value) || Array.isArray(value)) return stringifyApiJson(value);
+  return String(value);
+}
+
+function emitBulkGiftGoodwill(result: Record<string, unknown>, results: Array<Record<string, unknown>>): void {
+  if (isRecord(result.goodwill)) {
+    emitReceiptGoodwill(result.goodwill);
+    return;
+  }
+  for (const entry of results) {
+    const nestedResult = isRecord(entry.result) ? entry.result : undefined;
+    if (!nestedResult || !isRecord(nestedResult.goodwill)) continue;
+    const itemId = entry.item_id;
+    const heading = typeof itemId === 'string' && itemId !== '' ? `Goodwill (${itemId}):` : 'Goodwill:';
+    emitReceiptGoodwill(nestedResult.goodwill, heading);
+  }
+}
+
 function renderStationGift(result: Record<string, unknown>): boolean {
   if (isStationSendGift(result)) {
+    if (stationGiftReceiptRejected(result)) return false;
     emitLine(`\n${c.bright}=== Station Gift ===${c.reset}`);
     emitOptionalValue('Station', stationGiftStation(result));
     emitOptionalValue('Item', result.item_id);
     emitOptionalValue('Quantity', presentCount(result.quantity) ?? result.quantity);
     emitOptionalValue('Source', result.source);
     emitStationGiftRemaining(result);
+    if (Object.hasOwn(result, 'credits_sent')) emitOptionalValue('Credits Sent', result.credits_sent);
+    if (Object.hasOwn(result, 'wallet_remaining')) emitOptionalValue('Wallet Remaining', result.wallet_remaining);
+    if (Object.hasOwn(result, 'disposition') && !isRecord(result.disposition)) {
+      emitOptionalValue('Disposition', result.disposition);
+    }
     if (typeof result.message === 'string' && result.message) emitLine(result.message);
+    emitReceiptGoodwill(result.goodwill);
     emitFixerAccount(result.fixer, true);
     return true;
   }
@@ -845,6 +924,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
   if (!isStationGiftBulk(result)) return false;
   const results = bulkStationGiftResults(result);
   if (!results) return false;
+  if (stationGiftReceiptRejected(result)) return false;
 
   const nestedStation = results
     .map((entry) => (isRecord(entry.result) ? stationGiftStation(entry.result) : undefined))
@@ -861,6 +941,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
 
   if (results.length === 0) {
     emitLine('No results.');
+    emitBulkGiftGoodwill(result, results);
     emitFixerAccount(result.fixer, true);
     return true;
   }
@@ -872,6 +953,8 @@ function renderStationGift(result: Record<string, unknown>): boolean {
       status_display: entry.success === true ? 'yes' : entry.success === false ? 'no' : undefined,
       remaining_display: stationGiftRemainingDisplay(nested ?? {}),
       detail_display: stationGiftBulkDetail(entry),
+      credits_sent_display: bulkGiftAmountCell(nested?.credits_sent),
+      wallet_remaining_display: bulkGiftAmountCell(nested?.wallet_remaining),
     };
   });
   const columns: Array<[string, string[]]> = [
@@ -879,6 +962,14 @@ function renderStationGift(result: Record<string, unknown>): boolean {
     ['Qty', ['quantity']],
     ['OK', ['status_display']],
   ];
+  insertOptionalColumn(columns, rows, 'Credits Sent', ['credits_sent_display'], 'Qty');
+  insertOptionalColumn(
+    columns,
+    rows,
+    'Wallet Remaining',
+    ['wallet_remaining_display'],
+    columns.some(([label]) => label === 'Credits Sent') ? 'Credits Sent' : 'Qty',
+  );
   insertOptionalColumn(columns, rows, 'Remaining', ['remaining_display'], 'OK');
   insertOptionalColumn(
     columns,
@@ -888,6 +979,7 @@ function renderStationGift(result: Record<string, unknown>): boolean {
     rows.some((row) => row.remaining_display !== undefined) ? 'Remaining' : 'OK',
   );
   printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
+  emitBulkGiftGoodwill(result, results);
   emitFixerAccount(result.fixer, true);
   return true;
 }
@@ -1744,15 +1836,24 @@ export const genericFormatters = [
   ),
 
   // Before the scalar dump so bulk results expand.
-  formatter((r) => renderStationGift(r), { commands: ['storage_deposit'] }),
+  // A decline must skip shape fallbacks: `results` is also the trade-intel list.
+  formatter((r) => renderStationGift(r), {
+    commands: ['storage_deposit'],
+    suppressShapeFallbackOnDecline: true,
+  }),
 
   // Conservative fallback for scalar-only action responses.
   formatter(
     (r, command) => {
+      // Return before emitLine so a non-record goodwill or a rejected station gift cannot print a partial receipt.
+      if (commandNameEquals(command, 'storage_deposit') && storageDepositScalarRejected(r)) return false;
       const depositFixer = commandNameEquals(command, 'storage_deposit') && isRecord(r.fixer) ? r.fixer : undefined;
+      const depositGoodwill =
+        commandNameEquals(command, 'storage_deposit') && isRecord(r.goodwill) ? r.goodwill : undefined;
       // Skip dest keys flattened from sibling location; keep native details fields.
       const entries = Object.entries(r).filter(([key, value]) => {
         if (depositFixer && key === 'fixer') return false;
+        if (depositGoodwill && key === 'goodwill') return false;
         return value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key);
       });
       const isStorageTransfer =
@@ -1776,6 +1877,7 @@ export const genericFormatters = [
         }
       }
       if (entries.length === 1 && r.action !== undefined) emitLine(`${c.green}OK${c.reset}`);
+      if (depositGoodwill) emitReceiptGoodwill(depositGoodwill);
       if (depositFixer) emitFixerAccount(depositFixer, true);
       return true;
     },

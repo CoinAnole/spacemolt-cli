@@ -1,0 +1,17 @@
+
+=== Station Gift ===
+Station: station:grand_exchange_station
+Item: steel_plate
+Quantity: 20
+Source: cargo
+Cargo remaining: 80
+
+Goodwill:
+  Counterparty: nebula
+  Need value: 360
+  Reputation before: 10
+  Reputation after: 10
+  Reputation change: 0
+  Situation: token_items
+  Reply: Booked into inventory: 20 x Steel Plate. Useful goods, small lot. Noted. When you want to move markets, darling, bring a bigger hold.
+  Reply from: Nebula Trade Federation

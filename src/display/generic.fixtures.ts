@@ -1437,6 +1437,59 @@ export const storageDepositStationGiftFixture = {
   },
 };
 
+export const giftGoodwillExample = {
+  counterparty: 'nebula',
+  need_value: 360,
+  reputation_before: 10,
+  reputation_after: 10,
+  reputation_change: 0,
+  situation: 'token_items',
+  reply:
+    'Booked into inventory: 20 x Steel Plate. Useful goods, small lot. Noted. When you want to move markets, darling, bring a bigger hold.',
+  reply_from: 'Nebula Trade Federation',
+};
+
+export const storageDepositStationGiftGoodwillFixture = {
+  details: {
+    ...storageDepositStationGiftFixture.details,
+    goodwill: giftGoodwillExample,
+  },
+};
+
+export const storageDepositStationCreditGoodwillFixture = {
+  details: {
+    action: 'send_gift',
+    recipient: 'station:stronghold_base',
+    base_id: 'stronghold_base',
+    credits_sent: 5000,
+    wallet_remaining: 12000,
+    goodwill: {
+      counterparty: 'pirate_voss',
+      need_value: 5000,
+      bounty_paid: 100,
+      bounty_remaining: 0,
+      reputation_before: 0,
+      reputation_after: 0,
+      reputation_change: 0,
+      situation: 'stranger',
+      reply: 'Received.',
+      reply_from: 'Voss',
+    },
+  },
+};
+
+export const storageDepositGiftShipFixture = {
+  details: {
+    action: 'gift_ship',
+    ship_id: 'ship-1',
+    class_id: 'hull_example',
+    recipient: 'station:stronghold_base',
+    base_id: 'stronghold_base',
+    disposition: 'boss_ship',
+    goodwill: giftGoodwillExample,
+  },
+};
+
 /** Top-level SendGiftResponse for a fixer tab payment (no missions, player, or cargo). */
 export const storageDepositFixerTabFixture = {
   action: 'send_gift',
@@ -1686,6 +1739,21 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   storage_deposit_station_gift: {
     command: 'storage_deposit',
     fixture: storageDepositStationGiftFixture,
+    schemaTarget: 'details',
+  },
+  storage_deposit_station_gift_goodwill: {
+    command: 'storage_deposit',
+    fixture: storageDepositStationGiftGoodwillFixture,
+    schemaTarget: 'details',
+  },
+  storage_deposit_station_credit_goodwill: {
+    command: 'storage_deposit',
+    fixture: storageDepositStationCreditGoodwillFixture,
+    schemaTarget: 'details',
+  },
+  storage_deposit_gift_ship: {
+    command: 'storage_deposit',
+    fixture: storageDepositGiftShipFixture,
     schemaTarget: 'details',
   },
   storage_deposit_bulk_station_gift: {

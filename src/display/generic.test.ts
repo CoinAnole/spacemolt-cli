@@ -19,11 +19,15 @@ import {
   getActiveMissionsFixerFixture,
   getMissionsFixerFixture,
   getMissionsReliefOnlyFixture,
+  giftGoodwillExample,
   missionsFixture,
   storageDepositAutoDockedFixture,
   storageDepositBulkStationGiftFixture,
   storageDepositFixerTabFixture,
+  storageDepositGiftShipFixture,
+  storageDepositStationCreditGoodwillFixture,
   storageDepositStationGiftFixture,
+  storageDepositStationGiftGoodwillFixture,
   storageWithdrawAutoDockedFixture,
   undockFixture,
 } from './generic.fixtures.ts';
@@ -67,6 +71,34 @@ function earthStationLocation(dockedAt: string | null): Record<string, unknown> 
 
 function headingCount(stdout: string, heading: string): number {
   return stdout.split(`=== ${heading} ===`).length - 1;
+}
+
+function depositStdout(result: Record<string, unknown>, output: Partial<GlobalOptions> = {}): string {
+  return renderStructuredResult('storage_deposit', result, { ...options, ...output }, context).stdout.join('\n');
+}
+
+function resultsHeaderLabels(stdout: string): string[] {
+  const line = stdout.split('\n').find((entry) => /^\s*Item\s*\|/.test(entry));
+  if (!line) return [];
+  return line
+    .split('|')
+    .map((cell) => cell.trim())
+    .filter((cell) => cell !== '');
+}
+
+function stationGiftBody(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    details: {
+      action: 'send_gift',
+      recipient: 'station:grand_exchange_station',
+      base_id: 'grand_exchange_station',
+      source: 'cargo',
+      item_id: 'steel_plate',
+      quantity: 20,
+      cargo_remaining: 80,
+      ...extra,
+    },
+  };
 }
 
 function dockEnvelope(extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -652,6 +684,11 @@ test('renders a station material gift receipt instead of the scalar send-gift du
   expect(stdout).not.toContain('=== Send Gift ===');
   expect(stdout).not.toContain('Auto Docked');
   expect(stdout).not.toContain('[AUTO-DOCKED]');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('Credits Sent');
+  expect(stdout).not.toContain('Wallet Remaining');
+  expect(stdout).not.toContain('Disposition');
+  expect(stdout).not.toContain('Base Id');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('Donated 20 steel plates without payment.');
 });
@@ -874,6 +911,7 @@ test('keeps player send_gift on the scalar dump', () => {
   expect(stdout).toContain('Recipient: PlayerName');
   expect(stdout).toContain('Base Id: earth_station');
   expect(stdout).not.toContain('Fixer:');
+  expect(stdout).not.toContain('Goodwill:');
   expect(stdout).not.toContain('=== Station Gift ===');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -888,6 +926,7 @@ test.each(['storage_deposit', 'storage deposit'])('prints the fixer snapshot und
   expect(stdout).toContain('Credits Sent: 500');
   expect(stdout).toContain('Wallet Remaining: 1500');
   expect(stdout).not.toContain('Wallet Remaining: 1,500');
+  expect(stdout).not.toContain('Goodwill:');
   expect(stdout.split('Fixer:').length - 1).toBe(1);
   expect(stdout).toContain('Debt: 1,500');
   expect(stdout).toContain('Allowance: 5,000');
@@ -1040,6 +1079,7 @@ test('still dumps raw JSON when a storage deposit has another nested object', ()
       base_id: 'earth_station',
       credits_sent: 500,
       fixer: storageDepositFixerTabFixture.fixer,
+      goodwill: giftGoodwillExample,
       audit: { reason: 'extra' },
     },
     options,
@@ -1150,6 +1190,7 @@ test('expands bulk station-gift success and failure instead of a results count',
   expect(stdout).toContain('Station: station:grand_exchange_station');
   expect(stdout).toContain('2 requested | 1 succeeded | 1 failed');
   expect(stdout).toContain('=== Results ===');
+  expect(resultsHeaderLabels(stdout)).toEqual(['Item', 'Qty', 'OK', 'Remaining', 'Detail']);
   expect(stdout).toContain('steel_plate');
   expect(stdout).toContain('quest_token');
   expect(stdout).toContain('yes');
@@ -1216,7 +1257,7 @@ test('renders bulk station-gift all-failure without remaining counts', () => {
             item_id: 'credits',
             quantity: 100,
             success: false,
-            error: 'Credits cannot be donated to a station.',
+            error: 'Quest items cannot be donated to a station.',
           },
         ],
       },
@@ -1230,7 +1271,8 @@ test('renders bulk station-gift all-failure without remaining counts', () => {
   expect(stdout).toContain('=== Station Gift ===');
   expect(stdout).toContain('1 requested | 0 succeeded | 1 failed');
   expect(stdout).toContain('credits');
-  expect(stdout).toContain('Credits cannot be donated to a station.');
+  expect(stdout).toContain('Quest items cannot be donated to a station.');
+  expect(stdout).not.toContain('Credits cannot be donated to a station.');
   expect(stdout).not.toContain('Remaining');
   expect(stdout).not.toContain('cargo ');
   expect(stdout).not.toContain('=== Response ===');
@@ -1289,6 +1331,763 @@ test('station gift JSON keeps SendGiftResponse field names', () => {
   expect(parsed.details).toEqual(storageDepositStationGiftFixture.details);
   expect(parsed.details).toHaveProperty('cargo_remaining', 80);
   expect(parsed.details).toHaveProperty('recipient', 'station:grand_exchange_station');
+});
+
+test('prints the OpenAPI goodwill example on a station item gift', () => {
+  const stdout = depositStdout(storageDepositStationGiftGoodwillFixture);
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Item: steel_plate');
+  expect(stdout).toContain('Quantity: 20');
+  expect(stdout).toContain('Cargo remaining: 80\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout).toContain('Need value: 360');
+  expect(stdout).toContain('Reputation before: 10');
+  expect(stdout).toContain('Reputation after: 10');
+  expect(stdout).toContain('Reputation change: 0');
+  expect(stdout).toContain('Situation: token_items');
+  expect(stdout).toContain(
+    '  Reply: Booked into inventory: 20 x Steel Plate. Useful goods, small lot. Noted. When you want to move markets, darling, bring a bigger hold.',
+  );
+  expect(stdout).toContain('  Reply from: Nebula Trade Federation');
+  expect(stdout.indexOf('Need value:')).toBeLessThan(stdout.indexOf('Reputation before:'));
+  expect(stdout.indexOf('Reputation before:')).toBeLessThan(stdout.indexOf('Reputation after:'));
+  expect(stdout.indexOf('Reputation after:')).toBeLessThan(stdout.indexOf('Reputation change:'));
+  expect(stdout.indexOf('Reputation change:')).toBeLessThan(stdout.indexOf('Situation:'));
+  expect(stdout.indexOf('Situation:')).toBeLessThan(stdout.indexOf('Reply:'));
+  expect(stdout.indexOf('Reply:')).toBeLessThan(stdout.indexOf('Reply from:'));
+  expect(stdout).not.toContain('Bounty');
+  expect(stdout).not.toContain('Message:');
+  expect(stdout).not.toContain('Credits Sent');
+  expect(stdout).not.toContain('Base Id');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints ungrouped station credit totals and bounty lines', () => {
+  const stdout = depositStdout(storageDepositStationCreditGoodwillFixture);
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('Station: station:stronghold_base');
+  expect(stdout).toContain('Credits Sent: 5000');
+  expect(stdout).toContain('Wallet Remaining: 12000');
+  expect(stdout).toContain('Wallet Remaining: 12000\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: pirate_voss');
+  expect(stdout).toContain('Need value: 5000');
+  expect(stdout).toContain('Bounty paid: 100');
+  expect(stdout).toContain('Bounty remaining: 0');
+  expect(stdout).toContain('Reputation change: 0');
+  expect(stdout).toContain('Situation: stranger');
+  expect(stdout).toContain('Reply: Received.');
+  expect(stdout).toContain('Reply from: Voss');
+  expect(stdout.indexOf('Credits Sent:')).toBeLessThan(stdout.indexOf('Wallet Remaining:'));
+  expect(stdout.indexOf('Wallet Remaining:')).toBeLessThan(stdout.indexOf('Goodwill:'));
+  expect(stdout.indexOf('Need value:')).toBeLessThan(stdout.indexOf('Bounty paid:'));
+  expect(stdout.indexOf('Bounty paid:')).toBeLessThan(stdout.indexOf('Bounty remaining:'));
+  expect(stdout.indexOf('Bounty remaining:')).toBeLessThan(stdout.indexOf('Reputation before:'));
+  expect(stdout).not.toContain('5,000');
+  expect(stdout).not.toContain('12,000');
+  expect(stdout).not.toContain('pirate:');
+  expect(stdout).not.toContain('Item:');
+  expect(stdout).not.toContain('Message:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints an explicit zero credit total and omits a missing wallet', () => {
+  const zero = depositStdout(
+    stationGiftBody({
+      item_id: undefined,
+      quantity: undefined,
+      cargo_remaining: undefined,
+      credits_sent: 0,
+      wallet_remaining: 0,
+    }),
+  );
+  expect(zero).toContain('Credits Sent: 0');
+  expect(zero).toContain('Wallet Remaining: 0');
+  expect(zero).not.toContain('=== Response ===');
+
+  const omitted = depositStdout(
+    stationGiftBody({
+      item_id: undefined,
+      quantity: undefined,
+      cargo_remaining: undefined,
+      credits_sent: 5000,
+    }),
+  );
+  expect(omitted).toContain('Credits Sent: 5000');
+  expect(omitted).not.toContain('Wallet Remaining');
+  expect(omitted).not.toContain('=== Response ===');
+});
+
+test('prints station credit strings and floats without grouping', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      item_id: undefined,
+      quantity: undefined,
+      cargo_remaining: undefined,
+      credits_sent: '5000',
+      wallet_remaining: 1500.5,
+    }),
+  );
+
+  expect(stdout).toContain('Credits Sent: 5000');
+  expect(stdout).toContain('Wallet Remaining: 1500.5');
+  expect(stdout).not.toContain('1,500.5');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([null, ''])('treats %j station goodwill as absent', (goodwill) => {
+  const stdout = depositStdout(stationGiftBody({ goodwill }));
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([null, ''])('omits %j station credit totals', (amount) => {
+  const stdout = depositStdout(stationGiftBody({ credits_sent: amount, wallet_remaining: amount }));
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('Credits Sent');
+  expect(stdout).not.toContain('Wallet Remaining');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints station disposition and skips a record disposition', () => {
+  const printed = depositStdout(stationGiftBody({ disposition: 'scrapped' }));
+  expect(printed).toContain('Disposition: scrapped');
+  expect(printed).toContain('Cargo remaining: 80\nDisposition: scrapped');
+  expect(printed).not.toContain('=== Response ===');
+
+  const skipped = depositStdout(stationGiftBody({ disposition: { kind: 'scrapped' } }));
+  expect(skipped).toContain('=== Station Gift ===');
+  expect(skipped).not.toContain('Disposition');
+  expect(skipped).not.toContain('=== Response ===');
+});
+
+test('prints a station gift message before goodwill and fixer', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      message: 'Donated 20 steel plates without payment.',
+      goodwill: giftGoodwillExample,
+      fixer: storageDepositFixerTabFixture.fixer,
+    }),
+  );
+
+  expect(stdout).toContain('Donated 20 steel plates without payment.\n\nGoodwill:');
+  expect(stdout).toContain('Reply from: Nebula Trade Federation\n\nFixer:');
+  expect(stdout.indexOf('Cargo remaining: 80')).toBeLessThan(stdout.indexOf('Donated 20 steel plates'));
+  expect(stdout.indexOf('Donated 20 steel plates')).toBeLessThan(stdout.indexOf('Goodwill:'));
+  expect(stdout.indexOf('Goodwill:')).toBeLessThan(stdout.indexOf('Fixer:'));
+  expect(stdout.split('Fixer:').length - 1).toBe(1);
+  expect(stdout).not.toContain('Message:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('orders goodwill labels and prints a negative reputation change', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      goodwill: {
+        bounty_remaining: 0,
+        bounty_paid: 100,
+        ...giftGoodwillExample,
+        reputation_change: -3,
+      },
+    }),
+  );
+
+  expect(stdout.indexOf('Need value:')).toBeLessThan(stdout.indexOf('Bounty paid: 100'));
+  expect(stdout.indexOf('Bounty paid: 100')).toBeLessThan(stdout.indexOf('Bounty remaining: 0'));
+  expect(stdout.indexOf('Bounty remaining: 0')).toBeLessThan(stdout.indexOf('Reputation before:'));
+  expect(stdout).toContain('Reputation change: -3');
+  expect(stdout).not.toContain('Reputation change: −3');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('indents goodwill reply continuation lines', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      goodwill: { ...giftGoodwillExample, reply: 'line one\nline two\r\nline three' },
+    }),
+  );
+
+  expect(stdout).toContain('  Reply: line one\n    line two\n    line three');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints extra goodwill keys after the fixed labels', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      goodwill: {
+        extra_note: 'kept',
+        tags: ['a'],
+        meta: { a: 1 },
+        ...giftGoodwillExample,
+        need_value: { raw: 1 },
+      },
+    }),
+  );
+
+  expect(stdout).toContain('Need value: {"raw":1}');
+  expect(stdout).toContain('Reply from: Nebula Trade Federation');
+  expect(stdout.indexOf('Reply from:')).toBeLessThan(stdout.indexOf('Extra Note: kept'));
+  expect(stdout.indexOf('Extra Note: kept')).toBeLessThan(stdout.indexOf('Tags: 1 item(s)'));
+  expect(stdout.indexOf('Tags: 1 item(s)')).toBeLessThan(stdout.indexOf('Meta: {"a":1}'));
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits an empty goodwill record without a heading', () => {
+  const stdout = depositStdout(stationGiftBody({ goodwill: {} }));
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([
+  ['string goodwill', { goodwill: 'x' }],
+  ['numeric goodwill', { goodwill: 1 }],
+  ['boolean goodwill', { goodwill: false }],
+  ['array goodwill', { goodwill: ['x'] }],
+  ['record credits_sent', { credits_sent: { amount: 1 } }],
+  ['array credits_sent', { credits_sent: [1] }],
+  ['record wallet_remaining', { wallet_remaining: { amount: 1 } }],
+  ['array wallet_remaining', { wallet_remaining: [1] }],
+])('station gift %s raw-dumps without a station header', (_name, extra) => {
+  const stdout = depositStdout(stationGiftBody(extra));
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Station Gift ===');
+});
+
+test.each([
+  [
+    'gift_ship',
+    {
+      action: 'gift_ship',
+      ship_id: 'ship-1',
+      class_id: 'hull_example',
+      recipient: 'station:stronghold_base',
+      base_id: 'stronghold_base',
+      disposition: 'boss_ship',
+      goodwill: 'x',
+    },
+    '=== Gift Ship ===',
+  ],
+  [
+    'player send_gift',
+    {
+      action: 'send_gift',
+      recipient: 'PlayerName',
+      base_id: 'earth_station',
+      goodwill: 'x',
+    },
+    '=== Send Gift ===',
+  ],
+] as const)('%s with non-record goodwill raw-dumps', (_name, details, title) => {
+  const stdout = depositStdout({ details });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain(title);
+  expect(stdout).not.toContain('=== Station Gift ===');
+});
+
+test('prints gift_ship disposition and goodwill instead of a raw dump', () => {
+  const stdout = depositStdout(storageDepositGiftShipFixture);
+
+  expect(stdout).toContain('=== Gift Ship ===');
+  expect(stdout).toContain('Action: gift_ship');
+  expect(stdout).toContain('Ship Id: ship-1');
+  expect(stdout).toContain('Class Id: hull_example');
+  expect(stdout).toContain('Recipient: station:stronghold_base');
+  expect(stdout).toContain('Base Id: stronghold_base');
+  expect(stdout).toContain('Disposition: boss_ship');
+  expect(stdout).toContain('Disposition: boss_ship\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout.indexOf('Action: gift_ship')).toBeLessThan(stdout.indexOf('Ship Id:'));
+  expect(stdout.indexOf('Ship Id:')).toBeLessThan(stdout.indexOf('Class Id:'));
+  expect(stdout.indexOf('Class Id:')).toBeLessThan(stdout.indexOf('Recipient:'));
+  expect(stdout.indexOf('Recipient:')).toBeLessThan(stdout.indexOf('Base Id:'));
+  expect(stdout.indexOf('Base Id:')).toBeLessThan(stdout.indexOf('Disposition:'));
+  expect(stdout.indexOf('Disposition:')).toBeLessThan(stdout.indexOf('Goodwill:'));
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Message:');
+});
+
+test('prints gift_ship disposition without goodwill', () => {
+  const details: Record<string, unknown> = { ...storageDepositGiftShipFixture.details };
+  delete details.goodwill;
+  const stdout = depositStdout({ details });
+
+  expect(stdout).toContain('=== Gift Ship ===');
+  expect(stdout).toContain('Disposition: boss_ship');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints goodwill null on gift_ship as an absent block', () => {
+  const stdout = depositStdout({
+    details: { ...storageDepositGiftShipFixture.details, goodwill: null },
+  });
+  expect(stdout).toContain('=== Gift Ship ===');
+  expect(stdout).toContain('Disposition: boss_ship');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints player send_gift goodwill on the scalar receipt', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'send_gift',
+      recipient: 'PlayerName',
+      base_id: 'earth_station',
+      source: 'cargo',
+      item_id: 'steel_plate',
+      quantity: 5,
+      cargo_remaining: 10,
+      goodwill: giftGoodwillExample,
+    },
+  });
+
+  expect(stdout).toContain('=== Send Gift ===');
+  expect(stdout).toContain('Recipient: PlayerName');
+  expect(stdout).toContain('Cargo Remaining: 10\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints empire gift credits with goodwill and without a base id', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'empire_gift_credits',
+      empire_id: 'solarian',
+      empire_name: 'Solarian',
+      credits_sent: 5000,
+      wallet_remaining: 10000,
+      goodwill: giftGoodwillExample,
+    },
+  });
+
+  expect(stdout).toContain('=== Empire Gift Credits ===');
+  expect(stdout).toContain('Empire Id: solarian');
+  expect(stdout).toContain('Empire Name: Solarian');
+  expect(stdout).toContain('Credits Sent: 5000');
+  expect(stdout).toContain('Wallet Remaining: 10000');
+  expect(stdout).toContain('Wallet Remaining: 10000\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout).not.toContain('Base Id');
+  expect(stdout).not.toContain('Fleet Id');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each(['self', 'solarian'])('prints goodwill on a non-station bulk deposit to %s', (target) => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target,
+      results: [
+        {
+          item_id: 'ore_iron',
+          quantity: 12,
+          success: true,
+          result: {
+            action: 'deposit_items',
+            item_id: 'ore_iron',
+            quantity: 12,
+            storage_total: 42,
+            cargo_remaining: 8,
+          },
+        },
+      ],
+      goodwill: giftGoodwillExample,
+    },
+  });
+
+  expect(stdout).toContain('=== Bulk Deposit ===');
+  expect(stdout).toContain('Results: 1 item(s)');
+  expect(stdout).toContain('\n\nGoodwill:');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout).not.toContain('ore_iron');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Results ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inserts bulk credit columns after qty', () => {
+  const both = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 20,
+          success: true,
+          message: 'Donated.',
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            credits_sent: 5000,
+            wallet_remaining: 12000,
+            cargo_remaining: 80,
+          },
+        },
+      ],
+    },
+  });
+  expect(resultsHeaderLabels(both)).toEqual([
+    'Item',
+    'Qty',
+    'Credits Sent',
+    'Wallet Remaining',
+    'OK',
+    'Remaining',
+    'Detail',
+  ]);
+  expect(both).toContain('5000');
+  expect(both).toContain('12000');
+  expect(both).not.toContain('5,000');
+  expect(both).not.toContain('12,000');
+
+  const walletOnly = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 2,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            wallet_remaining: 0,
+          },
+        },
+      ],
+    },
+  });
+  expect(resultsHeaderLabels(walletOnly)).toEqual(['Item', 'Qty', 'Wallet Remaining', 'OK']);
+  expect(walletOnly).toContain('0');
+
+  const creditsOnly = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 2,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            credits_sent: 10.5,
+          },
+        },
+      ],
+    },
+  });
+  expect(resultsHeaderLabels(creditsOnly)).toEqual(['Item', 'Qty', 'Credits Sent', 'OK']);
+  expect(creditsOnly).toContain('10.5');
+
+  const split = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 2,
+      succeeded: 2,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            credits_sent: 5000,
+          },
+        },
+        {
+          item_id: 'copper_wire',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            wallet_remaining: '12000',
+          },
+        },
+      ],
+    },
+  });
+  expect(resultsHeaderLabels(split)).toEqual(['Item', 'Qty', 'Credits Sent', 'Wallet Remaining', 'OK']);
+});
+
+test('prints one parent goodwill block under a bulk station table', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      goodwill: giftGoodwillExample,
+      fixer: storageDepositFixerTabFixture.fixer,
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 20,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            item_id: 'steel_plate',
+            quantity: 20,
+            goodwill: 'hidden',
+            cargo_remaining: 80,
+          },
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('=== Results ===');
+  expect(stdout.split('Goodwill:').length - 1).toBe(1);
+  expect(stdout).not.toContain('Goodwill (steel_plate)');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout.indexOf('=== Results ===')).toBeLessThan(stdout.indexOf('Goodwill:'));
+  expect(stdout.indexOf('Goodwill:')).toBeLessThan(stdout.indexOf('Fixer:'));
+  expect(stdout).toContain('Reply from: Nebula Trade Federation\n\nFixer:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints nested goodwill blocks when the parent key is absent', () => {
+  const second = { ...giftGoodwillExample, counterparty: 'pirate_voss', reply: 'Second reply.' };
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 2,
+      succeeded: 2,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            goodwill: giftGoodwillExample,
+          },
+        },
+        {
+          item_id: 'copper_wire',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            goodwill: second,
+          },
+        },
+        {
+          item_id: '',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            goodwill: { ...giftGoodwillExample, reply: 'No item heading.' },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('Goodwill (steel_plate):');
+  expect(stdout).toContain('Goodwill (copper_wire):');
+  expect(stdout).toContain('\n\nGoodwill (steel_plate):');
+  expect(stdout.indexOf('Goodwill (steel_plate):')).toBeLessThan(stdout.indexOf('Goodwill (copper_wire):'));
+  expect(stdout.indexOf('Goodwill (copper_wire):')).toBeLessThan(stdout.indexOf('No item heading.'));
+  expect(stdout).toContain('Counterparty: pirate_voss');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test.each([undefined, null, ''])('prints nested goodwill when parent goodwill is %j', (parent) => {
+  const details: Record<string, unknown> = {
+    action: 'bulk_deposit',
+    requested: 1,
+    succeeded: 1,
+    failed: 0,
+    target: 'station:grand_exchange_station',
+    results: [
+      {
+        item_id: 'steel_plate',
+        quantity: 1,
+        success: true,
+        result: {
+          action: 'send_gift',
+          recipient: 'station:grand_exchange_station',
+          goodwill: giftGoodwillExample,
+        },
+      },
+    ],
+  };
+  if (parent !== undefined) details.goodwill = parent;
+  const stdout = depositStdout({ details });
+  expect(stdout).toContain('Goodwill (steel_plate):');
+  expect(stdout).toContain('Counterparty: nebula');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not print goodwill for an empty parent record even when a row has one', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      goodwill: {},
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            goodwill: { ...giftGoodwillExample, reply: 'NESTED ONLY' },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('=== Results ===');
+  expect(stdout).not.toContain('Goodwill:');
+  expect(stdout).not.toContain('NESTED ONLY');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints parent goodwill after no results and before fixer', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 0,
+      succeeded: 0,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [],
+      goodwill: giftGoodwillExample,
+      fixer: storageDepositFixerTabFixture.fixer,
+    },
+  });
+
+  expect(stdout).toContain('=== Station Gift ===');
+  expect(stdout).toContain('No results.\n\nGoodwill:');
+  expect(stdout).toContain('Reply from: Nebula Trade Federation\n\nFixer:');
+  expect(stdout).toContain('Debt: 1,500');
+  expect(stdout.indexOf('Goodwill:')).toBeLessThan(stdout.indexOf('Fixer:'));
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('empty bulk results with a non-record parent goodwill raw-dumps', () => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 0,
+      succeeded: 0,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [],
+      goodwill: 'x',
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('No results.');
+});
+
+test.each(['x', 1, ['x']])('nested non-record goodwill %j raw-dumps when the parent key is absent', (goodwill) => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 1,
+      failed: 0,
+      target: 'station:grand_exchange_station',
+      results: [
+        {
+          item_id: 'steel_plate',
+          quantity: 1,
+          success: true,
+          result: {
+            action: 'send_gift',
+            recipient: 'station:grand_exchange_station',
+            goodwill,
+          },
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Results ===');
+  expect(stdout).not.toContain('=== Bulk Deposit ===');
+});
+
+test.each([
+  ['record', { amount: 1 }],
+  ['array', [100]],
+])('bulk station gift with a parent %s credit total raw-dumps', (_name, credits) => {
+  const stdout = depositStdout({
+    details: {
+      action: 'bulk_deposit',
+      requested: 1,
+      succeeded: 0,
+      failed: 1,
+      target: 'station:grand_exchange_station',
+      credits_sent: credits,
+      results: [
+        {
+          item_id: 'credits',
+          quantity: 100,
+          success: false,
+          error: 'Quest items cannot be donated to a station.',
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Station Gift ===');
+  expect(stdout).not.toContain('=== Bulk Deposit ===');
+  expect(stdout).not.toContain('=== Results ===');
+});
+
+test('goodwill fixture json stays the raw object', () => {
+  const stdout = depositStdout(storageDepositStationGiftGoodwillFixture, { format: 'json' });
+  expect(JSON.parse(stdout)).toEqual(storageDepositStationGiftGoodwillFixture);
+  expect(stdout).not.toContain('Goodwill:');
 });
 
 test('renders catalog ships with prestige lock notes when present', () => {
