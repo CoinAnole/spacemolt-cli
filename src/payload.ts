@@ -340,7 +340,8 @@ function isReservedStorageTarget(command: string, field: string, value: string, 
     normalized === 'faction' ||
     normalized === 'fixer:tab' ||
     normalized.startsWith('faction:') ||
-    normalized.startsWith('station:')
+    normalized.startsWith('station:') ||
+    normalized.startsWith('pirate:')
   ) {
     return true;
   }

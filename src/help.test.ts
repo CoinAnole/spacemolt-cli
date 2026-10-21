@@ -831,7 +831,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('storage view [station_id] [target=self|faction]');
     expect(output).toContain(
-      'storage deposit [item_id] [qty] [items=JSON] [target=self|faction|player|station:…] [source=cargo|storage|faction]',
+      'storage deposit [item_id] [qty] [items=JSON] [credits=N] [target=self|faction|player|empire|pirate:<crew>|station:…] [source=cargo|storage|faction]',
     );
     expect(output).toContain(
       'storage deposit source=faction target=faction [bucket=name-or-id] [dest_bucket=name-or-id] [items=JSON]',
@@ -1042,7 +1042,11 @@ describe('help output branches', () => {
     expect(showCommandHelp('storage deposit', capture.writer)).toBe(true);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('credits - Credits to gift to another player. Not valid for station: targets.');
+    expect(output).toContain(
+      'credits - Credits to gift to another player, to donate to an empire from anywhere, to a station:<id> while docked there, or to a pirate:<crew> from anywhere.',
+    );
+    expect(output).not.toContain('Not valid for station: targets.');
+    expect(output).toContain('Not valid for fixer:tab.');
     expect(output).not.toContain('donate to an empire treasury');
   });
 
@@ -1066,11 +1070,14 @@ describe('help output branches', () => {
 
     const output = capture.stdout.join('\n');
     expect(output).toContain('gift items/credits/ships to players');
-    expect(output).toContain('target=self|faction|player|fixer:tab|station:<base-or-POI-ID>');
+    expect(output).toContain('target=self|faction|player|empire|pirate:<crew>|fixer:tab|station:<base-or-POI-ID>');
+    expect(output).toContain('pirate:<crew>');
     expect(output).toContain('send_gift');
     expect(output).toContain('already be docked');
+    expect(output).toContain('they do not auto-dock');
     expect(output).toContain('source=storage');
-    expect(output).toContain('No credits, ships, packages, or quest items');
+    expect(output).toContain('No packages or quest items');
+    expect(output).not.toContain('No credits, ships');
     expect(output).toContain('empire alias target, including an empire: prefix');
     expect(output).toContain('no empire ship uses');
     expect(output).toContain("sold on that station's market");
@@ -1079,12 +1086,17 @@ describe('help output branches', () => {
     expect(output).toContain('This sale does not apply to a station material gift');
     expect(output).not.toContain('donate to an empire treasury');
     expect(output).toContain(
-      'target - Target: self, faction, faction:TAG, empire alias, player name/ID, or station:<base-or-POI-ID>',
+      'A boss flagship is the exception: storage deposit <ship_id> target=station:<stronghold base id> sends it home from wherever it is parked (gameserver 0.643.0).',
     );
+    expect(output).toContain('Not valid for fixer:tab.');
+    expect(output).not.toContain('Not valid for station: targets.');
     expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
     expect(output).toContain('target=station:grand_exchange_station');
     expect(output).toContain(
       'spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"; tow own ship: storage deposit <ship_id> target=self; station gift: storage deposit steel_plate 20 target=station:grand_exchange_station',
+    );
+    expect(output).toContain(
+      'empire credits: storage deposit credits=5000 target=solarian; pirate credits: storage deposit credits=5000 target=pirate:voss; stronghold ship: storage deposit <ship_id> target=station:<stronghold base id>',
     );
   });
 

@@ -1172,6 +1172,79 @@ describe('cached ID payload resolver', () => {
     });
   });
 
+  test('does not rewrite pirate: deposit targets and still resolves a bare pirate name', () => {
+    const sessionPath = useTempSession();
+
+    function writePlayerHint(id: string, name: string) {
+      fs.writeFileSync(
+        getIdCachePath(sessionPath),
+        `${JSON.stringify({
+          version: 1,
+          hints: [
+            {
+              kind: 'player',
+              id,
+              name,
+              sourceCommand: 'get_nearby',
+              seenAt: '2026-05-18T00:00:00.000Z',
+            },
+          ],
+        })}\n`,
+      );
+    }
+
+    writePlayerHint('player-pirate-voss', 'pirate:voss');
+    for (const fuzzyIds of [false, true]) {
+      expect(
+        prepareInternalPayload(
+          'storage_deposit',
+          { target: 'pirate:voss', credits: '200' },
+          options({ fuzzyIds }),
+          sessionPath,
+        ),
+      ).toEqual({
+        type: 'payload',
+        payload: { target: 'pirate:voss', credits: 200 },
+      });
+    }
+
+    writePlayerHint('player-pirate-voss-case', 'Pirate:Voss');
+    for (const fuzzyIds of [false, true]) {
+      expect(
+        prepareInternalPayload(
+          'storage_deposit',
+          { target: 'Pirate:Voss', credits: '200' },
+          options({ fuzzyIds }),
+          sessionPath,
+        ),
+      ).toEqual({
+        type: 'payload',
+        payload: { target: 'Pirate:Voss', credits: 200 },
+      });
+    }
+
+    writePlayerHint('player-pirate-vossren', 'pirate:vossren');
+    expect(
+      prepareInternalPayload(
+        'storage_deposit',
+        { target: 'pirate:voss', credits: '200' },
+        options({ fuzzyIds: true }),
+        sessionPath,
+      ),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'pirate:voss', credits: 200 },
+    });
+
+    writePlayerHint('player-pirate', 'pirate');
+    expect(
+      prepareInternalPayload('storage_deposit', { target: 'pirate', credits: '200' }, options(), sessionPath),
+    ).toEqual({
+      type: 'payload',
+      payload: { target: 'player-pirate', credits: 200 },
+    });
+  });
+
   test('sends fixer:tab in lowercase and does not rewrite it from cached players', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(
