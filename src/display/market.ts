@@ -351,6 +351,22 @@ function isDirectMarketSellShape(record: Record<string, unknown>): boolean {
   );
 }
 
+function positiveUnitCount(value: unknown): string | undefined {
+  if (typeof value === 'bigint') {
+    if (value <= 0n) return undefined;
+    return formatIntegerText(value);
+  }
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value.toLocaleString();
+  return undefined;
+}
+
+function emitSellSources(result: Record<string, unknown>): void {
+  const fromCargo = positiveUnitCount(result.from_cargo);
+  const fromStorage = positiveUnitCount(result.from_storage);
+  if (fromCargo !== undefined) emitLine(`From cargo: ${fromCargo}`);
+  if (fromStorage !== undefined) emitLine(`From storage: ${fromStorage}`);
+}
+
 function isDirectMarketBuyShape(record: Record<string, unknown>): boolean {
   return (
     hasMarketItem(record) &&
@@ -1356,6 +1372,7 @@ export const marketFormatters = [
       } else if (earned !== undefined) {
         emitLine(`Total earned: ${formatCredits(earned)}`);
       }
+      emitSellSources(r);
       if (unsold !== undefined) emitLine(`Unsold: ${unsold}`);
       emitAutoListed(r.auto_listed);
       emitSmugglingAward(r);

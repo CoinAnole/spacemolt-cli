@@ -243,6 +243,18 @@ describe('boarding_locked', () => {
   });
 });
 
+describe('insufficient_items', () => {
+  test('stays unknown and retryable by default', () => {
+    expect(ERROR_REGISTRY.insufficient_items).toBeUndefined();
+    expect(isKnownErrorCode('insufficient_items')).toBe(false);
+    expect(isRetryableError('insufficient_items')).toBe(true);
+    expect(isAuthError('insufficient_items')).toBe(false);
+    expect(getErrorSuggestion('insufficient_items')).toBeUndefined();
+    expect(getErrorSuggestion('insufficient_items', 'sell')).toBeUndefined();
+    expect(getRelatedCommands('insufficient_items')).toEqual([]);
+  });
+});
+
 describe('insufficient_credits', () => {
   test('is retryable, is not an authentication error, and has command overlays', () => {
     expect(ERROR_REGISTRY.insufficient_credits?.retryable).toBe(true);

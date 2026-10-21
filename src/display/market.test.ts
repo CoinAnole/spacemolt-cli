@@ -252,6 +252,211 @@ test('sell prints smuggling XP without a level-up line', () => {
   expect(stdout).not.toContain('Level up');
   expect(stdout).not.toContain('XP gained');
   expect(stdout).not.toContain('Skill level');
+  expect(stdout).not.toContain('From cargo');
+  expect(stdout).not.toContain('From storage');
+});
+
+test('sell prints cargo and storage counts after fills and before unsold', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    { ...directSellBody, from_cargo: 5, from_storage: 1 },
+    options,
+    context,
+  ).stdout.join('\n');
+  const fillsAt = stdout.indexOf('Instant fills:');
+  const cargoAt = stdout.indexOf('From cargo: 5');
+  const storageAt = stdout.indexOf('From storage: 1');
+  const unsoldAt = stdout.indexOf('Unsold: 2');
+  const xpAt = stdout.indexOf('Smuggling XP: 40');
+
+  expect(stdout).toContain('From cargo: 5');
+  expect(stdout).toContain('From storage: 1');
+  expect(fillsAt).toBeGreaterThan(-1);
+  expect(cargoAt).toBeGreaterThan(fillsAt);
+  expect(storageAt).toBeGreaterThan(cargoAt);
+  expect(unsoldAt).toBeGreaterThan(storageAt);
+  expect(xpAt).toBeGreaterThan(unsoldAt);
+});
+
+test('sell prints only a positive storage count when cargo contributed nothing', () => {
+  const stdout = renderStructuredResult('sell', { ...directSellBody, from_storage: 4 }, options, context).stdout.join(
+    '\n',
+  );
+  const fillsAt = stdout.indexOf('Instant fills:');
+  const storageAt = stdout.indexOf('From storage: 4');
+  const unsoldAt = stdout.indexOf('Unsold: 2');
+
+  expect(stdout).toContain('From storage: 4');
+  expect(stdout).not.toContain('From cargo');
+  expect(fillsAt).toBeGreaterThan(-1);
+  expect(storageAt).toBeGreaterThan(fillsAt);
+  expect(unsoldAt).toBeGreaterThan(storageAt);
+});
+
+test('sell omits a zero source count and still prints smuggling XP 0', () => {
+  for (const counts of [
+    { from_cargo: 0, from_storage: 0 },
+    { from_cargo: 0n, from_storage: 0n },
+    { from_cargo: 0, from_storage: 0n },
+    { from_cargo: 0n, from_storage: 0 },
+  ]) {
+    const stdout = renderStructuredResult(
+      'sell',
+      { ...directSellBody, ...counts, smuggling_xp: 0, smuggling_level_up: false },
+      options,
+      context,
+    ).stdout.join('\n');
+
+    expect(stdout).toContain('Smuggling XP: 0');
+    expect(stdout).not.toContain('Smuggling level up');
+    expect(stdout).not.toContain('From cargo');
+    expect(stdout).not.toContain('From storage');
+  }
+
+  const cargoOnly = renderStructuredResult(
+    'sell',
+    { ...directSellBody, from_cargo: 3, from_storage: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(cargoOnly).toContain('From cargo: 3');
+  expect(cargoOnly).not.toContain('From storage');
+
+  const storageOnly = renderStructuredResult(
+    'sell',
+    { ...directSellBody, from_cargo: 0n, from_storage: 4 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(storageOnly).toContain('From storage: 4');
+  expect(storageOnly).not.toContain('From cargo');
+});
+
+test('sell omits non-positive source values and still formats the receipt', () => {
+  for (const value of [-1, 1.5, '6', null, true, false, Number.NaN, Number.POSITIVE_INFINITY, -1n, [6], { n: 6 }]) {
+    const stdout = renderStructuredResult(
+      'sell',
+      { ...directSellBody, from_cargo: value, from_storage: value },
+      options,
+      context,
+    ).stdout.join('\n');
+
+    expect(stdout).toContain('=== Sell Complete ===');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('From cargo');
+    expect(stdout).not.toContain('From storage');
+  }
+});
+
+test('sell prints a bigint from_cargo without rounding', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity_sold: 1,
+      total_earned: 1,
+      from_cargo: 9007199254740993n,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const rounded = Number(9007199254740993n).toLocaleString();
+
+  expect(stdout).toContain('From cargo:');
+  expect(stdout.replace(/\D/g, '')).toContain('9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain(rounded);
+  expect(stdout).not.toContain('From storage');
+});
+
+test('sell --format text prints the same source lines as the table', () => {
+  const body = { ...directSellBody, from_cargo: 5, from_storage: 1 };
+  const table = renderStructuredResult('sell', body, options, context).stdout.join('\n');
+  const text = renderStructuredResult('sell', body, { ...options, format: 'text' }, context).stdout.join('\n');
+
+  expect(text).toBe(table);
+  expect(text).toContain('From cargo: 5');
+  expect(text).toContain('From storage: 1');
+});
+
+test('sell --json keeps zero, negative, and string source fields', () => {
+  const body = {
+    action: 'sell',
+    item: 'Void Salt',
+    from_cargo: 0,
+    from_storage: -3,
+    note: 'keep',
+  };
+  const stdout = renderStructuredResult('sell', body, { ...options, format: 'json' }, context).stdout.join('\n');
+
+  expect(JSON.parse(stdout)).toEqual(body);
+  expect(stdout).not.toContain('=== Sell Complete ===');
+});
+
+test('sell source lines follow total earned when nothing was sold', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      total_earned: 40,
+      unsold: 2,
+      from_cargo: 1,
+      from_storage: 2,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const earnedAt = stdout.indexOf('Total earned:');
+  const cargoAt = stdout.indexOf('From cargo: 1');
+  const storageAt = stdout.indexOf('From storage: 2');
+  const unsoldAt = stdout.indexOf('Unsold: 2');
+
+  expect(earnedAt).toBeGreaterThan(-1);
+  expect(cargoAt).toBeGreaterThan(earnedAt);
+  expect(storageAt).toBeGreaterThan(cargoAt);
+  expect(unsoldAt).toBeGreaterThan(storageAt);
+  expect(stdout).not.toContain('Sold:');
+  expect(stdout).not.toContain('Instant fills:');
+});
+
+test('sell does not format source counts without a sell receipt shape', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    { item: 'Iron Ore', item_id: 'ore_iron', from_cargo: 5, from_storage: 1 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('=== Sell Complete ===');
+  expect(stdout).not.toContain('From cargo:');
+  expect(stdout).not.toContain('From storage:');
+});
+
+test('create_sell_order does not print direct sell source lines', () => {
+  const withSmuggling = renderStructuredResult(
+    'create_sell_order',
+    { ...singleSellBody, from_cargo: 20, from_storage: 1, smuggling_xp: 50, smuggling_level_up: true },
+    options,
+    context,
+  ).stdout.join('\n');
+  const orderOnly = renderStructuredResult(
+    'create_sell_order',
+    { ...singleSellBody, from_cargo: 20, from_storage: 1 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(withSmuggling).toContain('=== Sell Order Created ===');
+  expect(withSmuggling.endsWith('Order ID: order-salt-1\nSmuggling XP: 50\nSmuggling level up: yes')).toBe(true);
+  expect(withSmuggling).not.toContain('From cargo');
+  expect(withSmuggling).not.toContain('From storage');
+  expect(orderOnly.endsWith('Order ID: order-salt-1')).toBe(true);
+  expect(orderOnly).not.toContain('From cargo');
+  expect(orderOnly).not.toContain('From storage');
 });
 
 test('sell does not print trading level_up as smuggling', () => {

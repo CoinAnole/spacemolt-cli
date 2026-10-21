@@ -273,6 +273,8 @@ export const sellFixture = {
     quantity_sold: 6,
     total_earned: 90,
     unsold: 4,
+    from_cargo: 5,
+    from_storage: 1,
     fills: [
       { quantity: 5, price_each: 15, subtotal: 75, source: 'station' },
       { quantity: 1, price_each: 15, subtotal: 15, source: 'player' },

@@ -3,6 +3,8 @@
 Item: Iron Ore (ore_iron)
 Sold: 6
 Instant fills: 6 (earned: 90 cr)
+From cargo: 5
+From storage: 1
 Unsold: 4
 Auto-listed: 4 @ 20 cr
 Listing fee: 2 cr
