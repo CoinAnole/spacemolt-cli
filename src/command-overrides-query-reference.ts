@@ -161,7 +161,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/get_achievements',
   },
   get_faction_achievements: {
-    description: 'Show faction achievement progress and earned faction entries.',
+    description:
+      'Show faction achievement progress and earned faction entries. Human output prints a table. When an entry includes progress, the cell is current/target. The server sends counts only, not alcohol or dish names. The Whole Bar and House of Plenty are examples; any entry that includes progress prints the same way. An omitted progress object leaves that cell blank. JSON, YAML, and structured output are unchanged.',
     example: 'spacemolt get_faction_achievements',
     seeAlso: ['get_achievements', 'faction_info'],
     category: 'Faction',
