@@ -2,6 +2,7 @@ import { arenaFormatters } from './arena.ts';
 import { citizenshipFormatters } from './citizenship.ts';
 import { combatFormatters } from './combat.ts';
 import { empireFormatters } from './empire.ts';
+import { factionAchievementFormatters } from './faction-achievements.ts';
 import { findRouteFormatters } from './find-route.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
@@ -32,6 +33,7 @@ export const resultFormatters: ResultFormatter[] = [
   ...prizeFormatters,
   ...inspectFormatters,
   ...socialFormatters,
+  ...factionAchievementFormatters,
   ...empireFormatters,
   ...shippingFormatters,
   ...arenaFormatters,
