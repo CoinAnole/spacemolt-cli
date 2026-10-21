@@ -935,6 +935,16 @@ describe('help output branches', () => {
     expect(output).toContain('no resting order');
     expect(output).toContain('Order is not the ID column');
     expect(output).toContain('Non-strings do not print');
+    expect(output).toContain('combat.flagship_reclaimed');
+    expect(output).toContain(
+      'pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost',
+    );
+    expect(output).toContain('no extra table columns until OpenAPI defines the data keys for that event');
+    expect(description).toContain('combat.flagship_reclaimed');
+    expect(description).toContain(
+      'pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost',
+    );
+    expect(description).toContain('no extra table columns until OpenAPI defines the data keys for that event');
     expect(output).toContain('longer than 80 characters');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');
@@ -952,6 +962,7 @@ describe('help output branches', () => {
     expect(output).toContain(
       'spacemolt get_action_log event_type=session.daily_balance,faction.production_cycle since_id=42 page_size=100',
     );
+    expect(output).not.toContain('`');
   });
 
   test('showCommandHelp documents modify_order crossing-buy refunds', () => {
