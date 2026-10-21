@@ -232,6 +232,8 @@ const namedFormatterFixtureCases = {
         listing_fee: 2,
       },
       level_up: false,
+      from_cargo: 5,
+      from_storage: 1,
       message: 'Sold items.',
     },
   },
@@ -3619,6 +3621,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('Mara');
     expect(stdout).not.toContain('Created sell order.');
     expect(stdout).not.toContain('from_cargo');
+    expect(stdout).not.toContain('From cargo');
+    expect(stdout).not.toContain('From storage');
     expect(stdout).not.toContain('Bucket');
     expect(stdout).not.toContain('Smuggling XP:');
     expect(stdout).not.toContain('Smuggling level up');
@@ -4376,6 +4380,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Auto-listed: 4 @ 20 cr');
     expect(stdout).toContain('Listing fee: 2 cr');
     expect(stdout).toContain('Order ID: auto-sell-1');
+    expect(stdout).not.toContain('From cargo');
+    expect(stdout).not.toContain('From storage');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -4399,6 +4405,8 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Sell Complete ===');
     expect(stdout).toContain('Item: Iron Ore (iron_ore)');
     expect(stdout).toContain('Instant fills: 6 (earned: 90 cr)');
+    expect(stdout).not.toContain('From cargo');
+    expect(stdout).not.toContain('From storage');
     expect(stdout).not.toContain('=== Location ===');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -4852,6 +4860,8 @@ describe('structuredContent formatters', () => {
     expect(sell.stderr).toBe('');
     expect(buy.stdout).toContain('=== Buy Complete ===');
     expect(sell.stdout).toContain('=== Sell Complete ===');
+    expect(sell.stdout).toContain('From cargo: 5');
+    expect(sell.stdout).toContain('From storage: 1');
     expect(buy.stdout).not.toContain('=== Cargo ===');
     expect(sell.stdout).not.toContain('=== Cargo ===');
   });
@@ -10537,6 +10547,8 @@ describe('structuredContent formatters', () => {
     expect(outputs.supply_commission).toContain('=== Commission Supplied ===');
     expect(outputs.direct_buy).toContain('=== Buy Complete ===');
     expect(outputs.direct_sell).toContain('=== Sell Complete ===');
+    expect(outputs.direct_sell).toContain('From cargo: 5');
+    expect(outputs.direct_sell).toContain('From storage: 1');
     expect(outputs.faction_bulk_orders).toContain('=== Faction Buy Orders ===');
     expect(outputs.player_bulk_sell_orders).toContain('=== Sell Orders ===');
     expect(outputs.player_bulk_buy_orders).toContain('=== Buy Orders ===');

@@ -186,11 +186,13 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt/self_destruct',
   },
   sell: {
-    usage: '<item_id_or_cached_name> <quantity> [auto_list=true]  (use get_cargo to cache items)',
-    description: 'Sell cargo items. Use get_cargo first for item IDs, cached names, and available quantities.',
+    usage:
+      '<item_id_or_cached_name> <quantity> [auto_list=true]  (cargo first, then docked-station storage; use get_cargo or storage view to cache items)',
+    description:
+      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities.',
     example: 'spacemolt sell iron 50',
-    discoverWith: ['get_cargo', 'view_market'],
-    seeAlso: ['get_cargo', 'view_market'],
+    discoverWith: ['get_cargo', 'storage_view', 'view_market'],
+    seeAlso: ['get_cargo', 'storage_view', 'view_market'],
     category: 'Trading',
     apiRoute: 'POST /api/v2/spacemolt/sell',
     positionals: ['item_id', 'quantity', 'auto_list'],

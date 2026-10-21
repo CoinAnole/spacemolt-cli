@@ -4181,6 +4181,31 @@ describe('command metadata', () => {
     expect(COMMANDS.sell?.description).not.toContain('hazmat');
   });
 
+  test('sell help states cargo first, then docked-station storage', () => {
+    const usage =
+      '<item_id_or_cached_name> <quantity> [auto_list=true]  (cargo first, then docked-station storage; use get_cargo or storage view to cache items)';
+    const description =
+      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities.';
+    const related = ['get_cargo', 'storage_view', 'view_market'];
+    const config = COMMANDS.sell;
+
+    expect(config?.usage).toBe(usage);
+    expect(config?.description).toBe(description);
+    expect(config?.discoverWith).toEqual(related);
+    expect(config?.seeAlso).toEqual(related);
+    expect(config?.example).toBe('spacemolt sell iron 50');
+    expect(CORE_COMMAND_OVERRIDES.sell?.schemaExtensions).toBeUndefined();
+    expect(config?.schema).toEqual(GENERATED_API_ROUTES['POST /api/v2/spacemolt/sell']?.schema);
+    expect(config?.description).not.toContain('hazmat');
+
+    const help = captureHelp('sell');
+    expect(help).toContain('Sell items from cargo first, then from your station storage at the docked station.');
+    expect(help).toContain('insufficient_items');
+    expect(help).toContain('spacemolt storage view');
+    expect(help).not.toContain('Sell cargo items');
+    expect(help).not.toContain('storage_view');
+  });
+
   test('deploy_drone help advertises bulk deploy mode', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.deploy_drone;
     expect(config?.usage).toContain('[all=true]');

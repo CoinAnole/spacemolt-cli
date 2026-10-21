@@ -948,7 +948,9 @@ describe('local command handlers', () => {
 
     expect(exitCode).toBe(0);
     expect(stderr).toEqual([]);
-    expect(stdout.join('')).toContain('sell\tSell cargo items.');
+    expect(stdout.join('')).toContain(
+      'sell\tSell items from cargo first, then from your station storage at the docked station.',
+    );
   });
 
   test('hidden __complete command is not listed by commands or full help', async () => {

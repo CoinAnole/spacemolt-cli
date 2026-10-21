@@ -1,6 +1,11 @@
 import { getArgNames } from './args.ts';
 import type { CliRuntimeContext, CliWriter } from './cli-context.ts';
-import { type CommandGroupEntryConfig, commandGroup, groupedCommandParts } from './command-groups.ts';
+import {
+  type CommandGroupEntryConfig,
+  commandGroup,
+  groupActionDisplayName,
+  groupedCommandParts,
+} from './command-groups.ts';
 import {
   BUNDLED_COMMAND_REGISTRY,
   type CommandRegistrySnapshot,
@@ -590,11 +595,16 @@ export function showCommandHelp(
   return true;
 }
 
+function nextStepCommand(command: string): string {
+  const parts = groupedCommandParts(command);
+  return parts ? groupActionDisplayName(parts.group, parts.action) : command;
+}
+
 function printNextSteps(command: string, missingArg?: string, writer?: CliWriter, options?: HelpOutputOptions): void {
   const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
   const colors = colorsForPlain(Boolean(options?.plain));
   const steps: string[] = [];
-  for (const related of config?.discoverWith || []) steps.push(`spacemolt ${related}`);
+  for (const related of config?.discoverWith || []) steps.push(`spacemolt ${nextStepCommand(related)}`);
   if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
   if (command !== 'get_commands' && !steps.includes('spacemolt get_commands')) steps.push('spacemolt get_commands');
 
@@ -1094,7 +1104,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Mining & Trading:${c.reset}
     mine                      Mine at current POI (asteroid, ice, or gas)
-    sell <item_id> <qty>      Sell to NPC market
+    sell <item_id> <qty>      Sell cargo first, then storage at the docked station
     buy <item_id> [qty]       Buy from market
     refuel [fuel_cell_id]     Refuel at station to full or use fuel cells
     repair                    Repair hull (station, kits, or target=)

@@ -9,6 +9,7 @@ import { COMMANDS } from './commands';
 import type { PlayerState } from './help';
 import {
   displayError,
+  displayMissingArgument,
   displayUnknownCommand,
   parseCommandSearchQuery,
   renderProgressiveHelp,
@@ -155,6 +156,15 @@ describe('help output branches', () => {
     expect(output).toContain('travel <station>');
     expect(output).not.toContain('travel <poi_id>');
     expect(output).not.toContain('travel <station_poi_id>');
+  });
+
+  test('showHelp common loop keeps sell without a cargo-or-storage sentence', () => {
+    const capture = captureWriter();
+    showHelp(capture.writer);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('spacemolt sell <item_id> <quantity>');
+    expect(output).not.toContain('Sell cargo first, then storage at the docked station');
   });
 
   test('showHelp emphasizes local help command discovery before server help', () => {
@@ -2021,6 +2031,16 @@ describe('help output branches', () => {
     expect(output).toContain('sell_wreck                Sell towed wreck to NPC salvage yard for credits');
   });
 
+  test('showFullHelp sell line names cargo then docked-station storage', () => {
+    const capture = captureWriter();
+    showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('Sell cargo first, then storage at the docked station');
+    expect(output).not.toContain('Sell to NPC market');
+    expect(output).toContain('# Sell 50 iron ore');
+  });
+
   test('sell_wreck help documents NPC yard and scrap_wreck for player-owned yards', () => {
     const capture = captureWriter();
 
@@ -3694,6 +3714,8 @@ describe('help output branches', () => {
     expect(nextLine).toBeDefined();
     expect(nextLine).toContain('spacemolt catalog');
     expect(nextLine).toContain('spacemolt storage');
+    expect(nextLine).not.toContain('storage view');
+    expect(nextLine).not.toContain('storage_view');
     expect(nextLine).not.toContain('faction_deposit_credits');
 
     const quiet = captureWriter();
@@ -3706,6 +3728,78 @@ describe('help output branches', () => {
     expect(quiet.stderr.join('\n')).not.toContain('Suggestion:');
     expect(quiet.stderr.join('\n')).not.toContain('This error may be retryable.');
     expect(quiet.stderr.join('\n')).not.toContain('Next:');
+  });
+
+  test('displayError sell hints name storage view and not insufficient_items advice', () => {
+    const capture = captureWriter();
+    displayError(
+      'sell',
+      { code: 'insufficient_items', message: 'Not enough items.' },
+      { context: displayErrorContext(capture.writer) },
+    );
+
+    const output = capture.stderr.join('\n');
+    const nextLine = capture.stderr.find((line) => line.includes('Next:'));
+    expect(output).toContain('Error [insufficient_items]');
+    expect(output).toContain('Not enough items.');
+    expect(output).not.toContain('Suggestion:');
+    expect(output).toContain('This error may be retryable.');
+    expect(nextLine?.trim()).toBe(
+      'Next: run "spacemolt get_cargo" or "spacemolt storage view" or "spacemolt view_market".',
+    );
+    expect(nextLine).toContain('"spacemolt storage view"');
+    expect(nextLine).not.toContain('storage_view');
+    expect(nextLine).not.toContain('get_status');
+    expect(nextLine).not.toContain('get_commands');
+  });
+
+  test('displayMissingArgument sell uses the same three discovery steps', () => {
+    const capture = captureWriter();
+    displayMissingArgument('sell', 'item_id', capture.writer, undefined, { plain: true });
+
+    const nextLine = capture.stderr.find((line) => line.includes('Next:'));
+    expect(nextLine?.trim()).toBe(
+      'Next: run "spacemolt get_cargo" or "spacemolt storage view" or "spacemolt view_market" to find a valid item_id.',
+    );
+    expect(nextLine).toContain('"spacemolt storage view"');
+    expect(nextLine).not.toContain('storage_view');
+    expect(nextLine).not.toContain('get_status');
+    expect(nextLine).not.toContain('get_commands');
+  });
+
+  test('displayError translates grouped next steps for recycle, dismantle_outpost, and get_ship', () => {
+    const recycle = captureWriter();
+    displayError(
+      'recycle',
+      { code: 'not_found', message: 'Missing.' },
+      { context: displayErrorContext(recycle.writer) },
+    );
+    const recycleNext = recycle.stderr.find((line) => line.includes('Next:'));
+    expect(recycleNext?.trim()).toBe(
+      'Next: run "spacemolt catalog" or "spacemolt facility list" or "spacemolt storage".',
+    );
+    expect(recycleNext).not.toContain('facility_list');
+
+    const dismantle = captureWriter();
+    displayError(
+      'dismantle_outpost',
+      { code: 'not_found', message: 'Missing.' },
+      { context: displayErrorContext(dismantle.writer) },
+    );
+    const dismantleNext = dismantle.stderr.find((line) => line.includes('Next:'));
+    expect(dismantleNext?.trim()).toBe(
+      'Next: run "spacemolt build_outpost" or "spacemolt storage view" or "spacemolt storage withdraw".',
+    );
+    expect(dismantleNext).not.toContain('storage_view');
+    expect(dismantleNext).not.toContain('storage_withdraw');
+
+    const ship = captureWriter();
+    displayError('get_ship', { code: 'not_found', message: 'Missing.' }, { context: displayErrorContext(ship.writer) });
+    const shipNext = ship.stderr.find((line) => line.includes('Next:'));
+    expect(shipNext?.trim()).toBe(
+      'Next: run "spacemolt list_ships" or "spacemolt faction garages" or "spacemolt get_status".',
+    );
+    expect(shipNext).not.toContain('faction_garages');
   });
 
   test('displayError gives insufficient_credits a generic suggestion on buy', () => {
