@@ -3424,7 +3424,12 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('gameserver 0.621.0');
     expect(deposit?.description).toContain('Only those unused materials are sold.');
     expect(deposit?.description).toContain('This sale does not apply to a station material gift');
-    expect(deposit?.description).toContain('No credits, ships, packages, or quest items.');
+    expect(deposit?.description).toContain('No packages or quest items');
+    expect(deposit?.description).not.toContain('No credits, ships');
+    expect(deposit?.description).toContain('boss flagship');
+    expect(deposit?.description).toContain('pirate:<crew>');
+    expect(deposit?.description).toContain('from anywhere');
+    expect(deposit?.description).toContain('stranger');
     expect(deposit?.description).not.toContain('`');
     expect(deposit?.description).not.toContain('trash');
     expect(deposit?.description).not.toContain('donation box');
@@ -3448,6 +3453,15 @@ describe('command metadata', () => {
       'Items enter manager station inventory, not empire reserves',
     );
     expect(deposit?.schema?.target?.description).not.toContain("sold on that station's market");
+    expect(deposit?.schema?.target?.description).toContain(
+      'A boss flagship is the exception: storage deposit <ship_id> target=station:<stronghold base id> sends it home from wherever it is parked (gameserver 0.643.0). Other ships still have to be delivered at that stronghold. A pirate crew keeps a gift from a pilot never introduced to the pirate network and gives nothing back.',
+    );
+    expect(withdraw?.schema?.target?.description).toContain(
+      'Items enter manager station inventory, not empire reserves',
+    );
+    expect(withdraw?.schema?.target?.description).not.toContain('boss flagship');
+    const view = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.view?.config;
+    expect(view?.schema?.target?.description).not.toContain('boss flagship');
     expect(deposit?.aliases?.ship_id).toBe('item_id');
     expect(withdraw?.aliases?.ship_id).toBe('item_id');
     expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
@@ -3495,7 +3509,9 @@ describe('command metadata', () => {
 
   test('storage deposit help documents the fixer tab payment and reserves credits off that field', () => {
     const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
-    expect(deposit?.usage).toContain('target=self|faction|player|fixer:tab|station:<base-or-POI-ID>');
+    expect(deposit?.usage).toContain(
+      'target=self|faction|player|empire|pirate:<crew>|fixer:tab|station:<base-or-POI-ID>',
+    );
     expect(deposit?.usage).toContain('fixer tab: item id credits, quantity, target=fixer:tab');
     expect(deposit?.example).toContain('fixer tab: storage deposit credits 500 target=fixer:tab');
     expect(deposit?.description).toContain(
@@ -3511,12 +3527,25 @@ describe('command metadata', () => {
     expect(deposit?.schema?.target?.description).toContain(
       'Items enter manager station inventory, not empire reserves',
     );
-    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_deposit?.schemaExtensions?.target).toBeUndefined();
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_deposit?.schemaExtensions?.target?.description).toContain(
+      'Items enter manager station inventory, not empire reserves',
+    );
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_deposit?.schemaExtensions?.target?.description).not.toContain(
+      "sold on that station's market",
+    );
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_withdraw?.schemaExtensions?.target).toBeUndefined();
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.storage_view?.schemaExtensions?.target).toBeUndefined();
     expect(deposit?.schema?.item_id?.description).toContain('equal to or smaller than your active ship');
     expect(deposit?.schema?.item_id?.description).toContain('local path can auto-dock first');
     expect(deposit?.schema?.item_id?.description).toContain('target=fixer:tab');
+    expect(deposit?.schema?.item_id?.description).toContain(
+      'target=station:<stronghold base id> gifts the ship only to a pirate stronghold; a boss flagship may be parked anywhere; any other ship must be parked at that stronghold while you are docked there.',
+    );
+    expect(deposit?.schema?.item_id?.description).not.toContain('carrier');
     expect(deposit?.schema?.credits?.description).toContain('Not valid for fixer:tab.');
-    expect(deposit?.schema?.credits?.description).toContain('Not valid for station: targets.');
+    expect(deposit?.schema?.credits?.description).not.toContain('Not valid for station: targets.');
+    expect(deposit?.schema?.credits?.description).toContain('to a station:<id> while docked there');
+    expect(deposit?.schema?.credits?.description).toContain('or to a pirate:<crew> from anywhere');
     expect(deposit?.discoverWith).toEqual(['get_status', 'get_cargo', 'list_ships']);
     expect(deposit?.seeAlso).toEqual([
       'storage_view',
@@ -3530,6 +3559,10 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).toContain(
       'Pay fixer debt with storage deposit credits 500 target=fixer:tab at an empire station with mission services.',
     );
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).toContain(
+      'wire credits to an empire or a pirate crew, donate to a docked station',
+    );
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).not.toContain('donate materials to a docked NPC station');
     expect(CURATED_COMMAND_DESCRIPTIONS.storage_deposit).not.toBe(deposit?.description);
 
     const help = captureHelp('storage deposit');
