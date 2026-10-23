@@ -4824,11 +4824,11 @@ describe('command metadata', () => {
       expect(description).not.toMatch(/storage withdraw[^.]*while docked/);
     }
     expect(COMMANDS.uninstall_mod?.usage).toBe(
-      '<module_id> [ship_id=]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
+      '<module_id> [ship_id=...]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
     );
     expect(COMMANDS.uninstall_mod?.args).toEqual(['module_id']);
     const uninstallHelp = captureHelp('uninstall_mod');
-    expect(uninstallHelp).toContain('[ship_id=]');
+    expect(uninstallHelp).toContain('[ship_id=...]');
     expect(uninstallHelp).toContain('omit ship_id for the active ship');
     expect(uninstallHelp).toContain('Optional owned ship ID');
   });

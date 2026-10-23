@@ -365,7 +365,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   uninstall_mod: {
     usage:
-      '<module_id> [ship_id=]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
+      '<module_id> [ship_id=...]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt/uninstall_mod',
     positionals: ['module_id'],

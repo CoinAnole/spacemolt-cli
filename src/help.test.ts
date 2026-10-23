@@ -1861,7 +1861,7 @@ describe('help output branches', () => {
     expect(showCommandHelp('uninstall_mod', uninstall.writer)).toBe(true);
     const uninstallOutput = uninstall.stdout.join('\n');
     expect(uninstallOutput).not.toContain('do not gate');
-    expect(uninstallOutput).toContain('spacemolt uninstall_mod <module_id> [ship_id=]');
+    expect(uninstallOutput).toContain('spacemolt uninstall_mod <module_id> [ship_id=...]');
     expect(uninstallOutput).toContain('omit ship_id for the active ship');
     expect(uninstallOutput).toContain('stored ship while docked at its station');
   });
