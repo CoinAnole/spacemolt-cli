@@ -21,7 +21,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   claim_prize:
     'Assign prize crew and begin recovery of an intact captured ship. The prize sits at the battle origin POI, which can differ from your current POI; travel there, then claim.',
   cloak:
-    'Toggle the cloaking device. You cannot engage a cloak during a battle (in_battle). Attacking or engaging drops an active cloak.',
+    'Toggle the cloaking device. You can toggle it mid-jump, mid-travel, and during a Pathfinder drift. An engaged cloak burns 1 fuel per tick. You cannot engage a cloak during a battle (in_battle). Attacking or engaging drops an active cloak.',
   commission_quote:
     'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource.',
   commission_ship:

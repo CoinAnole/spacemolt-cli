@@ -212,6 +212,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `hunt` help: the creature must be at your current POI. Elsewhere is `invalid_target` (Target not found). Leviathan wording is unchanged (gameserver 0.618.0). **No parser change.**
 - `hunt` and `battle_stance` help: after you flee wildlife combat, wildlife cannot automatically attack you again during the escape tick or the next two ticks (three ticks, starting with the tick you escape). Use that window to `jump` or `travel` away. Fleet members entering wildlife combat cannot automatically pull you back during this window. You can still deliberately attack wildlife. `attack` still starts or joins that combat, and `hunt` still starts it. This is not immunity. The window does not apply to a player, pirate, empire NPC, station, or arena battle (gameserver 0.628.10). **No parser change.**
 - `cloak` help names `in_battle`. A cloak cannot be engaged during a battle. Attacking or engaging drops an active cloak (gameserver 0.618.0). **No parser change.**
+- `cloak` help: you can toggle the cloak mid-jump, mid-travel, and during a Pathfinder drift. An engaged cloak burns 1 fuel per tick. A cloak still cannot be engaged during a battle (`in_battle`). Attacking or engaging still drops an active cloak. Gameserver 0.644.0. **No parser change.**
 
 ### Personnel
 

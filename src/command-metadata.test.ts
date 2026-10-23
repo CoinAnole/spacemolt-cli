@@ -864,6 +864,10 @@ describe('command metadata', () => {
     expect(COMMANDS.find_route?.description).toContain('including yours');
     expect(COMMANDS.find_route?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.find_route);
     expect(COMMANDS.cloak?.description).toContain('in_battle');
+    expect(COMMANDS.cloak?.description).toContain('mid-jump');
+    expect(COMMANDS.cloak?.description).toContain('mid-travel');
+    expect(COMMANDS.cloak?.description).toContain('Pathfinder drift');
+    expect(COMMANDS.cloak?.description).toContain('1 fuel per tick');
     expect(COMMANDS.cloak?.description).not.toContain('scan');
     expect(COMMANDS.cloak?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.cloak);
     expect(CORE_COMMAND_OVERRIDES.cloak?.description).toBeUndefined();
