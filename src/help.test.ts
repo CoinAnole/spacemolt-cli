@@ -513,7 +513,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('attack <target_id>        Start/join persistent system battle');
     expect(output).toContain('battle_engage [side_id]   Join an existing battle only (no tick)');
-    expect(output).toContain('reload <weapon> <ammo>    Reload one magazine, or weapons=JSON (costs a tick)');
+    expect(output).toContain('reload <weapon> <ammo>    Reload a weapon or mining gun, or weapons=JSON (costs a tick)');
     expect(output).not.toContain('Join or start a battle');
   });
 
@@ -955,6 +955,10 @@ describe('help output branches', () => {
       'pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost',
     );
     expect(description).toContain('no extra table columns until OpenAPI defines the data keys for that event');
+    expect(output).toContain('mining.ammo_consumed');
+    expect(output).toContain('one charge spent by each loaded mining gun on a successful ore extraction');
+    expect(description).toContain('mining.ammo_consumed');
+    expect(description).toContain('gameserver 0.647.0');
     expect(output).toContain('longer than 80 characters');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');

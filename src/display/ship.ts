@@ -410,6 +410,33 @@ function formatModuleStats(stats: unknown): string {
   return entries.map(([key, inner]) => `${key} ${formatModuleStatValue(inner, false)}`).join(', ');
 }
 
+// V2Module magazine fields. Finite numbers include 0. Strings are trimmed. Other types stay blank.
+const MODULE_AMMO_FIELDS: Array<[string, string]> = [
+  ['Current ammo', 'current_ammo'],
+  ['Magazine', 'magazine_size'],
+  ['Loaded ammo', 'loaded_ammo_name'],
+  ['Ammo type', 'ammo_type'],
+];
+
+function moduleAmmoCell(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : undefined;
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return text.length > 0 ? text : undefined;
+  }
+  return undefined;
+}
+
+function withModuleAmmo(row: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...row };
+  for (const [, field] of MODULE_AMMO_FIELDS) {
+    const cell = moduleAmmoCell(row[field]);
+    if (cell !== undefined) next[`${field}_display`] = cell;
+  }
+  return next;
+}
+
 export function emitInstalledModules(
   modules: unknown,
   options?: { stats?: boolean; empty?: 'table' | 'none' },
@@ -429,12 +456,16 @@ export function emitInstalledModules(
     ['CPU', ['cpu_usage', 'cpu']],
     ['Power', ['power_usage', 'power']],
     ['Size', ['size']],
-    ['ID', ['module_id', 'id']],
   ];
-  let tableRows = rows;
+  let tableRows = rows.map((row) => (isRecord(row) ? withModuleAmmo(row) : row));
+  const projected = tableRows.filter(isRecord);
+  for (const [label, field] of MODULE_AMMO_FIELDS) {
+    appendOptionalColumn(columns, projected, label, [`${field}_display`]);
+  }
+  columns.push(['ID', ['module_id', 'id']]);
   let maxCellWidth: number | undefined;
   if (options?.stats === true) {
-    tableRows = rows.map((row) => {
+    tableRows = tableRows.map((row) => {
       if (!isRecord(row)) return row;
       return { ...row, stats_display: formatModuleStats(row.stats) };
     });

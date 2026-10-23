@@ -73,6 +73,13 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `craft` / `recycle` help now say omitted `preset` is `fast` (soonest finish; ownership only breaks ties) (gameserver 0.601.3). `help craft` warns that a paid public rental can beat your own idle facility and prepays that facility's per-run rental fee. Pass `preset=prefer_own` for ownership-order routing. Recycle has no `workshop` preset. **No parser change.**
 - `craft` and `recycle` help: every tier II+ module recipe takes one of the module one tier below, recycling does not return that module, and a job queued before the change shows `complete_queued_<module>_order` instead of `build_<module>`. Gameserver 0.637.0 and 0.637.1. **No parser change.**
 
+### Mining
+
+- `reload` help names a weapon or mining gun magazine. `weapon_instance_id` is the fitted weapon or mining gun (the request field stays `id`). Usage, positionals, and the bulk `weapons` array are unchanged. Gameserver 0.647.0. **No parser change.**
+- `mine` help: utility-slot mining guns add power only while loaded, spend one charge per successful ore extraction, and do not harvest gas, ice, or radioactive ore. **No parser change.**
+- `get_ship` and `get_state` module tables add optional Current ammo, Magazine, Loaded ammo, and Ammo type columns when a row carries `current_ammo`, `magazine_size`, `loaded_ammo_name`, or `ammo_type`. A finite number prints as digits, including 0. A non-empty string prints with surrounding whitespace removed. Anything else leaves the cell blank, and a column is omitted when every cell is blank. `loaded_ammo_id` is not a column. ID stays after those columns. `get_state` still adds Stats last. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
+- `get_action_log` help names `event_type=mining.ammo_consumed` (gameserver 0.647.0). A successful ore extraction spends one charge per loaded mining gun. No extra table columns until OpenAPI defines the data keys for that event. Event and Summary already print. Query with `event_type=mining.ammo_consumed`. **No parser change.**
+
 ### Factions
 
 - `join_faction` help: while you fight a station that faction owns, the command returns `own_faction_station`. Leave the battle first, then retry. Usage stays the faction id positional. **No parser change.**

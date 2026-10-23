@@ -488,6 +488,105 @@ test('get_ship keeps module stats off the table', () => {
   expect(modulesHalf).not.toContain('Cargo Expander III (module-1)');
 });
 
+function moduleCell(row: string, header: string, label: string): string {
+  const start = header.indexOf(label);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const bar = header.indexOf('|', start);
+  return row.slice(start, bar === -1 ? row.length : bar).trim();
+}
+
+test('get_ship and get_state module tables print magazine fields when present', () => {
+  const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+  const gun = fixture.modules[0];
+  if (!gun) throw new Error('ship fixture is missing its first module');
+  gun.current_ammo = 0;
+  gun.magazine_size = 5;
+  gun.loaded_ammo_name = '  Autocannon Rounds  ';
+  gun.ammo_type = 'autocannon';
+  gun.loaded_ammo_id = 'ammo_kinetic_small';
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  const header = modulesHalf.split('\n').find((line) => line.includes('Slot') && line.includes('ID')) ?? '';
+  expect(header).toContain('Current ammo');
+  expect(header.indexOf('Size')).toBeLessThan(header.indexOf('Current ammo'));
+  expect(header.indexOf('Current ammo')).toBeLessThan(header.indexOf('Magazine'));
+  expect(header.indexOf('Magazine')).toBeLessThan(header.indexOf('Loaded ammo'));
+  expect(header.indexOf('Loaded ammo')).toBeLessThan(header.indexOf('Ammo type'));
+  expect(header.indexOf('Ammo type')).toBeLessThan(header.indexOf('ID'));
+  expect(header).not.toContain('Stats');
+  const gunRow = tableRow(modulesHalf, 'Cargo Expander III');
+  expect(moduleCell(gunRow, header, 'Current ammo')).toBe('0');
+  expect(moduleCell(gunRow, header, 'Magazine')).toBe('5');
+  expect(moduleCell(gunRow, header, 'Loaded ammo')).toBe('Autocannon Rounds');
+  expect(moduleCell(gunRow, header, 'Ammo type')).toBe('autocannon');
+  expect(gunRow).not.toContain('ammo_kinetic_small');
+  const laserRow = tableRow(modulesHalf, 'Pulse Laser III');
+  expect(moduleCell(laserRow, header, 'Current ammo')).toBe('');
+  expect(moduleCell(laserRow, header, 'Loaded ammo')).toBe('');
+
+  const plain = renderShip(shipFixture).stdout.join('\n');
+  const plainHeader = (plain.split('=== Modules ===')[1] ?? '').split('\n').find((line) => line.includes('Slot')) ?? '';
+  expect(plainHeader).not.toContain('Current ammo');
+  expect(plainHeader).not.toContain('Magazine');
+  expect(plainHeader).not.toContain('Loaded ammo');
+  expect(plainHeader).not.toContain('Ammo type');
+
+  const state = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'gun-1',
+          name: 'Percussive Mining Array',
+          type: 'utility',
+          slot: 'utility',
+          size: 10,
+          cpu_usage: 2,
+          power_usage: 4,
+          current_ammo: 0,
+          magazine_size: 5,
+          loaded_ammo_name: 'Autocannon Rounds',
+          ammo_type: 'autocannon',
+          stats: { mining_power: 12 },
+        },
+        {
+          module_id: 'laser-1',
+          name: 'Mining Laser',
+          type: 'utility',
+          slot: 'utility',
+          size: 10,
+          cpu_usage: 1,
+          power_usage: 2,
+          current_ammo: Number.NaN,
+          magazine_size: { size: 4 },
+          loaded_ammo_name: '   ',
+          ammo_type: '',
+          stats: {},
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const stateModules = state.split('=== Modules ===')[1] ?? '';
+  const stateHeader = stateModules.split('\n').find((line) => line.includes('Slot') && line.includes('Stats')) ?? '';
+  expect(stateHeader.indexOf('Ammo type')).toBeLessThan(stateHeader.indexOf('ID'));
+  expect(stateHeader.indexOf('ID')).toBeLessThan(stateHeader.indexOf('Stats'));
+  const arrayRow = tableRow(stateModules, 'Percussive Mining Array');
+  expect(moduleCell(arrayRow, stateHeader, 'Current ammo')).toBe('0');
+  expect(moduleCell(arrayRow, stateHeader, 'Magazine')).toBe('5');
+  expect(moduleCell(arrayRow, stateHeader, 'Loaded ammo')).toBe('Autocannon Rounds');
+  expect(moduleCell(arrayRow, stateHeader, 'Ammo type')).toBe('autocannon');
+  expect(arrayRow).toContain('mining_power 12');
+  const bareRow = tableRow(stateModules, 'Mining Laser');
+  expect(moduleCell(bareRow, stateHeader, 'Current ammo')).toBe('');
+  expect(moduleCell(bareRow, stateHeader, 'Magazine')).toBe('');
+  expect(moduleCell(bareRow, stateHeader, 'Loaded ammo')).toBe('');
+  expect(moduleCell(bareRow, stateHeader, 'Ammo type')).toBe('');
+  expect(bareRow).not.toContain('NaN');
+  expect(bareRow).not.toContain('[object Object]');
+});
+
 test('get_ship does not flag per-module CPU or Power', () => {
   const stdout = renderShip(shipOverCapacityFixture).stdout.join('\n');
   const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
