@@ -5204,6 +5204,35 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   expect(stdout.split('Credits: 4242').length - 1).toBe(1);
 });
 
+test('get_state cargo share lines gloss size-1 fill and that lower is better', () => {
+  const snapshot = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(snapshot).toContain('Ore cargo: 50% (100 size-1 units fill 50 cargo; lower is better)');
+  expect(snapshot).not.toContain('Gas cargo:');
+  expect(snapshot).not.toContain('Ice cargo:');
+
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.ore_cargo_efficiency = 40;
+  fixture.ship.gas_cargo_efficiency = 0;
+  fixture.ship.ice_cargo_efficiency = 80;
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Ore cargo: 40% (100 size-1 units fill 40 cargo; lower is better)');
+  expect(stdout).toContain('Gas cargo: 0% (100 size-1 units fill 0 cargo; lower is better)');
+  expect(stdout).toContain('Ice cargo: 80% (100 size-1 units fill 80 cargo; lower is better)');
+
+  fixture.ship.ore_cargo_efficiency = '40';
+  delete fixture.ship.gas_cargo_efficiency;
+  fixture.ship.ice_cargo_efficiency = Number.POSITIVE_INFINITY;
+  const omitted = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(omitted).not.toContain('Ore cargo:');
+  expect(omitted).not.toContain('Gas cargo:');
+  expect(omitted).not.toContain('Ice cargo:');
+});
+
 test('get_state lists each module once and keeps stats on that row', () => {
   const stdout = renderStructuredResult(
     'get_state',

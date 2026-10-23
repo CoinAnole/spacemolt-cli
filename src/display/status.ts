@@ -1122,7 +1122,9 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       ['ice_cargo_efficiency', 'Ice cargo'],
     ] as const) {
       const value = ship[key];
-      if (finiteShipNumber(value)) emitLine(`${label}: ${String(value)}%`);
+      if (finiteShipNumber(value)) {
+        emitLine(`${label}: ${String(value)}% (100 size-1 units fill ${String(value)} cargo; lower is better)`);
+      }
     }
     if (finiteShipNumber(ship.speed)) emitLine(`Speed: ${ship.speed}`);
     if (finiteShipNumber(ship.damage_penalty)) emitLine(`Damage penalty: ${ship.damage_penalty}`);
