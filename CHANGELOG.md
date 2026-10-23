@@ -231,6 +231,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ### P2P Trading
 
+- `trade offer` usage and description cover a player trade or a faction station sale. `station_id` is the exact Base ID; `request_credits` is paid between faction treasuries. `get_trades` prints `Station`, `Seller faction`, `Buyer faction`, `Labor cost`, and `Transfer tax` when `station_id`, `seller_faction_id`, `buyer_faction_id`, `labor_cost`, or `transfer_tax` is present. A finite number prints, including 0. An omitted key does not print as 0. `trade_offer_received` and `trade_complete` previews print the same fields. The offer preview still ends with the accept or decline prompt. Ordinary trades omit them. `--json` / `--yaml` / `--structured` stay pass-through. Gameserver 0.646.0. **No parser change.**
 - `trade_cancel` / `trade_decline` help documents gameserver 0.611.0: `trade_in_progress` means the other side's accept is already committing and the trade will complete — do not retry cancel or decline; `trade_not_found` means the trade is already gone — check `get_trades`. Usage stays `trade_id`. **No parser change.**
 
 ### Exchange

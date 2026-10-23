@@ -8831,6 +8831,62 @@ describe('notification formatting', () => {
       expect(preview.details.some((d) => d.includes('Offering: 5 credits'))).toBe(true);
       expect(preview.details.some((d) => d.includes('Requesting: 2 credits'))).toBe(true);
       expect(preview.details.some((d) => d.includes('trade accept trade_id=trade_1'))).toBe(true);
+      expect(preview.details.join('\n')).not.toContain('Station:');
+      expect(preview.details.join('\n')).not.toContain('Labor cost:');
+    });
+
+    test('trade_offer_received and trade_complete previews show station sale fields, including 0', () => {
+      const offer = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        data: {
+          from_name: 'NovaLeader',
+          trade_id: 'trade_station',
+          offer_credits: 0,
+          request_credits: 5000000,
+          station_id: ' faction_station_nova\nignored',
+          seller_faction_id: 'faction_nova',
+          buyer_faction_id: 'faction_orion',
+          labor_cost: 0,
+          transfer_tax: 3000000n,
+        },
+      });
+      expect(offer.tag).toBe('TRADE');
+      expect(offer.headline).toContain('Offer from NovaLeader');
+      expect(offer.details).toEqual([
+        `Requesting: 5000000 credits`,
+        'Station: faction_station_nova; Seller faction: faction_nova; Buyer faction: faction_orion',
+        `Labor cost: 0 credits; Transfer tax: ${(3000000n).toLocaleString()} credits`,
+        'Use: trade accept trade_id=trade_station or trade decline trade_id=trade_station',
+      ]);
+      expect(offer.details.join('\n')).not.toContain('ignored');
+      expect(offer.details.join('\n')).not.toContain('Offering:');
+
+      const complete = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_complete',
+        data: {
+          partner_name: 'NovaLeader',
+          trade_id: 'trade_station',
+          station_id: 'faction_station_nova',
+          seller_faction_id: 'faction_nova',
+          labor_cost: 0n,
+          transfer_tax: null,
+        },
+      });
+      expect(complete.headline).toBe('Trade completed with NovaLeader!');
+      expect(complete.details).toEqual([
+        'Station: faction_station_nova; Seller faction: faction_nova',
+        'Labor cost: 0 credits',
+      ]);
+
+      const ordinary = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_complete',
+        data: { partner_name: 'Marlowe' },
+      });
+      expect(ordinary.headline).toBe('Trade completed with Marlowe!');
+      expect(ordinary.details).toEqual([]);
     });
 
     test('faction_invite pure preview includes decline prompt', () => {

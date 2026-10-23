@@ -225,9 +225,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   trade_offer: {
     usage:
-      '<player> [credits=N] [offer_items=JSON] [request_items=JSON] [request_credits=N]  (use get_trades for pending offers)',
+      '<player> [credits=N] [offer_items=JSON] [request_items=JSON] [request_credits=N] [station_id=BASE_ID]  (player trade or faction station sale; use get_trades for pending offers)',
     description:
-      'Offer a P2P trade. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}.',
+      'Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries.',
     example: `spacemolt trade_offer Marlowe offer_items='[{"item_id":"iron_ore","quantity":50}]' request_credits=1000`,
     seeAlso: ['get_trades', 'trade_accept', 'trade_decline', 'trade_cancel'],
     category: 'P2P Trading',

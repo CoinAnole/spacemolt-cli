@@ -200,7 +200,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Withdraw a trade you offered. Nothing moves, and the other player is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_cancel. Fails with trade_not_found if the trade is already gone; check get_trades.",
   trade_decline:
     "Decline a trade offered to you. Nothing moves, and the offerer is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_decline. Fails with trade_not_found if the trade is already gone; check get_trades.",
-  trade_offer: 'Offer a trade to another player',
+  trade_offer: 'Offer a trade or faction station sale to another player',
   uninstall_mod:
     'Uninstall a module from your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   unload_drone: 'Return a drone from your bay back to cargo',

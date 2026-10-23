@@ -6433,6 +6433,66 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Pending Trade Offers ===');
     expect(stdout).toContain('trade-credit-1: Ada offers 250 cr for 75 cr');
     expect(stdout).not.toContain('offers  for');
+    expect(stdout).not.toContain('Station:');
+    expect(stdout).not.toContain('Seller faction:');
+    expect(stdout).not.toContain('Buyer faction:');
+    expect(stdout).not.toContain('Labor cost:');
+    expect(stdout).not.toContain('Transfer tax:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('formats faction station sale fields on pending trades, including an explicit 0', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_trades', {
+      incoming: [
+        {
+          trade_id: 'trade-station-in',
+          offerer_name: 'NovaLeader',
+          offer_items: [],
+          request_items: [],
+          offer_credits: 0,
+          request_credits: 5000000,
+          station_id: ' faction_station_nova\nignored',
+          seller_faction_id: 'faction_nova',
+          buyer_faction_id: 'faction_orion',
+          labor_cost: 0,
+          transfer_tax: 3000000,
+          expires_at: '2026-10-23T12:00:00Z',
+        },
+      ],
+      outgoing: [
+        {
+          trade_id: 'trade-station-out',
+          target_name: 'OrionLeader',
+          offer_items: [],
+          request_items: [],
+          request_credits: 0,
+          station_id: 'faction_station_outpost',
+          seller_faction_id: ' ',
+          buyer_faction_id: null,
+          labor_cost: 1000000n,
+          transfer_tax: null,
+          expires_at: '2026-10-23T12:05:00Z',
+        },
+      ],
+    });
+
+    expect(stderr).toBe('');
+    const outgoing = stdout.split('Outgoing:')[1]?.split('Incoming:')[0] ?? '';
+    const incoming = stdout.split('Incoming:')[1] ?? '';
+    expect(incoming).toContain(`NovaLeader offers nothing for ${(5000000).toLocaleString()} cr`);
+    expect(incoming).toContain('Station: faction_station_nova');
+    expect(incoming).not.toContain('ignored');
+    expect(incoming).toContain('Seller faction: faction_nova');
+    expect(incoming).toContain('Buyer faction: faction_orion');
+    expect(incoming).toContain('Labor cost: 0 cr');
+    expect(incoming).toContain(`Transfer tax: ${(3000000).toLocaleString()} cr`);
+    expect(outgoing).toContain('offering nothing for nothing');
+    expect(outgoing).toContain('Station: faction_station_outpost');
+    expect(outgoing).toContain(`Labor cost: ${(1000000n).toLocaleString()} cr`);
+    expect(outgoing).toContain('To: OrionLeader');
+    expect(outgoing).not.toContain('Seller faction:');
+    expect(outgoing).not.toContain('Buyer faction:');
+    expect(outgoing).not.toContain('Transfer tax:');
     expect(stdout).not.toContain('=== Response ===');
   });
 

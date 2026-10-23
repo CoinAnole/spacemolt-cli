@@ -6315,10 +6315,18 @@ describe('command metadata', () => {
     expect(COMMANDS.trade_accept?.description).toBe('Accept a trade offer');
     expect(CURATED_COMMAND_DESCRIPTIONS.trade_accept).toBe('Accept a trade offer');
     expect(tradeOffer?.description).toBe(
-      'Offer a P2P trade. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}.',
+      'Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries.',
     );
     expect(COMMANDS.trade_offer?.description).toBe(tradeOffer?.description);
-    expect(CURATED_COMMAND_DESCRIPTIONS.trade_offer).toBe('Offer a trade to another player');
+    expect(CURATED_COMMAND_DESCRIPTIONS.trade_offer).toBe('Offer a trade or faction station sale to another player');
+    expect(tradeOffer?.usage).toContain('station_id=BASE_ID');
+    expect(tradeOffer?.usage).toContain('faction station sale');
+    expect(tradeOffer?.description).not.toContain('`');
+    const tradeOfferHelp = captureHelp('trade offer');
+    expect(tradeOfferHelp).toContain('faction station sale');
+    expect(tradeOfferHelp).toContain('station_id=BASE_ID');
+    expect(tradeOfferHelp).toContain('request_credits is paid between faction treasuries');
+    expect(tradeOfferHelp).toContain('exact Base ID');
     expect(CORE_COMMAND_OVERRIDES.trade_offer?.seeAlso).toEqual([
       'get_trades',
       'trade_accept',

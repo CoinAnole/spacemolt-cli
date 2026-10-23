@@ -297,6 +297,31 @@ function formatTradeTerms(items: unknown, credits: unknown): string {
   return parts.join(', ') || 'nothing';
 }
 
+function tradeIdText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const line = value.split(/\r?\n/, 1)[0]?.trim() ?? '';
+  return line.length > 0 ? line : undefined;
+}
+
+function tradeIntegerCredits(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return formatCredits(value);
+  if (typeof value === 'number' && Number.isFinite(value)) return formatCredits(value);
+  return undefined;
+}
+
+function emitTradeStationSale(trade: Record<string, unknown>): void {
+  const stationId = tradeIdText(trade.station_id);
+  if (stationId !== undefined) emitLine(`    Station: ${stationId}`);
+  const seller = tradeIdText(trade.seller_faction_id);
+  if (seller !== undefined) emitLine(`    Seller faction: ${seller}`);
+  const buyer = tradeIdText(trade.buyer_faction_id);
+  if (buyer !== undefined) emitLine(`    Buyer faction: ${buyer}`);
+  const labor = tradeIntegerCredits(trade.labor_cost);
+  if (labor !== undefined) emitLine(`    Labor cost: ${labor}`);
+  const tax = tradeIntegerCredits(trade.transfer_tax);
+  if (tax !== undefined) emitLine(`    Transfer tax: ${tax}`);
+}
+
 function formatOptionalNumber(value: unknown): string {
   return displayCount(value) ?? '?';
 }
@@ -1097,6 +1122,7 @@ export const marketFormatters = [
           const requested = formatTradeTerms(t.request_items, t.request_credits);
           const offered = formatTradeTerms(t.offer_items, t.offer_credits);
           emitLine(`  ${t.trade_id}: offering ${offered} for ${requested}`);
+          emitTradeStationSale(t);
           if (t.target_name) emitLine(`    To: ${t.target_name}`);
           if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
         }
@@ -1108,6 +1134,7 @@ export const marketFormatters = [
           const requested = formatTradeTerms(t.request_items, t.request_credits);
           const offered = formatTradeTerms(t.offer_items, t.offer_credits);
           emitLine(`  ${t.trade_id}: ${t.offerer_name || 'someone'} offers ${offered} for ${requested}`);
+          emitTradeStationSale(t);
           if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
         }
       }

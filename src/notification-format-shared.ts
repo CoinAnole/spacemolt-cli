@@ -1730,6 +1730,38 @@ function previewChatMessage(
   return details.length > 0 ? detailPreview(tag, headline, details, options) : headlinePreview(tag, headline, options);
 }
 
+function previewId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const line = firstLine(value);
+  return line.length > 0 ? line : undefined;
+}
+
+function previewIntegerCredits(value: unknown): string | undefined {
+  if (typeof value !== 'number' && typeof value !== 'bigint') return undefined;
+  if (typeof value === 'number' && !Number.isFinite(value)) return undefined;
+  const text = formatIntegerText(value);
+  return text === undefined ? undefined : `${text} credits`;
+}
+
+function stationSalePreviewLines(data: Record<string, unknown>): string[] {
+  const identity: string[] = [];
+  const stationId = previewId(data.station_id);
+  if (stationId !== undefined) identity.push(`Station: ${stationId}`);
+  const seller = previewId(data.seller_faction_id);
+  if (seller !== undefined) identity.push(`Seller faction: ${seller}`);
+  const buyer = previewId(data.buyer_faction_id);
+  if (buyer !== undefined) identity.push(`Buyer faction: ${buyer}`);
+  const fees: string[] = [];
+  const labor = previewIntegerCredits(data.labor_cost);
+  if (labor !== undefined) fees.push(`Labor cost: ${labor}`);
+  const tax = previewIntegerCredits(data.transfer_tax);
+  if (tax !== undefined) fees.push(`Transfer tax: ${tax}`);
+  const lines: string[] = [];
+  if (identity.length > 0) lines.push(identity.join('; '));
+  if (fees.length > 0) lines.push(fees.join('; '));
+  return lines;
+}
+
 function previewTradeOfferReceived(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -1742,6 +1774,7 @@ function previewTradeOfferReceived(
   if (offer !== undefined) details.push(`Offering: ${offer} credits`);
   const request = positiveNumber(data.request_credits);
   if (request !== undefined) details.push(`Requesting: ${request} credits`);
+  details.push(...stationSalePreviewLines(data));
   details.push(`Use: trade accept trade_id=${tradeId} or trade decline trade_id=${tradeId}`);
   return detailPreview('TRADE', `Offer from ${from} (ID: ${tradeId})`, details, options);
 }
@@ -1752,7 +1785,10 @@ function previewTradeComplete(
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
   const partner = scalarOr(data.partner_name, scalarOr(data.with, 'someone'));
-  return headlinePreview('TRADE', `Trade completed with ${partner}!`, options);
+  const headline = `Trade completed with ${partner}!`;
+  const details = stationSalePreviewLines(data);
+  if (details.length === 0) return headlinePreview('TRADE', headline, options);
+  return detailPreview('TRADE', headline, details, options);
 }
 
 function previewTradeDeclined(
