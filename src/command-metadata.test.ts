@@ -2252,6 +2252,9 @@ describe('command metadata', () => {
     const help = captureHelp('craft');
     expect(help).toContain('List queued crafting');
     expect(help).toContain('list jobs with no recipe');
+    expect(help).toContain('The Recipe column on a job list is the display name, not the catalog id.');
+    expect(help).toContain('falls back to the recipe id only when the recipe is no longer in the catalog');
+    expect(config?.description).toContain('not the catalog id');
     expect(help).toContain('source=storage|faction|faction:<bucket>|cargo');
     expect(help).toContain('deliver_to=storage|faction|faction:<bucket>');
     expect(help).toContain('escrow');
@@ -5126,6 +5129,9 @@ describe('command metadata', () => {
     expect(COMMANDS.get_notifications?.description).toContain(
       'Cached gameserver text describes that unsolicited frame as a WebSocket v2 push.',
     );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'An ok frame with action arrived, jumped, or pathfinder_arrival prints system, POI, from_system, and XP in the table message instead of a generic OK line.',
+    );
     expect(COMMANDS.get_notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.notifications?.description).toContain(
       'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
@@ -5135,6 +5141,9 @@ describe('command metadata', () => {
     );
     expect(COMMANDS.notifications?.description).toContain(
       'When an action_result has command pathfinder_arrival, it is formatted the same way as on get_notifications.',
+    );
+    expect(COMMANDS.notifications?.description).toContain(
+      'An ok frame with action arrived, jumped, or pathfinder_arrival is formatted the same way as on get_notifications.',
     );
     expect(COMMANDS.notifications?.description).toContain('This CLI does not open a WebSocket.');
     expect(COMMANDS.notifications?.description).not.toContain('next get_notifications poll');
@@ -5158,6 +5167,7 @@ describe('command metadata', () => {
     const getNotificationsHelp = captureHelp('get_notifications');
     expect(getNotificationsHelp).toContain('Mission objective completed (tick N)');
     expect(getNotificationsHelp).toContain('Pathfinder arrival (tick N)');
+    expect(getNotificationsHelp).toContain('instead of a generic OK line');
     expect(getNotificationsHelp).toContain('not its own type');
     expect(getNotificationsHelp).toContain('types=system');
     expect(getNotificationsHelp).not.toContain('next get_notifications poll');

@@ -2866,6 +2866,113 @@ function okBaseLabel(data: Record<string, unknown>): string | undefined {
   return fleetDockIdentity(data);
 }
 
+const OK_ARRIVAL_LABELS: Readonly<Record<string, string>> = {
+  arrived: 'Arrived',
+  jumped: 'Jumped',
+  pathfinder_arrival: 'Pathfinder arrival',
+};
+
+/** Finite numbers and bigints, including 0. No string coercion. */
+function arrivalCountText(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+/**
+ * `xp_gained` plus jump scalars. A skill already named by the map is not repeated
+ * from `navigation_xp`, `exploration_xp`, or `piloting_xp`.
+ */
+function arrivalXpText(data: Record<string, unknown>): string | undefined {
+  const parts: Array<{ skill: string; text: string; sort: number }> = [];
+  const covered = new Set<string>();
+  if (isRecord(data.xp_gained)) {
+    for (const [key, count] of Object.entries(data.xp_gained)) {
+      const skill = key.trim();
+      const text = arrivalCountText(count);
+      if (!skill || text === undefined) continue;
+      const sort = typeof count === 'number' ? count : Number(count);
+      parts.push({
+        skill,
+        text: `${skill}×${text}`,
+        sort: Number.isFinite(sort) ? sort : Number.NEGATIVE_INFINITY,
+      });
+      covered.add(skill);
+    }
+  }
+  const scalars: Array<[string, unknown]> = [
+    ['navigation', data.navigation_xp],
+    ['exploration', data.exploration_xp],
+    ['piloting', data.piloting_xp],
+  ];
+  for (const [skill, value] of scalars) {
+    if (covered.has(skill)) continue;
+    const text = arrivalCountText(value);
+    if (text === undefined) continue;
+    const sort = typeof value === 'number' ? value : Number(value);
+    parts.push({
+      skill,
+      text: `${skill}×${text}`,
+      sort: Number.isFinite(sort) ? sort : Number.NEGATIVE_INFINITY,
+    });
+  }
+  if (!parts.length) return undefined;
+  parts.sort((left, right) => right.sort - left.sort || left.skill.localeCompare(right.skill));
+  return parts.map((part) => part.text).join(', ');
+}
+
+/** `poi` is the POI name on arrived and the POI id on jumped / pathfinder_arrival. */
+function arrivalFactParts(data: Record<string, unknown>): string[] {
+  const parts: string[] = [];
+  const system = formatNameId(nonEmptyString(data.system), nonEmptyString(data.system_id));
+  if (system) parts.push(`system ${system}`);
+  const poi = formatNameId(nonEmptyString(data.poi), nonEmptyString(data.poi_id));
+  if (poi) parts.push(`POI ${poi}`);
+  const fromSystem = nonEmptyString(data.from_system);
+  if (fromSystem) parts.push(`from ${fromSystem}`);
+  const xp = arrivalXpText(data);
+  if (xp) parts.push(`XP ${xp}`);
+  return parts;
+}
+
+/** Do not treat a longer token as already showing this fact (`Sol` inside `Solar`). */
+function textHasFact(text: string, fact: string): boolean {
+  let from = 0;
+  while (from < text.length) {
+    const at = text.indexOf(fact, from);
+    if (at < 0) return false;
+    const next = text[at + fact.length];
+    if (next === undefined || /[\s,.;:!?)\]]/.test(next)) return true;
+    from = at + fact.length;
+  }
+  return false;
+}
+
+function fitArrivalHeadline(lead: string, facts: string, max: number): string {
+  const suffix = ` — ${facts}`;
+  if (`${lead}${suffix}`.length <= max) return `${lead}${suffix}`;
+  const budget = max - suffix.length;
+  if (budget <= 1) return facts;
+  return `${lead.slice(0, budget - 1)}…${suffix}`;
+}
+
+function arrivalOkHeadline(
+  action: string,
+  data: Record<string, unknown>,
+  messageLine: string,
+  options: ResolvedPreviewOptions,
+): string {
+  const label = OK_ARRIVAL_LABELS[action] ?? 'Arrived';
+  const facts = arrivalFactParts(data);
+  const factLine = facts.join('; ');
+  if (!messageLine) return factLine ? `${label}; ${factLine}` : label;
+  const missing = facts.filter((part) => !textHasFact(messageLine, part));
+  if (!missing.length) return messageLine;
+  const lead = messageLine.replace(/\.+$/, '').trim();
+  if (!lead) return factLine ? `${label}; ${factLine}` : label;
+  return fitArrivalHeadline(lead, missing.join('; '), options.maxLineLength);
+}
+
 function previewOk(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -2909,6 +3016,11 @@ function previewOk(
       }
       break;
     }
+    case 'arrived':
+    case 'jumped':
+    case 'pathfinder_arrival':
+      headline = arrivalOkHeadline(action, data, messageLine, options);
+      break;
     default: {
       if (!headline) {
         headline = action ? String(safeScalar(data.action)) : 'OK';

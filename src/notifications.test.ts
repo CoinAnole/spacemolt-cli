@@ -3356,6 +3356,201 @@ describe('notification formatting', () => {
       });
     });
 
+    describe('arrival ok frames (0.645.3)', () => {
+      const jumped = {
+        action: 'jumped',
+        system: 'Alpha Centauri',
+        system_id: 'alpha_centauri',
+        poi: 'new_providence',
+        from_system: 'Sol',
+        navigation_xp: 3,
+        exploration_xp: 5,
+        piloting_xp: 6,
+      };
+      const jumpedHeadline =
+        'Jumped; system Alpha Centauri (alpha_centauri); POI new_providence; from Sol; XP piloting×6, exploration×5, navigation×3';
+
+      test('jumped prints system, POI, from_system, and XP instead of a generic OK line', () => {
+        const notification = note('ok', jumped);
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('OK');
+        expect(preview.headline).toBe(jumpedHeadline);
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toBe('jumped');
+        expect(tableMessageFromPreview(preview)).toBe(jumpedHeadline);
+        expect(formatNotificationMessage(notification)).toBe(jumpedHeadline);
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[OK]');
+        expect(output).toContain(jumpedHeadline);
+        expectNoDiagnosticTokens(output);
+      });
+
+      test('arrived prints the POI name with poi_id and xp_gained, including 0', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'arrived',
+            poi: 'Earth',
+            poi_id: 'sol_earth',
+            xp_gained: { navigation: 3, piloting: 0 },
+          }),
+        );
+        expect(preview.headline).toBe('Arrived; POI Earth (sol_earth); XP navigation×3, piloting×0');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('arrived');
+      });
+
+      test('pathfinder_arrival message keeps labeled facts that the message does not already show', () => {
+        const notification = note('ok', {
+          action: 'pathfinder_arrival',
+          message: 'Dropped out at Procyon.',
+          system: 'Procyon',
+          system_id: 'procyon',
+          poi: 'new_providence',
+          from_system: 'Sol',
+          navigation_xp: 3,
+        });
+        const headline =
+          'Dropped out at Procyon — system Procyon (procyon); POI new_providence; from Sol; XP navigation×3';
+        const preview = formatNotificationPreview(notification);
+        expect(preview.headline).toBe(headline);
+        expect(preview.details).toEqual([]);
+        expect(formatNotificationMessage(notification)).toBe(headline);
+      });
+
+      test('a message that already contains each fact is left unchanged', () => {
+        const message = 'Pathfinder arrival; system Procyon (procyon); POI new_providence; from Sol; XP navigation×3';
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'pathfinder_arrival',
+            message,
+            system: 'Procyon',
+            system_id: 'procyon',
+            poi: 'new_providence',
+            from_system: 'Sol',
+            navigation_xp: 3,
+          }),
+        );
+        expect(preview.headline).toBe(message);
+        expect(preview.details).toEqual([]);
+      });
+
+      test('does not treat a longer system token as already printed', () => {
+        const preview = formatNotificationPreview(
+          note('ok', { action: 'jumped', message: 'Entered system Solar.', system: 'Sol' }),
+        );
+        expect(preview.headline).toBe('Entered system Solar — system Sol');
+      });
+
+      test('action only is a label, not the raw action token', () => {
+        expect(formatNotificationPreview(note('ok', { action: 'arrived' })).headline).toBe('Arrived');
+        expect(formatNotificationPreview(note('ok', { action: 'jumped' })).headline).toBe('Jumped');
+        expect(formatNotificationPreview(note('ok', { action: 'pathfinder_arrival' })).headline).toBe(
+          'Pathfinder arrival',
+        );
+        expect(
+          formatNotificationPreview(note('ok', { action: 'Pathfinder_Arrival', system: 'Procyon' })).headline,
+        ).toBe('Pathfinder arrival; system Procyon');
+      });
+
+      test('whitespace message uses the no-message arrival line', () => {
+        expect(
+          formatNotificationPreview(note('ok', { action: 'arrived', message: '   ', poi_id: 'sol_earth' })).headline,
+        ).toBe('Arrived; POI sol_earth');
+      });
+
+      test('system_id alone, equal poi and poi_id, and an explicit 0 scalar still print', () => {
+        expect(formatNotificationPreview(note('ok', { action: 'jumped', system_id: 'alpha_centauri' })).headline).toBe(
+          'Jumped; system alpha_centauri',
+        );
+        expect(
+          formatNotificationPreview(note('ok', { action: 'arrived', poi: 'sol_earth', poi_id: 'sol_earth' })).headline,
+        ).toBe('Arrived; POI sol_earth');
+        expect(formatNotificationPreview(note('ok', { action: 'jumped', navigation_xp: 0 })).headline).toBe(
+          'Jumped; XP navigation×0',
+        );
+      });
+
+      test('xp_gained covers the same skill on the scalar fields, and an empty map adds no XP', () => {
+        const covered = formatNotificationPreview(
+          note('ok', { action: 'jumped', xp_gained: { navigation: 3 }, navigation_xp: 9 }),
+        );
+        expect(covered.headline).toBe('Jumped; XP navigation×3');
+        expect(covered.headline).not.toContain('navigation×9');
+
+        const empty = formatNotificationPreview(note('ok', { action: 'arrived', xp_gained: {}, from_system: 'Sol' }));
+        expect(empty.headline).toBe('Arrived; from Sol');
+        expect(empty.headline).not.toContain('XP');
+      });
+
+      test('bigint xp prints its digits, and object poi is ignored', () => {
+        const big = formatNotificationPreview(
+          note('ok', { action: 'arrived', xp_gained: { navigation: 9007199254740993n } }),
+        );
+        expect(big.headline).toBe('Arrived; XP navigation×9007199254740993');
+
+        const objectPoi = formatNotificationPreview(
+          note('ok', { action: 'arrived', poi: { name: 'Earth' }, poi_id: 'sol_earth' }),
+        );
+        expect(objectPoi.headline).toBe('Arrived; POI sol_earth');
+        expectNoDiagnosticTokens(objectPoi.headline);
+        expect(objectPoi.headline).not.toContain('{');
+      });
+
+      test('does not dump online_players or unknown_signature', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'arrived',
+            poi: 'Earth',
+            poi_id: 'sol_earth',
+            unknown_signature: true,
+            online_players: [{ username: 'Ibis' }],
+          }),
+        );
+        expect(preview.headline).toBe('Arrived; POI Earth (sol_earth)');
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).not.toContain('Ibis');
+        expect(preview.headline).not.toContain('unknown_signature');
+        expectNoNestedJsonDump(preview.headline);
+      });
+
+      test('long message keeps the arrival facts inside maxLineLength 120', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'arrived',
+            message: 'A'.repeat(200),
+            system: 'Sol',
+            poi: 'Earth',
+          }),
+          { maxLineLength: 120 },
+        );
+        const suffix = ' — system Sol; POI Earth';
+        expect(preview.headline.length).toBeLessThanOrEqual(120);
+        expect(preview.headline.endsWith(suffix)).toBe(true);
+        expect(preview.details).toEqual([]);
+        expect(tableMessageFromPreview(preview)).toBe(preview.headline);
+      });
+
+      test('get_notifications table prints the arrival fields', () => {
+        const rendered = renderStructuredResult('get_notifications', {
+          count: 1,
+          notifications: [
+            {
+              id: 'ok-jump-1',
+              type: 'system',
+              msg_type: 'ok',
+              timestamp: '2026-09-07T12:00:00.000Z',
+              data: jumped,
+            },
+          ],
+        });
+        expect(rendered.success).toBe(true);
+        const stdout = rendered.stdout.join('\n');
+        expect(stdout).toContain('ok');
+        expect(stdout).toContain(jumpedHeadline);
+        expect(stdout).not.toContain('=== Response ===');
+      });
+    });
+
     test('unknown action uses tag OK and prefers the server message', () => {
       const withMessage = formatNotificationPreview(note('ok', { action: 'ack', message: 'Command accepted.' }));
       expect(withMessage.tag).toBe('OK');
