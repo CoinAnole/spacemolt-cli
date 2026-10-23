@@ -291,6 +291,7 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
         'Declaring war costs 50,000 credits from your wallet, not the faction treasury. Check "spacemolt get_status" for your credits. Earn credits, then retry, or do not declare. Do not run "spacemolt faction_deposit_credits" — that moves credits out of the wallet that is short.',
       citizenship_apply:
         'Applying for citizenship deducts the fee from your player wallet (you must hold the minimum balance plus the fee). Check "spacemolt get_status" for your credits. Do not run "spacemolt faction_deposit_credits" — that moves credits out of the wallet that is short.',
+      buy: 'Not enough credits for this buy. The server message includes the price, the tax, and your balance. Check "spacemolt get_status" for your wallet.',
     },
   },
   no_cargo_space: {

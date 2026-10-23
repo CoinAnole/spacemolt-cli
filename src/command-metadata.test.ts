@@ -4199,6 +4199,7 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('[delivery=cargo|storage]');
     expect(config?.aliases).toMatchObject({ delivery: 'deliver_to' });
     expect(COMMANDS.buy?.description).toContain(hazmatInstantFill);
+    expect(COMMANDS.buy?.description).toContain("An instant fill pays the empire's sales tax on each unit.");
     expect(COMMANDS.buy?.description).toContain('delivery=cargo');
     expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('CLI default is storage');
     expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('delivery=cargo');
@@ -4212,6 +4213,7 @@ describe('command metadata', () => {
     expect(help).toContain('delivery=cargo');
     expect(help).toContain('deliver_to=storage');
     expect(help).toContain(hazmatInstantFill);
+    expect(help).toContain("An instant fill pays the empire's sales tax on each unit.");
     expect(help).toContain('storage');
     expect(help).not.toContain('view_storage');
     for (const text of [COMMANDS.buy?.description ?? '', COMMANDS.buy?.schema?.deliver_to?.description ?? '']) {
@@ -4261,6 +4263,7 @@ describe('command metadata', () => {
     expect(COMMANDS.faction_create_buy_order?.description).not.toContain('hazmat');
     expect(COMMANDS.create_sell_order?.description).not.toContain('hazmat');
     expect(COMMANDS.sell?.description).not.toContain('hazmat');
+    expect(COMMANDS.create_buy_order?.description).not.toContain("empire's sales tax on each unit");
   });
 
   test('sell help states cargo first, then docked-station storage', () => {

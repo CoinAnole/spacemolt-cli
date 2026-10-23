@@ -3818,7 +3818,7 @@ describe('help output branches', () => {
     expect(shipNext).not.toContain('faction_garages');
   });
 
-  test('displayError gives insufficient_credits a generic suggestion on buy', () => {
+  test('displayError gives insufficient_credits a buy overlay', () => {
     const capture = captureWriter();
     displayError(
       'buy',
@@ -3829,8 +3829,9 @@ describe('help output branches', () => {
     const output = capture.stderr.join('\n');
     expect(output).toContain('Error [insufficient_credits]');
     expect(output).toContain('Suggestion:');
-    expect(output).toContain('If the server message names the faction treasury');
+    expect(output).toContain('The server message includes the price, the tax, and your balance');
     expect(output).toContain('spacemolt get_status');
+    expect(output).not.toContain('If the server message names the faction treasury');
     expect(output).not.toContain('dry_run');
     expect(output).not.toContain('50,000');
     expect(output).not.toContain('already held');

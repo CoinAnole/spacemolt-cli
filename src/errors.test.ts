@@ -269,6 +269,7 @@ describe('insufficient_credits', () => {
       'craft',
       'faction_declare_war',
       'citizenship_apply',
+      'buy',
     ]);
     expect(ERROR_REGISTRY.no_credits?.commandSuggestions).toBeUndefined();
     expect(ERROR_REGISTRY.boarding_locked?.commandSuggestions).toBeUndefined();
@@ -346,15 +347,28 @@ describe('insufficient_credits', () => {
     expect(underscore).not.toContain('job stayed');
   });
 
-  test('recycle and buy stay on the generic suggestion', () => {
+  test('recycle stays on the generic suggestion', () => {
     const generic = getErrorSuggestion('insufficient_credits');
     expect(getErrorSuggestion('insufficient_credits', 'recycle')).toBe(generic);
-    expect(getErrorSuggestion('insufficient_credits', 'buy')).toBe(generic);
     const recycle = getErrorSuggestion('insufficient_credits', 'recycle');
     expect(recycle).not.toContain('dry_run');
     expect(recycle).not.toContain('preset=cheap');
     expect(recycle).not.toContain('50,000');
     expect(recycle).not.toContain('balance plus the fee');
+    expect(recycle).not.toContain('the price, the tax, and your balance');
+  });
+
+  test('buy overlay says the server message includes price, tax, and balance', () => {
+    const generic = getErrorSuggestion('insufficient_credits');
+    const suggestion = getErrorSuggestion('insufficient_credits', 'buy');
+    expect(suggestion).not.toBe(generic);
+    expect(suggestion).toContain('The server message includes the price, the tax, and your balance');
+    expect(suggestion).toContain('spacemolt get_status');
+    expect(suggestion).not.toContain('dry_run');
+    expect(suggestion).not.toContain('50,000');
+    expect(suggestion).not.toContain('faction_deposit_credits');
+    expect(suggestion).not.toContain('missing_materials');
+    expect(suggestion).not.toContain('labor');
   });
 
   test('related commands stay generic', () => {

@@ -201,7 +201,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<item_id_or_cached_name> [quantity] [auto_list=true] [delivery=cargo|storage]  (defaults to station storage; use view_market to cache items)',
     description:
-      'Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
+      "Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo. An instant fill pays the empire's sales tax on each unit. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.",
     example: 'spacemolt buy fuel 10 delivery=cargo',
     discoverWith: ['view_market', 'get_status'],
     seeAlso: ['view_market', 'storage', 'get_cargo'],
