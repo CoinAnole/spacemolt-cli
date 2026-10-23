@@ -33,6 +33,7 @@ import {
   facilityListSimpleFixture,
   facilityOwnedFixture,
   facilityTypesDetailFixture,
+  facilityTypesFixture,
   factionDecommissionMobileBaseFixture,
   factionFacilityListFixture,
   factionFacilityOwnedFixture,
@@ -2871,6 +2872,203 @@ test('facility_types declines detail payloads with a non-types action', () => {
   ).stdout.join('\n');
   expect(stdout).not.toContain('=== Facility type:');
   expect(stdout).not.toContain('Service pool: 20 cap');
+});
+
+function facilityTypeListFixture(
+  types: Array<Record<string, unknown>>,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    action: 'types',
+    kind: 'list',
+    page: 1,
+    per_page: 20,
+    total: types.length,
+    total_pages: 1,
+    hint: 'Pass facility_type for one type.',
+    types,
+    ...extra,
+  };
+}
+
+function renderFacilityTypes(fixture: Record<string, unknown>, renderOptions = options): string {
+  return renderStructuredResult('facility_types', fixture, renderOptions, context).stdout.join('\n');
+}
+
+test('facility_types list prints buildable yes and no instead of the generic table', () => {
+  const fixture = facilityTypeListFixture([
+    {
+      id: 'faction_storage',
+      name: 'Faction Storage',
+      category: 'faction',
+      level: 1,
+      build_cost: 50000,
+      buildable: true,
+    },
+    {
+      id: 'life_support',
+      name: 'Life Support',
+      category: 'infrastructure',
+      level: 1,
+      build_cost: 0,
+      buildable: true,
+    },
+    {
+      id: 'ore_refinery',
+      name: 'Ore Refinery',
+      category: 'production',
+      level: 2,
+      build_cost: 12000,
+      buildable: false,
+    },
+  ]);
+  const stdout = renderFacilityTypes(fixture);
+  const section = sectionAfter(stdout, 'Facility types');
+  expect(stdout).toContain('=== Facility types ===');
+  expect(stdout).not.toContain('=== Types ===');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Categories ===');
+  expect(tableCell(section, 'Faction Storage', 'Buildable')).toBe('yes');
+  expect(tableCell(section, 'Life Support', 'Buildable')).toBe('yes');
+  expect(tableCell(section, 'Life Support', 'Build cost')).toBe('0');
+  expect(tableCell(section, 'Ore Refinery', 'Buildable')).toBe('no');
+  expect(tableCell(section, 'Ore Refinery', 'ID')).toBe('ore_refinery');
+  expect(tableCell(section, 'Ore Refinery', 'Category')).toBe('production');
+  expect(tableCell(section, 'Ore Refinery', 'Level')).toBe('2');
+  expect(tableCell(section, 'Faction Storage', 'Build cost')).toBe('50000');
+  expect(stdout).toContain('page 1/1 | total 3');
+  expect(stdout).toContain('Pass facility_type for one type.');
+  expect(stdout).not.toContain('true');
+  expect(stdout).not.toContain('false');
+});
+
+test('facility_types list omits Buildable when no row has a boolean', () => {
+  const stdout = renderFacilityTypes(
+    facilityTypeListFixture([
+      { id: 'ore_refinery', name: 'Ore Refinery', category: 'production', level: 2, build_cost: 12000 },
+      {
+        id: 'life_support',
+        name: 'Life Support',
+        category: 'infrastructure',
+        level: 2,
+        build_cost: 8000,
+        buildable: 1,
+      },
+    ]),
+  );
+  expect(stdout).toContain('=== Facility types ===');
+  expect(stdout).not.toContain('Buildable');
+  expect(stdout).not.toContain('yes');
+  expect(stdout).not.toContain('no');
+  expect(tableCell(sectionAfter(stdout, 'Facility types'), 'Ore Refinery', 'Build cost')).toBe('12000');
+});
+
+test('facility_types list prints none for an empty types array and keeps an explicit 0 total', () => {
+  const stdout = renderFacilityTypes(
+    facilityTypeListFixture([], { total: 0, hint: 'No matches.', page: 2, total_pages: 2 }),
+  );
+  expect(stdout).toContain('=== Facility types ===');
+  expect(stdout).toContain('(None)');
+  expect(stdout).toContain('page 2/2 | total 0');
+  expect(stdout).toContain('No matches.');
+  expect(stdout).not.toContain('Buildable');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_types list skips a non-string hint and still prints the table', () => {
+  const stdout = renderFacilityTypes(
+    facilityTypeListFixture(
+      [
+        {
+          id: 'faction_storage',
+          name: 'Faction Storage',
+          category: 'faction',
+          level: 1,
+          build_cost: 1,
+          buildable: true,
+        },
+      ],
+      { hint: { text: 'hidden' } },
+    ),
+  );
+  expect(tableCell(sectionAfter(stdout, 'Facility types'), 'Faction Storage', 'Buildable')).toBe('yes');
+  expect(stdout).not.toContain('hidden');
+  expect(stdout).not.toContain('[object Object]');
+});
+
+test('facility_types list declines a non-types action and a non-record row', () => {
+  const row = {
+    id: 'faction_storage',
+    name: 'Faction Storage',
+    category: 'faction',
+    level: 1,
+    build_cost: 1,
+    buildable: true,
+  };
+  const wrongAction = renderFacilityTypes(facilityTypeListFixture([row], { action: 'build' }));
+  expect(wrongAction).not.toContain('=== Facility types ===');
+  expect(wrongAction).toContain('=== Types ===');
+  expect(wrongAction).not.toContain('Buildable');
+
+  const mixed = renderFacilityTypes(facilityTypeListFixture([row, 'nope'] as Array<Record<string, unknown>>));
+  expect(mixed).not.toContain('=== Facility types ===');
+  expect(mixed).not.toContain('Buildable');
+  expect(mixed).not.toContain('yes');
+});
+
+test('facility_types list buildable stays off json, yaml, structured, and compact output', () => {
+  const fixture = facilityTypeListFixture([
+    {
+      id: 'faction_storage',
+      name: 'Faction Storage',
+      category: 'faction',
+      level: 1,
+      build_cost: 50000,
+      buildable: true,
+    },
+  ]);
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const stdout = renderFacilityTypes(structuredClone(fixture), renderOptions);
+    expect(stdout).not.toContain('=== Facility types ===');
+    expect(stdout).not.toContain('Buildable');
+    expect(stdout).not.toContain('buildable_display');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('buildable: true');
+    } else {
+      expect(JSON.parse(stdout).types[0].buildable).toBe(true);
+    }
+  }
+});
+
+test('facility_types list format text matches the table', () => {
+  const fixture = facilityTypeListFixture([
+    {
+      id: 'life_support',
+      name: 'Life Support',
+      category: 'infrastructure',
+      level: 1,
+      build_cost: 0,
+      buildable: false,
+    },
+  ]);
+  const table = renderFacilityTypes(structuredClone(fixture));
+  const text = renderFacilityTypes(structuredClone(fixture), { ...options, format: 'text' });
+  expect(text).toBe(table);
+  expect(tableCell(sectionAfter(text, 'Facility types'), 'Life Support', 'Buildable')).toBe('no');
+  expect(tableCell(sectionAfter(text, 'Facility types'), 'Life Support', 'Build cost')).toBe('0');
+});
+
+test('facility_types discovery still prints category buildable counts', () => {
+  const stdout = renderFacilityTypes(structuredClone(facilityTypesFixture) as Record<string, unknown>);
+  expect(stdout).toContain('=== Categories ===');
+  expect(stdout).toContain('Buildable');
+  expect(stdout).not.toContain('=== Facility types ===');
 });
 
 test('renders facility list item req. stock and labor per cycle', () => {

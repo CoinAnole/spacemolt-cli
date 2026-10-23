@@ -200,6 +200,32 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   return true;
 }
 
+function emitFacilityTypeList(r: Record<string, unknown>): boolean {
+  const action = r.action;
+  if (typeof action === 'string' && action && action !== 'types') return false;
+  if (!Array.isArray(r.types) || !r.types.every(isRecord)) return false;
+  const rows = r.types.map((row) => ({
+    ...row,
+    buildable_display: formatYesNo(row.buildable),
+  }));
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name']],
+    ['ID', ['id']],
+    ['Category', ['category']],
+    ['Level', ['level']],
+    ['Build cost', ['build_cost']],
+  ];
+  if (hasAnyField(rows, ['buildable_display'])) columns.push(['Buildable', ['buildable_display']]);
+  printCompactTable('Facility types', rows, columns);
+  const parts: string[] = [];
+  if (r.page !== undefined && r.total_pages !== undefined) parts.push(`page ${r.page}/${r.total_pages}`);
+  const total = r.total ?? r.total_count;
+  if (total !== undefined) parts.push(`total ${total}`);
+  if (parts.length) emitLine(`${c.dim}${parts.join(' | ')}${c.reset}`);
+  if (typeof r.hint === 'string' && r.hint) emitLine(`\n${r.hint}`);
+  return true;
+}
+
 /** Omit the no-winner sentinel so this side-id label is not printed as -1. */
 function formatWinningSide(value: unknown): unknown {
   if (value === -1n) return undefined;
@@ -2030,6 +2056,7 @@ export const socialFormatters = [
         return emitFacilityTypeDetail(r);
       }
 
+      if (r.kind === 'list') return emitFacilityTypeList(r);
       if (r.kind !== undefined && r.kind !== 'discovery') return false;
       if (!isRecord(r.categories)) return false;
       const categories = Object.entries(r.categories).map(([category, raw]) => ({
