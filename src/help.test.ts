@@ -764,12 +764,16 @@ describe('help output branches', () => {
     expect(storageJettisonLine).toBeDefined();
     expect(storageJettisonLine).toContain('Prefer top-level jettison');
     expect(storageJettisonLine).toContain('Same container, mid-flight destruction, and deposit-settle rules');
+    expect(storageJettisonLine).toContain('4 input to 3');
+    expect(storageJettisonLine).toContain('conversion.output_quantity');
     expect(storageJettisonLine).not.toContain('other.jettison_dispersed');
     expect(storageJettisonLine).not.toContain('settles back');
 
     const jettisonLine = output.split('\n').find((line) => /^\s+jettison /.test(line));
     expect(jettisonLine).toBeDefined();
     expect(jettisonLine).toContain('settles back');
+    expect(jettisonLine).toContain('4 input to 3');
+    expect(jettisonLine).toContain('partial batch is lost');
     expect(jettisonLine).toContain('other.jettison_dispersed');
   });
 

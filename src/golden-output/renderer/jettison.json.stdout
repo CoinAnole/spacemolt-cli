@@ -1,0 +1,14 @@
+{
+  "details": {
+    "action": "jettison",
+    "item_id": "purified_water",
+    "item_name": "Purified Water",
+    "quantity": 5,
+    "container_id": "jettison_container",
+    "message": "Jettisoned 5 Purified Water; formed 3 water_ice for recovery. Unrecoverable material dissipated.",
+    "conversion": {
+      "output_item_id": "water_ice",
+      "output_quantity": 3
+    }
+  }
+}

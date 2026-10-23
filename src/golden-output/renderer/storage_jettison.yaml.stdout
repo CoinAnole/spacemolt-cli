@@ -1,0 +1,20 @@
+
+details:
+  action: bulk_jettison
+  container_id: jettison_container
+  requested: 2
+  succeeded: 2
+  failed: 0
+  message: "Jettisoned 2 cargo types."
+  results:
+    - item_id: purified_water
+      item_name: "Purified Water"
+      quantity: 5
+      success: true
+      conversion: {output_item_id: water_ice, output_quantity: 3}
+    - item_id: coolant_fluid
+      item_name: "Coolant Fluid"
+      quantity: 2
+      success: true
+      message: "Incomplete batch dissipated."
+      conversion: {output_item_id: water_ice, output_quantity: 0}

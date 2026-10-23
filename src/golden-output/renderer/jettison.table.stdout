@@ -1,0 +1,10 @@
+
+=== Jettison ===
+Action: jettison
+Item Id: purified_water
+Item Name: Purified Water
+Quantity: 5
+Container Id: jettison_container
+Message: Jettisoned 5 Purified Water; formed 3 water_ice for recovery. Unrecoverable material dissipated.
+Output Item Id: water_ice
+Output Quantity: 3

@@ -138,7 +138,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   install_mod:
     'Install a module on your ship. Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:
-    'Dump cargo into a lootable container; matching ore settles back into the belt when the container despawns.',
+    'Dump cargo into a lootable container. At a POI, water, nitrogen, ammonia, and methane convert at 4 to 3, oxygen at 4 to 2, and coolant at 3 to 1 water ice; a partial batch is lost. Output is conversion.output_item_id and conversion.output_quantity, including 0. Matching ore settles back into the belt when the container despawns.',
   join_faction:
     "Join a faction via invitation. You must have a pending invite. While you fight in a battle against one of that faction's stations, join_faction returns own_faction_station. Leave the battle first, then retry.",
   leave_faction: 'Leave your faction',
@@ -186,7 +186,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   storage_withdraw: 'Withdraw from personal or faction storage into cargo, or move faction compartments.',
   storage_loot:
     'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod), via spacemolt_storage/loot. A wreck at another POI returns not_found, the same as a wreck that is already gone.',
-  storage_jettison: 'Jettison items via spacemolt_storage/jettison.',
+  storage_jettison:
+    'Jettison items via spacemolt_storage/jettison. At a POI, water, nitrogen, ammonia, and methane convert at 4 to 3, oxygen at 4 to 2, and coolant at 3 to 1 water ice; a partial batch is lost. Output is conversion.output_item_id and conversion.output_quantity, including 0.',
   supply_commission:
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
   survey_system: 'Read ore at charted POIs and scan the current system for hidden POIs',

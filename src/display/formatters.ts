@@ -7,6 +7,7 @@ import { findRouteFormatters } from './find-route.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
 import { inspectFormatters } from './inspect.ts';
+import { jettisonFormatters } from './jettison.ts';
 import { lootFormatters } from './loot.ts';
 import { marketFormatters } from './market.ts';
 import { mineFormatters } from './mine.ts';
@@ -30,6 +31,7 @@ export const resultFormatters: ResultFormatter[] = [
   ...passengerFormatters,
   ...shipFormatters,
   ...lootFormatters,
+  ...jettisonFormatters,
   ...prizeFormatters,
   ...inspectFormatters,
   ...socialFormatters,

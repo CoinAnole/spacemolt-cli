@@ -18,6 +18,9 @@ const FACTION_MEMBERSHIP_FACILITY_RENT_HELP =
 const FACILITY_RECLAIMED_PLAYER_STATION_HELP =
   "Gameserver 0.618.2, facility_reclaimed notification description (Notification_facility_reclaimed), not a property of that notice: at another faction's station, a repossessed production facility passes to that faction and any other facility is removed, with its build materials returned to the tenant's storage there, after the owning faction takes enough of them to cover the unpaid rent. Any rent the materials cannot cover is forgiven. The notice properties are base_id, base_name, facilities, faction_id, and message.";
 
+const JETTISON_POI_CONVERSION_HELP =
+  'At a POI, purified_water, liquid_nitrogen, liquid_ammonia, and liquid_methane convert at 4 input to 3 output (water_ice, nitrogen_ice, ammonia_ice, and methane_ice); liquid_oxygen converts to oxygen_ice at 4 to 2; coolant_fluid converts to water_ice at 3 to 1. All input is removed, and a partial batch is lost. Table output prints conversion.output_item_id and conversion.output_quantity, including 0.';
+
 const OUTSIDER_STATION_RENT_HELP =
   "Anyone outside a faction who owns a facility at that faction's player station pays rent each cycle to the faction's treasury. The faction and its members pay nothing there, so quotes and rent totals for them are 0, not an omitted field. " +
   FACTION_MEMBERSHIP_FACILITY_RENT_HELP +
@@ -211,7 +214,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',
     description:
-      'Dump cargo into a lootable container at your current POI; repeated dumps at the same POI share one container. Mid-flight (jump or Pathfinder drift) still jettisons, but there is no POI to anchor a container — the cargo is destroyed and the response says so. When a container despawns, cargo that matches a mineable deposit at that POI settles back into it up to capacity, so dumping unwanted ore does not strip it out of the belt; cargo the POI does not mine is lost. Despawn receipts are get_action_log event_type=other.jettison_dispersed. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+      'Dump cargo into a lootable container at your current POI; repeated dumps at the same POI share one container. Mid-flight (jump or Pathfinder drift) still jettisons, but there is no POI to anchor a container — the cargo is destroyed and the response says so. When a container despawns, cargo that matches a mineable deposit at that POI settles back into it up to capacity, so dumping unwanted ore does not strip it out of the belt; cargo the POI does not mine is lost. Despawn receipts are get_action_log event_type=other.jettison_dispersed. ' +
+      JETTISON_POI_CONVERSION_HELP +
+      ' When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
     example: 'spacemolt jettison items=\'[{"item_id":"iron_ore","quantity":50}]\'',
     discoverWith: ['get_cargo'],
     seeAlso: ['get_cargo', 'get_wrecks', 'get_action_log'],
@@ -329,7 +334,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '[item_id] [quantity] [items=JSON]  (item_id/quantity required unless items=JSON; same style as cargo jettison)',
     description:
-      'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path. Same container, mid-flight destruction, and deposit-settle rules as top-level jettison. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+      'Jettison items via spacemolt_storage/jettison. Prefer top-level jettison (spacemolt/jettison) for ordinary cargo dumps unless you specifically need this path. Same container, mid-flight destruction, and deposit-settle rules as top-level jettison. ' +
+      JETTISON_POI_CONVERSION_HELP +
+      ' When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
     example: 'spacemolt storage_jettison items=\'[{"item_id":"ore_iron","quantity":50}]\'',
     category: 'Cargo',
     apiRoute: 'POST /api/v2/spacemolt_storage/jettison',

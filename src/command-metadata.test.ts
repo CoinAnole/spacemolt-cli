@@ -1007,6 +1007,8 @@ describe('command metadata', () => {
     expect(CORE_COMMAND_OVERRIDES.jettison).toBeUndefined();
     expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.jettison?.description).toContain(sentence);
     expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('settles back into the belt');
+    expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('conversion.output_quantity');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_jettison).toContain('partial batch is lost');
     expect(CURATED_COMMAND_DESCRIPTIONS.jettison).not.toContain(sentence);
     expect(CORE_COMMAND_OVERRIDES.install_mod?.description).toBeUndefined();
     expect(CORE_COMMAND_OVERRIDES.uninstall_mod?.description).toBeUndefined();
@@ -2462,12 +2464,21 @@ describe('command metadata', () => {
     expect(jettison?.seeAlso).toEqual(expect.arrayContaining(['get_action_log', 'get_wrecks']));
     expect(jettison?.discoverWith).toEqual(expect.arrayContaining(['get_cargo']));
     expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('settles back into the belt');
+    expect(CURATED_COMMAND_DESCRIPTIONS.jettison).toContain('conversion.output_quantity');
+    expect(CURATED_COMMAND_DESCRIPTIONS.storage_jettison).toContain('partial batch is lost');
 
     const jettisonHelp = captureHelp('jettison');
     expect(jettisonHelp).toContain('container');
     expect(jettisonHelp).toMatch(/mid-flight|Pathfinder/);
     expect(jettisonHelp).toMatch(/settles back|does not strip/);
     expect(jettisonHelp).toContain('other.jettison_dispersed');
+    expect(jettisonHelp).toContain('4 input to 3');
+    expect(jettisonHelp).toContain('4 to 2');
+    expect(jettisonHelp).toContain('3 to 1');
+    expect(jettisonHelp).toContain('partial batch is lost');
+    expect(jettisonHelp).toContain('conversion.output_item_id');
+    expect(jettisonHelp).toContain('conversion.output_quantity');
+    expect(jettisonHelp).toContain('including 0');
     expect(jettisonHelp).toContain('[items=JSON]');
     expect(jettisonHelp).toContain('Bulk mode');
     expect(jettisonHelp).not.toContain('always destroyed');
@@ -2483,6 +2494,10 @@ describe('command metadata', () => {
     const storageJettisonHelp = captureHelp('storage jettison');
     expect(storageJettisonHelp).toContain('Prefer top-level jettison');
     expect(storageJettisonHelp).toContain('Same container, mid-flight destruction, and deposit-settle rules');
+    expect(storageJettisonHelp).toContain('4 input to 3');
+    expect(storageJettisonHelp).toContain('partial batch is lost');
+    expect(storageJettisonHelp).toContain('conversion.output_quantity');
+    expect(storageJettisonHelp).toContain('including 0');
     expect(storageJettisonHelp).not.toContain('other.jettison_dispersed');
 
     const mineHelp = captureHelp('mine');

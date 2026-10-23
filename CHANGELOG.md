@@ -82,6 +82,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 - `get_ship` and `get_state` module tables add optional Current ammo, Magazine, Loaded ammo, and Ammo type columns when a row carries `current_ammo`, `magazine_size`, `loaded_ammo_name`, or `ammo_type`. A finite number prints as digits, including 0. A non-empty string prints with surrounding whitespace removed. Anything else leaves the cell blank, and a column is omitted when every cell is blank. `loaded_ammo_id` is not a column. ID stays after those columns. `get_state` still adds Stats last. `--json` / `--yaml` / `--structured` stay pass-through. **No parser change.**
 - `get_action_log` help names `event_type=mining.ammo_consumed` (gameserver 0.647.0). A successful ore extraction spends one charge per loaded mining gun. No extra table columns until OpenAPI defines the data keys for that event. Event and Summary already print. Query with `event_type=mining.ammo_consumed`. **No parser change.**
 
+### Cargo
+
+- `jettison` and `storage jettison` help: at a POI, `purified_water`, `liquid_nitrogen`, `liquid_ammonia`, and `liquid_methane` convert at 4 input to 3 output; `liquid_oxygen` converts to `oxygen_ice` at 4 to 2; `coolant_fluid` converts to `water_ice` at 3 to 1. All input is removed, and a partial batch is lost. Table output prints `conversion.output_item_id` and `conversion.output_quantity`, including 0. An omitted `conversion` prints no output lines. Bulk `results` list each entry the same way, including 0. A `conversion` object no longer falls through to `=== Response ===`. Container, mid-flight destruction, and deposit settle-back text stay. `--json` / `--yaml` / `--structured` stay pass-through. Gameserver 0.645.0. **No parser change.**
+
 ### Factions
 
 - `join_faction` help: while you fight a station that faction owns, the command returns `own_faction_station`. Leave the battle first, then retry. Usage stays the faction id positional. **No parser change.**
