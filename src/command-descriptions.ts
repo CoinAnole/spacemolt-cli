@@ -8,7 +8,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   browse_ships: 'Browse ships listed for sale at a station',
   buy_insurance: 'Purchase ship insurance',
   buy_listed_ship:
-    'Purchase a ship from the exchange. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.',
+    "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.",
   cancel_commission: 'Cancel a pending or in-progress ship commission',
   cancel_order:
     'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.',
@@ -192,7 +192,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
   survey_system: 'Read ore at charted POIs and scan the current system for hidden POIs',
   switch_ship:
-    'Switch to a different ship stored at this station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.',
+    "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.",
   tow_wreck: 'Attach a tow line to a wreck for hauling',
   transfer_personnel: 'Transfer fit or injured crew and marines to an allied ship at the same POI',
   treat_personnel:

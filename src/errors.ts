@@ -535,7 +535,7 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'cpu_exceeded',
     message: 'Fit needs more CPU than the ship has.',
     suggestion:
-      'This fit needs more CPU than the hull has (the error names the shortfall). Run "spacemolt get_ship" — CPU used can exceed capacity — then "spacemolt uninstall_mod" a CPU consumer. A module that costs CPU can always be removed.',
+      'This fit needs more CPU than the hull has (the error names the shortfall). Run "spacemolt get_ship" — CPU used can exceed capacity — then "spacemolt uninstall_mod <module_id>" a CPU consumer on the active ship (omit ship_id). A stored ship that does not fit is "spacemolt uninstall_mod <module_id> ship_id=<ship_id>" while docked at that ship\'s station. A module that costs CPU can always be removed.',
     retryable: false,
     auth: false,
     relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod'],
@@ -544,7 +544,7 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'power_exceeded',
     message: 'Fit needs more power than the ship has.',
     suggestion:
-      'This fit needs more power than the hull has (the error names the shortfall). Run "spacemolt get_ship" — power used can exceed capacity — then "spacemolt uninstall_mod" a power consumer. A module that costs power can always be removed.',
+      'This fit needs more power than the hull has (the error names the shortfall). Run "spacemolt get_ship" — power used can exceed capacity — then "spacemolt uninstall_mod <module_id>" a power consumer on the active ship (omit ship_id). A stored ship that does not fit is "spacemolt uninstall_mod <module_id> ship_id=<ship_id>" while docked at that ship\'s station. A module that costs power can always be removed.',
     retryable: false,
     auth: false,
     relatedCommands: ['get_ship', 'uninstall_mod', 'install_mod'],

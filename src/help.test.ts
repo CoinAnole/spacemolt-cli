@@ -1859,7 +1859,11 @@ describe('help output branches', () => {
 
     const uninstall = captureWriter();
     expect(showCommandHelp('uninstall_mod', uninstall.writer)).toBe(true);
-    expect(uninstall.stdout.join('\n')).not.toContain('do not gate');
+    const uninstallOutput = uninstall.stdout.join('\n');
+    expect(uninstallOutput).not.toContain('do not gate');
+    expect(uninstallOutput).toContain('spacemolt uninstall_mod <module_id> [ship_id=]');
+    expect(uninstallOutput).toContain('omit ship_id for the active ship');
+    expect(uninstallOutput).toContain('stored ship while docked at its station');
   });
 
   test('storage loot help documents named module_id= cargo loot', () => {
@@ -2115,7 +2119,19 @@ describe('help output branches', () => {
       expect(output).toContain('where it lies');
       expect(output).toContain('same station');
       expect(output).toContain('auto-dock');
-      expect(output).not.toContain('while docked');
+      expect(output).toContain('Engineering skill');
+      expect(output).toContain('CPU and power');
+      expect(output).toContain('uninstall_mod');
+      expect(output).toContain('optional ship_id');
+      expect(output).toContain("while docked at that ship's station");
+      expect(output).not.toMatch(/storage withdraw[^.]*while docked/);
+      if (command === 'buy_listed_ship') {
+        expect(output).toContain('before payment or boarding');
+        expect(output).toContain('seller must refit');
+      } else {
+        expect(output).toContain('before boarding');
+        expect(output).not.toContain('seller must refit');
+      }
     }
   });
 
@@ -2903,6 +2919,9 @@ describe('help output branches', () => {
     expect(output).toContain('Suggestion:');
     expect(output).toContain('spacemolt get_ship');
     expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).toContain('active ship');
+    expect(output).toContain('ship_id=<ship_id>');
+    expect(output).toContain("while docked at that ship's station");
     expect(output).not.toContain('This error may be retryable.');
     expect(output).not.toContain('This is an authentication error.');
   });
@@ -2925,6 +2944,9 @@ describe('help output branches', () => {
     expect(output).toContain('Suggestion:');
     expect(output).toContain('spacemolt get_ship');
     expect(output).toContain('spacemolt uninstall_mod');
+    expect(output).toContain('active ship');
+    expect(output).toContain('ship_id=<ship_id>');
+    expect(output).toContain("while docked at that ship's station");
     expect(output).not.toContain('This error may be retryable.');
     expect(output).not.toContain('This is an authentication error.');
   });

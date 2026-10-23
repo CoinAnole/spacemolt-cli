@@ -164,6 +164,11 @@ describe('fit capacity errors', () => {
     expect(isAuthError('cpu_exceeded')).toBe(false);
     expect(getErrorSuggestion('cpu_exceeded')).toContain('spacemolt get_ship');
     expect(getErrorSuggestion('cpu_exceeded')).toContain('spacemolt uninstall_mod');
+    expect(getErrorSuggestion('cpu_exceeded')).toContain('active ship');
+    expect(getErrorSuggestion('cpu_exceeded')).toContain('omit ship_id');
+    expect(getErrorSuggestion('cpu_exceeded')).toContain('stored ship');
+    expect(getErrorSuggestion('cpu_exceeded')).toContain('ship_id=<ship_id>');
+    expect(getErrorSuggestion('cpu_exceeded')).toContain("while docked at that ship's station");
     expect(getRelatedCommands('cpu_exceeded')).toEqual(['get_ship', 'uninstall_mod', 'install_mod']);
   });
 
@@ -174,6 +179,11 @@ describe('fit capacity errors', () => {
     expect(isAuthError('power_exceeded')).toBe(false);
     expect(getErrorSuggestion('power_exceeded')).toContain('spacemolt get_ship');
     expect(getErrorSuggestion('power_exceeded')).toContain('spacemolt uninstall_mod');
+    expect(getErrorSuggestion('power_exceeded')).toContain('active ship');
+    expect(getErrorSuggestion('power_exceeded')).toContain('omit ship_id');
+    expect(getErrorSuggestion('power_exceeded')).toContain('stored ship');
+    expect(getErrorSuggestion('power_exceeded')).toContain('ship_id=<ship_id>');
+    expect(getErrorSuggestion('power_exceeded')).toContain("while docked at that ship's station");
     expect(getRelatedCommands('power_exceeded')).toEqual(['get_ship', 'uninstall_mod', 'install_mod']);
   });
 

@@ -4778,9 +4778,9 @@ describe('command metadata', () => {
 
   test('switch_ship, buy_listed_ship, and complete_mission help are curated descriptions', () => {
     const switchShip =
-      'Switch to a different ship stored at this station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.';
+      "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.";
     const buyListed =
-      'Purchase a ship from the exchange. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.';
+      "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.";
     const completeMission =
       'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.';
 
@@ -4810,6 +4810,27 @@ describe('command metadata', () => {
 
     expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).toBe('Clear a wreck tow without moving the wreck');
     expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).not.toBe(COMMANDS.release_tow?.description);
+
+    expect(switchShip).toContain('Engineering skill');
+    expect(switchShip).toContain('before boarding');
+    expect(switchShip).not.toContain('seller must refit');
+    expect(buyListed).toContain('before payment or boarding');
+    expect(buyListed).toContain('seller must refit');
+    for (const description of [switchShip, buyListed]) {
+      expect(description).toContain('CPU and power');
+      expect(description).toContain('uninstall_mod');
+      expect(description).toContain('optional ship_id');
+      expect(description).toContain("while docked at that ship's station");
+      expect(description).not.toMatch(/storage withdraw[^.]*while docked/);
+    }
+    expect(COMMANDS.uninstall_mod?.usage).toBe(
+      '<module_id> [ship_id=]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
+    );
+    expect(COMMANDS.uninstall_mod?.args).toEqual(['module_id']);
+    const uninstallHelp = captureHelp('uninstall_mod');
+    expect(uninstallHelp).toContain('[ship_id=]');
+    expect(uninstallHelp).toContain('omit ship_id for the active ship');
+    expect(uninstallHelp).toContain('Optional owned ship ID');
   });
 
   test('abandon_mission help states smuggling debt and a capped wallet charge', () => {
