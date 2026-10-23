@@ -4790,6 +4790,24 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).not.toBe(COMMANDS.release_tow?.description);
   });
 
+  test('abandon_mission help states smuggling debt and a capped wallet charge', () => {
+    const description =
+      'Abandon an active mission. Missing cargo becomes fixer debt only on a smuggling courier. Other missions charge the wallet, capped at the balance, with no debt.';
+
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.abandon_mission?.description).toBeUndefined();
+    expect(CURATED_COMMAND_DESCRIPTIONS.abandon_mission).toBe(description);
+    expect(COMMANDS.abandon_mission?.description).toBe(description);
+    expect(COMMANDS.abandon_mission?.description).not.toBe(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt/abandon_mission']?.summary,
+    );
+    expect(description).not.toContain('`');
+
+    const help = captureHelp('abandon_mission');
+    expect(help).toContain('fixer debt only on a smuggling courier');
+    expect(help).toContain('capped at the balance, with no debt');
+    expect(help).not.toContain('`');
+  });
+
   test('get_map documents optional system_id and chart description', () => {
     const config = COMMANDS.get_map;
     expect(config).toBeDefined();

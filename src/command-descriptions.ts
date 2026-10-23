@@ -1,5 +1,6 @@
 export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
-  abandon_mission: 'Abandon an active mission',
+  abandon_mission:
+    'Abandon an active mission. Missing cargo becomes fixer debt only on a smuggling courier. Other missions charge the wallet, capped at the balance, with no debt.',
   accept_mission:
     "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours.",
   analyze_market:
