@@ -165,7 +165,6 @@ function emitLocationResources(resources: unknown, options: { indent?: string; l
   emitLine(options.leadingNewline === false ? heading : `\n${heading}`);
   for (const res of rows) {
     const name = res.item_name || res.item_id || res.name || res.resource_id;
-    // remaining -1/0 map to unlimited/depleted
     const remaining = res.remaining === -1 ? 'unlimited' : res.remaining === 0 ? 'depleted' : String(res.remaining);
     emitLine(`${indent}  - ${name}: richness ${res.richness}, ${remaining}${formatResourceWorkabilitySuffix(res)}`);
   }
@@ -1298,7 +1297,6 @@ export const statusFormatters = [
     { commands: ['player_profile'] },
   ),
 
-  // Always returns true.
   formatter(
     (r) => {
       emitPilotProfile(r, 'v2');

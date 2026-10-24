@@ -71,12 +71,6 @@ function preferPopulatedArray(
   return primary ?? fallback;
 }
 
-function hasAnyDroneField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
-  return rows.some((row) =>
-    fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''),
-  );
-}
-
 function formatFuelDelta(value: unknown): string | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return value > 0 ? `+${value}` : String(value);
@@ -332,7 +326,7 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
     ['Type', ['type', 'drone_type', 'item_id']],
     ['Status', ['status', 'state']],
   ];
-  if (hasAnyDroneField(rows, ['system_name', 'system_id', 'current_system'])) {
+  if (hasAnyField(rows, ['system_name', 'system_id', 'current_system'])) {
     columns.push(['System', ['system_name', 'system_id', 'current_system']]);
   }
   columns.push(['POI', ['poi_name', 'poi_id', 'current_poi', 'location', 'base_id']]);

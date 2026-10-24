@@ -47,6 +47,16 @@ describe('emitGiftEntries', () => {
     expect(stdout).not.toContain('...');
   });
 
+  test('item line omits the id suffix when name and item_id are both fuel_cell', () => {
+    const { stdout } = renderGifts([
+      {
+        items: [{ item_id: 'fuel_cell', name: 'fuel_cell', quantity: 2 }],
+      },
+    ]);
+    const row = stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    2 fuel_cell');
+  });
+
   test('ship lines keep class id only when it is not already the label', () => {
     const named = renderGifts([
       {

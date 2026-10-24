@@ -127,12 +127,6 @@ export function emitShipCombatEffects(ship: Record<string, unknown>): boolean {
   return true;
 }
 
-function text(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim()) return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return undefined;
-}
-
 function summarizeScalarEffectEntry(entry: unknown): string | undefined {
   if (entry === undefined || entry === null || entry === '') return undefined;
   if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean') return String(entry);
@@ -142,10 +136,12 @@ function summarizeScalarEffectEntry(entry: unknown): string | undefined {
 export function summarizeEffect(value: unknown): string {
   if (!isRecord(value)) return summarizeScalarEffectEntry(value) ?? '';
 
-  // Prefer the shared ammo formatter for nested ammo effect records.
   const ammoSummary = summarizeAmmoEffects({ effect: value });
   if (ammoSummary) {
-    const type = text(value.type);
+    const effectType = value.type;
+    let type: string | undefined;
+    if (typeof effectType === 'string' && effectType.trim()) type = effectType;
+    else if (typeof effectType === 'number' || typeof effectType === 'boolean') type = String(effectType);
     return type ? `type: ${type}, ${ammoSummary}` : ammoSummary;
   }
 

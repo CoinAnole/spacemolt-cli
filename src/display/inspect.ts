@@ -82,11 +82,6 @@ function summarizeItemQuantities(value: unknown): string {
     .join(', ');
 }
 
-function emitOptionalLine(label: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
-  emitLine(`${label}: ${String(value)}`);
-}
-
 // byte-identical to shipping.ts formatCredits / formatTicks / formatBoolean
 function formatCredits(value: unknown): string | undefined {
   const text = formatIntegerText(value);
@@ -136,7 +131,6 @@ function emitPackageShipment(shipment: Record<string, unknown>): void {
     lines.push(`${label}: ${value}`);
   };
 
-  // Field order: ids → destination → credits → ticks → late (design example fragment)
   push('Contract', text(shipment.shipment_id));
   push('Status', text(shipment.status));
   push('Role', text(shipment.role));
@@ -385,7 +379,9 @@ function emitCatalogRecipeDetail(recipe: Record<string, unknown>, catalog: Recor
   if (inputs) emitLine(`Inputs: ${inputs}`);
   const outputs = summarizeItemQuantities(recipe.outputs);
   if (outputs) emitLine(`Outputs: ${outputs}`);
-  emitOptionalLine('Crafting time', recipe.crafting_time);
+  if (recipe.crafting_time !== undefined && recipe.crafting_time !== null && recipe.crafting_time !== '') {
+    emitLine(`Crafting time: ${String(recipe.crafting_time)}`);
+  }
 
   const venue = classifyRecipeVenue(recipe);
   emitLine(`Venue: ${venue}`);

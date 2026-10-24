@@ -493,6 +493,7 @@ test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or ze
       allowed_cargo: ['fuel'],
     }),
   ).toBe('up to 2 ships per side · tier 2–4 · max scale 2 · only fuel · no webifier');
+  expect(formatRuleDigest({ max_side_size: 1, min_ship_tier: 3 })).toBe('solo duel · min tier 3');
 });
 
 test('formatEnemyDigest marks a singleton boss and otherwise prints count × name', () => {

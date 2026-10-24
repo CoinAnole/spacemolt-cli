@@ -106,12 +106,6 @@ function emitDescriptions(rows: Array<Record<string, unknown>>): void {
   for (const line of lines) emitLine(line);
 }
 
-function emitMessage(message: unknown): void {
-  const text = stringField(message).trim();
-  if (text === '') return;
-  emitLine(`${c.dim}${text}${c.reset}`);
-}
-
 function formatFactionAchievements(result: Record<string, unknown>): boolean {
   if (!Array.isArray(result.achievements)) return false;
   const achievements: Array<Record<string, unknown>> = [];
@@ -127,7 +121,8 @@ function formatFactionAchievements(result: Record<string, unknown>): boolean {
   const rows = achievements.map(displayRow);
   printCompactTable('Faction Achievements', rows, tableColumns(rows), { maxCellWidth: 64 });
   emitDescriptions(achievements);
-  emitMessage(result.message);
+  const text = stringField(result.message).trim();
+  if (text !== '') emitLine(`${c.dim}${text}${c.reset}`);
   return true;
 }
 

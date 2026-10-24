@@ -292,6 +292,7 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).toContain('System: Sol');
   expect(stdout).toContain('ID: sol');
   expect(stdout).toContain('Empire: solarian');
+  expect(stdout).toContain('Position: (0, 0)');
   expect(stdout).toContain('Connections: alpha_centauri, barnards_star');
   expect(stdout).toContain('Visited: true');
   expect(stdout).toContain('Visited at: 2026-01-01T00:00:00Z');

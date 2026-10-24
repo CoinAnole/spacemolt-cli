@@ -402,7 +402,7 @@ export function formatEnemyDigest(enemies: readonly ArenaEnemyLine[]): string {
 
 function activeStringList(value: unknown): string[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
-  const items = value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+  const items = value.filter((item): item is string => isNonEmptyString(item));
   return items.length > 0 ? items : undefined;
 }
 

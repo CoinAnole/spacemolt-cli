@@ -517,12 +517,6 @@ function emitOptionalValue(label: string, value: unknown): void {
   emitLine(`${label}: ${String(value)}`);
 }
 
-function formatRunCount(value: unknown): string | undefined {
-  const count = formatCount(value);
-  if (count === undefined) return undefined;
-  return `${count}${Number(value) === 1 ? '' : ''}`;
-}
-
 function formatTimePerRun(value: unknown): string | undefined {
   const number = finiteNumber(value);
   if (number === undefined) return undefined;
@@ -1313,7 +1307,7 @@ export const genericFormatters = [
       emitOptionalValue('Label', r.label);
       emitOptionalValue('Recipe', r.recipe);
       emitOptionalValue('Mode', r.mode);
-      emitOptionalValue('Runs', formatRunCount(r.runs ?? r.quantity));
+      emitOptionalValue('Runs', formatCount(r.runs ?? r.quantity));
       emitOptionalValue('Venue', formatCraftVenue(r));
       emitOptionalValue('Facility', r.facility_id);
       emitCraftRentalDetails(r);

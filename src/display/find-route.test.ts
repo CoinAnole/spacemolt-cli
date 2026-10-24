@@ -145,6 +145,16 @@ describe('find_route formatter', () => {
     expect(cells(rowByText(stdout, 'Fleet Fuel', 'VegaDrift'))[7]).toBe('yes');
   });
 
+  test('prints Then travel: (empty) when target poi name and id are blank', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        target_poi_name: '',
+        target_poi: '',
+      }),
+    );
+    expect(stdout).toContain('Then travel: (empty)');
+  });
+
   test('leaves wormhole and entrance blank when via_wormhole is omitted', () => {
     const fixture = structuredClone(findRouteHighValueFixture);
     const steps = fixture.route as Array<Record<string, unknown>>;

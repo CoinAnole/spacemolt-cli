@@ -3776,6 +3776,37 @@ test('renders craft queue total_jobs and truncation message', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders craft queue bigint total_jobs without a showing suffix', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      total_jobs: 450n,
+      jobs: [
+        {
+          job_id: 'job-1',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 0,
+          runs_remaining: 1,
+          runs_total: 1,
+          venue: 'Station Workshop',
+          facility_id: 'workshop:player:station',
+          eta_ticks: 2,
+          status: 'queued',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain(`Total jobs: ${(450n).toLocaleString()}`);
+  expect(stdout).not.toContain('(showing');
+});
+
 test('renders queued craft destinations when present', () => {
   const rendered = renderStructuredResult(
     'craft',

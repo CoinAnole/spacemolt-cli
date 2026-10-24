@@ -63,13 +63,10 @@ function nearbyPrizeColumns(rows: Array<Record<string, unknown>>): Array<[string
 }
 
 function hasTransitFields(prize: Record<string, unknown>): boolean {
-  return [
-    'transit_kind',
-    'transit_from_system_id',
-    'transit_to_system_id',
-    'transit_from_poi_id',
-    'transit_to_poi_id',
-  ].some((field) => prize[field] !== undefined && prize[field] !== null && prize[field] !== '');
+  return hasAnyField(
+    [prize],
+    ['transit_kind', 'transit_from_system_id', 'transit_to_system_id', 'transit_from_poi_id', 'transit_to_poi_id'],
+  );
 }
 
 function formatPrizeTransit(prize: Record<string, unknown>): string | undefined {
@@ -107,7 +104,6 @@ function destinationDisplay(prize: Record<string, unknown>): string | undefined 
   return name ?? id;
 }
 
-// Claim responses use crew_assigned; recovery crewDisplay reads prize_crew_fit.
 function claimCrewDisplay(prize: Record<string, unknown>): string | undefined {
   const assigned = scalarText(prize.crew_assigned);
   const disposition =

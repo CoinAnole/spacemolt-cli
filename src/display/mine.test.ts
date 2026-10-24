@@ -173,6 +173,16 @@ test('mine joins multiple non-zero XP entries', () => {
   expect(stdout).toContain('Skill XP: mining +8, deep_core_mining +3');
 });
 
+test('mine prints negative mining XP without a plus sign', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { mining: -1200 };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: mining -1,200');
+});
+
 test('mine prints quantity as a plain decimal without grouping', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

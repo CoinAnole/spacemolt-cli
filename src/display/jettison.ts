@@ -128,18 +128,6 @@ function emitLabeled(label: string, value: string | undefined): void {
   emitLine(`${label}: ${value}`);
 }
 
-function emitResultLines(row: ResultLines): void {
-  emitLabeled('Item Id', row.itemId);
-  emitLabeled('Item Name', row.itemName);
-  emitLabeled('Quantity', row.quantity);
-  emitLabeled('Output Item Id', row.outputItemId);
-  emitLabeled('Output Quantity', row.outputQuantity);
-  emitLabeled('Success', row.success);
-  emitLabeled('Error', row.error);
-  emitLabeled('Message', row.message);
-  for (const [label, value] of row.extras) emitLabeled(label, value);
-}
-
 function formatJettison(result: Record<string, unknown>, command?: string): boolean {
   const conversion = readConversion(result.conversion);
   if (conversion === 'invalid') return false;
@@ -181,7 +169,15 @@ function formatJettison(result: Record<string, unknown>, command?: string): bool
     } else {
       for (const [index, row] of rows.entries()) {
         if (index > 0) emitLine('');
-        emitResultLines(row);
+        emitLabeled('Item Id', row.itemId);
+        emitLabeled('Item Name', row.itemName);
+        emitLabeled('Quantity', row.quantity);
+        emitLabeled('Output Item Id', row.outputItemId);
+        emitLabeled('Output Quantity', row.outputQuantity);
+        emitLabeled('Success', row.success);
+        emitLabeled('Error', row.error);
+        emitLabeled('Message', row.message);
+        for (const [label, value] of row.extras) emitLabeled(label, value);
       }
     }
   }

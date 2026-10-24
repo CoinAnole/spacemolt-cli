@@ -458,7 +458,7 @@ export function emitStationContrabandPolicy(source: unknown, indent = ''): boole
 
   if (Object.hasOwn(source, 'contraband_mode')) {
     const mode = source.contraband_mode;
-    if (typeof mode === 'string' && mode.trim() !== '' && !hasLineBreakOrControl(mode)) {
+    if (isPrintableId(mode)) {
       emitLine(`${indent}Contraband mode: ${mode}`);
       printed = true;
     }

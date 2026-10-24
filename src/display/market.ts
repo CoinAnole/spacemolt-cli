@@ -265,7 +265,7 @@ function printMarketOrders(result: Record<string, unknown>, orders: Array<Record
   emitLine(`\n${c.bright}=== Orders ===${c.reset}`);
   const context = marketOrderContext(result);
   if (context) emitLine(context);
-  if (result.hint !== undefined && result.hint !== null && result.hint !== '') emitLine(String(result.hint));
+  if (!isMissingDisplayValue(result.hint)) emitLine(String(result.hint));
 
   const lines = formatCompactTable('Orders', marketOrderRows(orders), [
     ['Item', ['item_display']],

@@ -558,13 +558,7 @@ function emitRecoveredBattleSummary(entry: Record<string, unknown>): void {
   emitDefinedLine('Category', summary.category);
   if (labels.note) emitLine(labels.note);
   emitDefinedLine('Start Tick', summary.start_tick);
-  if (
-    summary.duration !== undefined &&
-    summary.duration !== null &&
-    summary.duration !== '' &&
-    !isRecord(summary.duration) &&
-    !Array.isArray(summary.duration)
-  ) {
+  if (isDefinedLineValue(summary.duration)) {
     emitLine(`Duration: ${summary.duration} ticks`);
   }
   emitDefinedLine('Total Damage', summary.total_damage);
@@ -1024,7 +1018,6 @@ function isFactionMobileBaseSnapshot(result: Record<string, unknown>): boolean {
   return isRecord(state) && typeof state.archetype_id === 'string' && typeof state.lifecycle === 'string';
 }
 
-// info reads current_system_id; snapshot skips an alias-copied system_id.
 function emitMobileBaseSnapshot(source: Record<string, unknown>, mode: 'info' | 'snapshot'): void {
   if (mode === 'info') {
     const indent = '  ';

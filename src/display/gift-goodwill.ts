@@ -16,13 +16,6 @@ const GIFT_GOODWILL_FIELDS = [
 
 const GIFT_GOODWILL_KEYS = new Set<string>(GIFT_GOODWILL_FIELDS.map(([key]) => key));
 
-function labelForScalarKey(key: string): string {
-  return key
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
 function goodwillValueText(value: unknown): string {
   if (typeof value === 'bigint' || (typeof value === 'number' && Number.isInteger(value))) return String(value);
   if (
@@ -59,7 +52,10 @@ function pushKnownField(lines: string[], label: string, value: unknown, kind: 't
 
 function pushExtraField(lines: string[], key: string, value: unknown): void {
   if (value === undefined || value === null || value === '') return;
-  const label = labelForScalarKey(key);
+  const label = key
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
   if (Array.isArray(value)) {
     lines.push(`  ${label}: ${value.length} item(s)`);
     return;

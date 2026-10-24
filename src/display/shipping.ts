@@ -478,7 +478,6 @@ function renderSettlement(result: Record<string, unknown>, command: string | und
   emitField('Carrier payout', result.carrier_payout, formatCredits);
   emitField('Shipper refund', result.shipper_refund, formatCredits);
   emitField('Debt created', result.debt_created, formatCredits);
-  // OpenAPI ShippingSettlementResponse.late (optional boolean)
   emitField('Late delivery', result.late, formatBoolean);
   emitField('Terminal reason', result.contract.terminal_reason);
   return true;

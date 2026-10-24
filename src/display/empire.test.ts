@@ -150,6 +150,17 @@ test('omits outstanding bounties when the field is absent', () => {
   expect(stdout).not.toContain('Outstanding bounties');
 });
 
+test('renders unknown for an empty outstanding bounty record', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    { ...taxEstimateFixture, outstanding_bounties: [{}] },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('unknown: unknown');
+});
+
 test('omits payment guidance when the field is absent', () => {
   const { payment_guidance: _, ...fixture } = taxEstimateFixture;
   const stdout = renderStructuredResult('get_tax_estimate', fixture, options, context).stdout.join('\n');

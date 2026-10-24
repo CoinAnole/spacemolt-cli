@@ -677,6 +677,14 @@ test('get_wrecks prints carrion on an age-death body and omits it on a ship wrec
   expect(cloud).not.toContain('cr');
 });
 
+test('get_wrecks prints Expires in when expire_tick is absent', () => {
+  const fixture = cloneWrecksFixture();
+  delete wreckAt(fixture, 1).expire_tick;
+  wreckAt(fixture, 1).ticks_remaining = 0;
+  const cloud = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-cloudwhale-age');
+  expect(cloud).toContain('Expires in: 0 ticks');
+});
+
 test('get_wrecks prints an explicit carrion 0', () => {
   const fixture = cloneWrecksFixture();
   wreckAt(fixture, 0).carrion = 0;
