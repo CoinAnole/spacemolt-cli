@@ -8,6 +8,23 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+## 2.10.0 — 2026-10-24
+
+Large release since **2.9.0** (2026-09-08). Bundled OpenAPI metadata tracks gameserver through **v0.647.1**.
+
+### Highlights
+
+| Area | What changed |
+| --- | --- |
+| **Breaking: JSON** | HTTP 429 `--json` is an error object. `faction_facility_owned` rent fields moved into `faction_rent`. Whole numbers outside the safe integer range stay exact digits on v2 HTTP JSON |
+| **Status** | Human `get_state` prints the full snapshot, including module stats and the fixer account. `get_status` reads `location` for system, POI, dock, and nearby players |
+| **Ships & scan** | Nearby and observation ship lists no longer stop at 10. Ship counts, offline collapsed, cloaked-signature wording, and remote POI scan |
+| **Salvage & tow** | Carrion, omit-all loot, stale tow (`wreck_not_here`, `wreck_busy`, `already_towing`), and a wreck that stays at its death POI |
+| **Trade** | `sell` draws cargo, then station storage. Empire sales tax on `buy`. Faction station sales. Bulk order tables. Jettison freeze conversion |
+| **Factions & facilities** | Mobile base, intel freshness, achievements, rent bills, ally facilities, medical rates, and station contraband |
+| **Missions & combat** | Fixer debt, mission cargo and storage progress, public `list_battles`, `own_faction_station`, mid-transit cloak, and mining-gun magazines |
+| **API sync** | Bundled OpenAPI metadata from v0.598.3 through **v0.647.1** |
+
 ### Wildlife
 
 - `get_nearby` and `subscribe_observation` creature lines append `brand <faction>, <ranch>` when the server sends `brand_faction` or `brand_ranch`. The creature name is printed as sent, including a faction tag the server already put there. `survey_system` Wildlife adds `Ranched By` from `ranched_by`. An explicit `ranched` of 0 still shows the Ranched column. A creature `scan` prints `Branded: yes` when `branded` is true, and `Brand` and `Ranch` when those strings are present, before Revealed. A remote POI scan does not print them. `--follow` creature identities append the same owner and ranch. `--json` output is unchanged. `--format text` uses the same lines as table output. Gameserver 0.619.0. **No parser change.**
