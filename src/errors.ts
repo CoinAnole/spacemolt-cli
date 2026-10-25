@@ -648,7 +648,6 @@ export function isAuthError(code: string): boolean {
   return lookupError(code)?.auth ?? false;
 }
 
-// Grouped displayCommand uses spaces (e.g. "faction declare_war").
 function errorCommandKey(command: string | undefined): string | undefined {
   if (!command) return undefined;
   const key = command.trim().replace(/\s+/g, '_');

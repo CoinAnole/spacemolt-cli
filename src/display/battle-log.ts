@@ -39,8 +39,7 @@ export function resolveCombatantLabel(id: unknown, snapshots: unknown): string {
   if (!Array.isArray(snapshots)) return fallback;
   for (const snapshot of snapshots) {
     if (!isRecord(snapshot) || snapshot.player_id !== id) continue;
-    const username = snapshot.username;
-    const base = typeof username === 'string' && username ? username : fallback;
+    const base = stringLabel(snapshot.username) ?? fallback;
     return snapshot.is_boss === true ? `Boss ${base}` : base;
   }
   return fallback;

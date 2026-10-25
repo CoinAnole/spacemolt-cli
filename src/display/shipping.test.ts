@@ -629,6 +629,20 @@ test('renders maximum tier and an explicit empty debt message', () => {
   expect(stdout).toContain('Acceptance blocked: no');
 });
 
+test('renders unlimited liability without remaining or single-package limits', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: { ...carrierCapacity, liability_unlimited: true },
+    progression: carrierProgression,
+    debts: [],
+  });
+
+  expect(stdout).toContain('Aggregate liability: 33,000 cr (unlimited)');
+  expect(stdout).not.toContain('Remaining aggregate liability');
+  expect(stdout).not.toContain('Single-package liability');
+});
+
 test('renders debt payment changes separately from remaining debts', () => {
   const stdout = output('shipping_pay_debt', {
     details: {

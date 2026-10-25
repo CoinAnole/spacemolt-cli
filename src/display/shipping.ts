@@ -37,10 +37,6 @@ function formatRoute(origin: unknown, destination: unknown): string | undefined 
   return from && to ? `${from} -> ${to}` : undefined;
 }
 
-function optionalRecordArray(value: unknown): Array<Record<string, unknown>> | undefined {
-  return Array.isArray(value) ? value.filter(isRecord) : undefined;
-}
-
 function requiredRecordArray(value: unknown): Array<Record<string, unknown>> | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.every(isRecord) ? value : undefined;
@@ -89,7 +85,7 @@ function renderQuote(result: Record<string, unknown>): boolean {
   emitField('Uninsurable reason', quote.uninsurable_reason);
   emitField('Consequences', quote.consequences);
 
-  const appraisal = optionalRecordArray(quote.appraisal_lines);
+  const appraisal = Array.isArray(quote.appraisal_lines) ? quote.appraisal_lines.filter(isRecord) : undefined;
   if (!appraisal) return true;
   if (appraisal.length === 0) {
     emitLine('No appraisal lines.');

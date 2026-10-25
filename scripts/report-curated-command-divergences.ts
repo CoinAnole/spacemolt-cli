@@ -16,39 +16,36 @@ import {
   formatCuratedCommandComparisonReport,
 } from '../src/test-support/curated-command-compare.ts';
 
-function parseArgs(argv: string[]): { only?: string[]; includeCosmetic: boolean } {
-  const only: string[] = [];
-  let includeCosmetic = false;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (!a) continue;
-    if (a === '--only' || a === '-o') {
-      const next = argv[i + 1];
-      if (next && !next.startsWith('-')) {
-        only.push(
-          ...next
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-        );
-        i++;
-      }
-    } else if (a.startsWith('--only=')) {
+const argv = process.argv.slice(2);
+const only: string[] = [];
+let includeCosmetic = false;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (!a) continue;
+  if (a === '--only' || a === '-o') {
+    const next = argv[i + 1];
+    if (next && !next.startsWith('-')) {
       only.push(
-        ...a
-          .slice(7)
+        ...next
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
       );
-    } else if (a === '--include-cosmetic' || a === '--all') {
-      includeCosmetic = true;
+      i++;
     }
+  } else if (a.startsWith('--only=')) {
+    only.push(
+      ...a
+        .slice(7)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
+  } else if (a === '--include-cosmetic' || a === '--all') {
+    includeCosmetic = true;
   }
-  return { only: only.length ? only : undefined, includeCosmetic };
 }
-
-const options = parseArgs(process.argv.slice(2));
+const options = { only: only.length ? only : undefined, includeCosmetic };
 const report = compareCuratedCommandsToGenerated({ only: options.only });
 
 console.log(formatCuratedCommandComparisonReport(report, { includeCosmetic: options.includeCosmetic }));

@@ -155,6 +155,17 @@ describe('find_route formatter', () => {
     expect(stdout).toContain('Then travel: (empty)');
   });
 
+  test('prints a name-only travel target without a parenthesized poi', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        target_poi_name: 'Cloudbank',
+      }),
+    );
+    const line = stdout.split('\n').find((entry) => entry.startsWith('Then travel:'));
+    expect(line).toBe('Then travel: Cloudbank');
+    expect(line).not.toContain('(');
+  });
+
   test('leaves wormhole and entrance blank when via_wormhole is omitted', () => {
     const fixture = structuredClone(findRouteHighValueFixture);
     const steps = fixture.route as Array<Record<string, unknown>>;

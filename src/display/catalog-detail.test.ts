@@ -95,6 +95,13 @@ for (const { name, recipe, options, expected } of classifyCases) {
   });
 }
 
+test('recipe.ship_passive or recipe.passive true is ship passive over craftable or facility only', () => {
+  expect(classifyRecipeVenue({ ship_passive: true, hand_craftable: true })).toBe('ship passive');
+  expect(classifyRecipeVenue({ passive: true, hand_craftable: false, produced_by_facility_ids: ['nano_fab'] })).toBe(
+    'ship passive',
+  );
+});
+
 test('countRecipeVenues returns undefined when zero records were counted', () => {
   expect(countRecipeVenues([])).toBeUndefined();
   expect(countRecipeVenues(undefined)).toBeUndefined();

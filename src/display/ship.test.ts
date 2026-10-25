@@ -2114,4 +2114,20 @@ describe('emitCargoHold', () => {
     expect(stdout).toContain('Rock Skipper');
     expect(stdout).not.toContain('?/');
   });
+
+  test('carried-ship scale and slots columns print 0 cells', () => {
+    const cargo = structuredClone(cargoFixture) as {
+      carried_ships: Array<Record<string, unknown>>;
+    };
+    const carried = cargo.carried_ships[0];
+    if (!carried) throw new Error('cargo fixture is missing its carried ship');
+    carried.scale = 0;
+    carried.slots_used = 0;
+    const { stdout } = renderCargoHold(cargo);
+    const header = tableHeader(stdout);
+    const row = tableRow(stdout, 'Rock Skipper');
+    expect(header).toContain('Scale');
+    expect(header).toContain('Slots');
+    expect(row).toContain('| 0     | 0');
+  });
 });

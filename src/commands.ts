@@ -199,14 +199,9 @@ export function routeToPath(
   return options?.includeApiPrefix ? `/api/v2/${path}` : path;
 }
 
-/** Returns the URL path segment or full special path for signatures/debug. */
-function routePathForSignature(route: V2Route): string {
-  return routeToPath(route, { includeApiPrefix: true });
-}
-
 export function routeSignature(route: V2Route): string {
   const method = route.method || 'POST';
-  return `${method} ${routePathForSignature(route)}`;
+  return `${method} ${routeToPath(route, { includeApiPrefix: true })}`;
 }
 
 /**

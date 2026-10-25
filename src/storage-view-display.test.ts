@@ -77,6 +77,12 @@ describe('rewriteStorageViewHint', () => {
 
     expect(rewriteStorageViewHint(content)).toEqual(content);
   });
+
+  test('leaves a multi-station hint unchanged when no station id is available', () => {
+    const content = { hint: '100 items in storage at alpha, beta' };
+
+    expect(rewriteStorageViewHint(content)).toEqual(content);
+  });
 });
 
 describe('enrichStorageViewStructuredContent', () => {

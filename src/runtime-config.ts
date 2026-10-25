@@ -3,10 +3,6 @@ import { DEFAULT_USER_AGENT, DEFAULT_V2_API_BASE, type SpaceMoltConfig } from '.
 import { type CliConfig, loadCliConfig } from './session.ts';
 import type { GlobalOptions } from './types.ts';
 
-/**
- * Merge soft ID resolution preference: CLI flag > env > config.json boolean > false.
- * preparePayload never reads env; only the runner-merged options.fuzzyIds boolean.
- */
 export function resolveFuzzyIdsEnabled(
   options: Pick<GlobalOptions, 'fuzzyIds' | 'fuzzyIdsCliExplicit'>,
   env: CliEnv,

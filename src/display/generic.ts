@@ -31,13 +31,6 @@ import {
   withPausedRentSuffix,
 } from './helpers.ts';
 
-function formatRecordEntries(value: Record<string, unknown>, suffix = ''): string {
-  return Object.entries(value)
-    .filter(([, entry]) => entry !== undefined && entry !== null && entry !== '' && entry !== 0)
-    .map(([key, entry]) => `${key}${suffix} +${entry}`)
-    .join(', ');
-}
-
 function inventoryCount(value: unknown): string | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'bigint') return formatIntegerText(value);
@@ -131,7 +124,10 @@ function summarizeRewards(rewards: unknown): string {
   if (rewards.credits !== undefined && rewards.credits !== null && rewards.credits !== 0)
     parts.push(`${rewards.credits} cr`);
   if (isRecord(rewards.skill_xp)) {
-    const xp = formatRecordEntries(rewards.skill_xp, ' XP');
+    const xp = Object.entries(rewards.skill_xp)
+      .filter(([, entry]) => entry !== undefined && entry !== null && entry !== '' && entry !== 0)
+      .map(([key, entry]) => `${key} XP +${entry}`)
+      .join(', ');
     if (xp) parts.push(xp);
   }
   if (isRecord(rewards.items)) {

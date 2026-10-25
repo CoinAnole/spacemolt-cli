@@ -383,6 +383,16 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
   expect(zero).not.toContain('Skill XP:');
 });
 
+test('survey_system prints negative skill XP without a leading plus', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: -4 };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning -4');
+});
+
 test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

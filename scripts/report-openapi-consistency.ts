@@ -100,7 +100,6 @@ function main() {
   const output = formatConsistencyReport(report, { json: cli.json });
   console.log(output);
 
-  // Always exit 0 for diagnostic tool (like the other report:* scripts).
   // Use downstream scripting or --strict in future if you want gating.
   return 0;
 }

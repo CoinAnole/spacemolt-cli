@@ -108,7 +108,6 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_profile: {
     description:
       'Show a public faction profile by tag (roster, diplomacy, treasury, stations, ranks). No login required.',
-    // Grouped as `faction profile` in the CLI surface.
     example: 'spacemolt faction profile NOIR',
     seeAlso: ['faction_info', 'faction_list', 'player_profile', 'get_faction_achievements'],
     category: 'Factions',

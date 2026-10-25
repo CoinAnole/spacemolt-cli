@@ -15,7 +15,6 @@ const BOARDING_EVENT_GLOSS: Record<string, string> = {
   boarding_rejected: 'attempt refused; see Reason',
 };
 
-/** Non-empty strings only. Terminal tokens lowercase; known events append a short gloss. Non-terminals print trimmed as-is. */
 export function formatBoardingEvent(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const text = value.trim();

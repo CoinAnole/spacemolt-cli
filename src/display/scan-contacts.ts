@@ -40,13 +40,6 @@ export function nativeRemotePoiId(result: Record<string, unknown>): string | und
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
-function titleCaseKey(key: string): string {
-  return key
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
 function nativeScalarText(value: unknown): string | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
@@ -177,7 +170,12 @@ function emitFactionScanLeftovers(result: Record<string, unknown>): void {
     const value = result[key];
     if (Array.isArray(value) || isRecord(value)) continue;
     if (!isLeftoverScalar(value)) continue;
-    emitLine(`${titleCaseKey(key)}: ${value}`);
+    emitLine(
+      `${key
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')}: ${value}`,
+    );
   }
 }
 

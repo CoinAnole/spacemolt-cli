@@ -243,7 +243,7 @@ function formatOrderPage(result: Record<string, unknown>): string {
 
 function marketOrderContext(result: Record<string, unknown>): string {
   return [result.base, result.scope, result.sort_by, formatOrderCount(result.total), formatOrderPage(result)]
-    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    .filter((part): part is string => hasNonEmptyBaseId(part))
     .join(' | ');
 }
 

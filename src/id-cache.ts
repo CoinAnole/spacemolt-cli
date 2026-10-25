@@ -50,7 +50,6 @@ export const STRICT_ID_RESOLUTION_POLICY: IdResolutionPolicy = {
   allowSubstring: false,
 };
 
-/** Soft-match policy when options.fuzzyIds === true. system/poi never use substring. */
 export function softIdResolutionPolicy(kind: IdKind): IdResolutionPolicy {
   if (kind === 'system' || kind === 'poi') {
     return { allowPrefix: true, allowSubstring: false };
@@ -705,7 +704,9 @@ function valueMatches(value: string, normalizedQuery: string, match: IdMatchKind
 
 function formatHint(hint: IdHint, colors: DirectColors = DEFAULT_COLORS): string {
   const name = hint.name && hint.name !== hint.id ? ` (${hint.name})` : '';
-  const context = hint.context && Object.keys(hint.context).length > 0 ? ` ${formatContext(hint.context)}` : '';
+  const context = compactContext(hint.context)
+    ? ` ${formatContext(hint.context as Record<string, string | number | boolean>)}`
+    : '';
   return `${hint.id}${name}${context} ${colors.dim}[${hint.sourceCommand}, ${hint.seenAt}]${colors.reset}`;
 }
 

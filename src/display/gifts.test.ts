@@ -235,6 +235,13 @@ describe('emitGiftEntries', () => {
     expect(objectStamp.stdout).not.toContain('[object Object]');
   });
 
+  test('out-of-range numeric timestamp prints String(1e20), not an ISO clock', () => {
+    const { stdout } = renderGifts([{ sender: 'Ada', timestamp: 1e20 }]);
+    const when = stdout.split('\n').find((line) => line.includes('When:'));
+    expect(when).toContain(String(1e20));
+    expect(when).not.toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+  });
+
   test('object credits and quantities do not stringify', () => {
     const { stdout, stderr } = renderGifts([
       {

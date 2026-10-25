@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { rawColors } from './ansi.ts';
 import { formatDepletionRemainingSuffix, withDisplayRenderBuffer } from './helpers.ts';
 
 function formatPlain(depletionPercent: unknown): string {
@@ -19,5 +20,11 @@ describe('formatDepletionRemainingSuffix', () => {
   test('returns empty string for non-numeric values', () => {
     expect(formatPlain(undefined)).toBe('');
     expect(formatPlain('not-a-number')).toBe('');
+  });
+
+  test('yellow remaining band when color is on', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const result = withDisplayRenderBuffer(buffer, () => formatDepletionRemainingSuffix(75), { plain: false });
+    expect(result).toBe(` (${rawColors.yellow}${rawColors.reset}25.00% remaining${rawColors.reset}${rawColors.reset})`);
   });
 });

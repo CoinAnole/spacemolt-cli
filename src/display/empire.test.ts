@@ -236,3 +236,17 @@ test('omits statement income by category when the map is empty', () => {
 
   expect(stdout).not.toContain('Income by category');
 });
+
+test('prints the singular Empire Policy heading for one empire', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [{ empire_id: 'solarian' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Empire Policy ===');
+  expect(stdout).not.toContain('=== Empire Policies ===');
+});

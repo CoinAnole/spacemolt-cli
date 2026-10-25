@@ -45,11 +45,6 @@ function emitTarget(result: Record<string, unknown>): void {
   else if (id) emitLine(`Target: ${id}`);
 }
 
-function emitSide(value: unknown): void {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return;
-  emitLine(`Side: ${value}`);
-}
-
 function emitYesNo(label: string, value: unknown): void {
   if (value !== true && value !== false) return;
   emitLine(`${label}: ${value ? 'yes' : 'no'}`);
@@ -82,7 +77,9 @@ function formatAttackReply(result: Record<string, unknown>, command?: string): b
   if (battleId) emitLine(`Battle: ${battleId}`);
   const system = presentText(result.system);
   if (system) emitLine(`System: ${system}`);
-  emitSide(result.your_side);
+  if (typeof result.your_side === 'number' && Number.isFinite(result.your_side)) {
+    emitLine(`Side: ${result.your_side}`);
+  }
   const zone = presentText(result.your_zone);
   if (zone) emitLine(`Zone: ${zone}`);
   emitYesNo('Auto-docked', result.auto_docked);

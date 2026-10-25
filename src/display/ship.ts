@@ -637,7 +637,7 @@ export const shipFormatters = [
       if (ships === undefined && garage === undefined && r.count === undefined) return false;
 
       emitLine(`Owned: ${r.count !== undefined ? r.count : (ships ?? []).length}`);
-      if (typeof r.active_ship_id === 'string' && r.active_ship_id) {
+      if (nonEmptyString(r.active_ship_id)) {
         emitLine(`Active ship: ${activeShipLabel(r, ships ?? [])}`);
       }
 

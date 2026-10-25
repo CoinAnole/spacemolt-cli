@@ -62,13 +62,6 @@ function nearbyPrizeColumns(rows: Array<Record<string, unknown>>): Array<[string
   return columns;
 }
 
-function hasTransitFields(prize: Record<string, unknown>): boolean {
-  return hasAnyField(
-    [prize],
-    ['transit_kind', 'transit_from_system_id', 'transit_to_system_id', 'transit_from_poi_id', 'transit_to_poi_id'],
-  );
-}
-
 function formatPrizeTransit(prize: Record<string, unknown>): string | undefined {
   const kind = typeof prize.transit_kind === 'string' && prize.transit_kind ? prize.transit_kind : undefined;
   const fromSystem = scalarText(prize.transit_from_system_id);
@@ -121,7 +114,14 @@ function crewDisplay(prize: Record<string, unknown>): string | undefined {
 }
 
 function locationDisplay(prize: Record<string, unknown>): string | undefined {
-  if (hasTransitFields(prize)) return formatPrizeTransit(prize);
+  if (
+    hasAnyField(
+      [prize],
+      ['transit_kind', 'transit_from_system_id', 'transit_to_system_id', 'transit_from_poi_id', 'transit_to_poi_id'],
+    )
+  ) {
+    return formatPrizeTransit(prize);
+  }
   const parts = [scalarText(prize.system_id), scalarText(prize.poi_id)].filter((part): part is string => Boolean(part));
   return parts.length ? parts.join(' / ') : undefined;
 }

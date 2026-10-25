@@ -189,6 +189,10 @@ describe('formatBattleHitScale / formatBattleHitChance', () => {
     expect(formatBattleHitScale(81)).toBe('81');
   });
 
+  test('formats one-decimal hit scale', () => {
+    expect(formatBattleHitScale(0.125)).toBe('12.5');
+  });
+
   test('returns undefined for non-numeric input', () => {
     expect(formatBattleHitScale(undefined)).toBeUndefined();
     expect(formatBattleHitChance('nope')).toBeUndefined();

@@ -29,14 +29,6 @@ function finiteNonNegativeSeconds(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
-function omitKeys(data: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
-  const rest: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (!keys.includes(key)) rest[key] = value;
-  }
-  return rest;
-}
-
 export function parseRetryAfterHeaderSeconds(header: string | undefined, nowMs: number): number | undefined {
   const parsed = parseRetryAfterHeaderRaw(header, nowMs);
   if (!parsed) return undefined;
@@ -49,7 +41,7 @@ export function parseWaitSecondsFromMessage(message: unknown): number | undefine
   const match = message.match(/\d+/);
   if (!match || match.index === undefined) return undefined;
   const n = Number(match[0]);
-  if (!Number.isFinite(n) || n < 0) return undefined;
+  if (finiteNonNegativeSeconds(n) === undefined) return undefined;
   const remainder = message.slice(match.index + match[0].length);
   const unit = remainder.match(WAIT_UNIT);
   if (!unit?.[1]) return undefined;
@@ -107,7 +99,11 @@ function rewriteFlat429(
   retryAfterHeader: string | undefined,
   nowMs: number,
 ): APIResponse {
-  const rest = omitKeys(data, ['error', ...FLAT_429_LIFTED]);
+  const keys: readonly string[] = ['error', ...FLAT_429_LIFTED];
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!keys.includes(key)) rest[key] = value;
+  }
   const code = typeof data.error === 'string' ? data.error : '';
   const synth = {
     code,

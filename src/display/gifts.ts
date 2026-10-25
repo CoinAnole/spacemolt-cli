@@ -53,7 +53,7 @@ function formatGiftTimestamp(value: unknown): string | undefined {
     if (!Number.isFinite(date.getTime())) return String(value);
     return date.toISOString().replace('T', ' ').slice(0, 16);
   }
-  if (typeof value !== 'string' || value.length === 0) return undefined;
+  if (typeof value !== 'string' || !nonEmpty(value)) return undefined;
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
   return match ? `${match[1]} ${match[2]}` : value;
 }

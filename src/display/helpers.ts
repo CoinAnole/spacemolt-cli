@@ -168,7 +168,6 @@ export function isOverCapacity(used: unknown, capacity: unknown): boolean {
   return usedN > capN;
 }
 
-/** Append ` (over capacity)` when used > capacity. Empty string otherwise. */
 export function overCapacitySuffix(used: unknown, capacity: unknown): string {
   if (!isOverCapacity(used, capacity)) return '';
   return ` ${c.yellow}(over capacity)${c.reset}`;
@@ -524,9 +523,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
 
   const name = result.name;
   const baseId = result.base_id;
-  const namePresent = typeof name === 'string' && name !== '';
-  const basePresent = typeof baseId === 'string' && baseId !== '';
-  if (!namePresent && !basePresent) return false;
+  if (!nonEmptyString(name) && !nonEmptyString(baseId)) return false;
 
   // Returning false would let the scalar-action summary print the raw name or base_id with String(value).
   const label = isPrintableId(name) ? name : isPrintableId(baseId) ? baseId : 'unknown';

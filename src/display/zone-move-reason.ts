@@ -5,7 +5,6 @@ const ZONE_MOVE_REASON_GLOSS: Record<string, string> = {
   retreat_intercepted: 'retreat cancelled by interceptor',
 };
 
-/** Non-empty strings only. Known glossed tokens lowercase; unknowns print trimmed as-is. */
 export function formatZoneMoveReason(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const text = value.trim();

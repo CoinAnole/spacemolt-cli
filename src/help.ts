@@ -25,7 +25,7 @@ import { colorsForPlain } from './output-style.ts';
 import { extractErrorWaitSeconds, extractRateLimitMeta } from './rate-limit.ts';
 import { getStructuredResult, isRecord, trimTrailingSlash } from './response.ts';
 import { API_BASE, VERSION } from './runtime.ts';
-import { loadSession } from './session.ts';
+import { SessionManager } from './session.ts';
 import { requestJson } from './transport.ts';
 import type { APIResponse, CommandGroup, CommandSearchMatch, GlobalOptions, Session } from './types.ts';
 
@@ -694,7 +694,7 @@ export interface PlayerState {
 async function getPlayerState(): Promise<PlayerState> {
   let session: Session | null;
   try {
-    session = await loadSession();
+    session = await new SessionManager().loadSession();
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('No default profile set.')) {
       return { authenticated: false };

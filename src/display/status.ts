@@ -820,7 +820,6 @@ export function emitSkillMap(skills: unknown): boolean {
   const skillEntries = Object.entries(skillMap);
   if (skillEntries.length === 0) return false;
   const firstSkill = skillEntries[0]?.[1];
-  // Verify this looks like a skills map (entries should have name/level)
   if (!firstSkill?.name || firstSkill.level === undefined) return false;
   emitLine(`\n${c.bright}=== Your Skills ===${c.reset}`);
   const byCategory: Record<string, typeof skillEntries> = {};

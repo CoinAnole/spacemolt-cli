@@ -46,7 +46,11 @@ export async function loadCatalogDump(options: LoadCatalogDumpOptions): Promise<
   const now = options.now;
 
   if (cache && !options.refresh && isCacheFresh(cache, now)) {
-    debugCacheHit(options, cache, now);
+    if (options.debug && !options.quiet) {
+      const fetched = Date.parse(cache.fetchedAt);
+      const ageSeconds = Number.isFinite(fetched) ? Math.floor((now.getTime() - fetched) / 1000) : 0;
+      options.writer?.err(`catalog-dump cache hit age=${ageSeconds}s version=${cache.version}`);
+    }
     return { structuredContent: cache.catalog };
   }
 
@@ -172,13 +176,6 @@ function parseMaxAgeSeconds(cacheControl: string | null): number | undefined {
   if (!match?.[1]) return undefined;
   const value = Number(match[1]);
   return Number.isFinite(value) ? value : undefined;
-}
-
-function debugCacheHit(options: LoadCatalogDumpOptions, cache: CatalogDumpCacheFile, now: Date): void {
-  if (!options.debug || options.quiet) return;
-  const fetched = Date.parse(cache.fetchedAt);
-  const ageSeconds = Number.isFinite(fetched) ? Math.floor((now.getTime() - fetched) / 1000) : 0;
-  options.writer?.err(`catalog-dump cache hit age=${ageSeconds}s version=${cache.version}`);
 }
 
 function warnCachedDump(

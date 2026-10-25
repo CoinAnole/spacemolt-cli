@@ -143,11 +143,6 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
-function formatHeldCitizenships(value: unknown): string | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return formatCitizenships(value);
-}
-
 function emitScalar(label: string, value: unknown): void {
   if (value === undefined || value === null || value === '') return;
   emitLine(`${label}: ${value}`);
@@ -171,12 +166,12 @@ function emitPetition(petition: Record<string, unknown>): void {
   emitLine('Petition:');
   const empire = formatCitizenshipId(petition);
   if (empire) emitLine(`  Empire: ${empire}`);
-  if (petition.status !== undefined && petition.status !== null && petition.status !== '') {
+  if (hasAnyField([petition], 'status')) {
     emitLine(`  Status: ${petition.status}`);
   }
   const fee = feeCredits(petition.fee_paid);
   if (fee) emitLine(`  Fee: ${fee}`);
-  if (petition.id !== undefined && petition.id !== null && petition.id !== '') {
+  if (hasAnyField([petition], 'id')) {
     emitLine(`  ID: ${petition.id}`);
   }
 }
@@ -194,7 +189,7 @@ function projectPetitionRow(row: Record<string, unknown>): Record<string, unknow
     fee_paid: formatCredits(row.fee_paid) ?? row.fee_paid,
     id: row.id,
     decision: row.decision,
-    held_citizenships: formatHeldCitizenships(row.held_citizenships),
+    held_citizenships: Array.isArray(row.held_citizenships) ? formatCitizenships(row.held_citizenships) : undefined,
   };
 }
 

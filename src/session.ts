@@ -658,12 +658,6 @@ export class SessionManager {
   }
 }
 
-const legacySessionManager = new SessionManager();
-
-export async function loadSession(): Promise<Session | null> {
-  return legacySessionManager.loadSession();
-}
-
 export function extractPlayerId(response: APIResponse): string | undefined {
   const structured = getStructuredResult(response);
   const result = getObjectResult(response);

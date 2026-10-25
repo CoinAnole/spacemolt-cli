@@ -220,10 +220,6 @@ function emitFoundLine(result: Record<string, unknown>): void {
   if (found !== true && found !== false) emitLine(foundDetail(found));
 }
 
-function emitMessage(value: unknown): void {
-  if (typeof value === 'string' && value) emitLine(`${c.dim}${value}${c.reset}`);
-}
-
 function formatFindRoute(result: Record<string, unknown>): boolean {
   if (!claimsFindRoute(result)) return false;
   const status = routeStatus(result);
@@ -239,7 +235,7 @@ function formatFindRoute(result: Record<string, unknown>): boolean {
   if (travel) emitLine(travel);
   emitHop(result, status);
   if (Object.hasOwn(result, 'fleet_fuel')) emitFleet(result.fleet_fuel);
-  emitMessage(result.message);
+  if (typeof result.message === 'string' && result.message) emitLine(`${c.dim}${result.message}${c.reset}`);
   return true;
 }
 

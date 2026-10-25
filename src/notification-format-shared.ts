@@ -66,7 +66,7 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
 
 /** Finite numbers only, including 0 and negatives. No string coercion. */
 export function formatOfflineCollapsedText(value: unknown): string | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  if (finiteNumber(value) === undefined) return undefined;
   return `offline collapsed ${value}`;
 }
 
@@ -1125,8 +1125,6 @@ function previewPirateDestroyed(
     details: attached.details,
   };
 }
-
-// 0.578.1 pirate radio intercept
 
 function quotedTransmission(message: string): string {
   const trimmed = firstLine(message);
@@ -2862,10 +2860,6 @@ const FLEET_ACTION_FALLBACKS: Readonly<Record<string, (data: Record<string, unkn
   },
 };
 
-function okBaseLabel(data: Record<string, unknown>): string | undefined {
-  return fleetDockIdentity(data);
-}
-
 const OK_ARRIVAL_LABELS: Readonly<Record<string, string>> = {
   arrived: 'Arrived',
   jumped: 'Jumped',
@@ -3025,7 +3019,7 @@ function previewOk(
       if (!headline) {
         headline = action ? String(safeScalar(data.action)) : 'OK';
       }
-      const identity = okBaseLabel(data);
+      const identity = fleetDockIdentity(data);
       if (identity && !headline.includes(identity)) details.push(identity);
       const destination = safeScalar(data.destination);
       if (destination !== undefined && !headline.includes(String(destination))) {
