@@ -159,7 +159,7 @@ function emitActiveScanLine(result: Record<string, unknown>, command: string | u
 
 function emitLocationResources(resources: unknown, options: { indent?: string; leadingNewline?: boolean } = {}): void {
   const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
-  if (!rows.length) return; // empty array is silent
+  if (!rows.length) return;
   const indent = options.indent ?? '';
   const heading = `${indent}${c.bright}Resources:${c.reset}`;
   emitLine(options.leadingNewline === false ? heading : `\n${heading}`);
@@ -1020,7 +1020,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
   if (player) {
     emitLine(`\n${c.bright}=== Player Status ===${c.reset}`);
     emitLine(`Username: ${c.bright}${player.username}${c.reset}`);
-    if (typeof player.id === 'string' && player.id !== '') emitLine(`ID: ${player.id}`);
+    if (usableLabel(player.id)) emitLine(`ID: ${player.id}`);
     if (player.empire !== undefined && player.empire !== '') emitLine(`Empire: ${player.empire}`);
     emitCitizenshipsLine(player, true);
     if (player.credits !== undefined && !isRecord(player.credits) && !Array.isArray(player.credits)) {

@@ -1,21 +1,14 @@
 import { spawnSync } from 'node:child_process';
 
-function readGitCommit(): string | undefined {
-  const result = spawnSync('git', ['rev-parse', 'HEAD'], {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-    timeout: 1_000,
-    windowsHide: true,
-  });
-  if (result.status !== 0) return undefined;
-
-  const commit = result.stdout.trim();
-  return commit || undefined;
-}
-
 const args = ['build', 'src/client.ts', '--compile', '--outfile', 'spacemolt'];
-const commit = readGitCommit();
+const gitResult = spawnSync('git', ['rev-parse', 'HEAD'], {
+  cwd: process.cwd(),
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'ignore'],
+  timeout: 1_000,
+  windowsHide: true,
+});
+const commit = gitResult.status !== 0 ? undefined : gitResult.stdout.trim() || undefined;
 if (commit) {
   args.push('--define', `process.env.SPACEMOLT_BUILD_COMMIT=${JSON.stringify(commit)}`);
 }

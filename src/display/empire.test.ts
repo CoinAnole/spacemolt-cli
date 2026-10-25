@@ -250,3 +250,30 @@ test('prints the singular Empire Policy heading for one empire', () => {
   expect(stdout).toContain('=== Empire Policy ===');
   expect(stdout).not.toContain('=== Empire Policies ===');
 });
+
+test('prints Citizenship: Closed when citizenship is closed', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [{ empire_id: 'solarian', citizenship_open: false }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Citizenship: Closed');
+});
+
+test('prints (None) under Empire Policies when empires is empty', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Empire Policies ===');
+  expect(stdout).toContain('(None)');
+});

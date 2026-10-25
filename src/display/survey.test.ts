@@ -367,6 +367,22 @@ test('survey_system omitted bloom does not interpolate undefined', () => {
   expect(stderr).not.toContain('undefined');
 });
 
+test('survey_system omits Bloom when only status or only intensity is present', () => {
+  const statusOnly = stdoutOf(
+    clonePresent((details) => {
+      delete details.bloom_intensity;
+    }),
+  );
+  const intensityOnly = stdoutOf(
+    clonePresent((details) => {
+      delete details.bloom_status;
+    }),
+  );
+
+  expect(statusOnly).not.toContain('Bloom:');
+  expect(intensityOnly).not.toContain('Bloom:');
+});
+
 test('survey_system skips Skill XP for empty and zero maps', () => {
   const empty = stdoutOf(
     clonePresent((details) => {

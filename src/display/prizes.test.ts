@@ -1,8 +1,10 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { storageDepositAutoDockedFixture } from './generic.fixtures.ts';
+import { withDisplayRenderBuffer } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import { claimPrizeFixture } from './prizes.fixtures.ts';
+import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -201,4 +203,24 @@ test('declines missing destination identity', () => {
   const stdout = renderClaim(claimDetails({ destination_name: '', destination_base_id: '' }));
   expect(stdout).not.toContain('Captured Lark (skiff) →');
   expect(stdout).toContain('Prize Id:');
+});
+
+test('one-sided nearby prize hull prints 8/? and not 8/undefined', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ hull: 8 }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('8/?');
+  expect(stdout).not.toContain('8/undefined');
+});
+
+test('jump with only an origin prints jump sol and not an arrow', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitPrizeRecoveries([{ transit_kind: 'jump', transit_from_system_id: 'sol' }]),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('jump sol');
+  expect(stdout).not.toContain('→');
 });

@@ -101,10 +101,6 @@ function isCommandToken(value: unknown): value is string {
   return typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value.trim());
 }
 
-function uniqueStrings(values: Array<string | undefined>): string[] {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))];
-}
-
 export function parseOpenApiHelpEntries(document: OpenApiDocument): OpenApiHelpEntry[] {
   const entries: OpenApiHelpEntry[] = [];
 
@@ -121,7 +117,13 @@ export function parseOpenApiHelpEntries(document: OpenApiDocument): OpenApiHelpE
       if (!command) continue;
 
       entries.push({
-        aliases: uniqueStrings([command, cliCommand, summaryCommand, pathCommand, operationId]),
+        aliases: [
+          ...new Set(
+            [command, cliCommand, summaryCommand, pathCommand, operationId].filter((value): value is string =>
+              Boolean(value),
+            ),
+          ),
+        ],
         command,
         description: normalizedString(operation.description),
         operationId,

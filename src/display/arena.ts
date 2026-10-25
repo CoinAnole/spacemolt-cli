@@ -672,7 +672,7 @@ export function formatArenaXpLine(arenaXp: unknown): string | undefined {
     .sort((left, right) => left.localeCompare(right));
   if (skills.length === 0) return undefined;
   const parts = skills.map((skill) => `${skill} ${finiteNumber(usedToday[skill])}`);
-  const day = typeof arenaXp.day === 'string' && arenaXp.day ? arenaXp.day : undefined;
+  const day = isNonEmptyString(arenaXp.day) ? arenaXp.day : undefined;
   return day ? `Arena XP today (${day}): ${parts.join(', ')}` : `Arena XP today: ${parts.join(', ')}`;
 }
 

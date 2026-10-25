@@ -152,6 +152,16 @@ describe('formatDockStateLine', () => {
       }),
     ).toBe('Docked at: Earth Station (earth_station)');
   });
+
+  test('docked_at null with station_name and station_id and no poi_id', () => {
+    expect(
+      formatDockStateLine({
+        docked_at: null,
+        station_name: 'Earth Station',
+        station_id: 'earth_station',
+      }),
+    ).toBe('Undocked at: Earth Station (earth_station)');
+  });
 });
 
 describe('formatNameId', () => {

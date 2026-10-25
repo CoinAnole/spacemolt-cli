@@ -1,10 +1,6 @@
 import type { CommandConfig } from './commands.ts';
 import { type GeneratedApiRoute, schemaAllowsType } from './openapi-metadata.ts';
 
-function stripToolPrefix(tool: string): string {
-  return tool.replace(/^spacemolt_/, '');
-}
-
 function normalizeCommandName(name: string): string {
   return name
     .replace(/^spacemolt_/, '')
@@ -16,7 +12,7 @@ function normalizeCommandName(name: string): string {
 
 export function generatedCommandName(route: GeneratedApiRoute): string {
   if (route.cli?.command) return normalizeCommandName(route.cli.command);
-  const tool = stripToolPrefix(route.route.tool);
+  const tool = route.route.tool.replace(/^spacemolt_/, '');
   const action = route.route.action === route.route.tool ? tool : route.route.action;
   return normalizeCommandName(action === tool ? tool : `${tool}_${action}`);
 }

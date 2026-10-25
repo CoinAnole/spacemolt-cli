@@ -94,7 +94,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
     if (cache) {
       const lastCheck = new Date(cache.checked_at).getTime();
       if (clock.now().getTime() - lastCheck < UPDATE_CHECK_INTERVAL_MS) {
-        // Use cached result
         latestVersion = cache.latest_version;
       }
     }

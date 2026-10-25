@@ -17,7 +17,6 @@ function flatUnavailableText(error: unknown): string | undefined {
 
 export type ParsedRetryAfter = { kind: 'delta'; seconds: number } | { kind: 'date'; seconds: number };
 
-/** Tagged parse so 503 and rate-limit wrappers can disagree on past dates and missing headers. */
 export function parseRetryAfterHeaderRaw(
   header: string | null | undefined,
   nowMs: number,

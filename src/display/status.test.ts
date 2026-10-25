@@ -1268,6 +1268,18 @@ test('get_poi omits Deep core when false, missing, or non-boolean', () => {
   }
 });
 
+test('get_poi prints ? for omitted faction fuel capacity', () => {
+  const fixture = {
+    ...poiInfoFixture,
+    poi: {
+      ...poiInfoFixture.poi,
+      faction_fuel_reserve: 320,
+    },
+  };
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Faction Fuel: 320/?');
+});
+
 test('get_player prints arena record and XP after skill stats', () => {
   const stdout = renderStructuredResult(
     'get_player',

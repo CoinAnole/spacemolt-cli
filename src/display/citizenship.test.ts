@@ -161,6 +161,17 @@ test('citizenship list prints a comma remaining line for defensive string ids', 
   expect(stdout).not.toContain('=== Citizenships ===');
 });
 
+test('citizenship list prints true map keys and skips false citizenships', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    citizenships: { solarian: true, nebula: false, crimson: true },
+  });
+
+  const line = stdout.split('\n').find((entry) => entry.includes('Citizenships:'));
+  expect(line).toContain('Citizenships: solarian, crimson');
+  expect(line).not.toContain('nebula');
+});
+
 test('citizenship list prints a Held column when a pending row has held_citizenships', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

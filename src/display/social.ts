@@ -689,17 +689,15 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       recipe_id: recipeId,
       damaged_display: formatYesNo(row.damaged),
       dismantling_display: formatYesNo(row.dismantling),
-      rent_cycle_display:
-        row.rent_per_cycle === undefined || row.rent_per_cycle === null || row.rent_per_cycle === ''
-          ? undefined
-          : withPausedRentSuffix(String(row.rent_per_cycle), row),
+      rent_cycle_display: !hasAnyField([row], ['rent_per_cycle'])
+        ? undefined
+        : withPausedRentSuffix(String(row.rent_per_cycle), row),
     };
   });
 }
 
 function projectAllyRentalFee(row: Record<string, unknown>): Record<string, unknown> {
-  const top = row.rental_fee_per_run;
-  if (top !== undefined && top !== null && top !== '') return row;
+  if (hasAnyField([row], ['rental_fee_per_run'])) return row;
   const production = facilityProduction(row);
   const fee = production?.rental_fee_per_run;
   if (typeof fee === 'bigint' || (typeof fee === 'number' && Number.isFinite(fee))) {
@@ -2255,7 +2253,6 @@ export const socialFormatters = [
       const rowCount = Array.isArray(result.battles) ? result.battles.length : 0;
       emitLine(listBattlesHeader(rowCount, result));
       if (rowCount === 0) {
-        // An empty page prints one sentence and does not call printCompactTable.
         emitLine(listBattlesEmptyLine(result.total));
         return true;
       }

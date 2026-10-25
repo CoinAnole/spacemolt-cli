@@ -1516,7 +1516,6 @@ export const marketFormatters = [
     { commands: ['get_insurance_quote'] },
   ),
 
-  // Active insurance policies (v2 POST …/salvage/policies → curated view_insurance only)
   formatter(
     (r, command) => {
       const cmd = command?.replace(/^v2_/, '');

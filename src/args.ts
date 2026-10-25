@@ -742,7 +742,6 @@ export function applyCommandPayloadTransforms(
 ): Record<string, unknown> {
   const transformed = { ...payload };
 
-  // Apply array field splitting from metadata
   if (config?.arrayFields) {
     for (const field of config.arrayFields) {
       const val = transformed[field];

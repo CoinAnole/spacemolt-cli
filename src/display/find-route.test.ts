@@ -274,6 +274,15 @@ describe('find_route formatter', () => {
     expect(row[4]).toBe('(null)');
   });
 
+  test('prints (missing) when a wormhole entrance is null', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        route: [{ system_id: 'sol', name: 'Sol', jumps: 0, via_wormhole: true, entrance_poi: null }],
+      }),
+    );
+    expect(cells(rowByText(stdout, 'Route', 'Sol'))[4]).toBe('(missing)');
+  });
+
   test('keeps an entrance that arrived on a non-wormhole step', () => {
     const stdout = stdoutOf(
       foundBody({
@@ -402,6 +411,23 @@ describe('find_route formatter', () => {
     expect(stdout).toContain('Route: found');
     expect(stdout.split('\n')).toContain('Steps: (omitted)');
     expect(stdout).not.toContain('=== Route ===');
+  });
+
+  test('prints route status from route length when found is omitted', () => {
+    const hop: Record<string, unknown> = {
+      ...documentedMissingRouteFixture,
+      route: [{ system_id: 'sol', name: 'Sol', jumps: 0 }],
+    };
+    delete hop.found;
+    const hopStdout = stdoutOf(hop);
+    expect(hopStdout).toContain('Route: found');
+    expect(hopStdout).toContain('=== Route ===');
+
+    const empty: Record<string, unknown> = { ...documentedMissingRouteFixture, route: [] };
+    delete empty.found;
+    const emptyStdout = stdoutOf(empty);
+    expect(emptyStdout).toContain('Route: not found');
+    expect(emptyStdout.split('\n')).toContain('Steps: 0');
   });
 
   test('claims a body that only has a message', () => {

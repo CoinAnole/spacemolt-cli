@@ -1,7 +1,6 @@
 import { rawColors } from './ansi.ts';
 import { colorText, emitLine, isRecord } from './helpers.ts';
 
-/** Print LeviathanContact rows. Returns false when the section is omitted. */
 export function emitLeviathanContacts(leviathans: unknown, title: string): boolean {
   if (!Array.isArray(leviathans)) return false;
   const rows = leviathans.filter(isRecord);

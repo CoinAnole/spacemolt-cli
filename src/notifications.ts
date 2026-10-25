@@ -180,10 +180,6 @@ function formatGenericNotification(
   renderPreviewInline(preview, time, c, writeLine, verbose, noTimestamp);
 }
 
-/**
- * Known notification msg_types — derived from pure PREVIEW_HANDLERS keys (PR7c).
- * Table Type column still shows raw server msg_type (K13); this list is for test coverage.
- */
 export const NOTIFICATION_TYPES = [...PREVIEW_HANDLER_TYPES];
 
 /**

@@ -14,10 +14,6 @@ export function formatPrizeCaptureLocation(data: Record<string, unknown>): strin
   return poi ?? system;
 }
 
-/**
- * Prize-id site line uses at {poi} / in {system}.
- * Undefined when there is neither prize_id nor location.
- */
 export function formatPrizeCaptureSite(data: Record<string, unknown>): string | undefined {
   const prizeId = nonEmptyString(data.prize_id);
   const poi = nonEmptyString(data.prize_poi_name) ?? nonEmptyString(data.prize_poi_id);

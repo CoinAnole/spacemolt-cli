@@ -90,6 +90,19 @@ test('omitted conversion prints no output lines', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('empty jettison results print (None)', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('(None)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('bulk jettison lists each conversion, including 0', () => {
   const { stdout, stderr } = renderJettison('storage jettison', storageJettisonPartialFixture);
 
@@ -103,6 +116,24 @@ test('bulk jettison lists each conversion, including 0', () => {
   expect(stdout.indexOf('Output Quantity: 3')).toBeLessThan(stdout.indexOf('Output Quantity: 0'));
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('[object Object]');
+});
+
+test('failed jettison result prints Success: no', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          success: false,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Success: no');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('an unknown conversion field still dumps the response', () => {

@@ -593,13 +593,6 @@ function renderBulkReload(r: Record<string, unknown>): void {
   printCompactTable('Results', rows, columns, { maxCellWidth: 72 });
 }
 
-// Finite numbers and bigints only. Absent, null, non-finite, and non-numbers omit.
-function formatBareNumber(value: unknown): string | undefined {
-  if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
 export const shipFormatters = [
   formatter(
     (r) => {
@@ -988,7 +981,12 @@ export const shipFormatters = [
           emitLine(`\n${c.yellow}Wreck: ${wreckId}${c.reset}`);
           emitLine(`  Ship: ${ship}${victim}`);
           if (w.salvage_value !== undefined) emitLine(`  Salvage value: ${w.salvage_value}`);
-          const carrion = formatBareNumber(w.carrion);
+          const carrion =
+            typeof w.carrion === 'bigint'
+              ? w.carrion.toString()
+              : typeof w.carrion === 'number' && Number.isFinite(w.carrion)
+                ? String(w.carrion)
+                : undefined;
           if (carrion !== undefined) emitLine(`  Carrion: ${carrion}`);
           if (w.expire_tick !== undefined) {
             emitLine(`  Expires tick: ${w.expire_tick}`);
@@ -1042,7 +1040,7 @@ export const shipFormatters = [
   formatter(
     (r) => {
       if (r.action !== 'scrap_wreck') return false;
-      if (typeof r.wreck_id !== 'string' || r.wreck_id === '') return false;
+      if (!nonEmptyString(r.wreck_id)) return false;
       if (!Array.isArray(r.materials)) return false;
 
       const shipClass = nonEmptyString(r.ship_class);

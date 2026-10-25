@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatCompactTable } from './tables';
+import { formatCompactTable, truncateCell } from './tables';
 
 describe('formatCompactTable', () => {
   test('truncates very long cells to keep tables readable', () => {
@@ -20,5 +20,11 @@ describe('formatCompactTable', () => {
 
     expect(lines.join('\n')).toContain('...');
     expect(lines.some((line) => line.length > 80)).toBe(false);
+  });
+
+  test('maxCellWidth <= 3 returns repeated dots and not an ellipsis', () => {
+    const cell = truncateCell('longer-than-three', 2);
+    expect(cell).toBe('..');
+    expect(cell).not.toContain('...');
   });
 });

@@ -11767,6 +11767,20 @@ describe('notification formatting', () => {
       expectNoNestedJsonDump(detailsMsg);
     });
 
+    test('ship commission receipt without ship name or station', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered ship ship-42');
+      expect(message).not.toContain(', at ');
+    });
+
     test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {
       const notification = {
         type: 'system',

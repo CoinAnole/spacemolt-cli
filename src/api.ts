@@ -41,7 +41,7 @@ const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info', 'server-help']);
 
 /** Commands that require no session at all (public root endpoints, no X-Session-Id, no /session creation). */
 function isFullyUnauthenticated(command: string, route?: V2Route): boolean {
-  if (PUBLIC_SESSION_COMMANDS.has(command)) return false; // they still get transient sessions today
+  if (PUBLIC_SESSION_COMMANDS.has(command)) return false;
   return route?.publicUnauthenticated === true;
 }
 
@@ -96,21 +96,6 @@ function isMissingDefaultProfileError(error: unknown): boolean {
 interface CommandSession {
   session: Session;
   transient: boolean;
-}
-
-function appendQueryPayload(url: string, payload?: Record<string, unknown>): string {
-  if (!payload || Object.keys(payload).length === 0) return url;
-
-  const parsedUrl = new URL(url);
-  for (const [key, value] of Object.entries(payload)) {
-    if (value === undefined) continue;
-    const values = Array.isArray(value) ? value : [value];
-    for (const item of values) {
-      if (item === undefined) continue;
-      parsedUrl.searchParams.append(key, String(item));
-    }
-  }
-  return parsedUrl.toString();
 }
 
 export interface SpaceMoltClientOptions {
@@ -231,123 +216,115 @@ export class SpaceMoltClient {
     payload: Record<string, unknown>,
   ): Promise<APIResponse> {
     try {
-      return await this.executeRouteBody(command, mapping, payload);
+      const reserved = reservedRoutingActionError(command, payload);
+      if (reserved) {
+        return { error: { code: reserved.code, message: reserved.message } };
+      }
+
+      if (mapping.defaults) {
+        payload = { ...mapping.defaults, ...payload };
+      }
+      if (command === 'list_battles') {
+        payload = sanitizeListBattlesPayload(payload);
+      }
+
+      let url: string;
+      let residualPayload: Record<string, unknown>;
+      try {
+        ({ url, residualPayload } = applyPathParams(mapping, buildRequestUrl(this.baseUrl, mapping), payload));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { error: { code: 'missing_path_parameter', message } };
+      }
+
+      const method = mapping.method || 'POST';
+      const publicSessionCommand = PUBLIC_SESSION_COMMANDS.has(command);
+      const fullyUnauth = isFullyUnauthenticated(command, mapping);
+
+      const sessionProfile = this.sessionProfileForCommand(command, payload);
+      const commandSession = fullyUnauth
+        ? { session: { id: '', created_at: '', expires_at: '' } as Session, transient: true }
+        : await this.getSessionForCommand(command, sessionProfile);
+      let session = commandSession.session;
+      let transientSession = commandSession.transient;
+      let sessionRecoveryAttempts = 0;
+      let rateLimitRetries = 0;
+
+      while (true) {
+        if (command !== 'login' && command !== 'register' && !publicSessionCommand && !fullyUnauth) {
+          const authError = await this.sessionStore.authenticateProfileSession(session);
+          if (authError) return authError;
+        }
+
+        const {
+          status,
+          data: rawData,
+          retryAfterHeader,
+        } = await requestWithServiceUnavailableRetry(
+          () =>
+            this.sendRequest(session, url, method, residualPayload, sessionProfile, {
+              persistSession: !transientSession && !fullyUnauth,
+              fullyUnauthenticated: fullyUnauth,
+            }),
+          this.serviceUnavailableRetryOpts(),
+        );
+        const data = normalizeBareResponse(
+          normalizeRateLimitError(rawData, {
+            status,
+            retryAfterHeader,
+            nowMs: this.clock.now(),
+          }),
+          mapping,
+          fullyUnauth,
+          status,
+        );
+
+        if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
+          if (
+            (command === 'login' || command === 'register') &&
+            SESSION_BOOTSTRAP_ERROR_CODES.has(data.error.code) &&
+            sessionRecoveryAttempts < this.maxSessionRecoveryAttempts
+          ) {
+            sessionRecoveryAttempts += 1;
+            session = await this.sessionStore.createSession(sessionProfile);
+            continue;
+          }
+          if (
+            command === 'login' ||
+            command === 'register' ||
+            sessionRecoveryAttempts >= this.maxSessionRecoveryAttempts
+          ) {
+            return data;
+          }
+          sessionRecoveryAttempts += 1;
+          const recoveredSession = await this.recoverSession();
+          if (!recoveredSession) return data;
+          session = recoveredSession;
+          transientSession = false;
+          continue;
+        }
+
+        const retryAfter = isRateLimitAutoRetryWait(data.error);
+        if (retryAfter !== undefined) {
+          if (rateLimitRetries >= this.maxRateLimitRetries) return data;
+          rateLimitRetries += 1;
+          const waitMs = Math.ceil(retryAfter) * 1000;
+          if (!this.jsonOutput) {
+            this.logger.warn(`[RATE LIMITED] Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
+          }
+          await this.sleep(waitMs);
+          continue;
+        }
+
+        if (command === 'login' || command === 'register') {
+          await this.persistSuccessfulCredentials(command, payload, data);
+        }
+
+        return data;
+      }
     } catch (error) {
       if (error instanceof ServiceUnavailableError) return error.toAPIResponse();
       throw error;
-    }
-  }
-
-  private async executeRouteBody(
-    command: string,
-    mapping: V2Route,
-    payload: Record<string, unknown>,
-  ): Promise<APIResponse> {
-    const reserved = reservedRoutingActionError(command, payload);
-    if (reserved) {
-      return { error: { code: reserved.code, message: reserved.message } };
-    }
-
-    if (mapping.defaults) {
-      payload = { ...mapping.defaults, ...payload };
-    }
-    if (command === 'list_battles') {
-      payload = sanitizeListBattlesPayload(payload);
-    }
-
-    let url: string;
-    let residualPayload: Record<string, unknown>;
-    try {
-      ({ url, residualPayload } = applyPathParams(mapping, buildRequestUrl(this.baseUrl, mapping), payload));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { error: { code: 'missing_path_parameter', message } };
-    }
-
-    const method = mapping.method || 'POST';
-    const publicSessionCommand = PUBLIC_SESSION_COMMANDS.has(command);
-    const fullyUnauth = isFullyUnauthenticated(command, mapping);
-
-    const sessionProfile = this.sessionProfileForCommand(command, payload);
-    const commandSession = fullyUnauth
-      ? { session: { id: '', created_at: '', expires_at: '' } as Session, transient: true }
-      : await this.getSessionForCommand(command, sessionProfile);
-    let session = commandSession.session;
-    let transientSession = commandSession.transient;
-    let sessionRecoveryAttempts = 0;
-    let rateLimitRetries = 0;
-
-    while (true) {
-      if (command !== 'login' && command !== 'register' && !publicSessionCommand && !fullyUnauth) {
-        const authError = await this.sessionStore.authenticateProfileSession(session);
-        if (authError) return authError;
-      }
-
-      const {
-        status,
-        data: rawData,
-        retryAfterHeader,
-      } = await requestWithServiceUnavailableRetry(
-        () =>
-          this.sendRequest(session, url, method, residualPayload, sessionProfile, {
-            persistSession: !transientSession && !fullyUnauth,
-            fullyUnauthenticated: fullyUnauth,
-          }),
-        this.serviceUnavailableRetryOpts(),
-      );
-      const data = normalizeBareResponse(
-        normalizeRateLimitError(rawData, {
-          status,
-          retryAfterHeader,
-          nowMs: this.clock.now(),
-        }),
-        mapping,
-        fullyUnauth,
-        status,
-      );
-
-      if (!fullyUnauth && data.error && SESSION_RECOVERY_ERROR_CODES.has(data.error.code)) {
-        if (
-          (command === 'login' || command === 'register') &&
-          SESSION_BOOTSTRAP_ERROR_CODES.has(data.error.code) &&
-          sessionRecoveryAttempts < this.maxSessionRecoveryAttempts
-        ) {
-          sessionRecoveryAttempts += 1;
-          session = await this.sessionStore.createSession(sessionProfile);
-          continue;
-        }
-        if (
-          command === 'login' ||
-          command === 'register' ||
-          sessionRecoveryAttempts >= this.maxSessionRecoveryAttempts
-        ) {
-          return data;
-        }
-        sessionRecoveryAttempts += 1;
-        const recoveredSession = await this.recoverSession();
-        if (!recoveredSession) return data;
-        session = recoveredSession;
-        transientSession = false;
-        continue;
-      }
-
-      const retryAfter = isRateLimitAutoRetryWait(data.error);
-      if (retryAfter !== undefined) {
-        if (rateLimitRetries >= this.maxRateLimitRetries) return data;
-        rateLimitRetries += 1;
-        const waitMs = Math.ceil(retryAfter) * 1000;
-        if (!this.jsonOutput) {
-          this.logger.warn(`[RATE LIMITED] Waiting ${Math.ceil(retryAfter)} seconds before retry...`);
-        }
-        await this.sleep(waitMs);
-        continue;
-      }
-
-      if (command === 'login' || command === 'register') {
-        await this.persistSuccessfulCredentials(command, payload, data);
-      }
-
-      return data;
     }
   }
 
@@ -359,7 +336,19 @@ export class SpaceMoltClient {
     sessionProfile?: string,
     options: { persistSession?: boolean; fullyUnauthenticated?: boolean } = {},
   ): Promise<JsonResponse<APIResponse>> {
-    const finalRequestUrl = requestMethod === 'GET' ? appendQueryPayload(requestUrl, requestPayload) : requestUrl;
+    let finalRequestUrl = requestUrl;
+    if (requestMethod === 'GET' && requestPayload && Object.keys(requestPayload).length > 0) {
+      const parsedUrl = new URL(requestUrl);
+      for (const [key, value] of Object.entries(requestPayload)) {
+        if (value === undefined) continue;
+        const values = Array.isArray(value) ? value : [value];
+        for (const item of values) {
+          if (item === undefined) continue;
+          parsedUrl.searchParams.append(key, String(item));
+        }
+      }
+      finalRequestUrl = parsedUrl.toString();
+    }
     const fullyUnauth = options.fullyUnauthenticated === true;
 
     if (this.debug) {

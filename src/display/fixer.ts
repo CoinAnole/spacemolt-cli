@@ -9,7 +9,6 @@ const FIXER_ACCOUNT_LABELS: Record<(typeof FIXER_ACCOUNT_FIELDS)[number], string
   available: 'Available',
 };
 
-/** Returns false when nothing prints. `leadingBlank` is skipped in that case. */
 export function emitFixerAccount(value: unknown, leadingBlank = false): boolean {
   if (!isRecord(value)) return false;
   const lines: string[] = [];

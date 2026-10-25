@@ -38,7 +38,6 @@ export type CachedIdResolveResult =
 
 /** Controls which non-exact stages may rewrite payload IDs. Exact id/name always runs; exact poi `context.base_id` does too. */
 export interface IdResolutionPolicy {
-  /** When false, only exact (id or name, plus poi context.base_id) and reserved/package normalization may rewrite. */
   allowPrefix: boolean;
   /** When false, substring matches are never applied to the payload. */
   allowSubstring: boolean;
@@ -385,7 +384,6 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
 
   const pkg = isRecord(result.package) ? result.package : undefined;
   if (pkg) {
-    // Prefer the nested package payload (label/size/created_at). Fill missing package_id from top-level id.
     pushPackage(push, {
       ...pkg,
       package_id: pkg.package_id || pkg.id || result.id,
@@ -499,7 +497,6 @@ export function formatCachedIdAmbiguity(
   return lines;
 }
 
-/** One-line stderr notice for non-exact (prefix/substring) payload rewrites. */
 export function formatCachedIdResolution(
   command: string,
   field: string,

@@ -211,7 +211,6 @@ export function formatDeepCoreMark(value: unknown): string {
 export function emitResourceInfoLines(resources: unknown, options: { indent?: string; heading?: boolean } = {}): void {
   const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
   if (!rows.length) return; // empty array is silent
-  // indent is the heading indent; bullets are `${indent}  - `
   const indent = options.indent ?? '';
   if (options.heading !== false) {
     emitLine(`\n${indent}${c.bright}Resources:${c.reset}`);
@@ -411,7 +410,6 @@ export function emitStationIds(base: unknown, indent = ''): boolean {
   return true;
 }
 
-/** Station combat/defence stats from get_base (hull/shield/armor/guns). Replaces legacy defense_level. */
 export function emitStationDefences(base: unknown, indent = ''): boolean {
   if (!isRecord(base)) return false;
   const hasHull = base.hull !== undefined || base.max_hull !== undefined;
@@ -654,7 +652,7 @@ function formatStationServicePoolLine(key: string, label: string, pool: Record<s
   const capacityText = capacity === undefined ? '?' : String(capacity);
   let line = `  ${label}: ${remainingText}/${capacityText} remaining`;
   const refill = finiteNumber(pool.refill_per_cycle);
-  const supply = typeof pool.supply_item === 'string' && pool.supply_item ? pool.supply_item : undefined;
+  const supply = nonEmptyString(pool.supply_item);
   if (refill !== undefined) {
     line += ` (+${refill}/cycle`;
     if (supply) line += `, ${supply}`;
@@ -949,9 +947,8 @@ function printableMintShortages(value: unknown): string[] {
 }
 
 function formatMintCreditAmount(value: unknown): string | undefined {
-  if (typeof value === 'bigint') return `${value.toLocaleString()} credits`;
-  if (typeof value === 'number' && Number.isSafeInteger(value)) return `${value.toLocaleString()} credits`;
-  return undefined;
+  const text = formatExactGroupedInteger(value);
+  return text === undefined ? undefined : `${text} credits`;
 }
 
 function formatMintPriceLimit(row: Record<string, unknown>): string | undefined {

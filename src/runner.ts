@@ -71,24 +71,20 @@ const defaultRunnerDependencies: Required<RunnerDependencies> = {
 
 export type InvocationParseResult = { ok: true; invocation: Invocation } | { ok: false; error: GlobalOptionParseError };
 
-function defaultGlobalOptions(args: string[]): GlobalOptions {
-  return {
-    json: false,
-    quiet: false,
-    plain: false,
-    debug: false,
-    allowUnknown: false,
-    dryRun: false,
-    fields: undefined,
-    noTimestamp: false,
-    compact: false,
-    args,
-  };
-}
-
 export function parseInvocation(argv: string[], context?: CliRuntimeContext): InvocationParseResult {
   if (argv[0] === '__complete') {
-    const options = defaultGlobalOptions(argv);
+    const options: GlobalOptions = {
+      json: false,
+      quiet: false,
+      plain: false,
+      debug: false,
+      allowUnknown: false,
+      dryRun: false,
+      fields: undefined,
+      noTimestamp: false,
+      compact: false,
+      args: argv,
+    };
     applyGlobalOptions(options, context?.env);
     return { ok: true, invocation: { options, args: argv } };
   }
@@ -128,6 +124,12 @@ function validateEnvProfile(
   }
 }
 
+interface OutputTracker {
+  writer: CliRuntimeContext['writer'];
+  hasStdout(): boolean;
+  hasStderr(): boolean;
+}
+
 export async function runInvocation(
   argv: string[],
   client?: SpaceMoltClient,
@@ -135,26 +137,10 @@ export async function runInvocation(
   dependencies: RunnerDependencies = {},
 ): Promise<number> {
   const deps = { ...defaultRunnerDependencies, ...dependencies };
-  const outputTracker = createOutputTracker(context.writer);
-  const trackedContext = { ...context, writer: outputTracker.writer };
-  const fallbackOutput = fallbackOutputMode(argv, context);
-  return withCliWriter(outputTracker.writer, async () => {
-    const exitCode = await runInvocationWithContext(argv, client, trackedContext, deps);
-    renderFallbackDiagnosticIfSilent(exitCode, trackedContext, outputTracker, fallbackOutput);
-    return exitCode;
-  });
-}
-
-interface OutputTracker {
-  writer: CliRuntimeContext['writer'];
-  hasStdout(): boolean;
-  hasStderr(): boolean;
-}
-
-function createOutputTracker(writer: CliRuntimeContext['writer']): OutputTracker {
+  const writer = context.writer;
   let stdoutWrites = 0;
   let stderrWrites = 0;
-  return {
+  const outputTracker: OutputTracker = {
     writer: {
       out(message = '') {
         stdoutWrites += 1;
@@ -178,6 +164,13 @@ function createOutputTracker(writer: CliRuntimeContext['writer']): OutputTracker
       return stderrWrites > 0;
     },
   };
+  const trackedContext = { ...context, writer: outputTracker.writer };
+  const fallbackOutput = fallbackOutputMode(argv, context);
+  return withCliWriter(outputTracker.writer, async () => {
+    const exitCode = await runInvocationWithContext(argv, client, trackedContext, deps);
+    renderFallbackDiagnosticIfSilent(exitCode, trackedContext, outputTracker, fallbackOutput);
+    return exitCode;
+  });
 }
 
 function renderFallbackDiagnosticIfSilent(

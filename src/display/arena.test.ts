@@ -836,3 +836,36 @@ test('renders a well-typed match even when battle_id is omitted', () => {
   expect(stdout).not.toContain('Next: get_battle_status');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('a single win renders one ready trial with wins 1', () => {
+  const trial = trialDef({
+    challenge_id: 'first_blood',
+    name: 'First Blood',
+    series: 'Blood Arena',
+    stage: 1,
+    wins: 1,
+  });
+  const stdout = output('arena_challenges', { action: 'challenges', challenges: [trial] });
+
+  expect(stdout).toContain('1 win\n');
+});
+
+test('an all-locked catalog says to win a required trial', () => {
+  const trial = trialDef({
+    challenge_id: 'trial_master',
+    name: 'The Trial Master',
+    series: 'Blood Arena',
+    stage: 1,
+    locked: true,
+    requires: ['two_on_one'],
+  });
+  const stdout = output('arena_challenges', { action: 'challenges', challenges: [trial] });
+
+  expect(stdout).toContain('Next: win a required trial to unlock the next stage');
+});
+
+test('multiple allowed damage types format as only energy, kinetic', () => {
+  expect(formatRuleDigest({ max_side_size: 1, allowed_damage_types: ['energy', 'kinetic'] })).toBe(
+    'solo duel · only energy, kinetic',
+  );
+});

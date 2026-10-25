@@ -254,6 +254,27 @@ test('ignores non-record package.shipment values', () => {
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('inspect package prints Contents: (empty) when contents is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_empty',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_empty',
+        label: 'Empty crate',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contents: (empty)');
+});
+
 test('renders system inspect results with faction intel', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -300,6 +321,29 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).toContain('Faction intel');
   expect(stdout).toContain('Earth Station');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inspect system prints Online and POIs when those counts are present', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        online: 12,
+        poi_count: 4,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Online: 12');
+  expect(stdout).toContain('POIs: 4');
 });
 
 test('renders catalog inspect results for an item lookup with details', () => {
@@ -719,6 +763,25 @@ test('inspect ship-passive recipe does not print Produced by', () => {
 
   expect(stdout).toContain('Venue: ship passive');
   expect(stdout).not.toContain('Produced by:');
+});
+
+test('inspect catalog recipe prints Crafting time 0', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'instant_recipe',
+          name: 'Instant Recipe',
+          category: 'refining',
+          crafting_time: 0,
+        },
+      ],
+    },
+    'instant_recipe',
+  );
+
+  expect(stdout).toContain('Crafting time: 0');
 });
 
 test('inspect no-venue recipe does not print Produced by', () => {

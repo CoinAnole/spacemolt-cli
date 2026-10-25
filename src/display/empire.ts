@@ -17,14 +17,14 @@ function formatCredits(value: unknown): string | undefined {
   return number === undefined ? undefined : `${number} cr`;
 }
 
-function formatCompactNumber(value: number): string {
-  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
 function formatBps(value: unknown): string | undefined {
   const number = numberValue(value);
   if (number === undefined) return undefined;
-  return `${formatCompactNumber(number / 100)}%`;
+  return `${
+    Number.isInteger(number / 100)
+      ? (number / 100).toFixed(0)
+      : (number / 100).toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+  }%`;
 }
 
 function formatPolicyTimestamp(value: unknown): string | undefined {

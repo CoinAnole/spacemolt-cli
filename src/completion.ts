@@ -43,19 +43,17 @@ function registryCommandNames(registry: CompletionRegistry = BUNDLED_COMMAND_REG
     .sort();
 }
 
-function uniqueSorted(values: string[]): string[] {
-  return [...new Set(values)].sort();
-}
-
 function topLevelCommandNames(registry: CompletionRegistry = BUNDLED_COMMAND_REGISTRY): string[] {
-  return uniqueSorted([
-    ...commandsList(registry),
-    ...Object.keys(LOCAL_COMPLETION_COMMANDS),
-    ...Object.keys(SPECIAL_COMPLETIONS),
-    'commands',
-    'explain',
-    'help',
-  ]);
+  return [
+    ...new Set([
+      ...commandsList(registry),
+      ...Object.keys(LOCAL_COMPLETION_COMMANDS),
+      ...Object.keys(SPECIAL_COMPLETIONS),
+      'commands',
+      'explain',
+      'help',
+    ]),
+  ].sort();
 }
 
 function commandDescription(command: string, registry: CompletionRegistry): string {
@@ -198,7 +196,7 @@ function fishValueGlobalOptionWords(): string[] {
 }
 
 function generateZshGlobalOption(option: CompletionOption): string {
-  const words = [option.short, option.long].filter(Boolean) as string[];
+  const words = fishCompletionOptionWords(option).reverse();
   const escapedDescription = escapeZshDescription(option.description);
   const valueCompletion =
     option.takesValue && option.values?.length

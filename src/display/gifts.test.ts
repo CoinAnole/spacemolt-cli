@@ -57,6 +57,17 @@ describe('emitGiftEntries', () => {
     expect(row).toBe('    2 fuel_cell');
   });
 
+  test('an item with no name renders 4 rations and not (rations)', () => {
+    const { stdout } = renderGifts([
+      {
+        items: [{ item_id: 'rations', quantity: 4 }],
+      },
+    ]);
+    const row = stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    4 rations');
+    expect(stdout).not.toContain('(rations)');
+  });
+
   test('ship lines keep class id only when it is not already the label', () => {
     const named = renderGifts([
       {

@@ -595,16 +595,14 @@ export function showCommandHelp(
   return true;
 }
 
-function nextStepCommand(command: string): string {
-  const parts = groupedCommandParts(command);
-  return parts ? groupActionDisplayName(parts.group, parts.action) : command;
-}
-
 function printNextSteps(command: string, missingArg?: string, writer?: CliWriter, options?: HelpOutputOptions): void {
   const config = BUNDLED_COMMAND_REGISTRY.allCommands[command];
   const colors = colorsForPlain(Boolean(options?.plain));
   const steps: string[] = [];
-  for (const related of config?.discoverWith || []) steps.push(`spacemolt ${nextStepCommand(related)}`);
+  for (const related of config?.discoverWith || []) {
+    const parts = groupedCommandParts(related);
+    steps.push(`spacemolt ${parts ? groupActionDisplayName(parts.group, parts.action) : related}`);
+  }
   if (!steps.includes('spacemolt get_status')) steps.push('spacemolt get_status');
   if (command !== 'get_commands' && !steps.includes('spacemolt get_commands')) steps.push('spacemolt get_commands');
 

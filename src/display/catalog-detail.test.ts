@@ -3,12 +3,15 @@ import {
   catalogSkillTableColumns,
   classifyRecipeVenue,
   countRecipeVenues,
+  emitCatalogModuleDetail,
+  emitCatalogShipDetail,
   formatCatalogYesNo,
   formatProducedByFacilities,
   formatProducedByFacilityIds,
   type RecipeVenue,
   summarizeBonusPerLevel,
 } from './catalog-detail.ts';
+import { withDisplayRenderBuffer } from './helpers.ts';
 
 const classifyCases: Array<{
   name: string;
@@ -209,4 +212,25 @@ test('catalogSkillTableColumns adds Empire only when empire_restriction is a non
     'Max',
     'Empire',
   ]);
+});
+
+test('zero module bonus omits a Reach line and prints Scramble: 2', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ reach: 0, scramble_power: 2 }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Scramble: 2');
+  expect(stdout).not.toContain('Reach');
+});
+
+test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Shield: 700');
+  expect(buffer.stdout.join('\n')).not.toContain('/tick');
+});
+
+test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ defense_slots: 4 }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Slots: 0 weapon, 4 defense, 0 utility');
 });

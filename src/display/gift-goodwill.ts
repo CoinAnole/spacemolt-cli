@@ -36,20 +36,6 @@ function pushReply(lines: string[], text: string): void {
   for (const line of rest) lines.push(`    ${line}`);
 }
 
-function pushKnownField(lines: string[], label: string, value: unknown, kind: 'text' | 'value'): void {
-  if (value === undefined || value === null || value === '') return;
-  if (kind === 'text') {
-    if (typeof value !== 'string') return;
-    if (label === 'Reply') {
-      pushReply(lines, value);
-      return;
-    }
-    lines.push(`  ${label}: ${value}`);
-    return;
-  }
-  lines.push(`  ${label}: ${goodwillValueText(value)}`);
-}
-
 function pushExtraField(lines: string[], key: string, value: unknown): void {
   if (value === undefined || value === null || value === '') return;
   const label = key
@@ -72,7 +58,18 @@ export function giftGoodwillLines(value: unknown): string[] {
   const lines: string[] = [];
   for (const [key, label, kind] of GIFT_GOODWILL_FIELDS) {
     if (!Object.hasOwn(value, key)) continue;
-    pushKnownField(lines, label, value[key], kind);
+    const fieldValue = value[key];
+    if (fieldValue === undefined || fieldValue === null || fieldValue === '') continue;
+    if (kind === 'text') {
+      if (typeof fieldValue !== 'string') continue;
+      if (label === 'Reply') {
+        pushReply(lines, fieldValue);
+        continue;
+      }
+      lines.push(`  ${label}: ${fieldValue}`);
+      continue;
+    }
+    lines.push(`  ${label}: ${goodwillValueText(fieldValue)}`);
   }
   for (const [key, entry] of Object.entries(value)) {
     if (GIFT_GOODWILL_KEYS.has(key)) continue;

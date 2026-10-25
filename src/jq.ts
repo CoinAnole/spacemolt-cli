@@ -234,7 +234,7 @@ function resolvePathTokens(
 
     const mapped: unknown[] = [];
     for (const item of value) {
-      const resolved = resolvePathTokens(item, rest, appendArrayEachPath(path), options);
+      const resolved = resolvePathTokens(item, rest, `${path}[]`, options);
       if (!resolved.found) return resolved;
       mapped.push(jqResultValue(resolved.value));
     }
@@ -257,10 +257,6 @@ function resolvePathTokens(
 
 function appendPath(path: string, part: string): string {
   return path ? `${path}.${part}` : part;
-}
-
-function appendArrayEachPath(path: string): string {
-  return `${path}[]`;
 }
 
 function appendArrayIndexPath(path: string, index: number): string {

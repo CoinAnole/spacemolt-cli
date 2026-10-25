@@ -50,7 +50,12 @@ function parseArgs(argv: string[]): { only?: string[]; strict: boolean; updateBa
   return { only: only.length ? only : undefined, strict, updateBaseline };
 }
 
-function updateBaseline(): void {
+const options = parseArgs(process.argv.slice(2));
+const comparisons = compareHighValueFixturesToSpec({ only: options.only });
+
+console.log(formatComparisonReport(comparisons));
+
+if (options.updateBaseline) {
   const signatures = filterBlockingDivergences(compareHighValueFixturesToSpec())
     .map((divergence) => divergenceSignature(divergence))
     .sort();
@@ -65,15 +70,6 @@ function updateBaseline(): void {
       signatures.length
     } blocking divergence signature(s).`,
   );
-}
-
-const options = parseArgs(process.argv.slice(2));
-const comparisons = compareHighValueFixturesToSpec({ only: options.only });
-
-console.log(formatComparisonReport(comparisons));
-
-if (options.updateBaseline) {
-  updateBaseline();
 }
 
 if (options.strict) {

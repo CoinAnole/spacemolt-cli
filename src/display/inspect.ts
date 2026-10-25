@@ -171,7 +171,6 @@ function emitPackage(pkg: Record<string, unknown>): void {
   const creator = formatCreator(pkg.creator);
   if (creator) emitLine(`Creator: ${creator}`);
 
-  // Package-level logistics metadata before inventory rows
   if (isRecord(pkg.shipment)) {
     emitPackageShipment(pkg.shipment);
   }

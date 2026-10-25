@@ -237,3 +237,10 @@ test('json output passes the attack envelope through without the human warning l
   expect(stdout).not.toContain('Warning:');
   expect(stdout).not.toContain('=== Attack ===');
 });
+
+test('equal target name and id prints the target without parentheses', () => {
+  const stdout = renderCombat('attack', { ...playerReply, target_name: 'player-1' });
+
+  expect(stdout).toContain('Target: player-1');
+  expect(stdout).not.toContain('Target: player-1 (player-1)');
+});

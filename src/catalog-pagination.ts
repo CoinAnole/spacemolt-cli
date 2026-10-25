@@ -11,10 +11,6 @@ function catalogCollection(result: Record<string, unknown>): { key: string; item
   return undefined;
 }
 
-function catalogLabel(result: Record<string, unknown>, key: string): string {
-  return typeof result.type === 'string' && result.type.trim() ? result.type.trim() : key;
-}
-
 export function catalogTruncationWarning(command: string, result: Record<string, unknown>): string | undefined {
   if (command !== 'catalog') return undefined;
 
@@ -26,6 +22,6 @@ export function catalogTruncationWarning(command: string, result: Record<string,
 
   const page = finiteNumber(result.page) ?? 1;
   const nextPage = Math.max(1, Math.floor(page)) + 1;
-  const label = catalogLabel(result, collection.key);
+  const label = typeof result.type === 'string' && result.type.trim() ? result.type.trim() : collection.key;
   return `(Showing ${collection.items.length} of ${total} ${label}. Use --page ${nextPage} for more results.)`;
 }

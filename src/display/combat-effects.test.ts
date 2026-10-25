@@ -335,3 +335,11 @@ test('summarizeEffect prefers ammo then recurses scalars', () => {
   expect(summarizeEffect({ foo: { bar: 1 } })).toBe('foo: (bar: 1)');
   expect(summarizeEffect({ list: [1, { a: 2 }] })).toBe('list: [1, a: 2]');
 });
+
+test('armor melt without ticks prints the percent alone', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2 } } })).toBe('armor melt 20%');
+});
+
+test('positive accuracy prints a leading plus', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');
+});

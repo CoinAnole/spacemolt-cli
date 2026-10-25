@@ -300,6 +300,18 @@ test('renders an explicit empty listing message with pagination', () => {
   expect(stdout).toContain('Reason: no_matching_shipments');
 });
 
+test('renders the default empty freight listing when empty_reason is absent', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    page: 1,
+    per_page: 20,
+    total: 0,
+    shipments: [],
+  });
+  expect(stdout).toContain('No visible freight contracts.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders active freight with role, destination, deadline/late, recovery, payout, late fee, cargo, and next step', () => {
   const stdout = output('shipping_active', {
     action: 'active',
@@ -665,6 +677,28 @@ test('renders debt payment changes separately from remaining debts', () => {
   expect(stdout).toContain('Amount paid: 500 cr');
   expect(stdout).toContain('=== Updated Debts ===');
   expect(stdout).toContain('=== Outstanding Debts ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders empty updated freight debts as unchanged', () => {
+  const stdout = output('shipping_pay_debt', {
+    details: {
+      action: 'pay_debt',
+      amount_paid: 500,
+      profile: { ...carrierProfile, outstanding_debt: 250 },
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      debt_blocks_acceptance: true,
+      debt_block_reason: '250 cr remains unpaid.',
+      updated_debts: [],
+      outstanding_debts: [{ ...freightDebt, outstanding: 250 }],
+    },
+    player: { credits: 5000 },
+    ship: {},
+    cargo: [],
+  });
+
+  expect(stdout).toContain('No freight debts changed.');
   expect(stdout).not.toContain('=== Response ===');
 });
 

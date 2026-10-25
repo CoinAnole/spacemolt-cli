@@ -78,7 +78,7 @@ export function formatShipCountsLine(value: unknown): string | undefined {
   const pairs: string[] = [];
   for (const key of keys) {
     const count = value[key];
-    if (typeof count !== 'number' || !Number.isFinite(count)) continue;
+    if (finiteNumber(count) === undefined) continue;
     pairs.push(`${key}=${count}`);
   }
   if (Object.keys(value).length === 0) return 'Ship counts: (cleared)';
@@ -1676,7 +1676,7 @@ function positiveNumber(value: unknown): string | number | undefined {
 
 function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  return value.filter((item): item is string => nonEmptyString(item) !== undefined);
 }
 
 function detailPreview(
@@ -2261,7 +2261,6 @@ function previewScanDetected(
 
 // ── Remainder domain pure previews (PR7c) ───────────────────────────────────
 // mining, drones, skills, queue, version, poi_*, reconnected, pilotless, action_error
-// Completes pure registry; writeLine handlers deleted in notifications.ts.
 
 function previewMiningYield(
   data: Record<string, unknown>,
