@@ -198,7 +198,6 @@ export function formatResourceWorkabilitySuffix(res: Record<string, unknown>): s
   return parts.length ? `, ${parts.join(', ')}` : '';
 }
 
-/** Absence-is-silent: only the boolean true prints. */
 export function formatDeepCoreLine(value: unknown): string | undefined {
   if (value !== true) return undefined;
   return 'Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)';
@@ -210,7 +209,7 @@ export function formatDeepCoreMark(value: unknown): string {
 
 export function emitResourceInfoLines(resources: unknown, options: { indent?: string; heading?: boolean } = {}): void {
   const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
-  if (!rows.length) return; // empty array is silent
+  if (!rows.length) return;
   const indent = options.indent ?? '';
   if (options.heading !== false) {
     emitLine(`\n${indent}${c.bright}Resources:${c.reset}`);

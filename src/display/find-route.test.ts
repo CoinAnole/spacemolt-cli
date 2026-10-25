@@ -166,6 +166,18 @@ describe('find_route formatter', () => {
     expect(line).not.toContain('(');
   });
 
+  test('prints a poi-only travel target without a parenthesis', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        target_poi: 'belt_1',
+      }),
+    );
+    const line = stdout.split('\n').find((entry) => entry.startsWith('Then travel:'));
+    expect(line).toBe('Then travel: belt_1');
+    expect(line).not.toContain('(');
+    expect(line).not.toContain(')');
+  });
+
   test('leaves wormhole and entrance blank when via_wormhole is omitted', () => {
     const fixture = structuredClone(findRouteHighValueFixture);
     const steps = fixture.route as Array<Record<string, unknown>>;
@@ -404,6 +416,12 @@ describe('find_route formatter', () => {
     expect(stdout).not.toContain('sol');
   });
 
+  test('prints Route: found and Steps: (invalid) for a found true non-array route', () => {
+    const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: true, route: 'sol' });
+    expect(stdout.split('\n')).toContain('Route: found');
+    expect(stdout.split('\n')).toContain('Steps: (invalid)');
+  });
+
   test('prints Steps: (omitted) when a found route omits route', () => {
     const fixture = structuredClone(findRouteHighValueFixture);
     delete fixture.route;
@@ -535,6 +553,12 @@ describe('find_route formatter', () => {
     expect(row[0]).toBe('');
     expect(row[2]).toBe('');
     expect(stdout).not.toContain('unknown');
+  });
+
+  test('prints (null) in the player cell for a null fleet username', () => {
+    const stdout = stdoutOf(foundBody({ fleet_fuel: [fleetMember({ username: null })] }));
+    const row = cells(rowByText(stdout, 'Fleet Fuel', 'pilot-1'));
+    expect(row[0]).toBe('(null)');
   });
 
   test('prints fleet rows that are not the caller without inventing a leader', () => {

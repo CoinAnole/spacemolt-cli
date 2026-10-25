@@ -430,16 +430,12 @@ function storageItemMatches(item: Record<string, unknown>, itemFilter?: string, 
   }
 
   if (searchFilter) {
-    const needles = searchNeedles(searchFilter);
+    const needles = searchFilter.split(',').map(normalizeSearchText).filter(Boolean);
     const normalizedHaystack = haystack.map(normalizeSearchText);
     return needles.some((needle) => normalizedHaystack.some((value) => value.includes(needle)));
   }
 
   return true;
-}
-
-function searchNeedles(searchFilter: string): string[] {
-  return searchFilter.split(',').map(normalizeSearchText).filter(Boolean);
 }
 
 function normalizeSearchText(value: string): string {

@@ -49,8 +49,8 @@ function labelForScalarKey(key: string): string {
 }
 
 function titleForScalarAction(action: unknown): string {
-  if (typeof action !== 'string' || action.trim() === '') return 'Result';
-  return labelForScalarKey(action);
+  if (nonEmptyString(action) === undefined) return 'Result';
+  return labelForScalarKey(action as string);
 }
 
 /** Unknown conversion keys decline so the raw dump still shows them. Null is omitted; 0 prints. */

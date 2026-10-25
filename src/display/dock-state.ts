@@ -43,7 +43,6 @@ export function formatDockStateLine(location: unknown): string | undefined {
   return where ? `Undocked at: ${where}` : 'Undocked';
 }
 
-/** Flattened detailsViewModel fallback when sibling `location` is absent. */
 export function locationFromAliasedDetails(details: Record<string, unknown>): Record<string, unknown> | undefined {
   if (details.docked_at === undefined) return undefined;
   return {

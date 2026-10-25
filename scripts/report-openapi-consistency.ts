@@ -87,7 +87,7 @@ export function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
-function main() {
+if (import.meta.main) {
   const cli = parseArgs(Bun.argv.slice(2));
 
   const spec = loadOpenApiSpec(cli.specPath);
@@ -101,9 +101,5 @@ function main() {
   console.log(output);
 
   // Use downstream scripting or --strict in future if you want gating.
-  return 0;
-}
-
-if (import.meta.main) {
-  process.exitCode = main();
+  process.exitCode = 0;
 }

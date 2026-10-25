@@ -61,7 +61,6 @@ export function extractErrorWaitSeconds(error: unknown): number | undefined {
     if (fromDetails !== undefined) return fromDetails;
   }
 
-  // Legacy alias. Gameserver 0.601.6 never sent this field.
   const fromWaitSeconds = finiteNonNegativeSeconds(error.wait_seconds);
   if (fromWaitSeconds !== undefined) return fromWaitSeconds;
 

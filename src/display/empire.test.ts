@@ -277,3 +277,57 @@ test('prints (None) under Empire Policies when empires is empty', () => {
   expect(stdout).toContain('=== Empire Policies ===');
   expect(stdout).toContain('(None)');
 });
+
+test('prints exclusive on an auto-approved empire citizenship', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          citizenship_auto_approve: true,
+          citizenship_exclusive: true,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Auto-approved; exclusive');
+});
+
+test('prints an open-ended tax bracket when upper_bound is omitted', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: [
+        {
+          brackets: [{ lower_bound: 0 }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('0+');
+});
+
+test('prints foreign income deductions when the bps map is present', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          foreign_income_tax_deduction: { crimson: 200 },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Foreign Income Deductions: crimson 2%');
+});

@@ -3022,6 +3022,13 @@ test('get_status indents INCAPACITATED in the personnel block before combat effe
   expect(podIdx).toBe(-1);
 });
 
+test('get_status prints the escape pod warning', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.class_id = 'escape_pod';
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('WARNING: You are in an Escape Pod!');
+});
+
 test('get_status omits personnel when the ship has no personnel object or scalars', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   delete fixture.ship.personnel;
@@ -4393,6 +4400,24 @@ test('get_nearby prints a brand suffix only on the branded row and does not doub
   expect(stdout).not.toContain('[[SMC]');
   expect(stdout).not.toContain('[RNC] [RNC]');
   expect(stdout).not.toContain('[SMC] [SMC]');
+});
+
+test('get_nearby prints a question mark for a missing creature hull side', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-wild-1',
+        name: 'Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        max_hull: 40,
+      },
+    ],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('hull ?/40');
 });
 
 test.each([

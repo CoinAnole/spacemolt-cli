@@ -627,6 +627,18 @@ test('renders carrier profile capacity, progression, debt blocking, and debts', 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders limited carrier contract capacity', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: { ...carrierCapacity, active_contracts_unlimited: false, active_contract_limit: 4 },
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+
+  expect(stdout).toContain('Active contracts: 2 / 4');
+});
+
 test('renders maximum tier and an explicit empty debt message', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',

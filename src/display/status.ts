@@ -554,14 +554,8 @@ function chartDescription(value: unknown): string | undefined {
   return text === '' ? undefined : text;
 }
 
-function displayClass(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const text = value.trim();
-  return text === '' ? undefined : text;
-}
-
 function formatSystemPoiName(poi: Record<string, unknown>): string {
-  const poiClass = displayClass(poi.class);
+  const poiClass = chartDescription(poi.class);
   const classMark = poiClass ? ` [${poiClass}]` : '';
   return `${poi.name} (${poi.type})${classMark}${formatDeepCoreMark(poi.deep_core)}`;
 }
@@ -1047,7 +1041,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       if (status) emitLine(`Status: ${status}`);
     }
     if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
-    if (typeof player.home_poi === 'string' && player.home_poi !== '') emitLine(`Home POI: ${player.home_poi}`);
+    if (usableLabel(player.home_poi)) emitLine(`Home POI: ${player.home_poi}`);
     if (typeof player.home_system === 'string' && player.home_system !== '') {
       emitLine(`Home System: ${player.home_system}`);
     }

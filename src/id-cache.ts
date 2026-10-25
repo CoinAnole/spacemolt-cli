@@ -39,7 +39,6 @@ export type CachedIdResolveResult =
 /** Controls which non-exact stages may rewrite payload IDs. Exact id/name always runs; exact poi `context.base_id` does too. */
 export interface IdResolutionPolicy {
   allowPrefix: boolean;
-  /** When false, substring matches are never applied to the payload. */
   allowSubstring: boolean;
 }
 

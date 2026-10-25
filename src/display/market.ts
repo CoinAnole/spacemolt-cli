@@ -340,12 +340,8 @@ function formatFillCounterparties(fills: unknown): string {
   return counterparties.length ? ` from ${counterparties.join(', ')}` : '';
 }
 
-function autoListedOrder(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) ? value : undefined;
-}
-
 function emitAutoListed(value: unknown): void {
-  const order = autoListedOrder(value);
+  const order = isRecord(value) ? value : undefined;
   if (!order) return;
   const quantity = displayCount(order.quantity);
   const priceEach = formatCreditsValue(order.price_each);

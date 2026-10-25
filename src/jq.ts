@@ -245,7 +245,7 @@ function resolvePathTokens(
     if (!Array.isArray(value)) throw new Error(formatExpectedArrayError(path, value));
     const normalizedIndex = token.index < 0 ? value.length + token.index : token.index;
     if (!Object.hasOwn(value, normalizedIndex)) return { found: false };
-    return resolvePathTokens(value[normalizedIndex], rest, appendArrayIndexPath(path, token.index), options);
+    return resolvePathTokens(value[normalizedIndex], rest, `${path}[${token.index}]`, options);
   }
 
   if (typeof value === 'string') {
@@ -257,10 +257,6 @@ function resolvePathTokens(
 
 function appendPath(path: string, part: string): string {
   return path ? `${path}.${part}` : part;
-}
-
-function appendArrayIndexPath(path: string, index: number): string {
-  return `${path}[${index}]`;
 }
 
 function isObjectConstruction(expr: string): boolean {

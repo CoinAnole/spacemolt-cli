@@ -83,7 +83,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
   const debug = options.debug ?? false;
   const colors = colorsForPlain(Boolean(options.plain));
 
-  // Skip update check by default unless explicitly enabled
   if (env.SPACEMOLT_UPDATE_CHECK !== 'true') return;
 
   try {
@@ -112,7 +111,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
 
       latestVersion = response.data.tag_name.replace(/^v/, '');
 
-      // Update cache with fresh check time
       cache = { ...cache, checked_at: clock.now().toISOString(), latest_version: latestVersion } as UpdateCheckCache;
       await saveUpdateCache(cache, cachePath);
     }

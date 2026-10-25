@@ -382,6 +382,13 @@ test('get_ship prints healthy personnel after berths and before modules', () => 
   expect(modulesIdx).toBeGreaterThan(crewIdx);
 });
 
+test('get_ship prints passive recipe ids', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  fixture.ship.passive_recipes = ['passive_refine_iron_ore'];
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Passive Recipes: passive_refine_iron_ore');
+});
+
 test('get_ship omits personnel lines when personnel and scalars are absent', () => {
   const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
   delete fixture.ship.personnel;

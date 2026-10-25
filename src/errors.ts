@@ -648,16 +648,10 @@ export function isAuthError(code: string): boolean {
   return lookupError(code)?.auth ?? false;
 }
 
-function errorCommandKey(command: string | undefined): string | undefined {
-  if (!command) return undefined;
-  const key = command.trim().replace(/\s+/g, '_');
-  return key || undefined;
-}
-
 export function getErrorSuggestion(code: string, command?: string): string | undefined {
   const entry = lookupError(code);
   if (!entry) return undefined;
-  const key = errorCommandKey(command);
+  const key = !command ? undefined : command.trim().replace(/\s+/g, '_') || undefined;
   if (key) {
     const overlay = entry.commandSuggestions?.[key];
     if (overlay) return overlay;

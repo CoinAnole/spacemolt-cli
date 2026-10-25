@@ -105,8 +105,8 @@ const INVENTORY_QTY_KEYS = ['quantity', 'count', 'amount', 'qty'] as const;
 
 function inventoryItemLabel(item: Record<string, unknown>): string | undefined {
   for (const key of INVENTORY_ITEM_ID_KEYS) {
-    const value = item[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
+    const value = nonEmptyString(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -195,12 +195,6 @@ export function formatInventoryPreview(value: unknown, limit = DEFAULT_INVENTORY
 }
 
 // ── Shared notification preview (Policy 5 ladder + typed handlers) ──────────
-//
-// K8 module-size intent: keep pure preview + formatCountMap in this file for PR1.
-// Design allows a split to `notification-preview.ts` only if growth is ≫~200 lines
-// *and* the split pays for itself. Typed PREVIEW_HANDLERS (PR2+) may push past that
-// threshold — prefer one module until dual registries / table wire-up settle, then
-// split if navigation suffers. Do not re-flag K8 solely for line count mid-migration.
 
 /** Normalized envelope matching `normalizedNotification()` in `src/notifications.ts`. */
 export interface NormalizedNotification {
@@ -1654,15 +1648,6 @@ function previewPrizeUpdate(
   };
 }
 
-/**
- * Typed pure preview handlers. Grown over later PRs.
- * null → fall through to Policy 5 generic path.
- *
- * PR2: table Message special-case types (market, crafting, summaries, commission).
- * PR3: action_result + system (residual dump fixes).
- * PR7a: combat / police / pirate / battle domain.
- * Inline dual-use prefers this registry before writeLine (see formatNotification).
- */
 function scalarOr(value: unknown, fallback: string): string {
   const scalar = safeScalar(value);
   return scalar !== undefined ? String(scalar) : fallback;

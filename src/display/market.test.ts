@@ -1183,3 +1183,53 @@ test('supply_commission formats an all-sourced receipt without a materials array
   expect(stdout).not.toContain('Credits:');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('one-item view_market book with no buy or sell orders prints (no orders)', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('(no orders)');
+});
+
+test('empty view_insurance policies array prints No active policies.', () => {
+  const stdout = renderStructuredResult('view_insurance', { policies: [] }, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('No active policies.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('ship buy order with being_built false prints Building: no', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Earth Station',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          being_built: false,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Building: no');
+});

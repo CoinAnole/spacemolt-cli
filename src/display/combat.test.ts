@@ -97,6 +97,12 @@ test('your_side 0 still prints Side', () => {
   expect(stdout).toContain('Side: 0');
 });
 
+test('a non-finite your_side does not print Side', () => {
+  const stdout = renderCombat('attack', { ...playerReply, your_side: Infinity });
+
+  expect(stdout).not.toContain('Side:');
+});
+
 test('whitespace warning prints no Warning line', () => {
   const stdout = renderCombat('attack', {
     details: { ...attackBrandedFixture.details, warning: '   ' },

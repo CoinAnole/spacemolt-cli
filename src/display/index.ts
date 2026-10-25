@@ -116,13 +116,6 @@ function isEmptyJqOutput(value: unknown): boolean {
   return output === undefined || output === '' || (Array.isArray(output) && output.length === 0);
 }
 
-function formatEmptyJqOutputWarning(): string {
-  return [
-    `${c.yellow}[warning]${c.reset} --jq produced no output. Path may not exist in structuredContent.`,
-    'Use --keys to explore available fields, or add --fuzzy for auto-resolution.',
-  ].join('\n');
-}
-
 function formatEmptySearchFilterWarning(): string {
   return `${c.yellow}[warning]${c.reset} --search produced no output. No structured fields matched the query.`;
 }
@@ -335,7 +328,12 @@ function displayStructuredResultInternal(
     try {
       const jqResult = evaluateJq(structuredOutputResult, jqExpr, { fuzzy: options?.fuzzy });
       if (isEmptyJqOutput(jqResult)) {
-        emitError(formatEmptyJqOutputWarning());
+        emitError(
+          [
+            `${c.yellow}[warning]${c.reset} --jq produced no output. Path may not exist in structuredContent.`,
+            'Use --keys to explore available fields, or add --fuzzy for auto-resolution.',
+          ].join('\n'),
+        );
         return false;
       }
       if (outputSearch) {

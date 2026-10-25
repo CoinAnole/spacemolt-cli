@@ -1454,8 +1454,7 @@ export const socialFormatters = [
       const category = r.category || 'all';
       const rows = r.entries.filter(isRecord).map((entry) => {
         const data = isRecord(entry.data) ? entry.data : undefined;
-        const scalarFrom = (key: string): unknown =>
-          entry[key] !== undefined && entry[key] !== null && entry[key] !== '' ? entry[key] : data?.[key];
+        const scalarFrom = (key: string): unknown => (hasAnyField([entry], [key]) ? entry[key] : data?.[key]);
         const crewRecruited = scalarFrom('crew_recruited');
         const crewTreated = scalarFrom('crew_treated');
         const marinesRecruited = scalarFrom('marines_recruited');

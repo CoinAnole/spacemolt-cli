@@ -3,7 +3,6 @@ import { type CommandParseError, parseArgs, validateRequiredArgs } from './args.
 import type { CliRuntimeContext } from './cli-context.ts';
 import { type CommandGroupAction, groupActionDisplayName, groupedCommandParts } from './command-groups.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
-import type { CommandConfig } from './commands.ts';
 import { displayMissingArgument, showCommandHelp } from './help.ts';
 import { hasOutputSearch } from './output-search.ts';
 import { wantsMachineReadableErrorOutput } from './output-state.ts';
@@ -48,18 +47,6 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     return { [this.name]: this.displayConfig() };
   }
 
-  private displayRegistrySnapshot(): { commands: Record<string, CommandConfig> } {
-    return { commands: this.displayRegistry() };
-  }
-
-  private validationRegistry(): { commands: Record<string, CommandConfig> } {
-    return {
-      commands: {
-        [this.action.command]: this.action.config,
-      },
-    };
-  }
-
   private translateParseErrors(errors: CommandParseError[]): CommandParseError[] {
     return errors.map((error) => ({
       ...error,
@@ -94,7 +81,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
   ): CommandParseResult<Record<string, unknown>> {
     const flatArgv = [this.action.command, ...argv.slice(2)];
     const actionRegistry = { commands: { [this.action.command]: this.action.config } };
-    const validationRegistry = this.validationRegistry();
+    const validationRegistry = { commands: { [this.action.command]: this.action.config } };
 
     if (flatArgv.length === 2 && (flatArgv[1] === 'help' || flatArgv[1] === '--help' || flatArgv[1] === '-h')) {
       showCommandHelp(this.name, context?.writer, this.displayRegistry(), { plain: options.plain });
@@ -160,7 +147,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
       actionRegistry,
       {
         command: this.name,
-        registry: this.displayRegistrySnapshot(),
+        registry: { commands: this.displayRegistry() },
       },
     );
     if (prepared.type === 'exit') {

@@ -27,4 +27,9 @@ describe('formatCompactTable', () => {
     expect(cell).toBe('..');
     expect(cell).not.toContain('...');
   });
+
+  test('maxCellWidth <= 0 returns an empty string', () => {
+    expect(truncateCell('longer-than-three', 0)).toBe('');
+    expect(truncateCell('longer-than-three', -1)).toBe('');
+  });
 });

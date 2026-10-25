@@ -1208,7 +1208,6 @@ export const genericFormatters = [
         ];
         insertOptionalColumn(columns, rows, 'Destination', ['deliver_to'], 'Output');
         insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
-        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
         insertOptionalColumn(
           columns,
           rows,
@@ -1222,7 +1221,7 @@ export const genericFormatters = [
         const afterRentalContext = rows.some((row) => row.rental_display !== undefined) ? 'Rented' : afterVenueContext;
         insertOptionalColumn(columns, rows, 'Escrow', ['escrow_display'], afterRentalContext);
         printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
-        if (r.total_jobs !== undefined && r.total_jobs !== null && r.total_jobs !== '') {
+        if (presentCount(r.total_jobs)) {
           const shown = jobs.length;
           if (typeof r.total_jobs === 'bigint') {
             emitLine(`Total jobs: ${formatIntegerText(r.total_jobs)}`);

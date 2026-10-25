@@ -289,6 +289,27 @@ describe('emitGiftEntries', () => {
     expect(senderOnly.stdout).not.toContain('(');
   });
 
+  test('item quantity 0 prints the line 0 rations', () => {
+    const { stdout } = renderGifts([
+      {
+        items: [{ item_id: 'rations', quantity: 0 }],
+      },
+    ]);
+    const row = stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    0 rations');
+  });
+
+  test('an item with no name or id still prints From and omits Items', () => {
+    const { stdout } = renderGifts([
+      {
+        sender: 'Ada',
+        items: [{ quantity: 4 }],
+      },
+    ]);
+    expect(stdout).toContain('From');
+    expect(stdout).not.toContain('Items:');
+  });
+
   test('blank line separates blocks and the last block has no trailing blank', () => {
     const { stdout } = renderGifts([
       { sender: 'Ada', timestamp: '2026-09-23T14:05:00Z', credits: 1 },

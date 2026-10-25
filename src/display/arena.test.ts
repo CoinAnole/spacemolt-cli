@@ -129,6 +129,12 @@ test('arenaStatLines keeps XP when the record is all zeros', () => {
   );
 });
 
+test('an explicit zero arena XP skill stays on the Arena XP line', () => {
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, { by_skill: { gunnery: 0 } })).toEqual([
+    'Arena XP today: gunnery 0',
+  ]);
+});
+
 test('arenaStatLines ignores malformed arena_xp', () => {
   expect(arenaStatLines({ arena_wins: 1, arena_losses: 0, arena_knockouts: 0 }, 'today')).toEqual([
     'Arena: 1 wins / 0 losses / 0 knockouts',
@@ -494,6 +500,10 @@ test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or ze
     }),
   ).toBe('up to 2 ships per side · tier 2–4 · max scale 2 · only fuel · no webifier');
   expect(formatRuleDigest({ max_side_size: 1, min_ship_tier: 3 })).toBe('solo duel · min tier 3');
+});
+
+test('a positive max crew cap prints solo duel and max crew', () => {
+  expect(formatRuleDigest({ max_side_size: 1, max_crew: 4 })).toBe('solo duel · max crew 4');
 });
 
 test('formatEnemyDigest marks a singleton boss and otherwise prints count × name', () => {

@@ -37,14 +37,6 @@ function labelForScalarKey(key: string): string {
     .join(' ');
 }
 
-function emitTarget(result: Record<string, unknown>): void {
-  const name = presentText(result.target_name);
-  const id = presentText(result.target);
-  if (name && id && name !== id) emitLine(`Target: ${name} (${id})`);
-  else if (name) emitLine(`Target: ${name}`);
-  else if (id) emitLine(`Target: ${id}`);
-}
-
 function emitYesNo(label: string, value: unknown): void {
   if (value !== true && value !== false) return;
   emitLine(`${label}: ${value ? 'yes' : 'no'}`);
@@ -69,7 +61,11 @@ function formatAttackReply(result: Record<string, unknown>, command?: string): b
 
   const title = commandNameEquals(command, 'hunt') ? 'Hunt' : 'Attack';
   emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
-  emitTarget(result);
+  const name = presentText(result.target_name);
+  const id = presentText(result.target);
+  if (name && id && name !== id) emitLine(`Target: ${name} (${id})`);
+  else if (name) emitLine(`Target: ${name}`);
+  else if (id) emitLine(`Target: ${id}`);
   const targetType = presentText(result.target_type);
   if (targetType) emitLine(`Type: ${targetType}`);
   emitLine(`Kind: ${result.kind}`);

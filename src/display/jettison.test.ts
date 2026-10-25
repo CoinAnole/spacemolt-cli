@@ -159,3 +159,14 @@ test('json output stays the envelope', () => {
   expect(stderr).toBe('');
   expect(JSON.parse(stdout)).toEqual(jettisonFreezeFixture);
 });
+
+test('single-action jettison OK line prints OK', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+    },
+  });
+
+  expect(stdout).toContain('OK');
+  expect(stdout).not.toContain('=== Response ===');
+});

@@ -274,3 +274,22 @@ test('citizenship withdraw omits Citizenships: none when remaining is omitted', 
   expect(stdout).toContain('=== Application Withdrawn ===');
   expect(stdout).not.toContain('Citizenships: none');
 });
+
+test('citizenship apply prints a bigint fee paid', () => {
+  const fee = 9007199254740993n;
+  const stdout = stdoutOf('citizenship_apply', {
+    fee_paid: fee,
+  });
+
+  expect(stdout).toContain(`Fee paid: ${fee.toLocaleString()} cr`);
+});
+
+test('citizenship list skips non-string rules', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    rules: [{ text: 'hidden-rule-token' }, 'Visible rule.'],
+  });
+
+  expect(stdout).toContain('Visible rule.');
+  expect(stdout).not.toContain('hidden-rule-token');
+});

@@ -224,3 +224,19 @@ test('jump with only an origin prints jump sol and not an arrow', () => {
   expect(stdout).toContain('jump sol');
   expect(stdout).not.toContain('→');
 });
+
+test('max-only nearby prize hull prints ?/8 and not undefined/8', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ max_hull: 8 }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('?/8');
+  expect(stdout).not.toContain('undefined/8');
+});
+
+test('kind-only transit prints jump and not an arrow', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_kind: 'jump' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('jump');
+  expect(stdout).not.toContain('→');
+});

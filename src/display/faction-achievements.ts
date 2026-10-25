@@ -126,7 +126,6 @@ function formatFactionAchievements(result: Record<string, unknown>): boolean {
   return true;
 }
 
-// Do not add hintKeys, and do not set shapeFallback to quiet a debug warning.
 const formatFactionAchievementsCommand = formatter(formatFactionAchievements, {
   commands: ['get_faction_achievements'],
 });

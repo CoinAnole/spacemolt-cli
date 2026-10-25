@@ -143,6 +143,18 @@ test('survey_system prints present-field sections and 4-space ResourceInfo bulle
   expect(stdout).not.toContain('=== Your Skills ===');
 });
 
+test('survey_system prints a system-id-only headline without (sol)', () => {
+  const stdout = stdoutOf({
+    system_id: 'sol',
+    survey_power: 18,
+    newly_revealed: [],
+    already_revealed: [],
+  });
+
+  expect(stdout).toContain('=== Survey: sol ===');
+  expect(stdout).not.toContain('(sol)');
+});
+
 test('survey_system envelope V2Missions prints survey output then one Active Missions table', () => {
   const stdout = stdoutOf(structuredClone(surveySystemMissionsFixture));
 
@@ -397,6 +409,16 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
 
   expect(empty).not.toContain('Skill XP:');
   expect(zero).not.toContain('Skill XP:');
+});
+
+test('survey_system skips Skill XP for an empty-string xp value', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: '' };
+    }),
+  );
+
+  expect(stdout).not.toContain('Skill XP:');
 });
 
 test('survey_system prints negative skill XP without a leading plus', () => {

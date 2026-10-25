@@ -29,13 +29,6 @@ function goodwillValueText(value: unknown): string {
   return String(value);
 }
 
-function pushReply(lines: string[], text: string): void {
-  const [first, ...rest] = text.split(/\r?\n/);
-  // Continuation lines stay under Reply instead of reading as new fields.
-  lines.push(`  Reply: ${first ?? ''}`);
-  for (const line of rest) lines.push(`    ${line}`);
-}
-
 function pushExtraField(lines: string[], key: string, value: unknown): void {
   if (value === undefined || value === null || value === '') return;
   const label = key
@@ -63,7 +56,10 @@ export function giftGoodwillLines(value: unknown): string[] {
     if (kind === 'text') {
       if (typeof fieldValue !== 'string') continue;
       if (label === 'Reply') {
-        pushReply(lines, fieldValue);
+        const [first, ...rest] = fieldValue.split(/\r?\n/);
+        // Continuation lines stay under Reply instead of reading as new fields.
+        lines.push(`  Reply: ${first ?? ''}`);
+        for (const line of rest) lines.push(`    ${line}`);
         continue;
       }
       lines.push(`  ${label}: ${fieldValue}`);

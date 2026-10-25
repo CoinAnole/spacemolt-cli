@@ -10,6 +10,7 @@ import {
   formatProducedByFacilityIds,
   type RecipeVenue,
   summarizeBonusPerLevel,
+  summarizeNamedItemQuantities,
 } from './catalog-detail.ts';
 import { withDisplayRenderBuffer } from './helpers.ts';
 
@@ -233,4 +234,22 @@ test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', (
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ defense_slots: 4 }, {}), { plain: true });
   expect(buffer.stdout).toContain('Slots: 0 weapon, 4 defense, 0 utility');
+});
+
+test('zero shield recharge prints Shield: 700 (+0/tick)', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700, base_shield_recharge: 0 }, {}), {
+    plain: true,
+  });
+  expect(buffer.stdout.join('\n')).toContain('Shield: 700 (+0/tick)');
+});
+
+test('hidden module prints Hidden: yes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ hidden: true }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Hidden: yes');
+});
+
+test('quantity 0 prints 0x Steel Plate', () => {
+  expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: 0 }])).toBe('0x Steel Plate');
 });

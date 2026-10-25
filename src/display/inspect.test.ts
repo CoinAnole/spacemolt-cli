@@ -198,6 +198,38 @@ test('omits gated shipment fields when optional late fee is absent and late is f
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints a base-id-only shipment destination without a slash or parenthesis', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_base_only',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_base_only',
+        label: 'Base id only',
+        size: 1,
+        created_at: '2026-07-26T12:00:00Z',
+        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+        shipment: {
+          destination_base_id: 'sirius_observatory',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
+  expect(line).toBe('Destination: sirius_observatory');
+  expect(line).not.toContain('/');
+  expect(line).not.toContain('(');
+  expect(line).not.toContain(')');
+});
+
 test('suppresses bare Shipment heading when shipment record has no formattable fields', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1267,6 +1299,32 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('Lock');
   expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a POI wormhole that expires in 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: 'Alpha',
+          wormhole_expires_in: 0,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: Alpha (expires in 0)');
 });
 
 test('renders poi inspect workability columns when ship-relative fields are present', () => {

@@ -119,11 +119,6 @@ function formatShipmentDestination(shipment: Record<string, unknown>): string | 
   return undefined;
 }
 
-/**
- * OpenAPI InspectPackageShipment — freight contract summary when a sealed package
- * is under an active shipment. Optional nested `package.shipment`.
- * Suppress bare Shipment heading when zero fields format (empty/unrenderable record).
- */
 function emitPackageShipment(shipment: Record<string, unknown>): void {
   const lines: string[] = [];
   const push = (label: string, value: string | undefined): void => {

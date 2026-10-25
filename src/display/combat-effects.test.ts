@@ -285,6 +285,10 @@ test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses',
   expect(summarizeModuleBonuses({ reach: 3, shield_bonus: 0, speed_penalty: 0, cpu_usage: 9 })).toBe('reach 3');
 });
 
+test('omitted passenger fields leave only reach', () => {
+  expect(summarizeModuleBonuses({ passenger_bonus: 4, dining_rate: 2, leisure_power: 1, reach: 3 })).toBe('reach 3');
+});
+
 test('summarizeModuleBonuses prints boarding flags and percent bonuses', () => {
   expect(
     summarizeModuleBonuses({
@@ -340,6 +344,18 @@ test('armor melt without ticks prints the percent alone', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2 } } })).toBe('armor melt 20%');
 });
 
+test('a burn with ticks prints the percent and duration', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2, dot_ticks: 4 } } })).toBe('burn 20%/4t');
+});
+
 test('positive accuracy prints a leading plus', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');
+});
+
+test('negative accuracy prints accuracy -10%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: -0.1 } } })).toBe('accuracy -10%');
+});
+
+test('disrupt ticks prints the duration', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 2 } } })).toBe('disrupt 2 ticks');
 });

@@ -984,7 +984,7 @@ export const shipFormatters = [
           const carrion =
             typeof w.carrion === 'bigint'
               ? w.carrion.toString()
-              : typeof w.carrion === 'number' && Number.isFinite(w.carrion)
+              : isStrictFiniteNumber(w.carrion)
                 ? String(w.carrion)
                 : undefined;
           if (carrion !== undefined) emitLine(`  Carrion: ${carrion}`);
