@@ -1663,6 +1663,9 @@ describe('command metadata', () => {
 
     expect(captureHelp('get_battle_summary')).toContain('captor_kind');
     expect(captureHelp('get_battle_log')).toContain('plundered (cargo taken, hull left)');
+    expect(captureHelp('get_battle_log')).toContain('A completed battle stays readable for 14 days.');
+    expect(COMMANDS.get_battle_log?.description).toContain('A completed battle stays readable for 14 days.');
+    expect(COMMANDS.get_battle_log?.description).not.toContain('expired');
 
     const statusHelp = captureHelp('get_battle_status');
     expect(statusHelp).not.toContain('plundered (cargo taken, hull left)');

@@ -205,7 +205,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_battle_log: {
     usage: '<battle_id> [tick_start] [limit] [tick_end]',
     description:
-      'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages. Boarding Event plundered (cargo taken, hull left).',
+      'View the tick-by-tick combat replay of a battle by ID, including shield/hull split and compact per-weapon defense stages. Boarding Event plundered (cargo taken, hull left). A completed battle stays readable for 14 days.',
     example: 'spacemolt get_battle_log <battle_id>',
     discoverWith: ['get_battle_summary', 'get_battle_status', 'list_battles'],
     seeAlso: ['get_battle_summary', 'get_battle_status'],

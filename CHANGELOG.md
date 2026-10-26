@@ -8,6 +8,7 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_battle_log` help says a completed battle stays readable for 14 days.
 - `craft` and `facility job_add` say fuel made on someone else's fuel facility (a public rental or ally access) goes to your faction's fuel bunker at that station. With no bunker there, the order fails with `no_fuel_bunker` and auto-routing skips that facility. A full bunker pauses only your own rented job. `no_fuel_bunker` suggests building a faction fuel bunker at that station first.
 - `faction info` prints `fuel_bunkers` rows (base id, base name when sent, reserve, and capacity), including an explicit 0. An omitted key prints nothing.
 - `get_base` prints `Fuel bunker: reserve / capacity` when `faction_fuel_reserve` or `faction_fuel_capacity` is present, including 0.
