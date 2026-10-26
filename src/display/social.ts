@@ -146,6 +146,58 @@ function formatYesNo(value: unknown): string | undefined {
   return value ? 'yes' : 'no';
 }
 
+function pageNumber(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value;
+}
+
+function formatPageNumber(value: number): string {
+  return Object.is(value, -0) ? '0' : String(value);
+}
+
+function memberTime(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const preview = formatTimestampPreview(value);
+  return preview || undefined;
+}
+
+// members_limit is the page size. An omitted members_offset counts as 0 only in the next-page sum.
+function emitFactionMemberPage(result: Record<string, unknown>): void {
+  if (Array.isArray(result.members)) {
+    const rows = result.members.filter(isRecord).map((member) => ({
+      username: member.username,
+      role: member.role,
+      online: formatYesNo(member.is_online),
+      joined: memberTime(member.joined_at),
+      last_seen: memberTime(member.last_seen),
+      player_id: member.player_id,
+    }));
+    printCompactTable(
+      'Members',
+      rows,
+      [
+        ['Username', ['username']],
+        ['Role', ['role']],
+        ['Online', ['online']],
+        ['Joined', ['joined']],
+        ['Last seen', ['last_seen']],
+        ['Player ID', ['player_id']],
+      ],
+      { maxCellWidth: 80 },
+    );
+  }
+
+  const limit = pageNumber(result.members_limit);
+  if (limit !== undefined) emitLine(`Page size: ${formatPageNumber(limit)}`);
+  if (result.members_truncated !== true || limit === undefined) return;
+  const rawOffset = result.members_offset;
+  const offset = rawOffset === undefined || rawOffset === null ? 0 : pageNumber(rawOffset);
+  if (offset === undefined) return;
+  const next = offset + limit;
+  if (!Number.isFinite(next)) return;
+  emitLine(`Next page: offset=${formatPageNumber(next)}`);
+}
+
 function formatArenaOnlyFleetLine(arenaOnly: unknown): string | undefined {
   if (arenaOnly !== true) return undefined;
   return 'Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)';
@@ -1607,6 +1659,7 @@ export const socialFormatters = [
       emitLine(`ID: ${r.id}`);
       emitLine(`Leader: ${r.leader_username}`);
       emitLine(`Members: ${r.member_count}`);
+      emitFactionMemberPage(r);
       if (r.owned_bases !== undefined) emitLine(`Owned Stations: ${r.owned_bases}`);
       if (r.treasury !== undefined) emitLine(`Treasury: ${r.treasury}`);
       if (typeof r.description === 'string' && r.description) emitLine(`Description: ${r.description}`);

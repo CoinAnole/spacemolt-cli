@@ -55,7 +55,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   faction_info: {
     category: 'Factions',
     description:
-      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.',
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base. offset and limit page the member list. members_offset, members_limit, and members_truncated describe that member-list page. members_limit is the page size, not the faction member cap. A full faction rejects joins with faction_full, and that error states the cap. Table output prints the member page (username, role, online, joined, last seen, and player id) when members is present. When members_truncated is true, the next page is offset = members_offset + members_limit, treating an omitted members_offset as 0. members_limit prints as the page size. An omitted pagination field prints nothing.',
     seeAlso: [
       'faction_profile',
       'faction_list',
@@ -65,6 +65,12 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     ],
     apiRoute: 'POST /api/v2/spacemolt_faction/info',
     positionals: ['faction_id'],
+    schemaExtensions: {
+      limit: {
+        description:
+          'Member-list page size (default 50, max 100), not the faction member cap. members_offset, members_limit, and members_truncated describe that page. A full faction rejects joins with faction_full, and that error states the cap.',
+      },
+    },
   },
   faction_get_mobile_base: {
     category: 'Factions',

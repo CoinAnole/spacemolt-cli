@@ -2640,7 +2640,7 @@ describe('command metadata', () => {
 
   test('faction info help documents faction_rent omit versus zero', () => {
     const description =
-      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base.';
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base. offset and limit page the member list. members_offset, members_limit, and members_truncated describe that member-list page. members_limit is the page size, not the faction member cap. A full faction rejects joins with faction_full, and that error states the cap. Table output prints the member page (username, role, online, joined, last seen, and player id) when members is present. When members_truncated is true, the next page is offset = members_offset + members_limit, treating an omitted members_offset as 0. members_limit prints as the page size. An omitted pagination field prints nothing.';
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.info?.config;
     expect(config?.description).toBe(description);
     expect(config?.description).toContain('faction_rent');
@@ -2653,6 +2653,16 @@ describe('command metadata', () => {
     expect(config?.description).not.toContain('faction_info');
     expect(config?.description).not.toContain('faction_facility_owned');
     expect(config?.description).not.toContain('Estimated rent/day');
+    expect(config?.description).toContain('members_offset, members_limit, and members_truncated');
+    expect(config?.description).toContain('not the faction member cap');
+    expect(config?.description).toContain('faction_full');
+    expect(config?.description).toContain('treating an omitted members_offset as 0');
+    expect(config?.description).not.toMatch(/\b20\b/);
+    expect(config?.schema?.limit?.description).toBe(
+      'Member-list page size (default 50, max 100), not the faction member cap. members_offset, members_limit, and members_truncated describe that page. A full faction rejects joins with faction_full, and that error states the cap.',
+    );
+    expect(config?.schema?.limit?.description).not.toContain('Max members to return');
+    expect(config?.schema?.offset?.description).toBe('Pagination offset for member list (default 0)');
 
     expect(COMMANDS.faction_info?.description).toBe(description);
     expect(CURATED_COMMAND_DESCRIPTIONS.faction_info).toBe(description);
@@ -2681,6 +2691,12 @@ describe('command metadata', () => {
     expect(help).not.toContain('faction_facility_owned');
     expect(help).not.toContain('Estimated rent/day');
     expect(help).not.toContain('faction facility_list');
+    expect(help).toContain('members_offset, members_limit, and members_truncated');
+    expect(help).toContain('not the faction member cap');
+    expect(help).toContain('faction_full');
+    expect(help).toContain('treating an omitted members_offset as 0');
+    expect(help).toContain('Member-list page size (default 50, max 100)');
+    expect(help).not.toContain('Max members to return');
   });
 
   test('faction query_intel help documents unverified readings and live systems', () => {

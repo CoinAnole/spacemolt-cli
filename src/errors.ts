@@ -258,6 +258,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['faction_build', 'faction_info'],
   },
+  faction_full: {
+    code: 'faction_full',
+    message: 'Faction is full.',
+    suggestion:
+      'The faction is full. The server message states the member cap. members_limit is the member-list page size, not that cap.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['faction_info'],
+  },
   no_station_fuel: {
     code: 'no_station_fuel',
     message: 'Station has no fuel.',

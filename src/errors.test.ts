@@ -949,6 +949,25 @@ describe('no_fuel_bunker', () => {
   });
 });
 
+describe('faction_full', () => {
+  test('points at the server message and does not hardcode a member cap', () => {
+    expect(ERROR_REGISTRY.faction_full?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.faction_full?.auth).toBe(false);
+    expect(isRetryableError('faction_full')).toBe(false);
+    expect(isAuthError('faction_full')).toBe(false);
+    expect(isKnownErrorCode('faction_full')).toBe(true);
+    expect(ERROR_CODES).toContain('faction_full');
+    expect(ERROR_REGISTRY.faction_full?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('faction_full');
+    expect(suggestion).toBe(
+      'The faction is full. The server message states the member cap. members_limit is the member-list page size, not that cap.',
+    );
+    expect(suggestion).not.toMatch(/\d/);
+    expect(getErrorSuggestion('faction_full', 'join_faction')).toBe(suggestion);
+    expect(getRelatedCommands('faction_full')).toEqual(['faction_info']);
+  });
+});
+
 describe('invalid_poi', () => {
   test('says an uncharted hidden POI looks like an unknown id', () => {
     expect(ERROR_REGISTRY.invalid_poi?.retryable).toBe(false);

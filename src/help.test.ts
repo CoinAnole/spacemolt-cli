@@ -2655,6 +2655,21 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError points faction_full at the server message', () => {
+    const capture = captureWriter();
+    displayError(
+      'join_faction',
+      { code: 'faction_full', message: 'Faction is full (member cap 40)' },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [faction_full]: Faction is full (member cap 40)');
+    expect(output).toContain('The server message states the member cap.');
+    expect(output).toContain('members_limit is the member-list page size, not that cap.');
+    expect(output).not.toContain('20');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayError gives transit and fleet movement errors actionable suggestions', () => {
     const baseContext: CliRuntimeContext = {
       env: {},

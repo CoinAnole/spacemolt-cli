@@ -4027,6 +4027,172 @@ test('faction_info json passes fuel_bunkers through without the table', () => {
   expect(stdout).not.toContain('Fuel bunkers');
 });
 
+const factionMemberPage = [
+  {
+    username: 'Marlowe',
+    role: 'leader',
+    is_online: true,
+    joined_at: '2026-04-30T00:36:56.053381041Z',
+    last_seen: '2026-10-26T12:01:02Z',
+    player_id: 'player-marlowe',
+  },
+  {
+    username: 'Arbiter47',
+    role: 'officer',
+    is_online: false,
+    joined_at: '2026-07-11T23:51:36.899216109Z',
+    last_seen: '2026-07-11T23:51:36Z',
+    player_id: 'player-arbiter',
+  },
+];
+
+test('faction_info prints the member page and page size without calling it a cap', () => {
+  const fixture = factionInfoWithRent();
+  fixture.members = structuredClone(factionMemberPage);
+  fixture.members_limit = 50;
+  fixture.members_offset = 0;
+  fixture.members_truncated = true;
+  const stdout = renderFactionInfo(fixture);
+  const count = stdout.indexOf('Members: 20');
+  const table = stdout.indexOf('=== Members ===');
+  const page = stdout.indexOf('Page size: 50');
+  const next = stdout.indexOf('Next page: offset=50');
+  const owned = stdout.indexOf('Owned Stations:');
+  expect(count).toBeGreaterThan(-1);
+  expect(table).toBeGreaterThan(count);
+  expect(page).toBeGreaterThan(table);
+  expect(next).toBeGreaterThan(page);
+  expect(owned).toBeGreaterThan(next);
+
+  const rows = stdout.split('=== Members ===')[1]?.split('Page size:')[0] ?? '';
+  expect(rows).toContain('Username');
+  expect(rows).toContain('Role');
+  expect(rows).toContain('Online');
+  expect(rows).toContain('Joined');
+  expect(rows).toContain('Last seen');
+  expect(rows).toContain('Player ID');
+  expect(rows).toContain('Marlowe');
+  expect(rows).toContain('leader');
+  expect(rows).toContain('yes');
+  expect(rows).toContain('2026-04-30 00:36:56');
+  expect(rows).toContain('2026-10-26 12:01:02');
+  expect(rows).toContain('player-marlowe');
+  expect(rows).toContain('Arbiter47');
+  expect(rows).toContain('officer');
+  expect(rows).toContain('no');
+  expect(rows).toContain('player-arbiter');
+  expect(rows).not.toContain('true');
+  expect(rows).not.toContain('false');
+  expect(stdout).not.toContain('cap');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info treats an omitted members_offset as 0 and skips omitted pagination fields', () => {
+  const truncated = factionInfoWithRent();
+  truncated.members = structuredClone(factionMemberPage);
+  truncated.members_limit = 25;
+  truncated.members_truncated = true;
+  const stdout = renderFactionInfo(truncated);
+  expect(stdout).toContain('Page size: 25');
+  expect(stdout).toContain('Next page: offset=25');
+  expect(stdout).not.toContain('Offset:');
+  expect(stdout).not.toContain('cap');
+
+  const explicitZero = factionInfoWithRent();
+  explicitZero.members_limit = 25;
+  explicitZero.members_offset = 0;
+  explicitZero.members_truncated = true;
+  expect(renderFactionInfo(explicitZero)).toContain('Next page: offset=25');
+
+  const later = factionInfoWithRent();
+  later.members_limit = 25;
+  later.members_offset = 25;
+  later.members_truncated = true;
+  const laterStdout = renderFactionInfo(later);
+  expect(laterStdout).toContain('Page size: 25');
+  expect(laterStdout).toContain('Next page: offset=50');
+  expect(laterStdout).not.toContain('=== Members ===');
+
+  const notTruncated = factionInfoWithRent();
+  notTruncated.members_limit = 25;
+  notTruncated.members_offset = 25;
+  notTruncated.members_truncated = false;
+  const open = renderFactionInfo(notTruncated);
+  expect(open).toContain('Page size: 25');
+  expect(open).not.toContain('Next page');
+  expect(open).not.toContain('Offset:');
+
+  const omitted = renderFactionInfo(factionInfoWithRent());
+  expect(omitted).not.toContain('=== Members ===');
+  expect(omitted).not.toContain('Page size');
+  expect(omitted).not.toContain('Next page');
+  expect(omitted).toContain('Members: 20');
+});
+
+test('faction_info prints an explicit zero page size and nothing for unusable pagination fields', () => {
+  const zero = factionInfoWithRent();
+  zero.members = [];
+  zero.members_limit = 0;
+  zero.members_truncated = true;
+  const stdout = renderFactionInfo(zero);
+  expect(stdout).toContain('=== Members ===\n(None)');
+  expect(stdout).toContain('Page size: 0');
+  expect(stdout).toContain('Next page: offset=0');
+  expect(stdout).not.toContain('cap');
+
+  for (const pagination of [
+    { members_limit: null, members_offset: null, members_truncated: null },
+    { members_limit: '50', members_offset: '0', members_truncated: 'true' },
+    { members_limit: true, members_offset: false, members_truncated: 1 },
+  ]) {
+    const fixture = factionInfoWithRent();
+    Object.assign(fixture, pagination);
+    const page = renderFactionInfo(fixture);
+    expect(page).not.toContain('Page size');
+    expect(page).not.toContain('Next page');
+    expect(page).toContain('=== Faction:');
+    expect(page).not.toContain('=== Response ===');
+  }
+
+  const badOffset = factionInfoWithRent();
+  badOffset.members_limit = 10;
+  badOffset.members_offset = '10';
+  badOffset.members_truncated = true;
+  const bad = renderFactionInfo(badOffset);
+  expect(bad).toContain('Page size: 10');
+  expect(bad).not.toContain('Next page');
+
+  for (const members of [null, 'Marlowe', { username: 'Marlowe' }]) {
+    const fixture = factionInfoWithRent();
+    fixture.members = members;
+    const page = renderFactionInfo(fixture);
+    expect(page).not.toContain('=== Members ===');
+    expect(page).toContain('=== Faction:');
+  }
+});
+
+test('faction_info json passes the member page through without table labels', () => {
+  const fixture = factionInfoWithRent();
+  fixture.members = structuredClone(factionMemberPage);
+  fixture.members_limit = 50;
+  fixture.members_offset = 0;
+  fixture.members_truncated = false;
+  const stdout = renderFactionInfo(fixture, 'json');
+  const parsed = JSON.parse(stdout) as {
+    members: Array<{ username: string; is_online: boolean; player_id: string }>;
+    members_limit: number;
+    members_truncated: boolean;
+  };
+  expect(parsed.members[0]?.username).toBe('Marlowe');
+  expect(parsed.members[0]?.is_online).toBe(true);
+  expect(parsed.members[1]?.player_id).toBe('player-arbiter');
+  expect(parsed.members_limit).toBe(50);
+  expect(parsed.members_truncated).toBe(false);
+  expect(stdout).not.toContain('Page size');
+  expect(stdout).not.toContain('=== Members ===');
+  expect(stdout).not.toContain('Next page');
+});
+
 test('faction get_mobile_base prints stationary, preparing, and isolated snapshots', () => {
   const stationary = renderCommand('faction_get_mobile_base', factionGetMobileBaseFixture);
   expect(stationary).toContain('=== Faction Mobile Base: Civitas ===');
