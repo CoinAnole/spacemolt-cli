@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `facility types` detail prints Buildable as yes or no when `buildable` is a boolean, including an explicit false. The types list adds that column when any row sends it. An omitted key prints nothing. `facility types`, `facility build`, and `faction build` say station infrastructure with a flat on/off effect is limited to one copy per station, like dining and leisure. Power plants, life support, capacitor banks, and fuel tank expansions still stack.
+
 - `storage deposit` help names every ship gift: `target=<player_name>` and a docked pirate-stronghold `target=station:<base ID>` are `gift_ship` (that stronghold's stolen flagship can be sent home from any station), and an empire alias is `empire_gift_ship`. An empire station does not take ships. A starter ship donated to an empire is scrapped, earns no goodwill, and omits fleet and petition fields. A bulk `station:` gift prints goodwill once on the parent, not on each row. `situation` prints as sent.
 
 - `faction info` prints the member page when `members` is present (username, role, online, joined, last seen, and player id). `members_limit` prints as the page size, not a member cap. When `members_truncated` is true, the next page is `offset` = `members_offset` + `members_limit`, and an omitted `members_offset` is 0. An omitted pagination field prints nothing. Help says those three fields describe the member-list page. `faction_full` points at the server message for the cap.

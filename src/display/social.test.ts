@@ -2774,6 +2774,26 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).not.toContain('=== Categories ===');
 });
 
+test('facility_types detail prints an explicit false buildable and skips an omitted key', () => {
+  const denied = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  denied.buildable = false;
+  denied.unique = true;
+  const deniedOut = facilityTypeDetailLines(denied).join('\n');
+  expect(deniedOut).toContain('Buildable: no');
+  expect(deniedOut).not.toContain('Unique');
+  expect(deniedOut).not.toMatch(/\bunique\b/i);
+  expect(deniedOut).not.toContain('=== Response ===');
+
+  const omitted = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete omitted.buildable;
+  omitted.unique = false;
+  const omittedOut = facilityTypeDetailLines(omitted).join('\n');
+  expect(omittedOut).toContain('=== Facility type: Crew Office ===');
+  expect(omittedOut).not.toContain('Buildable');
+  expect(omittedOut).not.toContain('Unique');
+  expect(omittedOut).not.toMatch(/\bunique\b/i);
+});
+
 test('facility_types detail keeps an explicit 0 rent quote and the same gloss', () => {
   const fixture = structuredClone(facilityTypesDetailFixture);
   fixture.rent_per_cycle = 0;
@@ -2938,6 +2958,36 @@ test('facility_types list prints buildable yes and no instead of the generic tab
   expect(tableCell(section, 'Faction Storage', 'Build cost')).toBe('50000');
   expect(stdout).toContain('page 1/1 | total 3');
   expect(stdout).toContain('Pass facility_type for one type.');
+  expect(stdout).not.toContain('true');
+  expect(stdout).not.toContain('false');
+});
+
+test('facility_types list keeps Buildable when every sent value is false and ignores unique', () => {
+  const stdout = renderFacilityTypes(
+    facilityTypeListFixture([
+      {
+        id: 'flat_effect',
+        name: 'Flat Effect',
+        category: 'infrastructure',
+        level: 1,
+        build_cost: 10,
+        buildable: false,
+        unique: true,
+      },
+      {
+        id: 'stacking_supply',
+        name: 'Stacking Supply',
+        category: 'infrastructure',
+        level: 1,
+        build_cost: 20,
+      },
+    ]),
+  );
+  const section = sectionAfter(stdout, 'Facility types');
+  expect(tableCell(section, 'Flat Effect', 'Buildable')).toBe('no');
+  expect(tableCell(section, 'Stacking Supply', 'Buildable')).toBe('');
+  expect(stdout).not.toContain('Unique');
+  expect(stdout).not.toMatch(/\bunique\b/i);
   expect(stdout).not.toContain('true');
   expect(stdout).not.toContain('false');
 });

@@ -3100,6 +3100,9 @@ describe('command metadata', () => {
     expect(help).toContain('[bucket=name-or-id]');
     expect(help).toContain('Storage Extension bucket');
     expect(help).toContain('package_ids');
+    expect(help).toContain('one copy per station');
+    expect(help).toContain('fuel tank expansions still stack');
+    expect(config?.description).toContain('Gameserver 0.648.3');
   });
 
   test('facility_build help documents that build accepts faction facility types', () => {
@@ -3147,6 +3150,10 @@ describe('command metadata', () => {
       'base_id, base_name, facilities, faction_id, and message',
       'faction facility types are accepted',
       'package_ids',
+      'flat on/off effect',
+      'one copy per station',
+      'still stack',
+      'Gameserver 0.648.3',
     ];
     const forbidden = [
       'not an OpenAPI field',
@@ -3211,6 +3218,13 @@ describe('command metadata', () => {
       expect(text).toContain("tenant's storage there");
       expect(text).toContain('not a property of that notice');
       expect(text).toContain('explicit 0');
+      expect(text).toContain('Buildable as yes or no');
+      expect(text).toContain('including an explicit false');
+      expect(text).toContain('An omitted buildable key prints nothing');
+      expect(text).toContain('flat on/off effect');
+      expect(text).toContain('one copy per station');
+      expect(text).toContain('fuel tank expansions still stack');
+      expect(text).toContain('Gameserver 0.648.3');
       expect(text).not.toContain('not an OpenAPI field');
     }
   });

@@ -28,6 +28,13 @@ const OUTSIDER_STATION_RENT_HELP =
   ' Changelog 0.618.2: arrears warnings and eviction match an NPC station (roughly 3 days). ' +
   FACILITY_RECLAIMED_PLAYER_STATION_HELP;
 
+const FACILITY_COPY_LIMIT_HELP =
+  'Station infrastructure with a flat on/off effect is limited to one copy per station, the same idea as dining and leisure. Power plants, life support, capacitor banks, and fuel tank expansions still stack. Gameserver 0.648.3.';
+
+const FACILITY_BUILDABLE_PRINT_HELP =
+  'Detail output prints Buildable as yes or no when buildable is a boolean, including an explicit false. The types list prints a Buildable column when any row sends that boolean. An omitted buildable key prints nothing. ' +
+  FACILITY_COPY_LIMIT_HELP;
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -630,6 +637,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     description:
       "Browse facility types. Pass facility_type for one type. Detail output prints that type's rent_per_cycle as Rent/cycle, including an explicit 0 as 0. An omitted key prints no rent line. The number is your quote per facility cycle (100 ticks) at the docked station: 0 at your own faction's player station or outpost, where members pay no rent; an outsider there is quoted the tenant rent paid to the owning faction. List and discovery pages have no rent quote. " +
+      FACILITY_BUILDABLE_PRINT_HELP +
+      ' ' +
       OUTSIDER_STATION_RENT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/types',
     positionals: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'],
@@ -642,6 +651,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage: '<facility_type> [package_ids=id[,id...]]',
     description:
       "Build a facility at the current station; faction facility types are accepted by the server. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall). The facility bills rent every cycle even when idle (none at your own faction's station). Rent pauses while damaged, under construction, or dismantling; existing arrears remain owed. A table view whose location supplies poi_id and nearby_players prints Arrived at and hides the rent integer. A partial location that lacks either field does not print Arrived at. When location is absent and the build details stay scalars, table output can print Rent Per Cycle, including an explicit 0. That label is not Rent/cycle. --json and --format json print the whole response; the integer is structuredContent.details.rent_per_cycle, including an explicit 0. --structured and --format yaml print details.rent_per_cycle. facility types detail prints the quote as Rent/cycle. This help states no credit price and no grace-cycle count. " +
+      FACILITY_COPY_LIMIT_HELP +
+      ' ' +
       OUTSIDER_STATION_RENT_HELP,
     example: 'spacemolt facility_build ore_refinery package_ids=pkg-tier1,pkg-tier2',
     discoverWith: ['facility_types', 'facility_list'],
@@ -896,7 +907,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_build: {
     usage: '<facility_type> [bucket=name-or-id] [package_ids=id[,id...]]',
     description:
-      'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall).',
+      'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall). ' +
+      FACILITY_COPY_LIMIT_HELP,
     example: 'spacemolt faction_build ore_refinery bucket=BuildMat package_ids=pkg-tier1',
     discoverWith: ['facility_types', 'faction_facility_list'],
     seeAlso: ['facility_types', 'faction_facility_list', 'faction_dismantle'],
