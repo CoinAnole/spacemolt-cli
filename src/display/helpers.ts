@@ -1053,4 +1053,69 @@ export function emitSovereignMint(mint: unknown): boolean {
   return true;
 }
 
+const PIRATE_MATERIAL_COLUMNS: ReadonlyArray<readonly [string, string]> = [
+  ['Name', 'name'],
+  ['Item ID', 'item_id'],
+  ['Required', 'quantity_required'],
+  ['In storage', 'quantity_in_storage'],
+  ['Incoming', 'quantity_incoming'],
+  ['Missing', 'quantity_missing'],
+  ['To supply', 'quantity_to_supply'],
+  ['Bid price', 'bid_price'],
+  ['Bid quantity', 'bid_quantity'],
+];
+
+const PIRATE_QUANTITY_KEYS = [
+  'quantity_required',
+  'quantity_in_storage',
+  'quantity_incoming',
+  'quantity_missing',
+  'quantity_to_supply',
+  'bid_price',
+  'bid_quantity',
+] as const;
+
+function pirateMaterialRows(materials: unknown): Array<Record<string, string>> | undefined {
+  if (!Array.isArray(materials)) return undefined;
+  const rows: Array<Record<string, string>> = [];
+  for (const material of materials) {
+    if (!isRecord(material)) continue;
+    const row: Record<string, string> = {};
+    const name = nonEmptyString(material.name);
+    if (name) row.name = name;
+    const itemId = nonEmptyString(material.item_id);
+    if (itemId) row.item_id = itemId;
+    for (const key of PIRATE_QUANTITY_KEYS) {
+      const text = formatExactGroupedInteger(material[key]);
+      if (text !== undefined) row[key] = text;
+    }
+    if (Object.keys(row).length) rows.push(row);
+  }
+  return rows;
+}
+
+/** PirateRecoveryNeeds from get_base / inspect docked base. No-op if absent or empty. */
+export function emitPirateRecovery(recovery: unknown): boolean {
+  if (!isRecord(recovery)) return false;
+  const shipName = nonEmptyString(recovery.ship_name);
+  const shipClassId = nonEmptyString(recovery.ship_class_id);
+  const status = nonEmptyString(recovery.status);
+  const materialRows = pirateMaterialRows(recovery.materials);
+  if (!shipName && !shipClassId && !status && !materialRows?.length) return false;
+
+  emitLine('');
+  emitLine(`${c.bright}=== Pirate Recovery ===${c.reset}`);
+  if (shipName) emitLine(`Ship: ${shipName}`);
+  if (shipClassId) emitLine(`Class: ${shipClassId}`);
+  if (status) emitLine(`Status: ${status}`);
+  if (materialRows?.length) {
+    const columns: Array<[string, string[]]> = [];
+    for (const [label, key] of PIRATE_MATERIAL_COLUMNS) {
+      if (materialRows.some((row) => row[key] !== undefined)) columns.push([label, [key]]);
+    }
+    printCompactTable('Materials', materialRows, columns, { maxCellWidth: 64 });
+  }
+  return true;
+}
+
 export { firstArray, rowValue };

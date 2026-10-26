@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_base` and docked-base `inspect` print `pirate_recovery` when the server sends it: ship name, ship class id, and status as sent, plus the one-hull material list (`name`, `item_id`, `quantity_required`, `quantity_in_storage`, `quantity_incoming`, `quantity_missing`, `quantity_to_supply`, `bid_price`, and `bid_quantity`), including an explicit 0. `materials` is omitted after a build is commissioned. An omitted `pirate_recovery` prints nothing. Help says `materials_ready` confirms physical inputs only, a shortage is not a promise of payment, and to check `view_market` and sell into public station buy orders.
+
 - `facility types` detail prints Buildable as yes or no when `buildable` is a boolean, including an explicit false. The types list adds that column when any row sends it. An omitted key prints nothing. `facility types`, `facility build`, and `faction build` say station infrastructure with a flat on/off effect is limited to one copy per station, like dining and leisure. Power plants, life support, capacitor banks, and fuel tank expansions still stack.
 
 - `storage deposit` help names every ship gift: `target=<player_name>` and a docked pirate-stronghold `target=station:<base ID>` are `gift_ship` (that stronghold's stolen flagship can be sent home from any station), and an empire alias is `empire_gift_ship`. An empire station does not take ships. A starter ship donated to an empire is scrapped, earns no goodwill, and omits fleet and petition fields. A bulk `station:` gift prints goodwill once on the parent, not on each row. `situation` prints as sent.

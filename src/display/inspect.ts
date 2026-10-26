@@ -13,6 +13,7 @@ import {
 import {
   c,
   emitLine,
+  emitPirateRecovery,
   emitSovereignMint,
   emitStationConstruction,
   emitStationContrabandPolicy,
@@ -358,6 +359,7 @@ function emitBase(basePayload: Record<string, unknown>): void {
   emitStationRepairs(basePayload.repairs, { skipWrecked: base.wrecked === true });
   emitStationConstruction(basePayload.construction);
   emitSovereignMint(basePayload.sovereign_mint);
+  emitPirateRecovery(basePayload.pirate_recovery);
 
   if (typeof base.description === 'string' && base.description.trim()) {
     emitLine(`\n${base.description.trim()}`);

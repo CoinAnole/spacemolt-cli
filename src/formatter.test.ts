@@ -9307,6 +9307,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Repairs ===');
     expect(stdout).not.toContain('=== Repair Queue ===');
     expect(stdout).not.toContain('=== Sovereign Mint ===');
+    expect(stdout).not.toContain('=== Pirate Recovery ===');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -9365,6 +9366,7 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).not.toContain('=== Sovereign Mint ===');
+    expect(stdout).not.toContain('=== Pirate Recovery ===');
     expect(stdout).not.toContain('Fuel bunker:');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -9414,6 +9416,194 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).not.toContain('=== Sovereign Mint ===');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints pirate recovery hull, status, and material shopping list', () => {
+    const { stdout, stderr } = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      pirate_recovery: {
+        ship_name: 'Last Call',
+        ship_class_id: 'last_call',
+        status: 'awaiting_materials',
+        materials: [
+          {
+            name: 'Thruster Nozzle',
+            item_id: 'thruster_nozzle',
+            quantity_required: 10,
+            quantity_in_storage: 1,
+            quantity_incoming: 2,
+            quantity_missing: 9,
+            quantity_to_supply: 7,
+            bid_price: 400,
+            bid_quantity: 5,
+          },
+        ],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(
+      ['=== Pirate Recovery ===', 'Ship: Last Call', 'Class: last_call', 'Status: awaiting_materials'].join('\n'),
+    );
+    expect(stdout.indexOf('=== Pirate Recovery ===')).toBeGreaterThan(stdout.indexOf('=== Construction ==='));
+    expect(stdout.indexOf('A busy trade station.')).toBeGreaterThan(stdout.indexOf('=== Pirate Recovery ==='));
+    expect(stdout).toContain('=== Materials ===');
+    expect(stdout).toContain('Name');
+    expect(stdout).toContain('Item ID');
+    expect(stdout).toContain('Required');
+    expect(stdout).toContain('In storage');
+    expect(stdout).toContain('Incoming');
+    expect(stdout).toContain('Missing');
+    expect(stdout).toContain('To supply');
+    expect(stdout).toContain('Bid price');
+    expect(stdout).toContain('Bid quantity');
+    expect(stdout).toMatch(
+      /Thruster Nozzle\s+\|\s+thruster_nozzle\s+\|\s+10\s+\|\s+1\s+\|\s+2\s+\|\s+9\s+\|\s+7\s+\|\s+400\s+\|\s+5/,
+    );
+    expect(stdout).not.toContain('no bid');
+    expect(stdout).not.toContain('promise');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints pirate recovery zeros and leaves status as sent', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: {
+        ship_name: 'Last Call',
+        ship_class_id: 'last_call',
+        status: 'materials_ready',
+        materials: [
+          {
+            name: 'Steel Plate',
+            item_id: 'steel_plate',
+            quantity_required: 0,
+            quantity_in_storage: 0,
+            quantity_incoming: 0,
+            quantity_missing: 0,
+            quantity_to_supply: 0,
+            bid_price: 0,
+            bid_quantity: 0,
+          },
+        ],
+      },
+    });
+
+    expect(stdout).toContain('Status: materials_ready');
+    expect(stdout).not.toContain('shipyard');
+    expect(stdout).toMatch(
+      /Steel Plate\s+\|\s+steel_plate\s+\|\s+0\s+\|\s+0\s+\|\s+0\s+\|\s+0\s+\|\s+0\s+\|\s+0\s+\|\s+0/,
+    );
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base omits pirate recovery materials after a commissioned build', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: {
+        ship_name: 'Last Call',
+        ship_class_id: 'last_call',
+        status: 'building',
+      },
+    });
+
+    expect(stdout).toContain('Status: building');
+    expect(stdout).toContain('Ship: Last Call');
+    expect(stdout).toContain('Class: last_call');
+    expect(stdout).not.toContain('=== Materials ===');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints only pirate recovery material fields the server sent', () => {
+    const { stdout } = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: {
+        status: 'queued',
+        materials: [{ name: 'Circuit Board', quantity_missing: 0 }],
+      },
+    });
+
+    expect(stdout).toContain('Status: queued');
+    expect(stdout).not.toContain('Ship:');
+    expect(stdout).not.toContain('Class:');
+    expect(stdout).toContain('Name');
+    expect(stdout).toContain('Missing');
+    expect(stdout).toContain('Circuit Board');
+    expect(stdout).not.toContain('Item ID');
+    expect(stdout).not.toContain('Required');
+    expect(stdout).not.toContain('In storage');
+    expect(stdout).not.toContain('Incoming');
+    expect(stdout).not.toContain('To supply');
+    expect(stdout).not.toContain('Bid price');
+    expect(stdout).not.toContain('Bid quantity');
+    expect(stdout).toMatch(/Circuit Board\s+\|\s+0/);
+  });
+
+  test('get_base omits pirate recovery when the key is absent, empty, or not an object', () => {
+    const absent = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+    });
+    const empty = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: {},
+    });
+    const emptyMaterials = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: { status: 'ready', materials: [] },
+    });
+    const malformed = captureStructuredOutput('get_base', {
+      base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+      services: ['market'],
+      pirate_recovery: 'awaiting_materials',
+    });
+
+    expect(absent.stdout).not.toContain('=== Pirate Recovery ===');
+    expect(empty.stdout).not.toContain('=== Pirate Recovery ===');
+    expect(emptyMaterials.stdout).toContain('Status: ready');
+    expect(emptyMaterials.stdout).not.toContain('=== Materials ===');
+    expect(emptyMaterials.stdout).not.toContain('(None)');
+    expect(malformed.stdout).not.toContain('=== Pirate Recovery ===');
+    expect(malformed.stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base json keeps pirate_recovery, including an explicit 0', () => {
+    const json = captureStructuredOutput(
+      'get_base',
+      {
+        ...baseFixture,
+        pirate_recovery: {
+          ship_name: 'Last Call',
+          ship_class_id: 'last_call',
+          status: 'awaiting_delivery',
+          materials: [
+            {
+              name: 'Thruster Nozzle',
+              item_id: 'thruster_nozzle',
+              quantity_required: 10,
+              quantity_in_storage: 0,
+              quantity_incoming: 0,
+              quantity_missing: 10,
+              quantity_to_supply: 10,
+              bid_price: 0,
+              bid_quantity: 0,
+            },
+          ],
+        },
+      },
+      { format: 'json' },
+    );
+    const parsed = JSON.parse(json.stdout) as {
+      pirate_recovery: { status: string; materials: Array<{ bid_price: number; quantity_in_storage: number }> };
+    };
+    expect(parsed.pirate_recovery.status).toBe('awaiting_delivery');
+    expect(parsed.pirate_recovery.materials[0]?.bid_price).toBe(0);
+    expect(parsed.pirate_recovery.materials[0]?.quantity_in_storage).toBe(0);
+    expect(json.stdout).not.toContain('=== Pirate Recovery ===');
   });
 
   test('get_base omits zeroed repairs with empty facilities', () => {

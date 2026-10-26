@@ -3885,6 +3885,20 @@ describe('command metadata', () => {
     expect(COMMANDS.get_base?.description).toContain(
       'Empire customs still apply in empire territory, including aboard a mobile base.',
     );
+    expect(COMMANDS.get_base?.description).toContain('pirate_recovery');
+    expect(COMMANDS.get_base?.description).toContain(
+      'awaiting_materials, awaiting_delivery, materials_ready, queued, building, and ready',
+    );
+    expect(COMMANDS.get_base?.description).toContain(
+      'materials_ready confirms physical inputs only; shipyard scheduling can still delay construction',
+    );
+    expect(COMMANDS.get_base?.description).toContain('materials is omitted after a build is commissioned');
+    expect(COMMANDS.get_base?.description).toContain('quantity_missing excludes physical stock');
+    expect(COMMANDS.get_base?.description).toContain('quantity_to_supply also excludes inbound station freight');
+    expect(COMMANDS.get_base?.description).toContain('bid_price 0 means no bid');
+    expect(COMMANDS.get_base?.description).toContain('bid_quantity can differ from the construction shortage');
+    expect(COMMANDS.get_base?.description).toContain('A shortage is not a promise of payment');
+    expect(COMMANDS.get_base?.description).toContain('Check view_market and sell into public station buy orders');
     expect(COMMANDS.get_base?.seeAlso).toEqual(['facility_repair', 'facility_list', 'view_market', 'storage']);
 
     const help = captureHelp('get_base');
@@ -3902,6 +3916,9 @@ describe('command metadata', () => {
     expect(help).toContain('facility list');
     expect(help).toContain('view_market');
     expect(help).toContain('storage');
+    expect(help).toContain('pirate_recovery');
+    expect(help).toContain('materials_ready');
+    expect(help).toContain('sell into public station buy orders');
     expect(help).not.toContain('`');
   });
 
@@ -3918,7 +3935,7 @@ describe('command metadata', () => {
     expect(COMMANDS.inspect?.description).toContain('sovereign mint');
     expect(COMMANDS.inspect?.description).toContain('repair queue');
     expect(COMMANDS.inspect?.description).toContain(
-      'Docked-base inspect prints the same repair queue and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth.',
+      'Docked-base inspect prints the same repair queue, pirate replacement list, and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. An omitted pirate_recovery prints nothing. A shortage on that list is not a promise of payment. Check view_market and sell into public station buy orders.',
     );
 
     const help = captureHelp('inspect');
@@ -3926,12 +3943,15 @@ describe('command metadata', () => {
     expect(help).toContain('repair queue');
     expect(help).toContain('buy order: yes');
     expect(help).toContain('Smuggling skill still bypasses listed items');
+    expect(help).toContain('pirate_recovery');
+    expect(help).toContain('not a promise of payment');
+    expect(help).toContain('sell into public station buy orders');
     expect(help).not.toContain('`');
   });
 
   test('inspect help points skills, recipes, and facilities at catalog', () => {
     const description =
-      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. An uncharted hidden POI in this system is not found (not_found), the same as an unknown id. Docked-base inspect prints the same Contraband mode and Contraband items lines as get_base. Smuggling skill still bypasses listed items.';
+      'Look up a visible package, item, module, ship class, known system, current-system POI, or docked base by ID. A catalog block on this response uses type items for an item or module, and type ships for a ship class. Look up skills, recipes, and facilities with catalog, not inspect: spacemolt catalog type=skills id=refining, spacemolt catalog type=recipes, or spacemolt catalog type=facilities. Package instances use the package:<id> form (for example package:pkg_abc). Packages show contents, custodial owner, creator, and creator faction; systems/POIs include matching faction intel when available. Docked-base inspect prints the same repair queue, pirate replacement list, and sovereign mint report as get_base, including per-input buy order: yes or no and Price limits rows (station public buy and lowest public sell). Status price_limited is printed as sent and can appear while production continues. Those prices are a snapshot and are not a private spending ceiling. Sell only buy order: yes rows through the public market; check view_market for depth. An omitted pirate_recovery prints nothing. A shortage on that list is not a promise of payment. Check view_market and sell into public station buy orders. An uncharted hidden POI in this system is not found (not_found), the same as an unknown id. Docked-base inspect prints the same Contraband mode and Contraband items lines as get_base. Smuggling skill still bypasses listed items.';
 
     expect(QUERY_REFERENCE_COMMAND_OVERRIDES.inspect?.description).toBe(description);
     expect(COMMANDS.inspect?.description).toBe(description);

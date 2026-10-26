@@ -1554,6 +1554,7 @@ test('renders base inspect without a repairs section when repairs are absent', (
   expect(stdout).not.toContain('=== Repairs ===');
   expect(stdout).not.toContain('=== Repair Queue ===');
   expect(stdout).not.toContain('=== Sovereign Mint ===');
+  expect(stdout).not.toContain('=== Pirate Recovery ===');
   expect(stdout).not.toContain('Contraband mode:');
   expect(stdout).not.toContain('Contraband items:');
   expect(stdout).not.toContain('=== Response ===');
@@ -1657,6 +1658,54 @@ test('renders nested base sovereign mint price limits matching get_base', () => 
     ].join('\n'),
   );
   expect(stdout).not.toContain('  Sell listed inputs');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders nested base pirate recovery matching get_base', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'stronghold',
+      kind: 'base',
+      source: 'station',
+      base: {
+        base: { id: 'stronghold', name: 'Stronghold', empire: 'None' },
+        services: ['market'],
+        pirate_recovery: {
+          ship_name: 'Last Call',
+          ship_class_id: 'last_call',
+          status: 'awaiting_materials',
+          materials: [
+            {
+              name: 'Thruster Nozzle',
+              item_id: 'thruster_nozzle',
+              quantity_required: 10,
+              quantity_in_storage: 0,
+              quantity_incoming: 2,
+              quantity_missing: 10,
+              quantity_to_supply: 8,
+              bid_price: 0,
+              bid_quantity: 4,
+            },
+          ],
+        },
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: stronghold ===');
+  expect(stdout).toContain('Station: Stronghold');
+  expect(stdout).not.toContain('=== Station: Stronghold ===');
+  expect(stdout).toContain(
+    ['=== Pirate Recovery ===', 'Ship: Last Call', 'Class: last_call', 'Status: awaiting_materials'].join('\n'),
+  );
+  expect(stdout).toMatch(
+    /Thruster Nozzle\s+\|\s+thruster_nozzle\s+\|\s+10\s+\|\s+0\s+\|\s+2\s+\|\s+10\s+\|\s+8\s+\|\s+0\s+\|\s+4/,
+  );
   expect(stdout).not.toContain('=== Response ===');
 });
 
