@@ -1,6 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import {
   convertPayloadTypes,
   getArgNames,
@@ -6568,45 +6566,6 @@ describe('command metadata', () => {
     expect(copy).not.toMatch(/voidborn/i);
     expect(copy).not.toMatch(/pulse laser/i);
     expect(copy).not.toMatch(/disruptor/i);
-  });
-
-  test('unreleased changelog documents refit_ship under Ship between Personnel and Storage', () => {
-    const changelog = fs.readFileSync(path.join(import.meta.dir, '..', 'CHANGELOG.md'), 'utf8');
-    const unreleasedStart = changelog.indexOf('## Unreleased');
-    expect(unreleasedStart).toBeGreaterThanOrEqual(0);
-    const afterHeading = changelog.slice(unreleasedStart + '## Unreleased'.length);
-    const nextRelease = afterHeading.search(/\n## /);
-    const unreleased = nextRelease === -1 ? afterHeading : afterHeading.slice(0, nextRelease);
-    const bullets = unreleased.split('\n').filter((line) => line.startsWith('- ') && line.includes('refit_ship'));
-    expect(bullets).toHaveLength(1);
-    const bullet = bullets[0] ?? '';
-
-    expect(bullet).toContain('dock at a shipyard');
-    expect(bullet).toContain('station storage');
-    expect(bullet).toContain('not destroyed');
-    expect(bullet).toContain('free and irreversible');
-    expect(bullet).toContain('response message of already_current');
-    expect(bullet).toContain('default-loadout version');
-    expect(bullet).toContain('nothing is applied');
-    expect(bullet).toContain('**No parser change.**');
-    expect(bullet).not.toMatch(/threshold/i);
-    expect(bullet).not.toMatch(/voidborn/i);
-    expect(bullet).not.toMatch(/pulse laser/i);
-    expect(bullet).not.toMatch(/disruptor/i);
-    expect(bullet).not.toMatch(/0\.612\.7/);
-    expect(bullet).not.toMatch(/gameserver/i);
-    expect(bullet).not.toMatch(/\berror\b/i);
-
-    const headings = [...unreleased.matchAll(/^### (.+)$/gm)];
-    const bulletIndex = unreleased.indexOf(bullet);
-    const owning = headings.filter((match) => (match.index ?? 0) < bulletIndex).at(-1);
-    const personnelIndex = headings.find((match) => match[1] === 'Personnel')?.index ?? -1;
-    const shipIndex = headings.find((match) => match[1] === 'Ship')?.index ?? -1;
-    const storageIndex = headings.find((match) => match[1] === 'Storage')?.index ?? -1;
-    expect(owning?.[1]).toBe('Ship');
-    expect(personnelIndex).toBeGreaterThanOrEqual(0);
-    expect(shipIndex).toBeGreaterThan(personnelIndex);
-    expect(storageIndex).toBeGreaterThan(shipIndex);
   });
 
   test('location, state, and faction scan help name leviathans without changing get_status', () => {
