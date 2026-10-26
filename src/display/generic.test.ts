@@ -1392,6 +1392,16 @@ test('prints ungrouped station credit totals and bounty lines', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints goodwill situation as sent without mapping an enum', () => {
+  const stdout = depositStdout(
+    stationGiftBody({
+      goodwill: { ...giftGoodwillExample, situation: 'not_an_enum_value' },
+    }),
+  );
+  expect(stdout).toContain('Situation: not_an_enum_value');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('prints an explicit zero credit total and omits a missing wallet', () => {
   const zero = depositStdout(
     stationGiftBody({

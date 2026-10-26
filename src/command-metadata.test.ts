@@ -3528,10 +3528,23 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('This sale does not apply to a station material gift');
     expect(deposit?.description).toContain('No packages or quest items');
     expect(deposit?.description).not.toContain('No credits, ships');
-    expect(deposit?.description).toContain('boss flagship');
+    expect(deposit?.description).toContain('stolen flagship');
+    expect(deposit?.description).not.toContain('boss flagship');
+    expect(deposit?.description).toContain('empire_gift_ship');
+    expect(deposit?.description).toContain('An empire station does not take ships.');
+    expect(deposit?.description).toContain(
+      'A starter ship is scrapped, earns no goodwill, and omits fleet and petition fields.',
+    );
+    expect(deposit?.description).toContain('does not detect a starter hull');
+    expect(deposit?.description).toContain(
+      'BulkStorageResponse goodwill once on the parent for all successful entries and never on nested results',
+    );
+    expect(deposit?.description).toContain('does not add a goodwill column');
+    expect(deposit?.description).toContain('prints situation as sent');
+    expect(deposit?.description).not.toContain('stranger');
+    expect(deposit?.description).not.toContain('token_items');
     expect(deposit?.description).toContain('pirate:<crew>');
     expect(deposit?.description).toContain('from anywhere');
-    expect(deposit?.description).toContain('stranger');
     expect(deposit?.description).not.toContain('`');
     expect(deposit?.description).not.toContain('trash');
     expect(deposit?.description).not.toContain('donation box');
@@ -3556,8 +3569,9 @@ describe('command metadata', () => {
     );
     expect(deposit?.schema?.target?.description).not.toContain("sold on that station's market");
     expect(deposit?.schema?.target?.description).toContain(
-      'A boss flagship is the exception: storage deposit <ship_id> target=station:<stronghold base id> sends it home from wherever it is parked (gameserver 0.643.0). Other ships still have to be delivered at that stronghold. A pirate crew keeps a gift from a pilot never introduced to the pirate network and gives nothing back.',
+      "target=station:<base ID> gives a ship to that pirate stronghold while you and the ship are docked there (gift_ship; a stronghold's own stolen flagship can be sent home from any station). An empire station does not take ships. An empire-alias ship donation is empire_gift_ship. A pirate crew keeps a gift from a pilot never introduced to the pirate network and gives nothing back.",
     );
+    expect(deposit?.schema?.target?.description).not.toContain('boss flagship');
     expect(withdraw?.schema?.target?.description).toContain(
       'Items enter manager station inventory, not empire reserves',
     );
@@ -3641,8 +3655,14 @@ describe('command metadata', () => {
     expect(deposit?.schema?.item_id?.description).toContain('local path can auto-dock first');
     expect(deposit?.schema?.item_id?.description).toContain('target=fixer:tab');
     expect(deposit?.schema?.item_id?.description).toContain(
-      'target=station:<stronghold base id> gifts the ship only to a pirate stronghold; a boss flagship may be parked anywhere; any other ship must be parked at that stronghold while you are docked there.',
+      "target=<player_name> on a deposit gifts the ship (gift_ship), target=station:<base ID> on a deposit gives it to that pirate stronghold while you and the ship are docked there (also gift_ship; a stronghold's own stolen flagship can be sent home from any station), and an empire alias on a deposit donates it to that empire (empire_gift_ship).",
     );
+    expect(deposit?.schema?.item_id?.description).toContain('An empire station does not take ships.');
+    expect(deposit?.schema?.item_id?.description).toContain(
+      'A starter ship is scrapped, earns no goodwill, and omits fleet and petition fields.',
+    );
+    expect(deposit?.schema?.item_id?.description).toContain('does not detect a starter hull');
+    expect(deposit?.schema?.item_id?.description).not.toContain('boss flagship');
     expect(deposit?.schema?.item_id?.description).not.toContain('carrier');
     expect(deposit?.schema?.credits?.description).toContain('Not valid for fixer:tab.');
     expect(deposit?.schema?.credits?.description).not.toContain('Not valid for station: targets.');

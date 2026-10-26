@@ -1093,9 +1093,16 @@ describe('help output branches', () => {
     expect(output).toContain('Only those unused materials are sold.');
     expect(output).toContain('This sale does not apply to a station material gift');
     expect(output).not.toContain('donate to an empire treasury');
-    expect(output).toContain(
-      'A boss flagship is the exception: storage deposit <ship_id> target=station:<stronghold base id> sends it home from wherever it is parked (gameserver 0.643.0).',
-    );
+    expect(output).toContain("a stronghold's own stolen flagship can be sent home from any station");
+    expect(output).toContain('empire_gift_ship');
+    expect(output).toContain('An empire station does not take ships.');
+    expect(output).toContain('A starter ship is scrapped, earns no goodwill, and omits fleet and petition fields.');
+    expect(output).toContain('does not detect a starter hull');
+    expect(output).toContain('never on nested results');
+    expect(output).toContain('does not add a goodwill column');
+    expect(output).toContain('prints situation as sent');
+    expect(output).not.toContain('boss flagship');
+    expect(output).toContain('empire ship: storage deposit <ship_id> target=solarian');
     expect(output).toContain('Not valid for fixer:tab.');
     expect(output).not.toContain('Not valid for station: targets.');
     expect(output).toContain('spacemolt storage deposit ore_iron 50 target=PlayerName source=storage message="Enjoy"');
