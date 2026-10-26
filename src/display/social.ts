@@ -66,6 +66,15 @@ function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): bo
   );
 }
 
+function emitFactionFuelBunkers(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows = value.filter(isRecord);
+  const columns: Array<[string, string[]]> = [['Base ID', ['base_id']]];
+  if (hasAnyField(rows, ['base_name'])) columns.push(['Base', ['base_name']]);
+  columns.push(['Reserve', ['fuel_reserve']], ['Capacity', ['fuel_capacity']]);
+  printCompactTable('Fuel bunkers', rows, columns);
+}
+
 function identifierText(value: unknown): string | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -1623,6 +1632,7 @@ export const socialFormatters = [
           ['Active', ['active', 'enabled', 'status']],
         ]);
       }
+      emitFactionFuelBunkers(r.fuel_bunkers);
       emitRentSummary('Faction rent bill', 'Faction arrears', r.faction_rent);
       if (isRecord(r.mobile_base)) emitMobileBaseSnapshot(r.mobile_base, 'info');
       if (isRecord(r.mobile_base_commission)) emitMobileBaseCommission(r.mobile_base_commission);

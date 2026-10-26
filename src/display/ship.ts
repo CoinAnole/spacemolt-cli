@@ -30,6 +30,13 @@ import {
 import { emitShipPersonnel } from './personnel.ts';
 import { formatCompactTable } from './tables.ts';
 
+function emitGetBaseFactionFuelBunker(result: Record<string, unknown>): void {
+  const reserve = result.faction_fuel_reserve;
+  const capacity = result.faction_fuel_capacity;
+  if (reserve === undefined && capacity === undefined) return;
+  emitLine(`Fuel bunker: ${reserve ?? '?'} / ${capacity ?? '?'} units`);
+}
+
 function summarizeItemQuantities(value: unknown): string {
   if (!Array.isArray(value)) return '';
   return value
@@ -748,6 +755,7 @@ export const shipFormatters = [
       if (base.fuel !== undefined || base.max_fuel !== undefined)
         emitLine(`Fuel: ${base.fuel ?? '?'}/${base.max_fuel ?? '?'}`);
       emitStationFuelPricing(r);
+      emitGetBaseFactionFuelBunker(r);
       emitStationPower(r.power);
       emitStationLifeSupport(r.life_support);
 

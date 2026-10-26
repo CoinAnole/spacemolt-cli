@@ -2641,6 +2641,20 @@ describe('help output branches', () => {
     expect(output).not.toContain('This error may be retryable.');
   });
 
+  test('displayError suggests building a faction fuel bunker for no_fuel_bunker', () => {
+    const capture = captureWriter();
+    displayError(
+      'craft',
+      { code: 'no_fuel_bunker', message: 'no fuel bunker' },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('Error [no_fuel_bunker]: no fuel bunker');
+    expect(output).toContain('Build a faction fuel bunker at that station first.');
+    expect(output).toContain('spacemolt faction build');
+    expect(output).not.toContain('This error may be retryable.');
+  });
+
   test('displayError gives transit and fleet movement errors actionable suggestions', () => {
     const baseContext: CliRuntimeContext = {
       env: {},

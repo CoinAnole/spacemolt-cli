@@ -3962,6 +3962,71 @@ test('faction_info prints empty commission strings', () => {
   expect(stdout).toContain('  Archetype: (empty)');
 });
 
+test('faction_info prints fuel bunker rows, including an explicit 0', () => {
+  const fixture = factionInfoWithRent();
+  fixture.fuel_bunkers = [
+    { base_id: 'earth_station', fuel_reserve: 0, fuel_capacity: 500 },
+    { base_id: 'nova_terra_central', base_name: 'Nova Terra Central', fuel_reserve: 12, fuel_capacity: 0 },
+  ];
+  const stdout = renderFactionInfo(fixture);
+  const facilities = stdout.indexOf('=== Faction Facilities ===');
+  const bunkers = stdout.indexOf('=== Fuel bunkers ===');
+  const rent = stdout.indexOf('Faction rent bill:');
+  expect(facilities).toBeGreaterThan(-1);
+  expect(bunkers).toBeGreaterThan(facilities);
+  expect(rent).toBeGreaterThan(bunkers);
+  expect(stdout).toContain('earth_station');
+  expect(stdout).toContain('nova_terra_central');
+  expect(stdout).toContain('Nova Terra Central');
+  expect(stdout).toContain('| 0');
+  expect(stdout).not.toContain('paused');
+  expect(stdout).not.toContain('full');
+  expect(stdout).not.toContain('=== Response ===');
+
+  const named = stdout.split('=== Fuel bunkers ===')[1]?.split('Faction rent bill:')[0] ?? '';
+  expect(named).toContain('Base');
+  expect(named).not.toContain('paused');
+});
+
+test('faction_info prints nothing when fuel_bunkers is omitted or not an array', () => {
+  const omitted = renderFactionInfo(factionInfoWithRent());
+  expect(omitted).not.toContain('Fuel bunkers');
+  expect(omitted).toContain('=== Faction:');
+
+  for (const fuelBunkers of [null, 'earth_station', { base_id: 'earth_station' }]) {
+    const fixture = factionInfoWithRent();
+    fixture.fuel_bunkers = fuelBunkers;
+    const stdout = renderFactionInfo(fixture);
+    expect(stdout).not.toContain('Fuel bunkers');
+    expect(stdout).toContain('Faction rent bill:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('faction_info prints an empty fuel bunker list and skips a missing base name', () => {
+  const empty = factionInfoWithRent();
+  empty.fuel_bunkers = [];
+  expect(renderFactionInfo(empty)).toContain('=== Fuel bunkers ===\n(None)');
+
+  const unnamed = factionInfoWithRent();
+  unnamed.fuel_bunkers = [{ base_id: 'earth_station', fuel_reserve: 0, fuel_capacity: 0 }];
+  const stdout = renderFactionInfo(unnamed);
+  expect(stdout).toContain('earth_station');
+  expect(stdout).toContain('0');
+  const table = stdout.split('=== Fuel bunkers ===')[1] ?? '';
+  expect(table.split('\n')[2]).not.toContain('Base |');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info json passes fuel_bunkers through without the table', () => {
+  const fixture = factionInfoWithRent();
+  fixture.fuel_bunkers = [{ base_id: 'earth_station', fuel_reserve: 0, fuel_capacity: 500 }];
+  const stdout = renderFactionInfo(fixture, 'json');
+  const parsed = JSON.parse(stdout) as { fuel_bunkers: Array<{ fuel_reserve: number }> };
+  expect(parsed.fuel_bunkers[0]?.fuel_reserve).toBe(0);
+  expect(stdout).not.toContain('Fuel bunkers');
+});
+
 test('faction get_mobile_base prints stationary, preparing, and isolated snapshots', () => {
   const stationary = renderCommand('faction_get_mobile_base', factionGetMobileBaseFixture);
   expect(stationary).toContain('=== Faction Mobile Base: Civitas ===');

@@ -9365,7 +9365,44 @@ describe('structuredContent formatters', () => {
 
     expect(stderr).toBe('');
     expect(stdout).not.toContain('=== Sovereign Mint ===');
+    expect(stdout).not.toContain('Fuel bunker:');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('get_base prints faction fuel bunker reserve and capacity, including 0', () => {
+    const bothZero = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      faction_fuel_reserve: 0,
+      faction_fuel_capacity: 0,
+    });
+    expect(bothZero.stderr).toBe('');
+    expect(bothZero.stdout).toContain('Fuel bunker: 0 / 0 units');
+    expect(bothZero.stdout).not.toContain('paused');
+    expect(bothZero.stdout).not.toContain('full');
+    expect(bothZero.stdout).not.toContain('=== Response ===');
+
+    const reserveOnly = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      faction_fuel_reserve: 0,
+    });
+    expect(reserveOnly.stdout).toContain('Fuel bunker: 0 / ? units');
+    expect(reserveOnly.stdout).not.toContain('paused');
+
+    const capacityOnly = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      faction_fuel_capacity: 500,
+    });
+    expect(capacityOnly.stdout).toContain('Fuel bunker: ? / 500 units');
+
+    const json = captureStructuredOutput(
+      'get_base',
+      { ...baseFixture, faction_fuel_reserve: 0, faction_fuel_capacity: 500 },
+      { format: 'json' },
+    );
+    const parsed = JSON.parse(json.stdout) as { faction_fuel_reserve: number; faction_fuel_capacity: number };
+    expect(parsed.faction_fuel_reserve).toBe(0);
+    expect(parsed.faction_fuel_capacity).toBe(500);
+    expect(json.stdout).not.toContain('Fuel bunker:');
   });
 
   test('get_base omits sovereign mint when the mint object is empty', () => {

@@ -1,3 +1,4 @@
+import { RENTED_FUEL_BUNKER_FULL_HELP, RENTED_FUEL_BUNKER_RULE } from './command-overrides-core';
 import type { CommandOverride } from './commands';
 
 const STORAGE_TRANSFER_SOURCE_DESCRIPTION =
@@ -700,7 +701,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '<facility_id> <recipe_id> <quantity> [direction=forward|reverse] [deliver_to=storage|faction|faction:<bucket>] [source=storage|faction|faction:<bucket>|cargo] [items=JSON] [label=...] [package_id=...] [target=storage|cargo|faction|faction:<bucket>]',
     description:
-      'Queue production work on a facility you own (or a rental/logistics bay you can use). Ordinary jobs use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket. Package recipes pack_package and unpack_package also accept items/label or package_id with source/target (cargo allowed; target defaults to source). Empire stations offer a station-owned T1 Package Logistics Bay for 1 credit per package operation.',
+      'Queue production work on a facility you own (or a rental/logistics bay you can use). Ordinary jobs use source and deliver_to to pull inputs from one store and deposit outputs to another; faction:<bucket> targets a Storage Extension bucket. Package recipes pack_package and unpack_package also accept items/label or package_id with source/target (cargo allowed; target defaults to source). Empire stations offer a station-owned T1 Package Logistics Bay for 1 credit per package operation. ' +
+      RENTED_FUEL_BUNKER_RULE +
+      ' ' +
+      RENTED_FUEL_BUNKER_FULL_HELP,
     example:
       'spacemolt facility_job_add facility-1 pack_package 1 items=\'[{"item_id":"iron_ore","quantity":20}]\' label=\'Smelter Feedstock\' source=cargo target=storage',
     discoverWith: ['facility_list', 'facility_owned', 'catalog', 'inspect'],

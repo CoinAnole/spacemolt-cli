@@ -250,6 +250,14 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['refuel', 'dock', 'get_status'],
   },
+  no_fuel_bunker: {
+    code: 'no_fuel_bunker',
+    message: 'No faction fuel bunker at that station.',
+    suggestion: 'Build a faction fuel bunker at that station first. Run "spacemolt faction build" while docked there.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['faction_build', 'faction_info'],
+  },
   no_station_fuel: {
     code: 'no_station_fuel',
     message: 'Station has no fuel.',

@@ -930,6 +930,25 @@ describe('poi_not_found', () => {
   });
 });
 
+describe('no_fuel_bunker', () => {
+  test('says to build a faction fuel bunker at that station first', () => {
+    expect(ERROR_REGISTRY.no_fuel_bunker?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.no_fuel_bunker?.auth).toBe(false);
+    expect(isRetryableError('no_fuel_bunker')).toBe(false);
+    expect(isAuthError('no_fuel_bunker')).toBe(false);
+    expect(isKnownErrorCode('no_fuel_bunker')).toBe(true);
+    expect(ERROR_CODES).toContain('no_fuel_bunker');
+    expect(ERROR_REGISTRY.no_fuel_bunker?.commandSuggestions).toBeUndefined();
+    const suggestion = getErrorSuggestion('no_fuel_bunker');
+    expect(suggestion).toBe(
+      'Build a faction fuel bunker at that station first. Run "spacemolt faction build" while docked there.',
+    );
+    expect(getErrorSuggestion('no_fuel_bunker', 'craft')).toBe(suggestion);
+    expect(getErrorSuggestion('no_fuel_bunker', 'facility job_add')).toBe(suggestion);
+    expect(getRelatedCommands('no_fuel_bunker')).toEqual(['faction_build', 'faction_info']);
+  });
+});
+
 describe('invalid_poi', () => {
   test('says an uncharted hidden POI looks like an unknown id', () => {
     expect(ERROR_REGISTRY.invalid_poi?.retryable).toBe(false);
