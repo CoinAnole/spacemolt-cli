@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `facility faction_list` prints Missed when any row sends `missed_rent_cycles`, including an explicit 0. An omitted key on a row stays blank, and the column is omitted when no row sends the key. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window. Docked `facility list` prints Missed on Player Facilities and Faction Facilities, and a missing key prints 0. Station, Public, and Ally tables do not add Missed from a missing key (gameserver 0.651.0).
+
 - `get_base` and docked-base `inspect` print `pirate_recovery` when the server sends it: ship name, ship class id, and status as sent, plus the one-hull material list (`name`, `item_id`, `quantity_required`, `quantity_in_storage`, `quantity_incoming`, `quantity_missing`, `quantity_to_supply`, `bid_price`, and `bid_quantity`), including an explicit 0. `materials` is omitted after a build is commissioned. An omitted `pirate_recovery` prints nothing. Help says `materials_ready` confirms physical inputs only, a shortage is not a promise of payment, and to check `view_market` and sell into public station buy orders.
 
 - `facility types` detail prints Buildable as yes or no when `buildable` is a boolean, including an explicit false. The types list adds that column when any row sends it. An omitted key prints nothing. `facility types`, `facility build`, and `faction build` say station infrastructure with a flat on/off effect is limited to one copy per station, like dining and leisure. Power plants, life support, capacitor banks, and fuel tank expansions still stack.

@@ -11133,15 +11133,15 @@ describe('structuredContent formatters', () => {
 
       === Player Facilities ===
 
-        Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Owner
-        -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+------
-        Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse |
+        Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Missed | Owner
+        -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+--------+------
+        Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse | 0      |
 
       === Faction Facilities ===
 
-        Name          | ID              | Level | Category   | Maint | Price/unit | Rent/cycle | Owner
-        --------------+-----------------+-------+------------+-------+------------+------------+------
-        Alloy Smelter | faction-smelter | 1     | production | true  | 0cr        | 1200       |
+        Name          | ID              | Level | Category   | Maint | Price/unit | Rent/cycle | Missed | Owner
+        --------------+-----------------+-------+------------+-------+------------+------------+--------+------
+        Alloy Smelter | faction-smelter | 1     | production | true  | 0cr        | 1200       | 0      |
 
       Faction rent bill: 1,200cr/cycle
       Facilities: 1

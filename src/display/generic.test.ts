@@ -140,6 +140,22 @@ test('dock your_facilities grows an ETA column when ticks_until_complete is pres
   expect(stdout).toContain('800cr (paused)');
 });
 
+test('dock your_facilities does not print Missed from missed_rent_cycles', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const facilities = fixture.your_facilities as Array<Record<string, unknown>>;
+  const refinery = facilities.find((row) => row.facility_id === 'player-refinery');
+  const quarters = facilities.find((row) => row.facility_id === 'player-quarters');
+  if (!refinery || !quarters) throw new Error('Dock fixture facility rows are missing.');
+  refinery.missed_rent_cycles = 0;
+  quarters.missed_rent_cycles = 3;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  const facilitiesTable = stdout.split('=== Your facilities ===')[1] ?? '';
+  const header = facilitiesTable.split('\n').find((line) => line.includes('Name') && line.includes('Rent/cycle'));
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Missed');
+  expect(facilitiesTable).not.toMatch(/\bMissed\b/);
+});
+
 test('omits dock your_facilities table and (None) when the list is empty', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   fixture.your_facilities = [];

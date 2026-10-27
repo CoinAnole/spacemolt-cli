@@ -767,9 +767,21 @@ function projectAllyRentalFee(row: Record<string, unknown>): Record<string, unkn
   return row;
 }
 
+// FacilityEntry.missed_rent_cycles is present only on player_facilities and faction_facilities.
+// An omitted key there means 0. FacilityFactionEntry has the same field with no description,
+// so a missing key stays blank and does not open the column.
+function rowSendsMissedRent(row: Record<string, unknown>): boolean {
+  return Object.hasOwn(row, 'missed_rent_cycles');
+}
+
+function withOmittedMissedRentAsZero(row: Record<string, unknown>): Record<string, unknown> {
+  if (rowSendsMissedRent(row)) return row;
+  return { ...row, missed_rent_display: '0' };
+}
+
 function facilityColumns(
   rows: Array<Record<string, unknown>>,
-  options: { grouped?: boolean; includeType?: boolean } = {},
+  options: { grouped?: boolean; includeType?: boolean; missedRent?: 'zero' | 'present' } = {},
 ) {
   const columns: Array<[string, string[]]> = [['Name', ['name_display']]];
   if (options.includeType) columns.push(['Type', ['type_display']]);
@@ -833,6 +845,12 @@ function facilityColumns(
   if (hasAnyField(rows, ['public'])) columns.push(['Public', ['public']]);
   if (hasAnyField(rows, ['rent_per_cycle'])) {
     columns.push(['Rent/cycle', ['rent_cycle_display', 'rent_per_cycle']]);
+  }
+  if (
+    options.missedRent === 'zero' ||
+    (options.missedRent === 'present' && rows.some((row) => rowSendsMissedRent(row)))
+  ) {
+    columns.push(['Missed', ['missed_rent_display', 'missed_rent_cycles']]);
   }
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
@@ -1974,6 +1992,10 @@ export const socialFormatters = [
       }
       columns.push(['Service', ['faction_service']]);
       columns.push(['Rent', ['rent_display', 'rent_per_cycle']]);
+      // Key presence, including an explicit 0. Do not treat an omitted key as 0.
+      if (facilities.some((facility) => rowSendsMissedRent(facility))) {
+        columns.push(['Missed', ['missed_rent_cycles']]);
+      }
       if (hasAnyField(rows, ['capacity'])) {
         columns.push(['Capacity', ['capacity']]);
       }
@@ -2039,12 +2061,12 @@ export const socialFormatters = [
       const factionFacilities = firstArray(r, ['faction_facilities']);
       if (!stationFacilities || !playerFacilities || !factionFacilities) return false;
 
-      const groups: Array<[string, Array<Record<string, unknown>> | undefined, boolean]> = [
-        ['Station Facilities', stationFacilities, false],
-        ['Public Facilities', firstArray(r, ['public_facilities']), false],
-        ['Ally Facilities', firstArray(r, ['ally_facilities']), true],
-        ['Player Facilities', playerFacilities, false],
-        ['Faction Facilities', factionFacilities, false],
+      const groups: Array<[string, Array<Record<string, unknown>> | undefined, boolean, 'zero' | 'present']> = [
+        ['Station Facilities', stationFacilities, false, 'present'],
+        ['Public Facilities', firstArray(r, ['public_facilities']), false, 'present'],
+        ['Ally Facilities', firstArray(r, ['ally_facilities']), true, 'present'],
+        ['Player Facilities', playerFacilities, false, 'zero'],
+        ['Faction Facilities', factionFacilities, false, 'zero'],
       ];
 
       if (r.base_id) emitLine(`\n${c.bright}=== Facilities at ${r.base_id} ===${c.reset}`);
@@ -2052,11 +2074,12 @@ export const socialFormatters = [
       emitStationLifeSupport(r.life_support);
       emitStationConstruction(r.construction);
       emitStationServicePools(r.service_pools);
-      for (const [title, rows, projectFee] of groups) {
+      for (const [title, rows, projectFee, missedRent] of groups) {
         if (!rows?.length) continue;
         const source = projectFee ? rows.map(projectAllyRentalFee) : rows;
-        const displayRows = facilityRows(source);
-        printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true }));
+        const rentRows = missedRent === 'zero' ? source.map(withOmittedMissedRentAsZero) : source;
+        const displayRows = facilityRows(rentRows);
+        printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true, missedRent }));
       }
       emitFacilityRentSummaries(r);
       return true;

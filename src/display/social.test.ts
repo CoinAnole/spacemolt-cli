@@ -3360,6 +3360,92 @@ test('grouped facility_list suffixes paused rent without switching to 1,200cr', 
   expect(stdout).not.toContain('1,200cr (paused)');
 });
 
+function facilityTableHeader(section: string): string | undefined {
+  return section.split('\n').find((line) => line.includes('|') && line.includes('Name') && line.includes('Level'));
+}
+
+test('grouped facility_list prints Missed as 0 for player and faction and not from a missing key elsewhere', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.public_facilities = [
+    {
+      facility_id: 'public-refinery',
+      name: 'Public Refinery',
+      category: 'production',
+      level: 1,
+    },
+  ];
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally-tank',
+      name: 'Ally Tank',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+    },
+  ];
+
+  const absent = renderStructuredResult('facility_list', structuredClone(fixture), options, context).stdout.join('\n');
+  const station = sectionAfter(absent, 'Station Facilities', 'Public Facilities');
+  const publicSection = sectionAfter(absent, 'Public Facilities', 'Ally Facilities');
+  const ally = sectionAfter(absent, 'Ally Facilities', 'Player Facilities');
+  const player = sectionAfter(absent, 'Player Facilities', 'Faction Facilities');
+  const faction = sectionAfter(absent, 'Faction Facilities');
+
+  expect(facilityTableHeader(station)).not.toContain('Missed');
+  expect(facilityTableHeader(publicSection)).not.toContain('Missed');
+  expect(facilityTableHeader(ally)).not.toContain('Missed');
+  expect(tableCell(player, 'player-refinery', 'Missed')).toBe('0');
+  expect(tableCell(faction, 'faction-smelter', 'Missed')).toBe('0');
+
+  const stationRows = fixture.station_facilities as Array<Record<string, unknown>>;
+  if (!stationRows[0]) throw new Error('Station facility fixture is incomplete.');
+  stationRows[0].missed_rent_cycles = 2;
+  fixture.public_facilities = [
+    {
+      facility_id: 'public-zero',
+      name: 'Public Zero',
+      category: 'production',
+      level: 1,
+      missed_rent_cycles: 0,
+    },
+    {
+      facility_id: 'public-omitted',
+      name: 'Public Omitted',
+      category: 'production',
+      level: 1,
+    },
+  ];
+  fixture.ally_facilities = [
+    {
+      facility_id: 'ally-zero',
+      name: 'Ally Zero',
+      category: 'production',
+      level: 1,
+      faction_id: 'ally_faction',
+      missed_rent_cycles: 0,
+    },
+  ];
+  const playerRows = fixture.player_facilities as Array<Record<string, unknown>>;
+  if (!playerRows[0]) throw new Error('Player facility fixture is incomplete.');
+  playerRows[0].missed_rent_cycles = 5;
+
+  const present = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const stationPresent = sectionAfter(present, 'Station Facilities', 'Public Facilities');
+  const publicPresent = sectionAfter(present, 'Public Facilities', 'Ally Facilities');
+  const allyPresent = sectionAfter(present, 'Ally Facilities', 'Player Facilities');
+  const playerPresent = sectionAfter(present, 'Player Facilities', 'Faction Facilities');
+  const factionPresent = sectionAfter(present, 'Faction Facilities');
+
+  expect(facilityTableHeader(stationPresent)).toContain('Missed');
+  expect(tableCell(stationPresent, 'station-fuel', 'Missed')).toBe('2');
+  expect(tableCell(stationPresent, 'station-depot', 'Missed')).toBe('');
+  expect(tableCell(publicPresent, 'public-zero', 'Missed')).toBe('0');
+  expect(tableCell(publicPresent, 'public-omitted', 'Missed')).toBe('');
+  expect(tableCell(allyPresent, 'ally-zero', 'Missed')).toBe('0');
+  expect(tableCell(playerPresent, 'player-refinery', 'Missed')).toBe('5');
+  expect(tableCell(factionPresent, 'faction-smelter', 'Missed')).toBe('0');
+});
+
 test('renders facility list faction rent summary', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   facilityList.faction_rent = {
@@ -7150,6 +7236,7 @@ test('faction_facility_list renders status, damaged yes/no, and custom names', (
   expect(tableCell(section, 'faction-yard', 'Rent')).toBe('1,200cr (paused)');
   expect(tableCell(section, 'faction-hangar', 'Status')).toBe('dismantling');
   expect(tableCell(section, 'faction-hangar', 'Rent')).toBe('600cr (paused)');
+  expect(tableCell(section, 'faction-smelter', 'Missed')).toBeUndefined();
   expect(stdout).toContain('Faction storage:');
   expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
   expect(stdout).toContain('Facilities: 4');
@@ -7250,6 +7337,113 @@ test('faction_facility_list omits Damaged column when no damaged fields', () => 
   expect(stdout).toMatch(/\|\s*Building\s*$|\|\s*Building\b/);
   expect(stdout).toContain('12');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_facility_list prints Missed when any row sends the key, including 0', () => {
+  const fixture = {
+    action: 'faction_list',
+    base_id: 'earth_station',
+    faction_id: 'faction-1',
+    faction_facilities: [
+      {
+        facility_id: 'paid',
+        type: 'alloy_smelter',
+        name: 'Paid',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 100,
+        status: 'active',
+        missed_rent_cycles: 0,
+      },
+      {
+        facility_id: 'behind',
+        type: 'fuel_bunker',
+        name: 'Behind',
+        level: 1,
+        faction_service: 'fuel',
+        rent_per_cycle: 100,
+        status: 'active',
+        missed_rent_cycles: 4,
+      },
+      {
+        facility_id: 'omitted',
+        type: 'faction_hangar',
+        name: 'Omitted',
+        level: 1,
+        faction_service: 'hangar',
+        rent_per_cycle: 100,
+        status: 'active',
+        arrears_owed: 400,
+      },
+      {
+        facility_id: 'null-missed',
+        type: 'faction_hangar',
+        name: 'Null Missed',
+        level: 1,
+        faction_service: 'hangar',
+        rent_per_cycle: 100,
+        status: 'active',
+        missed_rent_cycles: null,
+      },
+    ],
+    faction_rent: {
+      facilities: 4,
+      total_rent_per_cycle: 300,
+      arrears_owed: 400,
+      grace_cycles: 12,
+      est_rent_per_day: 25800,
+    },
+  };
+  const stdout = renderStructuredResult('faction_facility_list', fixture, options, context).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Faction Facilities at earth_station');
+  const header = section
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('|') && line.includes('Rent'));
+
+  expect(header).toBeDefined();
+  expect(header).toContain('Missed');
+  expect(header).not.toContain('Arrears');
+  expect(header?.indexOf('Rent') ?? -1).toBeLessThan(header?.indexOf('Missed') ?? -1);
+  expect(tableCell(section, 'paid', 'Missed')).toBe('0');
+  expect(tableCell(section, 'behind', 'Missed')).toBe('4');
+  expect(tableCell(section, 'omitted', 'Missed')).toBe('');
+  expect(tableCell(section, 'null-missed', 'Missed')).toBe('');
+  expect(tableCell(section, 'omitted', 'Arrears')).toBeUndefined();
+  expect(stdout).toContain('Grace remaining: 12 cycles');
+  expect(stdout).toContain('Faction arrears: 400cr');
+});
+
+test('faction_facility_list shows Missed for a sent null and not for a fully omitted key', () => {
+  const omitted = {
+    action: 'faction_list',
+    faction_facilities: [
+      {
+        facility_id: 'only',
+        type: 'alloy_smelter',
+        name: 'Only',
+        level: 1,
+        faction_service: 'production',
+        rent_per_cycle: 100,
+        status: 'active',
+      },
+    ],
+  };
+  const sentNull = structuredClone(omitted);
+  (sentNull.faction_facilities[0] as Record<string, unknown>).missed_rent_cycles = null;
+
+  const omittedStdout = renderStructuredResult('faction_facility_list', omitted, options, context).stdout.join('\n');
+  const nullStdout = renderStructuredResult('faction_facility_list', sentNull, options, context).stdout.join('\n');
+  const omittedHeader = sectionAfter(omittedStdout, 'Faction Facilities')
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('Rent'));
+  const nullSection = sectionAfter(nullStdout, 'Faction Facilities');
+  const nullHeader = nullSection.split('\n').find((line) => line.includes('Name') && line.includes('Rent'));
+
+  expect(omittedHeader).toBeDefined();
+  expect(omittedHeader).not.toContain('Missed');
+  expect(nullHeader).toBeDefined();
+  expect(nullHeader).toContain('Missed');
+  expect(tableCell(nullSection, 'only', 'Missed')).toBe('');
 });
 
 test('faction_facility_list omits Building column without ticks_until_complete', () => {

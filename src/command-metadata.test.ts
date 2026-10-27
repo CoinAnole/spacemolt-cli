@@ -3250,11 +3250,33 @@ describe('command metadata', () => {
       expect(text).toContain('no Rent/run column');
       expect(text).toContain('omitted output price');
       expect(text).toContain('Gameserver 0.630.3');
+      expect(text).toContain('Player Facilities and Faction Facilities print Missed');
+      expect(text).toContain('missing missed_rent_cycles prints 0');
+      expect(text).toContain('print Missed only when a row sends missed_rent_cycles');
+      expect(text).toContain('does not add the column');
     }
 
     const factionEdit = captureHelp('faction edit');
     expect(factionEdit).toContain('ally_facility_access');
     expect(factionEdit).not.toContain('Ally Facilities');
+  });
+
+  test('faction facility_list help points at grace without a cycle count', () => {
+    const description = COMMERCE_FACILITY_COMMAND_OVERRIDES.faction_facility_list?.description;
+    expect(description).toBe(CURATED_COMMAND_DESCRIPTIONS.faction_facility_list);
+    expect(description).toBe(COMMANDS.faction_facility_list?.description);
+    const help = captureHelp('faction facility_list');
+    for (const text of [description, help]) {
+      expect(text).toContain('missed_rent_cycles');
+      expect(text).toContain('explicit 0');
+      expect(text).toContain('Missed column is omitted');
+      expect(text).toContain('An omitted key is not 0');
+      expect(text).toContain('Grace remaining');
+      expect(text).toContain('grace_cycles');
+      expect(text).toContain('no cycle count');
+      expect(text).not.toContain('arrears_owed');
+      expect(text).not.toMatch(/\b\d+\s+cycles?\b/);
+    }
   });
 
   test('station set_build_policy help states treasury rent without the transfer', () => {

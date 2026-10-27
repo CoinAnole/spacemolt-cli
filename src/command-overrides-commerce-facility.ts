@@ -619,7 +619,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_list: {
     category: 'Facilities',
     description:
-      "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3.",
+      "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3. Player Facilities and Faction Facilities print Missed, and a missing missed_rent_cycles prints 0. Station, Public, and Ally tables print Missed only when a row sends missed_rent_cycles; an omitted key on those rows stays blank and does not add the column.",
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
   facility_owned: {
@@ -888,7 +888,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_facility_list: {
     category: 'Facilities',
     description:
-      'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling).',
+      'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling). Table output prints Missed when any row sends missed_rent_cycles, including an explicit 0. An omitted key on a row stays blank. When no row sends the key, the Missed column is omitted. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window (grace_cycles). This help states no cycle count.',
     example: 'spacemolt faction facility_list',
     discoverWith: ['faction_facility_owned', 'facility_repair', 'facility_list'],
     seeAlso: ['faction_facility_owned', 'facility_repair', 'faction_build', 'facility_list'],

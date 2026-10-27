@@ -58,7 +58,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_edit: 'Update faction description, charter, colors, and ally-sharing toggles',
   faction_edit_role: 'Edit a custom faction role',
   faction_facility_list:
-    'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling).',
+    'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling). Table output prints Missed when any row sends missed_rent_cycles, including an explicit 0. An omitted key on a row stays blank. When no row sends the key, the Missed column is omitted. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window (grace_cycles). This help states no cycle count.',
   faction_facility_owned: 'List faction facilities across all stations.',
   faction_get_invites: 'View pending faction invitations',
   faction_info:
