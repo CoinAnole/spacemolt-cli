@@ -2921,7 +2921,7 @@ describe('command metadata', () => {
 
   test('analyze_market help teaches 0.618.0 insight limits and drops item_id and page', () => {
     const description =
-      "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed.";
+      "Get actionable trading insights at your current station. Insights only reference stations in systems you have visited. They show no other faction's private orders, no fuel sell orders, and no contraband you cannot trade at that station. Your own faction's Company Store can still appear, the same as on view_market. Contraband you can trade at that station is included, including at a contraband-friendly station (pirate strongholds, Outer Rim stations, Treasure Cache). This is not a full view_market snapshot (fuel and contraband there stay the since rule) and not the subscribe_market feed. Price data refreshes every 5 minutes (gameserver 0.651.1), so an insight can lag the newest trades by up to 5 minutes. Outlier trades are filtered against galaxy-wide prices.";
     const rejected = [
       'the way view_market shows',
       'what view_market showed',
@@ -2991,6 +2991,10 @@ describe('command metadata', () => {
       'not a full view_market snapshot',
       'since rule',
       'not the subscribe_market feed',
+      'Price data refreshes every 5 minutes',
+      'gameserver 0.651.1',
+      'lag the newest trades by up to 5 minutes',
+      'Outlier trades are filtered against galaxy-wide prices',
     ]) {
       expect(description).toContain(phrase);
     }

@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `analyze_market` help says price data refreshes every 5 minutes, so an insight can lag the newest trades by up to 5 minutes. Outlier trades are filtered against galaxy-wide prices (gameserver 0.651.1).
+
 - `login`, `login_token`, and a successful `auth_login_link_poll` print `unread_chat` as four channels (`system`, `local`, `faction`, `private`), including an explicit 0. A count of 200 prints as 200 or more. Any other count prints as sent. The channels are not added into one total. An omitted `unread_chat` prints nothing. `register` does not print unread counts. Dock still prints the summed count and `unread_chat_note` as sent (gameserver 0.651.1).
 
 - `facility faction_list` prints Missed when any row sends `missed_rent_cycles`, including an explicit 0. An omitted key on a row stays blank, and the column is omitted when no row sends the key. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window. Docked `facility list` prints Missed on Player Facilities and Faction Facilities, and a missing key prints 0. Station, Public, and Ally tables do not add Missed from a missing key (gameserver 0.651.0).
