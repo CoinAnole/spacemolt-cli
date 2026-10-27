@@ -5942,3 +5942,97 @@ test('get_status_summary does not print the short POI or nearby lines', () => {
   expect(stdout).not.toContain('POI:');
   expect(stdout).not.toContain('Nearby Players');
 });
+
+test.each([
+  'login',
+  'login_token',
+  'login_link_poll',
+  'auth_login_link_poll',
+] as const)('%s prints unread_chat channels, including 0, and reads 200 as 200 or more', (command) => {
+  const stdout = renderStatusTable(command, {
+    player: { username: 'Marlowe', empire: 'Terran', credits: 1 },
+    unread_chat: { private: 201, faction: 200, local: 0, system: 4, galaxy: 9 },
+    unread_chat_note: 'You have 405 unread chat message(s).',
+  });
+  const lines = stdout.split('\n');
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout.indexOf('=== Player Status ===')).toBeLessThan(stdout.indexOf('Unread chat:'));
+  expect(lines).toContain('Unread chat:');
+  expect(lines).toContain('  system: 4');
+  expect(lines).toContain('  local: 0');
+  expect(lines).toContain('  faction: 200 or more');
+  expect(lines).toContain('  private: 201');
+  expect(lines.indexOf('  system: 4')).toBeLessThan(lines.indexOf('  local: 0'));
+  expect(lines.indexOf('  local: 0')).toBeLessThan(lines.indexOf('  faction: 200 or more'));
+  expect(lines.indexOf('  faction: 200 or more')).toBeLessThan(lines.indexOf('  private: 201'));
+  expect(stdout).not.toContain('Unread chat: 405');
+  expect(stdout).not.toContain('You have 405 unread chat message(s).');
+  expect(stdout).not.toContain('galaxy');
+});
+
+test('login prints an explicit 0 on every unread channel and does not sum them', () => {
+  const stdout = renderStatusTable('login', {
+    player: { username: 'Marlowe' },
+    unread_chat: { system: 0, local: 0, faction: 0, private: 0 },
+  });
+  const lines = stdout.split('\n');
+  expect(lines).toContain('  system: 0');
+  expect(lines).toContain('  local: 0');
+  expect(lines).toContain('  faction: 0');
+  expect(lines).toContain('  private: 0');
+  expect(stdout).not.toContain('Unread chat: 0');
+  expect(stdout).not.toContain('200 or more');
+});
+
+test('login leaves a non-200 unread count as sent and skips a missing or non-numeric channel', () => {
+  const stdout = renderStatusTable('login', {
+    player: { username: 'Marlowe' },
+    unread_chat: { system: 199, local: '0', faction: 2000, private: null },
+  });
+  const lines = stdout.split('\n');
+  expect(lines).toContain('  system: 199');
+  expect(lines).toContain('  faction: 2000');
+  expect(stdout).not.toContain('200 or more');
+  expect(stdout).not.toContain('local:');
+  expect(stdout).not.toContain('private:');
+  expect(stdout).not.toContain('Unread chat: 2199');
+});
+
+test('login prints nothing for omitted, empty, or non-object unread_chat', () => {
+  const omitted = renderStatusTable('login', { player: { username: 'Marlowe' } });
+  const empty = renderStatusTable('login', { player: { username: 'Marlowe' }, unread_chat: {} });
+  const number = renderStatusTable('login', { player: { username: 'Marlowe' }, unread_chat: 12 });
+  for (const stdout of [omitted, empty, number]) {
+    expect(stdout).toContain('=== Player Status ===');
+    expect(stdout).not.toContain('Unread chat:');
+  }
+});
+
+test('get_status and buy do not print login unread channels', () => {
+  const unread = { system: 200, local: 0, faction: 1, private: 2 };
+  for (const command of ['get_status', 'buy'] as const) {
+    const stdout = renderStatusTable(command, {
+      player: { username: 'Marlowe', empire: 'Terran', credits: 1 },
+      unread_chat: unread,
+      unread_chat_note: 'You have 203 unread chat message(s).',
+    });
+    expect(stdout).toContain('=== Player Status ===');
+    expect(stdout).not.toContain('Unread chat:');
+    expect(stdout).not.toContain('200 or more');
+    expect(stdout).not.toContain('You have 203 unread chat message(s).');
+  }
+});
+
+test('register does not print unread_chat', () => {
+  const stdout = renderStatusTable('register', {
+    password: 'secret',
+    player_id: 'player-1',
+    player: { username: 'Marlowe' },
+    unread_chat: { system: 200, local: 0, faction: 1, private: 2 },
+    unread_chat_note: 'You have 203 unread chat message(s).',
+  });
+  expect(stdout).toContain('=== Registration Successful ===');
+  expect(stdout).not.toContain('Unread chat:');
+  expect(stdout).not.toContain('200 or more');
+  expect(stdout).not.toContain('You have 203 unread chat message(s).');
+});

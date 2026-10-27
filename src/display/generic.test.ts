@@ -387,6 +387,23 @@ test('dock gifts sit between trade fills and unread chat', () => {
   expect(stdout).not.toContain('buy_filled');
 });
 
+test('dock still sums unread_chat and prints unread_chat_note as sent', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.unread_chat = { system: 200, local: 0, faction: 0, private: 1 };
+  fixture.unread_chat_note = 'You have 201 unread chat message(s).';
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Unread chat: 201');
+  expect(stdout).toContain('You have 201 unread chat message(s).');
+  expect(stdout).not.toContain('200 or more');
+  expect(stdout).not.toContain('system:');
+  expect(stdout).not.toContain('local:');
+});
+
 test('dock gifts omit the truncated suffix unless strictly true and skip a blank note', () => {
   const truncatedFalse = structuredClone(dockGiftsFixture) as Record<string, unknown>;
   truncatedFalse.gifts_truncated = false;

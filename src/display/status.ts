@@ -1196,6 +1196,29 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
   return true;
 }
 
+const LOGIN_UNREAD_CHAT_COMMANDS = ['login', 'login_token', 'login_link_poll', 'auth_login_link_poll'] as const;
+const LOGIN_UNREAD_CHAT_CHANNELS = ['system', 'local', 'faction', 'private'] as const;
+
+function formatLoginUnreadCount(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  // Gameserver 0.651.1 stops each login channel at 200. 200 means 200 or more.
+  if (value === 200) return '200 or more';
+  return String(value);
+}
+
+function emitLoginUnreadChat(result: Record<string, unknown>, command: string | undefined): void {
+  if (!LOGIN_UNREAD_CHAT_COMMANDS.some((name) => commandNameEquals(command, name))) return;
+  if (!isRecord(result.unread_chat)) return;
+  const unread = result.unread_chat;
+  const lines = LOGIN_UNREAD_CHAT_CHANNELS.flatMap((channel) => {
+    const text = formatLoginUnreadCount(unread[channel]);
+    return text === undefined ? [] : [`  ${channel}: ${text}`];
+  });
+  if (!lines.length) return;
+  emitLine(`\n${c.bright}Unread chat:${c.reset}`);
+  for (const line of lines) emitLine(line);
+}
+
 export const statusFormatters = [
   // Queue state
   formatter((r) => emitQueue(r.queue), { commands: ['get_queue'] }),
@@ -1400,6 +1423,7 @@ export const statusFormatters = [
       });
       emitLeviathanContacts(location?.nearby_leviathans, 'Nearby Leviathans');
       emitPrizeRecoveries(r.prize_recoveries);
+      emitLoginUnreadChat(r, command);
       return true;
     },
     { commands: ['get_status'], shapeFallback: true },

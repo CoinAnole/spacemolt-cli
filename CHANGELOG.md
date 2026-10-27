@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `login`, `login_token`, and a successful `auth_login_link_poll` print `unread_chat` as four channels (`system`, `local`, `faction`, `private`), including an explicit 0. A count of 200 prints as 200 or more. Any other count prints as sent. The channels are not added into one total. An omitted `unread_chat` prints nothing. `register` does not print unread counts. Dock still prints the summed count and `unread_chat_note` as sent (gameserver 0.651.1).
+
 - `facility faction_list` prints Missed when any row sends `missed_rent_cycles`, including an explicit 0. An omitted key on a row stays blank, and the column is omitted when no row sends the key. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window. Docked `facility list` prints Missed on Player Facilities and Faction Facilities, and a missing key prints 0. Station, Public, and Ally tables do not add Missed from a missing key (gameserver 0.651.0).
 
 - `get_base` and docked-base `inspect` print `pirate_recovery` when the server sends it: ship name, ship class id, and status as sent, plus the one-hull material list (`name`, `item_id`, `quantity_required`, `quantity_in_storage`, `quantity_incoming`, `quantity_missing`, `quantity_to_supply`, `bid_price`, and `bid_quantity`), including an explicit 0. `materials` is omitted after a build is commissioned. An omitted `pirate_recovery` prints nothing. Help says `materials_ready` confirms physical inputs only, a shortage is not a promise of payment, and to check `view_market` and sell into public station buy orders.
