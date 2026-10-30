@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.651.1",
+  "generatedAtGameserver": "v0.655.1",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -284,6 +284,8 @@
     "get_player_arena|get_player|required-missing|player.primary_color",
     "get_player_arena|get_player|required-missing|player.secondary_color",
     "get_player_arena|get_player|required-missing|player.status_message",
+    "get_player_profile_sparse|get_player_profile|required-missing|stats.passengers_delivered",
+    "get_player_profile|get_player_profile|required-missing|stats.passengers_delivered",
     "get_player|get_player|required-missing|player.id",
     "get_player|get_player|required-missing|player.is_cloaked",
     "get_player|get_player|required-missing|player.primary_color",
