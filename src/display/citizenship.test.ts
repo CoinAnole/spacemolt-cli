@@ -284,6 +284,14 @@ test('citizenship apply prints a bigint fee paid', () => {
   expect(stdout).toContain(`Fee paid: ${fee.toLocaleString()} cr`);
 });
 
+test('citizenship apply prints an explicit zero fee paid', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    fee_paid: 0,
+  });
+
+  expect(stdout).toContain('Fee paid: 0 cr');
+});
+
 test('citizenship list skips non-string rules', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

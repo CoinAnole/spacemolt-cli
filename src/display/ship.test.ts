@@ -4,6 +4,7 @@ import { withDisplayRenderBuffer } from './helpers.ts';
 import { renderStructuredResult } from './index.ts';
 import { formatCrewRatio } from './personnel.ts';
 import {
+  baseFixture,
   cargoFixture,
   cargoOverCapacityFixture,
   factionGaragesFixture,
@@ -2137,4 +2138,11 @@ describe('emitCargoHold', () => {
     expect(header).toContain('Slots');
     expect(row).toContain('| 0     | 0');
   });
+});
+
+test('get_base facilities overflow prints the remainder for 13 facility ids', () => {
+  const fixture = structuredClone(baseFixture);
+  fixture.base.facilities = Array.from({ length: 13 }, (_, index) => `facility_${index + 1}`);
+  const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain(', ... and 1 more');
 });

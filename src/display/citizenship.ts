@@ -144,7 +144,7 @@ function formatBoolean(value: unknown): string | undefined {
 }
 
 function emitScalar(label: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
+  if (!hasAnyField([{ value }], 'value')) return;
   emitLine(`${label}: ${value}`);
 }
 

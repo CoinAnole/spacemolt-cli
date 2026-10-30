@@ -456,6 +456,25 @@ test('groupTrialsBySeries preserves server order and marks here from any row', (
   expect(sections[1]?.poi_name).toBe('Other Arena');
 });
 
+test('a differing trial poi renders the catalog row with @ Other Arena', () => {
+  const stdout = output('arena_challenges', {
+    action: 'challenges',
+    challenges: [
+      trialDef({ challenge_id: 'first_blood', name: 'First Blood', series: 'Blood Arena', stage: 1 }),
+      trialDef({
+        challenge_id: 'other_bout',
+        name: 'Other Bout',
+        series: 'Blood Arena',
+        stage: 2,
+        poi_name: 'Other Arena',
+        poi_id: 'other_arena',
+      }),
+    ],
+  });
+
+  expect(stdout).toContain('@ Other Arena');
+});
+
 test('countLedger excludes rematches from Ready here', () => {
   const trials = sixteenTrialMidSeries();
   expect(countLedger(trials, trialNameIndex(trials))).toEqual({ readyHere: 1, travel: 0, locked: 14 });

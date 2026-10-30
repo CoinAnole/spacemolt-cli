@@ -26,31 +26,28 @@ import {
   formatComparisonReport,
 } from '../src/test-support/fixture-schema-compare.ts';
 
-function parseArgs(argv: string[]): { only?: string[]; strict: boolean; updateBaseline: boolean } {
-  const only: string[] = [];
-  let strict = false;
-  let updateBaseline = false;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (!a) continue;
-    if (a === '--only' || a === '-o') {
-      const next = argv[i + 1];
-      if (next && !next.startsWith('-')) {
-        only.push(...next.split(',').map((s) => s.trim()).filter(Boolean));
-        i++;
-      }
-    } else if (a.startsWith('--only=')) {
-      only.push(...a.slice(7).split(',').map((s) => s.trim()).filter(Boolean));
-    } else if (a === '--strict') {
-      strict = true;
-    } else if (a === '--update-baseline') {
-      updateBaseline = true;
+const argv = process.argv.slice(2);
+const only: string[] = [];
+let strict = false;
+let updateBaseline = false;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (!a) continue;
+  if (a === '--only' || a === '-o') {
+    const next = argv[i + 1];
+    if (next && !next.startsWith('-')) {
+      only.push(...next.split(',').map((s) => s.trim()).filter(Boolean));
+      i++;
     }
+  } else if (a.startsWith('--only=')) {
+    only.push(...a.slice(7).split(',').map((s) => s.trim()).filter(Boolean));
+  } else if (a === '--strict') {
+    strict = true;
+  } else if (a === '--update-baseline') {
+    updateBaseline = true;
   }
-  return { only: only.length ? only : undefined, strict, updateBaseline };
 }
-
-const options = parseArgs(process.argv.slice(2));
+const options = { only: only.length ? only : undefined, strict, updateBaseline };
 const comparisons = compareHighValueFixturesToSpec({ only: options.only });
 
 console.log(formatComparisonReport(comparisons));

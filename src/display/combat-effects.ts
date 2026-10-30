@@ -63,7 +63,7 @@ export function summarizeAmmoEffects(item: Record<string, unknown>): string {
   const meltPct = formatPercent(ammo.armor_melt_pct);
   if (meltPct) {
     const ticks = finiteNumber(ammo.armor_melt_ticks);
-    parts.push(ticks && ticks > 0 ? `armor melt ${meltPct}/${ticks}t` : `armor melt ${meltPct}`);
+    parts.push(formatTicks(ammo.armor_melt_ticks) ? `armor melt ${meltPct}/${ticks}t` : `armor melt ${meltPct}`);
   }
 
   const dotPct = formatPercent(ammo.dot_pct);

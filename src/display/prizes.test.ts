@@ -240,3 +240,29 @@ test('kind-only transit prints jump and not an arrow', () => {
   expect(stdout).toContain('jump');
   expect(stdout).not.toContain('→');
 });
+
+test('poi-only transit with no kind prints ac_station and not an arrow', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_to_poi_id: 'ac_station' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('ac_station');
+  expect(stdout).not.toContain('→');
+});
+
+test('travel with only system ids prints travel sol → alpha_centauri', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () =>
+      emitPrizeRecoveries([
+        {
+          transit_kind: 'travel',
+          transit_from_system_id: 'sol',
+          transit_to_system_id: 'alpha_centauri',
+        },
+      ]),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('travel sol → alpha_centauri');
+});

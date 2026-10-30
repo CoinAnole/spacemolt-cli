@@ -146,6 +146,17 @@ test('renders freight quotes with route, actors, costs, liability, and appraisal
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote prints uninsurable reason', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      uninsurable_reason: 'seal broken',
+    },
+  });
+  expect(stdout).toContain('Uninsurable reason: seal broken');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders an explicit empty appraisal message', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',

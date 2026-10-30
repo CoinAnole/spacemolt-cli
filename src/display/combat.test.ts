@@ -227,6 +227,26 @@ test('an empty target declines to the response dump instead of an arrival', () =
   expect(stdout).not.toContain('=== Attack ===');
 });
 
+test('a non-npc non-player attack kind declines to the response dump', () => {
+  const stdout = renderCombat('attack', {
+    details: {
+      action: 'attack',
+      kind: 'structure',
+      target: 'station-1',
+      target_type: 'station',
+      target_name: 'Earth Station',
+    },
+    location: {
+      poi_id: 'sol_belt',
+      poi_name: 'Belt',
+      nearby_players: [{ username: 'Ibis' }],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Attack ===');
+});
+
 test('json output passes the attack envelope through without the human warning label', () => {
   const envelope = structuredClone(attackBrandedFixture);
   const rendered = renderStructuredResult(

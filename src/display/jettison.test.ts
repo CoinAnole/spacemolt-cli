@@ -136,6 +136,25 @@ test('failed jettison result prints Success: no', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('failed jettison result prints Error', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          success: false,
+          error: 'cargo locked',
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Error: cargo locked');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('an unknown conversion field still dumps the response', () => {
   const { stdout } = renderJettison('jettison', {
     details: {

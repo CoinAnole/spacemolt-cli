@@ -155,6 +155,16 @@ test('survey_system prints a system-id-only headline without (sol)', () => {
   expect(stdout).not.toContain('(sol)');
 });
 
+test('survey_system prints Unknown for a missing system name and id', () => {
+  const stdout = stdoutOf({
+    survey_power: 18,
+    newly_revealed: [],
+    already_revealed: [],
+  });
+
+  expect(stdout).toContain('=== Survey: Unknown ===');
+});
+
 test('survey_system envelope V2Missions prints survey output then one Active Missions table', () => {
   const stdout = stdoutOf(structuredClone(surveySystemMissionsFixture));
 
@@ -429,6 +439,16 @@ test('survey_system prints negative skill XP without a leading plus', () => {
   );
 
   expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning -4');
+});
+
+test('survey_system prints a non-number skill XP value for scanning', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: '1200' };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning +1200');
 });
 
 test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () => {

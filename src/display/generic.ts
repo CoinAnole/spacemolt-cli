@@ -98,9 +98,7 @@ function objectivesSummary(objectives: unknown): string {
 function summarizeCommunityProgressMap(value: unknown): string {
   if (!isRecord(value)) return '';
   return Object.entries(value)
-    .filter(
-      ([, entry]) => entry !== undefined && entry !== null && entry !== '' && !isRecord(entry) && !Array.isArray(entry),
-    )
+    .filter(([, entry]) => hasScalarValue({ entry }, ['entry']))
     .map(([item, entry]) => `${item}: ${entry}`)
     .join(', ');
 }
@@ -1251,7 +1249,6 @@ export const genericFormatters = [
           ['Message', ['message', 'error', 'error_code']],
         ];
         insertOptionalColumn(columns, rows, 'Package', ['package_id'], 'Job');
-        // Prefer after Package when present; otherwise keep Label next to Job (label-only rows).
         insertOptionalColumn(
           columns,
           rows,
@@ -1507,7 +1504,6 @@ export const genericFormatters = [
     commands: ['get_active_missions', 'accept_mission', 'abandon_mission'],
   }),
 
-  // Distress signal broadcast (details unwrapped by postActionDetailsViewModel)
   formatter(
     (r) => {
       if (r.action !== 'distress_signal' && r.distress_type === undefined) return false;

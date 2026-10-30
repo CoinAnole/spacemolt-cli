@@ -619,7 +619,6 @@ export const shipFormatters = [
     { commands: ['storage_carrier_load'] },
   ),
 
-  // Cargo
   namedFormatter(
     'cargo',
     ['cargo'],
@@ -656,7 +655,7 @@ export const shipFormatters = [
 
       emitFactionGarage(r, garage);
       emitLine(`${c.dim}Use get_ship <id> for the full fit.${c.reset}`);
-      if (typeof r.message === 'string' && r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+      if (nonEmptyString(r.message)) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
     { commands: ['list_ships'] },

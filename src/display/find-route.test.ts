@@ -416,6 +416,14 @@ describe('find_route formatter', () => {
     expect(stdout).not.toContain('sol');
   });
 
+  test('prints Route: (omitted) and Steps: (invalid) for a non-array route with found omitted', () => {
+    const body: Record<string, unknown> = { ...documentedMissingRouteFixture, route: 'sol' };
+    delete body.found;
+    const stdout = stdoutOf(body);
+    expect(stdout).toContain('Route: (omitted)');
+    expect(stdout.split('\n')).toContain('Steps: (invalid)');
+  });
+
   test('prints Route: found and Steps: (invalid) for a found true non-array route', () => {
     const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: true, route: 'sol' });
     expect(stdout.split('\n')).toContain('Route: found');
@@ -643,6 +651,11 @@ describe('find_route formatter', () => {
     expect(rendered.success).toBe(true);
     expect(cells(rowByText(stdout, 'Route', '(invalid)'))[0]).toBe('(invalid)');
     expect(stdout).not.toContain('NOT_A_RECORD');
+  });
+
+  test('prints (invalid) in the Fleet Fuel player cell for a non-record fleet member', () => {
+    const stdout = stdoutOf(foundBody({ fleet_fuel: ['nope'] }));
+    expect(cells(rowByText(stdout, 'Fleet Fuel', '(invalid)'))[0]).toBe('(invalid)');
   });
 
   test('falls through to raw JSON when find_route has no route keys', () => {

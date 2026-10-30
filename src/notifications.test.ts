@@ -5629,6 +5629,16 @@ describe('notification formatting', () => {
     expectNoNestedJsonDump(systemPreview.headline);
   });
 
+  test('last-resort system headline for empty data', () => {
+    const preview = formatNotificationPreview({
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: {},
+    });
+    expect(preview.headline).toBe('system notification');
+  });
+
   test('formatActionResultDetails prefers message then compact scalars', () => {
     expect(formatActionResultDetails({ message: 'jumped to Alfirk' })).toBe('jumped to Alfirk');
     expect(
@@ -11779,6 +11789,21 @@ describe('notification formatting', () => {
       const message = formatNotificationMessage(notification);
       expect(message).toBe('Commission commission-1 delivered ship ship-42');
       expect(message).not.toContain(', at ');
+    });
+
+    test('ship commission receipt when ship name equals its class', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          ship_name: 'prospector',
+          ship_class: 'prospector',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered prospector, ship ship-42');
     });
 
     test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {

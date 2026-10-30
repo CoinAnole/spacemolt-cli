@@ -36,6 +36,7 @@ import {
   scanFixture,
   scanPoiEmptyFixture,
   scanPoiFixture,
+  skillsFixture,
   stationPoiContrabandDefaultFixture,
   stationPoiInfoFixture,
   subscribeObservationArenaFixture,
@@ -6173,4 +6174,13 @@ test('register does not print unread_chat', () => {
   expect(stdout).not.toContain('Unread chat:');
   expect(stdout).not.toContain('200 or more');
   expect(stdout).not.toContain('You have 203 unread chat message(s).');
+});
+
+test('get_skills prints (MAX) for the max-level skill branch', () => {
+  const fixture = structuredClone(skillsFixture);
+  const mining: { level: number; max_level: number; next_level_xp?: number } = fixture.skills.mining;
+  delete mining.next_level_xp;
+  mining.level = mining.max_level;
+  const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('(MAX)');
 });

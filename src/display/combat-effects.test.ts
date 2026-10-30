@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import {
+  emitShipCombatEffects,
   MODULE_BONUS_EXCLUSIONS,
   summarizeAmmoEffects,
   summarizeCatalogItemEffects,
@@ -8,6 +9,7 @@ import {
   summarizeModuleBonuses,
   summarizeModuleEffects,
 } from './combat-effects.ts';
+import { withDisplayRenderBuffer } from './helpers.ts';
 
 const adaptiveShieldI: Record<string, unknown> = {
   id: 'adaptive_shield_i',
@@ -219,6 +221,10 @@ test('summarizeAmmoEffects still scales damage_mod 1.0 to 100%', () => {
   expect(summarizeAmmoEffects(antimatterTorpedoes)).toBe('damage 100%, armor bypass 30%, shield bypass 30%');
 });
 
+test('shield damage mod prints shield 100%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { shield_damage_mod: 1 } } })).toBe('shield 100%');
+});
+
 test('summarizeCombatSpecialEffects omits empty, zero, false, and non-scalars', () => {
   expect(summarizeCombatSpecialEffects({})).toBe('');
   expect(summarizeCombatSpecialEffects(undefined)).toBe('');
@@ -348,6 +354,10 @@ test('a burn with ticks prints the percent and duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2, dot_ticks: 4 } } })).toBe('burn 20%/4t');
 });
 
+test('burn without ticks prints the percent alone', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2 } } })).toBe('burn 20%');
+});
+
 test('positive accuracy prints a leading plus', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');
 });
@@ -358,4 +368,10 @@ test('negative accuracy prints accuracy -10%', () => {
 
 test('disrupt ticks prints the duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 2 } } })).toBe('disrupt 2 ticks');
+});
+
+test('active armor melt prints Armor melt: active for 2 ticks', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_ticks_remaining: 2 }), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Armor melt: active for 2 ticks');
 });

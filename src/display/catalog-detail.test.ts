@@ -3,6 +3,7 @@ import {
   catalogSkillTableColumns,
   classifyRecipeVenue,
   countRecipeVenues,
+  emitCatalogItemDetail,
   emitCatalogModuleDetail,
   emitCatalogShipDetail,
   formatCatalogYesNo,
@@ -70,6 +71,11 @@ const classifyCases: Array<{
     name: 'partial dump hand_craftable false with ids absent and facility_only true is facility only',
     recipe: { hand_craftable: false, facility_only: true },
     expected: 'facility only',
+  },
+  {
+    name: 'hand_craftable false with facility ids absent and no facility-only flag is no venue',
+    recipe: { hand_craftable: false, category: 'refining' },
+    expected: 'no venue',
   },
   {
     name: 'paginated facility_only true with no dump keys is facility only',
@@ -252,4 +258,32 @@ test('hidden module prints Hidden: yes', () => {
 
 test('quantity 0 prints 0x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: 0 }])).toBe('0x Steel Plate');
+});
+
+test('missing quantity prints ?x Steel Plate', () => {
+  expect(summarizeNamedItemQuantities([{ name: 'Steel Plate' }])).toBe('?x Steel Plate');
+});
+
+test('ship capability flag prints Capabilities: cloak passive 2', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', flag: 'passive', value: 2 }] }, {}),
+    { plain: true },
+  );
+  expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
+});
+
+test('module package operation falls back to catalog.package_operation', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({}, { package_operation: 'unpack' }), {
+    plain: true,
+  });
+  expect(buffer.stdout.join('\n')).toContain('Package operation: unpack');
+});
+
+test('item category falls back to type when category is absent', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ type: 'ore' }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Category: ore');
 });

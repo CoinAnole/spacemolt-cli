@@ -1095,7 +1095,6 @@ export const marketFormatters = [
     { commands: ['browse_ships', 'view_ship_buy_orders'], shapeFallback: true },
   ),
 
-  // Trade offers (get_trades real shape per GetTradesResponse)
   formatter(
     (r) => {
       const hasIncoming = Array.isArray(r.incoming);

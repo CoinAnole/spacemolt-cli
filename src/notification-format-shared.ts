@@ -12,7 +12,6 @@ import {
 import { NON_COMPLETION_ACTION_RESULT_COMMANDS, normalizeActionResultCommand } from './notification-events.ts';
 import { formatShipCommissionReceipt } from './ship-commission-receipt.ts';
 
-/** Local isRecord — same style as ship-commission-receipt.ts; no import from response.ts. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -351,7 +350,6 @@ type PreviewHandler = (
 ) => NotificationPreview | null;
 
 // ── Table Message baseline formatters (PR2; sole Message source after PR4) ───
-// Ported from the former table-only helpers in display/notifications.ts.
 // Table Message is now always tableMessageFromPreview(formatNotificationPreview(...)).
 
 function records(value: unknown): Array<Record<string, unknown>> {
@@ -683,7 +681,6 @@ function previewSystem(
   _notification: NormalizedNotification,
   options: ResolvedPreviewOptions,
 ): NotificationPreview {
-  // gameplay_tip → [TIP]
   if (data.type === 'gameplay_tip') {
     const message = safeScalar(data.message);
     return {
@@ -2170,7 +2167,6 @@ function previewDroneAdrift(
     headline = 'A drone is adrift';
   } else {
     headline = `Your ${droneType !== undefined ? droneType : 'drone'} drone is adrift at ${poiId !== undefined ? poiId : 'unknown POI'} in ${systemId !== undefined ? systemId : 'unknown system'}`;
-    // Skip (ID: ) when drone_id is missing.
     if (droneId !== undefined) headline += ` (ID: ${droneId})`;
   }
 
@@ -2853,7 +2849,7 @@ const OK_ARRIVAL_LABELS: Readonly<Record<string, string>> = {
 /** Finite numbers and bigints, including 0. No string coercion. */
 function arrivalCountText(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (finiteNumber(value) !== undefined) return String(value);
   return undefined;
 }
 

@@ -115,7 +115,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
       await saveUpdateCache(cache, cachePath);
     }
 
-    // Check if update is available
     if (compareVersions(version, latestVersion) <= 0) return;
 
     // Only show notification if we haven't recently notified about this version

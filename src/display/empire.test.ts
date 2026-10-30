@@ -331,3 +331,21 @@ test('prints foreign income deductions when the bps map is present', () => {
 
   expect(stdout).toContain('Foreign Income Deductions: crimson 2%');
 });
+
+test('prints the facility rent multiplier as a Fees rent percentage', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          facility_rent_multiplier_bps: 15000,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Fees: rent 150%');
+});

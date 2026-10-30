@@ -50,7 +50,7 @@ function firstLinePreview(value: unknown): string {
 }
 
 function emitOptionalLine(label: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
+  if (!hasAnyField([{ value }], ['value'])) return;
   emitLine(`${label}: ${value}`);
 }
 
@@ -326,7 +326,6 @@ function formatYesBlank(value: unknown): string | undefined {
   return value === true ? 'yes' : undefined;
 }
 
-/** Opaque exchange order id. Split the first line, then trim. Strings only. */
 function formatActionLogOrderId(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const first = value.split(/\r?\n/, 1)[0] ?? '';

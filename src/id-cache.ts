@@ -461,7 +461,7 @@ export function resolveCachedId(
 }
 
 export function idKindForCommandField(command: string, field?: string): IdKind | undefined {
-  const normalizedField = normalizeField(field || '');
+  const normalizedField = (field || '').toLowerCase().replace(/-/g, '_');
   const resolverRules = COMMAND_ID_RESOLVER_RULES[command];
   if (resolverRules) {
     for (const kind of ID_KINDS) {
@@ -682,9 +682,9 @@ function idOrNameValues(hint: IdHint): string[] {
 }
 
 function rawBaseId(hint: IdHint): string {
-  const value = hint.context?.base_id;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return '';
+  const value = pick(hint.context ?? {}, ['base_id']).base_id;
+  if (value === undefined) return '';
+  return String(value);
 }
 
 function normalizedBaseId(hint: IdHint): string {
@@ -891,10 +891,6 @@ function compactContext(context: Record<string, string | number | boolean> | und
 
 function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
-}
-
-function normalizeField(field: string): string {
-  return field.toLowerCase().replace(/-/g, '_');
 }
 
 function normalizeSearchText(value: string): string {

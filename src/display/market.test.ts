@@ -154,6 +154,29 @@ test('create_sell_order prints a bigint quantity_listed instead of a zero remain
   expect(stdout).not.toContain('Remaining listed: 0');
 });
 
+test('create_sell_order prints not-listed and self-clear lines including 0', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      order_id: 'order-1',
+      quantity_not_listed: 2,
+      self_cleared: 0,
+      self_clear_refund: 0,
+      self_clear_returned: 3,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Not listed: 2');
+  expect(stdout).toContain('Self-cleared own crossing order(s): 0');
+  expect(stdout).toContain('Self-clear refund: 0 cr');
+  expect(stdout).toContain('Self-clear returned to storage: 3');
+});
+
 const singleSellBody = {
   action: 'create_sell_order',
   kind: 'single',
@@ -1204,6 +1227,30 @@ test('one-item view_market book with no buy or sell orders prints (no orders)', 
   ).stdout.join('\n');
 
   expect(stdout).toContain('(no orders)');
+});
+
+test('one-item view_market tags a non-player buy source', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 15, quantity: 500, source: 'npc' }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('15 cr x 500 [npc]');
+  expect(stdout).not.toContain('[station]');
+  expect(stdout).not.toContain('[player]');
 });
 
 test('empty view_insurance policies array prints No active policies.', () => {

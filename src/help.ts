@@ -313,15 +313,11 @@ function formatCommandSummary(command: string, commands: CommandHelpMap): string
 
 function isWeakDescription(command: string, description: string | undefined): boolean {
   if (!description) return true;
-  return normalizeCommandSummaryText(description) === normalizeCommandSummaryText(command);
+  return description.trim().toLowerCase().replace(/\s+/g, '_') === command.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
 function executableGroupLabel(groupName: string): string {
   return findCommandGroup(groupName)?.label ?? groupName;
-}
-
-function normalizeCommandSummaryText(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
 type HelpOutputOptions = Partial<Pick<GlobalOptions, 'plain' | 'quiet'>>;

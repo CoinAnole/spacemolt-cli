@@ -249,7 +249,6 @@ function renderShippingActive(result: Record<string, unknown>): boolean {
   }
   if (message) emitLine(message);
 
-  // contract objects already validated above via isRecord on every row.
   const rows = shipments.map((row) => {
     const contract = row.contract as Record<string, unknown>;
     return {
@@ -480,7 +479,7 @@ function renderSettlement(result: Record<string, unknown>, command: string | und
 }
 
 export const shippingFormatters = [
-  formatter((result) => renderQuote(result), {
+  formatter(renderQuote, {
     commands: ['shipping_quote'],
     suppressShapeFallbackOnDecline: true,
   }),

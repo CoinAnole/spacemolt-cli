@@ -4129,6 +4129,26 @@ test('renders rented facility and remaining escrow on a queued craft job', () =>
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Credits still escrowed: 450cr when escrowed_credits is 450', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        job_id: 'escrow-job-1',
+        recipe: 'Refine Steel',
+        escrowed_credits: 450,
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Credits still escrowed: 450cr');
+});
+
 test('renders craft queue rental and escrow columns when present', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4317,6 +4337,28 @@ test('renders packaged craft quote with gates, ready, and output package preview
   expect(stdout).not.toContain('Credits total');
   expect(stdout).not.toContain('credits_total');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a non-record packaged-craft gate as the full line credits: ?', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        gates: {
+          credits: 'pending',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout).toContain('  credits: ?');
 });
 
 test('ordinary craft quote still surfaces have_* fields', () => {

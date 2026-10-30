@@ -1049,7 +1049,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
     }
     if (player.home_base) emitLine(`Home Station: ${formatDisplayValue(player.home_base)}`);
     if (usableLabel(player.home_poi)) emitLine(`Home POI: ${player.home_poi}`);
-    if (typeof player.home_system === 'string' && player.home_system !== '') {
+    if (usableLabel(player.home_system)) {
       emitLine(`Home System: ${player.home_system}`);
     }
     emitTradingRestriction(player);
@@ -1734,8 +1734,6 @@ export const statusFormatters = [
   // Skills state: skills as object map of skill_id -> skill data
   formatter((r) => emitSkillMap(r.skills), { commands: ['get_skills'], shapeFallback: true }),
 
-  // Location info (get_location) — must come before simple message formatter since
-  // the response has both r.location and r.message, which the simple formatter swallows
   formatter(
     (r) => {
       if (!isRecord(r.location)) return false;

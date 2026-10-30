@@ -127,7 +127,11 @@ export async function runSubscriptionFollow(
 
       let response: APIResponse;
       try {
-        response = await client.execute('get_notifications', pollPayload(command));
+        response = await client.execute('get_notifications', {
+          clear: true,
+          limit: 100,
+          types: [command === 'subscribe_market' ? 'market' : 'observation'],
+        });
       } catch (error) {
         if (!running) break;
         delaySeconds = RETRY_DELAYS_SECONDS[Math.min(retryIndex, RETRY_DELAYS_SECONDS.length - 1)] ?? 30;
@@ -176,14 +180,6 @@ export async function runSubscriptionFollow(
   }
 
   return exitCode;
-}
-
-function pollPayload(command: 'subscribe_market' | 'subscribe_observation'): Record<string, unknown> {
-  return {
-    clear: true,
-    limit: 100,
-    types: [command === 'subscribe_market' ? 'market' : 'observation'],
-  };
 }
 
 async function interruptibleSleep(

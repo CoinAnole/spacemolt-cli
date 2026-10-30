@@ -52,13 +52,6 @@ function hasKeys(keys: string | undefined): keys is string {
   return keys !== undefined;
 }
 
-function fieldPaths(field: string): string[] {
-  return field
-    .split(',')
-    .map((path) => path.trim())
-    .filter(Boolean);
-}
-
 function getOutputFormat(options?: GlobalOptions, context?: DisplayContext): OutputFormat {
   if (options?.format) return options.format;
   if (options?.json ?? context?.output?.json ?? context?.config?.jsonOutput) return 'json';
@@ -392,7 +385,10 @@ function displayStructuredResultInternal(
   }
 
   if (hasField(field)) {
-    const paths = fieldPaths(field);
+    const paths = field
+      .split(',')
+      .map((path) => path.trim())
+      .filter(Boolean);
     if (paths.length > 1) {
       const extracted = extractFields(structuredOutputResult, paths);
       emitLine(formatProjection(extracted, format, compact, 'fields'));

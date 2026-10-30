@@ -217,3 +217,22 @@ test('a non-record channel declines without a partial table', () => {
     expect(stdout).not.toContain('Message types');
   }
 });
+
+test('prints one remaining notification in the singular', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+    remaining: 1,
+  });
+
+  expect(stdout).toContain('1 more notification remaining.');
+  expect(stdout).not.toContain('1 more notifications remaining.');
+});

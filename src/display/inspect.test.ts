@@ -230,6 +230,38 @@ test('prints a base-id-only shipment destination without a slash or parenthesis'
   expect(line).not.toContain(')');
 });
 
+test('prints a name-and-system destination without destination_base_id or parenthesis', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_labels',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_labels',
+        label: 'Labels only',
+        size: 1,
+        created_at: '2026-07-26T12:00:00Z',
+        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+        shipment: {
+          destination_name: 'Sirius Observatory',
+          destination_system: 'Sirius',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
+  expect(line).toBe('Destination: Sirius Observatory / Sirius');
+  expect(line).not.toContain('(');
+  expect(line).not.toContain(')');
+});
+
 test('suppresses bare Shipment heading when shipment record has no formattable fields', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -423,6 +455,25 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).toContain('Page 1/1');
   expect(stdout).not.toContain('Mining group');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints (No catalog entries in this response) for a catalog with no items, recipes, or analysis', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'empty_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('(No catalog entries in this response)');
 });
 
 test('renders catalog inspect Mining group for a crystal ore', () => {
@@ -1301,6 +1352,33 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Active battle when detail.active_battle.battle_id is set', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          active_battle: {
+            battle_id: 'battle-9',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Active battle: battle-9');
+});
+
 test('renders a POI wormhole that expires in 0', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1462,6 +1540,27 @@ test('poi inspect too_sparse false does not create a Sparse column', () => {
   expect(stdout).toContain('Lock');
   expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('too sparse');
+});
+
+test('prints Base: yes when has_base is true without base_name or base_id', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          has_base: true,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Base: yes');
 });
 
 test('renders base inspect results with station defences', () => {

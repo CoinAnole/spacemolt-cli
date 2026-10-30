@@ -155,7 +155,7 @@ function appendAttackRows(
   const fired = firedWeapons(attack);
   if (fired.length === 0) {
     if (attack.hit_success === false) {
-      rows.push(missRow(tick, attack, snapshots));
+      rows.push(combatantRow(tick, attack, snapshots, 'miss', '', missDefense(attack)));
       return;
     }
     const components = recordComponents(attack.defense_components);
@@ -198,10 +198,6 @@ function appendAttackRows(
     }
     rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', weaponMissDefense(weapon, attack)));
   }
-}
-
-function missRow(tick: unknown, attack: Record<string, unknown>, snapshots: unknown): BattleLogAttackRow {
-  return combatantRow(tick, attack, snapshots, 'miss', '', missDefense(attack));
 }
 
 function attackRowFromComponent(
