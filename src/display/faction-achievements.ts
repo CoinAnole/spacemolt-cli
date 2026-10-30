@@ -12,13 +12,6 @@ function stringField(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function displayCount(value: unknown): string | undefined {
-  const grouped = formatExactGroupedInteger(value);
-  if (grouped !== undefined) return grouped;
-  if (typeof value === 'number' && Number.isFinite(value) && !Number.isInteger(value)) return String(value);
-  return undefined;
-}
-
 function exactIntegerText(value: unknown): string | undefined {
   if (value === undefined) return undefined;
   return formatExactGroupedInteger(value) ?? '?';
@@ -44,7 +37,10 @@ function formatTimestampPreview(value: string): string {
 
 function progressSide(value: unknown): string | undefined {
   if (value === undefined) return undefined;
-  return displayCount(value) ?? '?';
+  const grouped = formatExactGroupedInteger(value);
+  if (grouped !== undefined) return grouped;
+  if (typeof value === 'number' && Number.isFinite(value) && !Number.isInteger(value)) return String(value);
+  return '?';
 }
 
 function progressCell(progress: unknown): string {

@@ -5522,6 +5522,30 @@ test('get_state lists each module once and keeps stats on that row', () => {
   expect(quietModules).not.toContain('Stats');
 });
 
+test('get_state boolean false module stats print active no', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'nested-1',
+          name: 'Adaptive Shield',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 5,
+          power_usage: 10,
+          stats: { active: false },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('active no');
+});
+
 const SHORT_DOCKED_NO = '  Docked: No';
 
 function expectShortLocation(

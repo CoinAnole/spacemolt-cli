@@ -507,7 +507,7 @@ function printRecipeRows(
 }
 
 function emitOptionalValue(label: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
+  if (presentCount(value) === undefined) return;
   emitLine(`${label}: ${String(value)}`);
 }
 
@@ -730,7 +730,6 @@ function emitCraftCost(label: string, value: unknown): void {
 
 function emitCraftRentalDetails(result: Record<string, unknown>): void {
   if (result.external === true) emitOptionalValue('Rented facility', 'yes');
-  // Prefer remaining escrowed_credits when present; fee from cost/escrowed is handled by emitCraftCost.
   if (result.escrowed_credits !== undefined) {
     emitOptionalValue('Credits still escrowed', formatCreditsAmount(result.escrowed_credits));
   }
@@ -1112,7 +1111,6 @@ function emitActiveMissionView(result: Record<string, unknown>): boolean {
 }
 
 export const genericFormatters = [
-  // Simple public endpoint for the Frontier mobile capital
   formatter(
     (r) => {
       const structuredContent = isRecord(r.structuredContent) ? r.structuredContent : undefined;
@@ -1583,7 +1581,6 @@ export const genericFormatters = [
     { commands: ['catalog'] },
   ),
 
-  // Catalog type=facilities returns FacilityDefinition rows (maintenance_fuel / maintenance_inputs).
   formatter(
     (r) => {
       if (r.type !== 'facilities' || !Array.isArray(r.items) || !r.items.every(isRecord)) return false;

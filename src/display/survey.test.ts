@@ -177,6 +177,16 @@ test('survey_system prints Unknown for a missing system name and id', () => {
   expect(stdout).toContain('=== Survey: Unknown ===');
 });
 
+test('survey_system prints Unknown for a newly revealed POI with no name or id', () => {
+  const stdout = stdoutOf({
+    survey_power: 18,
+    newly_revealed: [{}],
+    already_revealed: [],
+  });
+
+  expect(stdout.split('\n')).toContain('  - Unknown');
+});
+
 test('survey_system envelope V2Missions prints survey output then one Active Missions table', () => {
   const stdout = stdoutOf(structuredClone(surveySystemMissionsFixture));
 

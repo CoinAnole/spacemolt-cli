@@ -666,6 +666,18 @@ test('renders limited carrier contract capacity', () => {
   expect(stdout).toContain('Active contracts: 2 / 4');
 });
 
+test('renders carrier capacity without a contract limit when profile active contracts differ', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, active_contracts: 2 },
+    capacity: { ...carrierCapacity, active_contracts: 3, active_contracts_unlimited: false },
+    progression: carrierProgression,
+    debts: [],
+  });
+
+  expect(stdout).toContain('Active contracts: 3\n');
+});
+
 test('renders maximum tier and an explicit empty debt message', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',

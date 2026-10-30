@@ -22,6 +22,12 @@ describe('formatDepletionRemainingSuffix', () => {
     expect(formatPlain('not-a-number')).toBe('');
   });
 
+  test('green remaining band when color is on', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const result = withDisplayRenderBuffer(buffer, () => formatDepletionRemainingSuffix(25), { plain: false });
+    expect(result).toBe(` (${rawColors.green}${rawColors.reset}75.00% remaining${rawColors.reset}${rawColors.reset})`);
+  });
+
   test('yellow remaining band when color is on', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     const result = withDisplayRenderBuffer(buffer, () => formatDepletionRemainingSuffix(75), { plain: false });

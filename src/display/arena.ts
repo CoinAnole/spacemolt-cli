@@ -716,19 +716,15 @@ export function battleRulesetFromCategory(category: unknown): BattleRuleset {
   return 'standard';
 }
 
-function logEntryCategories(entry: Record<string, unknown>): unknown[] {
-  const categories: unknown[] = [];
-  if (isRecord(entry.battle_ended)) categories.push(entry.battle_ended.category);
-  if (isRecord(entry.recovered_summary)) categories.push(entry.recovered_summary.category);
-  return categories;
-}
-
 export function battleRulesetFromLogEntries(entries: Array<Record<string, unknown>>): BattleRuleset {
   if (entries.some((entry) => entry.arena === true)) return 'arena';
   if (
-    entries.some((entry) =>
-      logEntryCategories(entry).some((category) => battleRulesetFromCategory(category) === 'hunt'),
-    )
+    entries.some((entry) => {
+      const categories: unknown[] = [];
+      if (isRecord(entry.battle_ended)) categories.push(entry.battle_ended.category);
+      if (isRecord(entry.recovered_summary)) categories.push(entry.recovered_summary.category);
+      return categories.some((category) => battleRulesetFromCategory(category) === 'hunt');
+    })
   ) {
     return 'hunt';
   }

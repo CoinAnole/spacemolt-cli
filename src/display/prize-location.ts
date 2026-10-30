@@ -6,7 +6,6 @@ function nonEmptyString(value: unknown): string | undefined {
 
 export { nonEmptyString as prizeFieldText };
 
-/** Compact origin. Names-first, preposition-free. */
 export function formatPrizeCaptureLocation(data: Record<string, unknown>): string | undefined {
   const poi = nonEmptyString(data.prize_poi_name) ?? nonEmptyString(data.prize_poi_id);
   const system = nonEmptyString(data.prize_system_name) ?? nonEmptyString(data.prize_system_id);

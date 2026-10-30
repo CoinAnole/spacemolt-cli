@@ -3543,6 +3543,27 @@ test('renders dry-run route previews for craft cancellation payloads', () => {
   expect(stdout).not.toContain('=== Craft Quote ===');
 });
 
+test('dry-run route preview prints each notes line', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      dry_run: true,
+      command: 'craft',
+      method: 'POST',
+      url: 'https://game.spacemolt.com/api/v2/spacemolt/craft',
+      payload: { job_id: 'craft-job-1' },
+      server_request_sent: false,
+      notes: ['No mutation was sent. This is a client-side route and payload preview.'],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('- No mutation was sent. This is a client-side route and payload preview.');
+});
+
 test('dry-run route preview payload line keeps integers above 2^53', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4728,6 +4749,14 @@ test('catalog_dump prints version, mining constants, counts, and guide pointer',
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('run catalog_dump refresh=true');
   expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump omits Version when version is an empty string', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.version = '';
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Catalog dump ===');
+  expect(stdout).not.toContain('Version:');
 });
 
 test('catalog_dump omits mining keys that are not finite numbers', () => {

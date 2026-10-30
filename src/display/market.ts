@@ -363,7 +363,7 @@ function hasAnyField(record: Record<string, unknown>, fields: string[]): boolean
 }
 
 function hasMarketItem(record: Record<string, unknown>): boolean {
-  return record.item !== undefined || record.item_name !== undefined || record.item_id !== undefined;
+  return hasAnyField(record, ['item', 'item_name', 'item_id']);
 }
 
 function isDirectMarketSellShape(record: Record<string, unknown>): boolean {
@@ -885,7 +885,7 @@ function formatAnalyzeMarket(r: Record<string, unknown>): boolean {
   emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
   const skill = finiteNumber(r.skill_level);
   if (skill !== undefined) emitLine(`Trading skill: ${skill}`);
-  if (typeof r.message === 'string' && r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
+  if (hasNonEmptyBaseId(r.message)) emitLine(`${c.dim}${r.message}${c.reset}`);
   printCompactTable(
     'Insights',
     r.insights,

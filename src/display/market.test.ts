@@ -1343,3 +1343,40 @@ test('commission_status count mismatch prints count 0 when the array is non-empt
   expect(stdout).toContain('count 0');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('empty get_trades listings prints (No listings at this market)', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('(No listings at this market)');
+});
+
+test('get_trades buy price modifier prints buy and sell price modifiers', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+          seller_name: 'Ada',
+        },
+      ],
+      buy_price_modifier: 1.1,
+      sell_price_modifier: 0.9,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Buy price modifier:');
+  expect(stdout).toContain('Sell price modifier:');
+});

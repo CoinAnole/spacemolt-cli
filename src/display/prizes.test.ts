@@ -219,6 +219,16 @@ test('one-sided nearby prize hull prints 8/? and not 8/undefined', () => {
   expect(stdout).not.toContain('8/undefined');
 });
 
+test('non-finite nearby prize hull prints ?/8 and not Infinity', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ hull: Infinity, max_hull: 8 }] }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('?/8');
+  expect(stdout).not.toContain('Infinity');
+});
+
 test('jump with only an origin prints jump sol and not an arrow', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(

@@ -44,13 +44,10 @@ export interface GlobalOptions {
   fuzzy?: boolean;
   /**
    * Effective soft ID payload resolution (prefix/substring).
-   * After runner merge: always concrete true|false.
-   * Before merge (unit tests / direct preparePayload): treat undefined as false (strict).
    */
   fuzzyIds?: boolean;
   /**
    * True iff --fuzzy-ids or --no-fuzzy-ids appeared on the CLI.
-   * Used only by resolveFuzzyIdsEnabled; not read by preparePayload.
    */
   fuzzyIdsCliExplicit?: boolean;
   profile?: string;

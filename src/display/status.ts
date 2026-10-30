@@ -123,8 +123,7 @@ function emitDetention(player: Record<string, unknown>): void {
   if (!isRecord(player.standings)) return;
   for (const [empire, value] of Object.entries(player.standings)) {
     if (!isRecord(value)) continue;
-    const jailedUntil =
-      typeof value.jailed_until === 'string' && value.jailed_until !== '' ? value.jailed_until : undefined;
+    const jailedUntil = usableLabel(value.jailed_until);
     if (!jailedUntil) continue;
 
     const head = `Detained by: ${empire} until ${formatTimestampPreview(jailedUntil)}`;
@@ -980,17 +979,16 @@ export function emitLocationSnapshot(
     const rawCount = loc.nearby_empire_npc_count;
     const npcCount = typeof rawCount === 'number' && Number.isFinite(rawCount) ? rawCount : npcRows.length;
     if (npcCount !== 0 || npcRows.length !== 0) {
-      const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
       emitLine(`\n${c.dim}Nearby Empire NPCs (${npcCount}):${c.reset}`);
       for (const npc of npcRows) {
-        const idText = text(npc.npc_id);
-        const name = text(npc.name) ?? idText ?? 'Unknown';
-        const shipName = text(npc.ship_name);
-        const shipClass = text(npc.ship_class);
+        const idText = usableLabel(npc.npc_id);
+        const name = usableLabel(npc.name) ?? idText ?? 'Unknown';
+        const shipName = usableLabel(npc.ship_name);
+        const shipClass = usableLabel(npc.ship_class);
         const ship =
           shipName && shipClass && shipName !== shipClass ? `${shipName} / ${shipClass}` : (shipName ?? shipClass);
-        const role = text(npc.role);
-        const empire = text(npc.empire);
+        const role = usableLabel(npc.role);
+        const empire = usableLabel(npc.empire);
         emitLine(
           `  ${name}${idText ? ` [${idText}]` : ''}${ship ? ` (${ship})` : ''}${role ? ` - ${role}` : ''}${empire ? ` - ${empire}` : ''}${npc.in_combat === true ? ' - in combat' : ''}`,
         );

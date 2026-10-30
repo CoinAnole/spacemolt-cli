@@ -398,3 +398,48 @@ test('prints reputation restore without a cap', () => {
   expect(stdout).toContain('Reputation: restore 50%');
   expect(stdout).not.toContain(' cap ');
 });
+
+test('prints last_assessed_at 1779926400000 as Last assessed: 2026-05-28 00:00 UTC', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      last_assessed_at: 1779926400000,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Last assessed: 2026-05-28 00:00 UTC');
+});
+
+test('renders numeric period_started_at 0 as Period started: none', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        period_started_at: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Period started: none');
+});
+
+test('prints an income_tax record note flat instead of the raw response dump', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: { note: 'flat' },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Income tax: note flat');
+  expect(stdout).not.toContain('=== Response ===');
+});

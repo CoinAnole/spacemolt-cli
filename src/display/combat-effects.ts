@@ -206,7 +206,7 @@ function humanizeKey(key: string): string {
 }
 
 function isSkippedEffectValue(value: unknown): boolean {
-  if (value === undefined || value === null || value === '' || value === false || value === 0) return true;
+  if (isOmittedBonusValue(value)) return true;
   if (typeof value === 'number') return !Number.isFinite(value);
   return typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean';
 }

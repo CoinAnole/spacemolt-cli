@@ -1,4 +1,3 @@
-/** A blank or non-string side is omitted; the kept text is trimmed. */
 export function formatCreatureBrandSuffix(creature: Record<string, unknown>): string {
   const faction = trimmedBrandText(creature.brand_faction);
   const ranch = trimmedBrandText(creature.brand_ranch);

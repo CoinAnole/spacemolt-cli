@@ -39,7 +39,6 @@ const SESSION_RECOVERY_ERROR_CODES = new Set([
 
 const PUBLIC_SESSION_COMMANDS = new Set(['get_empire_info', 'server-help']);
 
-/** Commands that require no session at all (public root endpoints, no X-Session-Id, no /session creation). */
 function isFullyUnauthenticated(command: string, route?: V2Route): boolean {
   if (PUBLIC_SESSION_COMMANDS.has(command)) return false;
   return route?.publicUnauthenticated === true;

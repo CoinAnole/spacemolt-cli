@@ -456,7 +456,6 @@ export function resolveCachedId(
     if (substring.length > 0) return resolveMatches(kind, lookup, substring, 'substring');
   }
 
-  // Even without a cache hit, return the bare package instance id for API fields.
   return { type: 'unresolved', value: kind === 'package' ? lookup : query };
 }
 
@@ -701,15 +700,11 @@ function valueMatches(value: string, normalizedQuery: string, match: IdMatchKind
 function formatHint(hint: IdHint, colors: DirectColors = DEFAULT_COLORS): string {
   const name = hint.name && hint.name !== hint.id ? ` (${hint.name})` : '';
   const context = compactContext(hint.context)
-    ? ` ${formatContext(hint.context as Record<string, string | number | boolean>)}`
+    ? ` ${Object.entries(hint.context as Record<string, string | number | boolean>)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(' ')}`
     : '';
   return `${hint.id}${name}${context} ${colors.dim}[${hint.sourceCommand}, ${hint.seenAt}]${colors.reset}`;
-}
-
-function formatContext(context: Record<string, string | number | boolean>): string {
-  return Object.entries(context)
-    .map(([key, value]) => `${key}=${value}`)
-    .join(' ');
 }
 
 function printDiscoveryCommands(kind: IdKind, writer?: CliWriter): void {

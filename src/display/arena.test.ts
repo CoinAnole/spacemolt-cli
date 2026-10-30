@@ -499,6 +499,11 @@ test('suggestedFight prefers a new ready trial, then a travel new trial', () => 
   expect(suggestedFight(rematchOnly)?.challenge_id).toBe('first_blood');
 });
 
+test('suggestedFight falls back to the first unlocked trial when all are away and already won', () => {
+  const trials = sixteenTrialMidSeries().map((trial) => ({ ...trial, at_this_arena: false, wins: 1 }));
+  expect(suggestedFight(trials)?.challenge_id).toBe('first_blood');
+});
+
 test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or zero optionals', () => {
   expect(formatRuleDigest({ max_side_size: 0 })).toBe('full fleet (every eligible member)');
   expect(formatRuleDigest({ max_side_size: 1 })).toBe('solo duel');

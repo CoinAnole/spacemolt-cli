@@ -184,7 +184,6 @@ function resolveCachedIdsForPayload(
 ): PayloadResolveResult {
   const resolvedPayload: Record<string, unknown> = { ...payload };
   const hints = loadIdCacheSync(sessionPath);
-  // undefined fuzzyIds → strict (K1); runner merges env/config into a concrete boolean.
   const fuzzyIds = Boolean(options.fuzzyIds);
   const policyFor = (kind: IdKind): IdResolutionPolicy =>
     fuzzyIds ? softIdResolutionPolicy(kind) : STRICT_ID_RESOLUTION_POLICY;

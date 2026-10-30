@@ -15,6 +15,7 @@ test('preserves zero-capacity classes and rejects malformed entries', () => {
   expect(formatBerthSummary({ economy: { total: 0, free: 0 } })).toBe('Economy: 0/0 free');
   expect(formatBerthSummary({ economy: { total: '12', free: undefined } })).toBeUndefined();
   expect(formatBerthSummary(undefined)).toBeUndefined();
+  expect(formatBerthSummary({ economy: 4, business: { total: 2, free: 1 } })).toBe('Business: 1/2 free');
 });
 
 test('non-finite berth total Infinity with free 1 is undefined', () => {

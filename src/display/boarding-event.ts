@@ -1,4 +1,3 @@
-/** OpenAPI terminal BoardingStateLogEntry.event values only. Non-terminals (progress, latch, hold, …) are unknown: trimmed, case-preserving, no gloss. */
 const KNOWN_TERMINAL_BOARDING_EVENTS = new Set([
   'capture_ready',
   'plundered',

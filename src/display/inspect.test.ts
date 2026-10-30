@@ -89,6 +89,31 @@ test('renders package inspect results with contents table', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Creator: PilotOne when the package creator has a username and no faction', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_creator',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_creator',
+        label: 'Solo Survey Supplies',
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Creator:'));
+  expect(line).toBe('Creator: PilotOne');
+  expect(line).not.toContain('/');
+});
+
 test('renders package inspect freight shipment summary when nested shipment is present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -262,6 +287,37 @@ test('prints a name-and-system destination without destination_base_id or parent
   expect(line).not.toContain(')');
 });
 
+test('prints Destination name and base id without destination_system or a slash', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_name_base',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_name_base',
+        label: 'Name and base',
+        size: 1,
+        created_at: '2026-07-26T12:00:00Z',
+        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+        shipment: {
+          destination_base_id: 'sirius_observatory',
+          destination_name: 'Sirius Observatory',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
+  expect(line).toBe('Destination: Sirius Observatory (sirius_observatory)');
+  expect(line).not.toContain('/');
+});
+
 test('suppresses bare Shipment heading when shipment record has no formattable fields', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -410,6 +466,30 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Known POIs: 2 when faction system POI records have no usable name or id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        pois: [{}, {}],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Known POIs: 2');
+  expect(stdout).not.toContain('Known POIs (2)');
+});
+
 test('inspect system prints Online and POIs when those counts are present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -518,6 +598,29 @@ test('prints Estimated material cost: 0 without an analysis record', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Estimated material cost: 0');
   expect(stdout).not.toContain('Analysis');
+});
+
+test('prints Analysis and the raw materials quantity line for a catalog analysis record', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20, category: 'ore' }],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Analysis');
+  expect(stdout.split('\n')).toContain('Raw materials: 20× Iron Ore');
 });
 
 test('renders catalog inspect Mining group for a crystal ore', () => {

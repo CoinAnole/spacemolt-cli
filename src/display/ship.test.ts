@@ -135,6 +135,15 @@ test('list_ships happy path shows fleet, module types, garage, and footer', () =
   expect(bettyCell).not.toContain('Lithosphere');
 });
 
+test('list_ships active_ship_class fallback when no owned row matches', () => {
+  const fixture = cloneListShips();
+  fixture.active_ship_id = 'ship-missing';
+  fixture.active_ship_class = 'lithosphere';
+
+  const stdout = renderListShips(fixture).stdout.join('\n');
+  expect(stdout).toContain('Active ship: lithosphere (ship-missing)');
+});
+
 test('list_ships Name falls back to class_name when custom_name is absent', () => {
   const fixture = cloneListShips();
   const ships = cloneShips(fixture);

@@ -9,6 +9,7 @@ import {
   formatCatalogYesNo,
   formatProducedByFacilities,
   formatProducedByFacilityIds,
+  joinStringIds,
   type RecipeVenue,
   summarizeBonusPerLevel,
   summarizeNamedItemQuantities,
@@ -248,12 +249,24 @@ test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', (
   expect(buffer.stdout).toContain('Slots: 0 weapon, 4 defense, 0 utility');
 });
 
+test('omitted ship slots do not print Slots', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({}, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).not.toContain('Slots');
+});
+
 test('zero shield recharge prints Shield: 700 (+0/tick)', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700, base_shield_recharge: 0 }, {}), {
     plain: true,
   });
   expect(buffer.stdout.join('\n')).toContain('Shield: 700 (+0/tick)');
+});
+
+test('required reputation 0 prints Reputation: 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ required_reputation: 0 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Reputation: 0');
 });
 
 test('hidden module prints Hidden: yes', () => {
@@ -268,6 +281,14 @@ test('quantity 0 prints 0x Steel Plate', () => {
 
 test('missing quantity prints ?x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate' }])).toBe('?x Steel Plate');
+});
+
+test('item_id name fallback prints 2x steel_plate', () => {
+  expect(summarizeNamedItemQuantities([{ item_id: 'steel_plate', quantity: 2 }])).toBe('2x steel_plate');
+});
+
+test('non-string id returns empty from joinStringIds', () => {
+  expect(joinStringIds(['laser', 1])).toBe('');
 });
 
 test('ship capability flag prints Capabilities: cloak passive 2', () => {
@@ -298,6 +319,14 @@ test('legacy-only ship prints Availability: legacy', () => {
   expect(stdout).not.toContain('hidden');
 });
 
+test('hidden-only ship prints Availability: hidden', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ hidden: true }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Availability: hidden');
+  expect(stdout).not.toContain('legacy');
+});
+
 test('module package operation falls back to catalog.package_operation', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({}, { package_operation: 'unpack' }), {
@@ -310,4 +339,10 @@ test('item category falls back to type when category is absent', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ type: 'ore' }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).toContain('Category: ore');
+});
+
+test('empty category does not print Category:', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: '', type: 'ore' }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).not.toContain('Category:');
 });

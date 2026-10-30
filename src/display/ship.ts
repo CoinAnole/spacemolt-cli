@@ -697,7 +697,7 @@ export const shipFormatters = [
       emitLine(`ID: ${ship.id || ship.ship_id || 'unknown'}`);
       emitLine(`Class: ${ship.class_name || ship.class_id || 'unknown'}`);
       if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
-      const remoteLocation = typeof ship.location === 'string' && ship.location ? ship.location : undefined;
+      const remoteLocation = nonEmptyString(ship.location);
       if (remoteLocation) emitLine(`Location: ${remoteLocation}`);
       emitLine(`Hull: ${ship.hull ?? '?'}/${ship.max_hull ?? '?'}`);
       emitLine(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);

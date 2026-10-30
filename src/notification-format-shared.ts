@@ -2483,7 +2483,6 @@ function observationText(value: unknown): string | undefined {
   return text;
 }
 
-/** Empty when current is not a finite number. */
 function observationRatioSuffix(label: string, current: unknown, max: unknown): string {
   const n = finiteNumber(current);
   if (n === undefined) return '';

@@ -29,10 +29,6 @@ type PathToken =
   | { kind: 'index'; index: number; raw: string }
   | { kind: 'slice'; start: number; end: number; raw: string };
 
-function makeFuzzyJqResult(values: Record<string, unknown>): FuzzyJqResult {
-  return { [FUZZY_JQ_RESULT]: true, values };
-}
-
 function isFuzzyJqResult(value: unknown): value is FuzzyJqResult {
   return typeof value === 'object' && value !== null && (value as FuzzyJqResult)[FUZZY_JQ_RESULT] === true;
 }
@@ -204,11 +200,12 @@ function resolvePathTokens(
         if (selectedSuggestions.length > 1 && rest.length === 0) {
           return {
             found: true,
-            value: makeFuzzyJqResult(
-              Object.fromEntries(
+            value: {
+              [FUZZY_JQ_RESULT]: true,
+              values: Object.fromEntries(
                 selectedSuggestions.map((suggestion) => [suggestionPath('', suggestion.key), suggestion.value]),
               ),
-            ),
+            },
           };
         }
       }

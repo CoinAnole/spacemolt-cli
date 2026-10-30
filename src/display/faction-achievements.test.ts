@@ -396,6 +396,13 @@ describe('get_faction_achievements', () => {
     expect(numeric).not.toContain(numericStamp.toLocaleString());
   });
 
+  test('a non-ISO earned_at string is the Earned at cell', () => {
+    const earnedAt = 'earned yesterday';
+    const stdout = stdoutOf(body({ achievements: [entry({ id: 'plain_time', earned_at: earnedAt })] }));
+
+    expect(cell(stdout, 'plain_time', 'Earned at')).toBe(earnedAt);
+  });
+
   test('19. share_url stays out of the table and in JSON', () => {
     const fixture = body({
       achievements: [entry({ share_url: 'https://example.test/share/the_whole_bar' })],

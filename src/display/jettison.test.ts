@@ -225,3 +225,15 @@ test('single-action jettison OK line prints OK', () => {
   expect(stdout).toContain('OK');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('blank jettison action with item_id prints === Result ===', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: '',
+      item_id: 'ore_iron',
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('=== Result ===');
+});

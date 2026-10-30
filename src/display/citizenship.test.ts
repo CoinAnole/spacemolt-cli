@@ -210,6 +210,24 @@ test('citizenship list prints recent decisions with a Decision column', () => {
   expect(stdout).toContain('denied');
 });
 
+test('recent decisions without a decision field omit the Decision header', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    recent_decisions: [
+      {
+        id: 'pet-void-1',
+        empire_id: 'voidborn',
+        status: 'rejected',
+        fee_paid: 500,
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Recent Decisions ===');
+  expect(stdout).toContain('rejected');
+  expect(stdout).not.toMatch(/\bDecision\b/);
+});
+
 test('citizenship list prints petition_id only when petition is absent', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

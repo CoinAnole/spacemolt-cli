@@ -261,6 +261,10 @@ test('summarizeCombatSpecialEffects walks label map before unmapped own keys', (
   ).toBe('lifesteal 1%, unmapped flag, weird pct 4%');
 });
 
+test('a string combat effect prints chain alpha', () => {
+  expect(summarizeCombatSpecialEffects({ chain_targets: 'alpha' })).toBe('chain alpha');
+});
+
 test('pinned catalog module effect cells', () => {
   expect(summarizeModuleEffects(warpScrambler)).toBe('reach 3, scramble 2');
   expect(summarizeModuleEffects(adaptiveShieldI)).toBe('shield +60, damage reduction 10, adaptive_resistance_10');
@@ -378,8 +382,18 @@ test('disrupt ticks prints the duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 2 } } })).toBe('disrupt 2 ticks');
 });
 
+test('bonus disrupt ticks prints bonus disrupt 2 ticks', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_ticks: 2 } } })).toBe('bonus disrupt 2 ticks');
+});
+
 test('disrupt damage prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0.1 } } })).toBe('disrupt damage +10%');
+});
+
+test('burn without per-tick damage prints Effects and Burn: 3 ticks', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ burn_ticks_remaining: 3 }), { plain: true });
+  expect(buffer.stdout).toEqual(['Effects:', '  Burn: 3 ticks']);
 });
 
 test('active armor melt prints Armor melt: active for 2 ticks', () => {
@@ -400,4 +414,10 @@ test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
     plain: true,
   });
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
+test('a buff without a stat prints Buff: buff +5%', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ amount: 5 }] }), { plain: true });
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: buff +5%']);
 });

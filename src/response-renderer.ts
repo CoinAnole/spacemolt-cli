@@ -155,7 +155,8 @@ export async function renderResponse(
 
   const sessionPath = tryGetSessionPath(client.config, context?.env);
   if (!options.dryRun) await cacheIdsFromResponse(command, commandRun.response, sessionPath);
-  const outputResponse = applyStructuredOutputFilters(command, response, commandRun.payload);
+  const outputResponse =
+    command !== 'storage_view' ? response : applyHumanDisplayFilters(command, response, commandRun.payload);
 
   if ((isJson || renderOptions.structured) && !hasProjection) {
     if (renderOptions.structured && outputResponse.structuredContent) {
@@ -363,15 +364,6 @@ function enrichCarrierLoadDisplayResponse(
 
 function findCachedShipHint(shipId: string, sessionPath?: string) {
   return loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'ship' && hint.id === shipId);
-}
-
-function applyStructuredOutputFilters(
-  command: string,
-  response: APIResponse,
-  payload?: Record<string, unknown>,
-): APIResponse {
-  if (command !== 'storage_view') return response;
-  return applyHumanDisplayFilters(command, response, payload);
 }
 
 function applyHumanDisplayFilters(
