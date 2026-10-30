@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `set_status` help says the status message is at most 64 characters and the clan tag is at most 4 characters. The server counts characters, not bytes (gameserver 0.654.2).
+
 - `get_base` and docked-base `inspect` print `Dining` and `Leisure` when `GetBaseResponse` sends `dining_points` or `leisure_points`, including an explicit 0, and `Tourism revenue` in credits when `tourism_revenue` is sent, including an explicit 0. An omitted key prints nothing. These lines are not summed from facility rows and are not printed by `get_poi` (gameserver 0.654.0).
 
 - Short `get_status` prints one `Passengers delivered` line when `player.stats.passengers_delivered` is a finite number or bigint, including 0. An omitted key prints nothing. `--summary` does not print the line, and the rest of the lifetime stats stay off this view. The same short view is the shape fallback, so another player-shaped payload with the key prints the same line. Each delivery counts once. Stranded and expired passengers do not count. The counter started at zero in gameserver 0.653.0.

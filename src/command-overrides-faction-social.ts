@@ -442,7 +442,8 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_intel/trade_intel_status',
   },
   set_status: {
-    usage: '[status=..] [clan_tag=..]  (status max 100 chars, tag max 4 chars)',
+    usage:
+      '[status=..] [clan_tag=..]  (status max 64 characters, tag max 4 characters; the server counts characters, not bytes)',
     category: 'Player settings',
     apiRoute: 'POST /api/v2/spacemolt_social/set_status',
     positionals: ['status_message', 'clan_tag'],
