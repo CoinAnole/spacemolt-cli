@@ -699,6 +699,18 @@ export function emitStationFuelPricing(result: Record<string, unknown>, indent =
   return true;
 }
 
+// GetBaseResponse only. An omitted key is not 0, and facility rows are not summed in.
+export function emitStationTourism(result: Record<string, unknown>): boolean {
+  const dining = formatExactGroupedInteger(result.dining_points);
+  const leisure = formatExactGroupedInteger(result.leisure_points);
+  const revenue = formatExactGroupedInteger(result.tourism_revenue);
+  if (dining === undefined && leisure === undefined && revenue === undefined) return false;
+  if (dining !== undefined) emitLine(`Dining: ${dining}`);
+  if (leisure !== undefined) emitLine(`Leisure: ${leisure}`);
+  if (revenue !== undefined) emitLine(`Tourism revenue: ${revenue} credits`);
+  return true;
+}
+
 function nonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined;
 }

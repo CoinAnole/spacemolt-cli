@@ -9407,6 +9407,132 @@ describe('structuredContent formatters', () => {
     expect(json.stdout).not.toContain('Fuel bunker:');
   });
 
+  test('get_base prints station tourism when sent, including 0, and skips omitted keys', () => {
+    const printed = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      dining_points: 0,
+      leisure_points: 1200,
+      tourism_revenue: 9007199254740993n,
+    });
+    expect(printed.stderr).toBe('');
+    expect(printed.stdout.split('\n')).toContain('Dining: 0');
+    expect(printed.stdout.split('\n')).toContain('Leisure: 1,200');
+    expect(printed.stdout.split('\n')).toContain('Tourism revenue: 9,007,199,254,740,993 credits');
+    expect(printed.stdout).not.toContain('no venue');
+    const servicesAt = printed.stdout.indexOf('Services:');
+    const diningAt = printed.stdout.indexOf('Dining: 0');
+    const facilitiesAt = printed.stdout.indexOf('Facilities:');
+    expect(servicesAt).toBeGreaterThan(-1);
+    expect(diningAt).toBeGreaterThan(servicesAt);
+    expect(facilitiesAt).toBeGreaterThan(diningAt);
+
+    const zeros = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      dining_points: 0,
+      leisure_points: 0,
+      tourism_revenue: 0,
+    });
+    expect(zeros.stdout.split('\n')).toContain('Dining: 0');
+    expect(zeros.stdout.split('\n')).toContain('Leisure: 0');
+    expect(zeros.stdout.split('\n')).toContain('Tourism revenue: 0 credits');
+
+    const leisureOnly = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      leisure_points: 0,
+    });
+    expect(leisureOnly.stdout.split('\n')).toContain('Leisure: 0');
+    expect(leisureOnly.stdout).not.toContain('Dining:');
+    expect(leisureOnly.stdout).not.toContain('Tourism revenue');
+
+    const revenueOnly = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      tourism_revenue: 0,
+    });
+    expect(revenueOnly.stdout.split('\n')).toContain('Tourism revenue: 0 credits');
+    expect(revenueOnly.stdout).not.toContain('Dining:');
+    expect(revenueOnly.stdout).not.toContain('Leisure:');
+
+    const nestedOnly = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      base: {
+        ...baseFixture.base,
+        dining_points: 4,
+        leisure_points: 5,
+        tourism_revenue: 6,
+        facilities: [
+          { id: 'dining_hall', dining_points: 4 },
+          { id: 'lounge', leisure_points: 9 },
+        ],
+      },
+    });
+    expect(nestedOnly.stdout).not.toMatch(/^Dining:/m);
+    expect(nestedOnly.stdout).not.toMatch(/^Leisure:/m);
+    expect(nestedOnly.stdout).not.toContain('Tourism revenue');
+    expect(nestedOnly.stdout).not.toContain('Dining: 13');
+    expect(nestedOnly.stdout).not.toContain('Leisure: 14');
+
+    const responseNotSummed = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      dining_points: 1,
+      leisure_points: 2,
+      tourism_revenue: 3,
+      base: {
+        ...baseFixture.base,
+        dining_points: 9,
+        leisure_points: 8,
+        tourism_revenue: 7,
+      },
+    });
+    expect(responseNotSummed.stdout.split('\n')).toContain('Dining: 1');
+    expect(responseNotSummed.stdout.split('\n')).toContain('Leisure: 2');
+    expect(responseNotSummed.stdout.split('\n')).toContain('Tourism revenue: 3 credits');
+    expect(responseNotSummed.stdout).not.toContain('Dining: 9');
+    expect(responseNotSummed.stdout).not.toContain('Dining: 10');
+    expect(responseNotSummed.stdout).not.toContain('Leisure: 8');
+    expect(responseNotSummed.stdout).not.toContain('Leisure: 10');
+    expect(responseNotSummed.stdout).not.toContain('Tourism revenue: 7');
+    expect(responseNotSummed.stdout).not.toContain('Tourism revenue: 10');
+
+    const omitted = captureStructuredOutput('get_base', baseFixture);
+    expect(omitted.stdout).not.toContain('Dining:');
+    expect(omitted.stdout).not.toContain('Leisure:');
+    expect(omitted.stdout).not.toContain('Tourism revenue');
+
+    const junk = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      dining_points: 1.5,
+      leisure_points: '2',
+      tourism_revenue: null,
+    });
+    expect(junk.stdout).not.toContain('Dining:');
+    expect(junk.stdout).not.toContain('Leisure:');
+    expect(junk.stdout).not.toContain('Tourism revenue');
+
+    const text = captureStructuredOutput(
+      'get_base',
+      { ...baseFixture, dining_points: 0, leisure_points: 3, tourism_revenue: 0 },
+      { format: 'text' },
+    );
+    expect(text.stdout.split('\n')).toContain('Dining: 0');
+    expect(text.stdout.split('\n')).toContain('Leisure: 3');
+    expect(text.stdout.split('\n')).toContain('Tourism revenue: 0 credits');
+
+    const jsonOut = captureStructuredOutput(
+      'get_base',
+      { ...baseFixture, dining_points: 0, leisure_points: 3, tourism_revenue: 0 },
+      { format: 'json' },
+    );
+    const parsedTourism = JSON.parse(jsonOut.stdout) as {
+      dining_points: number;
+      leisure_points: number;
+      tourism_revenue: number;
+    };
+    expect(parsedTourism.dining_points).toBe(0);
+    expect(parsedTourism.leisure_points).toBe(3);
+    expect(parsedTourism.tourism_revenue).toBe(0);
+    expect(jsonOut.stdout).not.toContain('Tourism revenue:');
+  });
+
   test('get_base omits sovereign mint when the mint object is empty', () => {
     const { stdout, stderr } = captureStructuredOutput('get_base', {
       ...baseFixture,

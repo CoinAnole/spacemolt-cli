@@ -23,6 +23,7 @@ import {
   emitStationLifeSupport,
   emitStationPower,
   emitStationRepairs,
+  emitStationTourism,
   formatDeepCoreLine,
   formatIntegerText,
   formatter,
@@ -345,6 +346,8 @@ function emitBase(basePayload: Record<string, unknown>): void {
 
   const services = basePayload.services;
   if (Array.isArray(services) && services.length) emitLine(`Services: ${services.join(', ')}`);
+
+  emitStationTourism(basePayload);
 
   const facilities = base.facilities;
   if (Array.isArray(facilities)) {

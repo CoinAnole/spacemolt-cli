@@ -17,6 +17,7 @@ import {
   emitStationLifeSupport,
   emitStationPower,
   emitStationRepairs,
+  emitStationTourism,
   finiteNumber,
   firstArray,
   formatCreditRate,
@@ -769,6 +770,8 @@ export const shipFormatters = [
 
       const services = r.services as unknown;
       if (Array.isArray(services) && services.length) emitLine(`Services: ${services.join(', ')}`);
+
+      emitStationTourism(r);
 
       const facilities = base.facilities as unknown;
       if (Array.isArray(facilities)) {

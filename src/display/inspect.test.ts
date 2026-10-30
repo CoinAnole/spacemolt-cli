@@ -1709,6 +1709,93 @@ test('renders nested base pirate recovery matching get_base', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders nested base tourism from GetBaseResponse, including 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nova_terra_central',
+      kind: 'base',
+      source: 'station',
+      base: {
+        base: {
+          id: 'nova_terra_central',
+          name: 'Nova Terra Central',
+          empire: 'solarian',
+          facilities: ['dining_hall', 'lounge'],
+          dining_points: 9,
+          leisure_points: 8,
+          tourism_revenue: 7,
+        },
+        services: ['market'],
+        dining_points: 0,
+        leisure_points: 1200,
+        tourism_revenue: 0,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Inspect: nova_terra_central ===');
+  expect(stdout).toContain('Station: Nova Terra Central');
+  expect(stdout).not.toContain('=== Station: Nova Terra Central ===');
+  expect(stdout.split('\n')).toContain('Dining: 0');
+  expect(stdout.split('\n')).toContain('Leisure: 1,200');
+  expect(stdout.split('\n')).toContain('Tourism revenue: 0 credits');
+  expect(stdout).not.toContain('Dining: 9');
+  expect(stdout).not.toContain('Leisure: 8');
+  expect(stdout).not.toContain('Tourism revenue: 7');
+  const servicesAt = stdout.indexOf('Services: market');
+  const diningAt = stdout.indexOf('Dining: 0');
+  const facilitiesAt = stdout.indexOf('Facilities:');
+  expect(diningAt).toBeGreaterThan(servicesAt);
+  expect(facilitiesAt).toBeGreaterThan(diningAt);
+  expect(stdout).not.toContain('=== Response ===');
+
+  const omitted = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nova_terra_central',
+      kind: 'base',
+      base: {
+        base: { id: 'nova_terra_central', name: 'Nova Terra Central', empire: 'solarian' },
+        services: ['market'],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).not.toContain('Dining:');
+  expect(omitted).not.toContain('Leisure:');
+  expect(omitted).not.toContain('Tourism revenue');
+
+  const nestedOnly = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nova_terra_central',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'nova_terra_central',
+          name: 'Nova Terra Central',
+          empire: 'solarian',
+          dining_points: 4,
+          leisure_points: 5,
+          tourism_revenue: 6,
+        },
+        services: ['market'],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(nestedOnly).not.toContain('Dining:');
+  expect(nestedOnly).not.toContain('Leisure:');
+  expect(nestedOnly).not.toContain('Tourism revenue');
+});
+
 test('renders base inspect identity without POI when poi_id is absent', () => {
   const rendered = renderStructuredResult(
     'inspect',

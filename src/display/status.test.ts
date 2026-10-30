@@ -1610,6 +1610,33 @@ test('get_poi nested station prints indented ID and POI and skips Station Base I
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_poi does not print station tourism lines', () => {
+  const stdout = renderStructuredResult(
+    'get_poi',
+    {
+      ...structuredClone(stationPoiInfoFixture),
+      dining_points: 4,
+      leisure_points: 0,
+      tourism_revenue: 80,
+      base: {
+        ...stationPoiInfoFixture.base,
+        dining_points: 4,
+        leisure_points: 0,
+        tourism_revenue: 80,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== POI: Earth ===');
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('Dining:');
+  expect(stdout).not.toContain('Leisure:');
+  expect(stdout).not.toContain('Tourism revenue');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_poi indents station contraband lines and skips them without a nested base', () => {
   const stdout = renderStructuredResult(
     'get_poi',
