@@ -610,6 +610,13 @@ function emitNonZeroFixerDebt(result: Record<string, unknown>, command: string |
   emitLine(`Fixer debt: ${text}`);
 }
 
+function emitPassengersDelivered(player: unknown): void {
+  if (!isRecord(player) || !isRecord(player.stats)) return;
+  const text = formatIntegerText(player.stats.passengers_delivered);
+  if (text === undefined) return;
+  emitLine(`Passengers delivered: ${text}`);
+}
+
 function emitScanRevealedInfo(result: Record<string, unknown>): void {
   if (Array.isArray(result.revealed_info)) {
     const revealed = result.revealed_info
@@ -1350,6 +1357,7 @@ export const statusFormatters = [
       }
       emitLine(`Credits: ${p.credits}`);
       emitNonZeroFixerDebt(r, command);
+      emitPassengersDelivered(p);
       emitLine(`Faction: ${p.faction_id ? `${p.faction_id} (${p.faction_rank})` : 'None'}`);
       emitTradingRestriction(p);
       emitDetention(p);

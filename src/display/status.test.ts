@@ -1321,6 +1321,117 @@ test('get_status does not print arena stats', () => {
   expect(stdout).not.toContain('Arena XP today');
 });
 
+test('get_status prints passengers delivered including 0 and skips every other lifetime stat', () => {
+  const zero = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({ stats: { passengers_delivered: 0, credits_earned: 9, ships_destroyed: 2 } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero.split('\n')).toContain('Passengers delivered: 0');
+  expect(zero).not.toContain('Lifetime Stats');
+  expect(zero).not.toContain('Credits Earned');
+  expect(zero).not.toContain('Ships Destroyed');
+  const creditsAt = zero.indexOf('Credits: 4242');
+  const passengersAt = zero.indexOf('Passengers delivered: 0');
+  const factionAt = zero.indexOf('Faction:');
+  const locationAt = zero.indexOf('Location:');
+  expect(passengersAt).toBeGreaterThan(creditsAt);
+  expect(factionAt).toBeGreaterThan(passengersAt);
+  expect(locationAt).toBeGreaterThan(passengersAt);
+
+  const grouped = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({ stats: { passengers_delivered: 1200 } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(grouped.split('\n')).toContain('Passengers delivered: 1,200');
+
+  const big = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({ stats: { passengers_delivered: 9007199254740993n } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(big.split('\n')).toContain('Passengers delivered: 9,007,199,254,740,993');
+
+  const omitted = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(omitted).not.toContain('Passengers delivered');
+
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, '4', null, {}, true] as const) {
+    const stdout = renderStructuredResult(
+      'get_status',
+      statusWithPlayer({ stats: { passengers_delivered: value, ore_mined: 3 } }),
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('Passengers delivered');
+    expect(stdout).not.toContain('Ore Mined');
+    expect(stdout).not.toContain('Lifetime Stats');
+  }
+
+  const missingKey = renderStructuredResult(
+    'get_status',
+    statusWithPlayer({ stats: { ore_mined: 3 } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(missingKey).not.toContain('Passengers delivered');
+  expect(missingKey).not.toContain('Ore Mined');
+});
+
+test('get_status_summary does not print passengers delivered', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    statusWithPlayer({ stats: { passengers_delivered: 0, credits_earned: 9 } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Player:');
+  expect(stdout).not.toContain('Passengers delivered');
+  expect(stdout).not.toContain('Lifetime Stats');
+  expect(stdout).not.toContain('Credits Earned');
+});
+
+test('player-shaped buy shapeFallback prints passengers delivered and not the lifetime table', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    { player: { username: 'Marlowe', empire: 'Terran', stats: { passengers_delivered: 0, ships_lost: 1 } } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout.split('\n')).toContain('Passengers delivered: 0');
+  expect(stdout).not.toContain('Ships Lost');
+  expect(stdout).not.toContain('Lifetime Stats');
+
+  const omitted = renderStructuredResult(
+    'buy',
+    { player: { username: 'Marlowe', empire: 'Terran', stats: { ships_lost: 1 } } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('=== Player Status ===');
+  expect(omitted).not.toContain('Passengers delivered');
+  expect(omitted).not.toContain('Ships Lost');
+});
+
+test('get_state keeps passengers delivered in the lifetime table, including 0', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    statusWithPlayer({ stats: { passengers_delivered: 0, credits_earned: 9 } }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Lifetime Stats ===');
+  expect(stdout).toMatch(/Passengers Delivered\s+\|\s+0/);
+  expect(stdout).toMatch(/Credits Earned\s+\|\s+9/);
+  expect(stdout).not.toContain('Passengers delivered:');
+});
+
 test('get_player omits Arena trials when arena_won is empty or all zeros', () => {
   const empty = structuredClone(playerArenaFixture) as {
     player: { arena_won?: Record<string, number> };

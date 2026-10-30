@@ -17,7 +17,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_status: {
     usage: '[--summary]',
     description:
-      'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. --summary does not print it.',
+      'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. --summary does not print it. Passengers delivered prints when player.stats.passengers_delivered is a number or bigint, including 0. Each delivery counts once. Stranded and expired passengers do not count. The counter started at zero in gameserver 0.653.0. An omitted key prints nothing. --summary does not print this count.',
     example: 'spacemolt get_status --summary',
     seeAlso: ['get_system', 'get_cargo', 'get_ship'],
     category: 'Query commands',

@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- Short `get_status` prints one `Passengers delivered` line when `player.stats.passengers_delivered` is a finite number or bigint, including 0. An omitted key prints nothing. `--summary` does not print the line, and the rest of the lifetime stats stay off this view. The same short view is the shape fallback, so another player-shaped payload with the key prints the same line. Each delivery counts once. Stranded and expired passengers do not count. The counter started at zero in gameserver 0.653.0.
+
 - `analyze_market` help says price data refreshes every 5 minutes, so an insight can lag the newest trades by up to 5 minutes. Outlier trades are filtered against galaxy-wide prices (gameserver 0.651.1).
 
 - `login`, `login_token`, and a successful `auth_login_link_poll` print `unread_chat` as four channels (`system`, `local`, `faction`, `private`), including an explicit 0. A count of 200 prints as 200 or more. Any other count prints as sent. The channels are not added into one total. An omitted `unread_chat` prints nothing. `register` does not print unread counts. Dock still prints the summed count and `unread_chat_note` as sent (gameserver 0.651.1).
