@@ -132,8 +132,9 @@ function isRoutineActionResult(notification: Notification): boolean {
 }
 
 function isTravelSystemAction(data: Record<string, unknown>): boolean {
-  if (typeof data.action !== 'string' || !data.action.trim()) return false;
-  return TRAVEL_SYSTEM_ACTIONS.has(data.action.trim().toLowerCase());
+  const action = metadataString(data.action);
+  if (!action) return false;
+  return TRAVEL_SYSTEM_ACTIONS.has(action.trim());
 }
 
 function isRoutineSystemProgress(notification: Notification): boolean {

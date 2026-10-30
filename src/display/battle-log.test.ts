@@ -872,6 +872,47 @@ describe('battleLogAttackRows', () => {
     }
   });
 
+  test('duplicate defense component id keeps the first component', () => {
+    const rows = battleLogAttackRows([
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            weapons: [
+              {
+                instance_id: 'w-dup',
+                name: 'Pulse Laser',
+                damage_type: 'kinetic',
+                hit_chance: 0.65,
+                hit_roll: 0.2,
+                hit_success: true,
+              },
+            ],
+            defense_components: [
+              pulseLaserComponent({ weapon_instance_id: 'w-dup' }),
+              railgunComponent({ weapon_instance_id: 'w-dup' }),
+            ],
+          },
+        ],
+      },
+    ]);
+    expectAttackRows(rows, [
+      {
+        tick: 0,
+        from: 'player-1',
+        to: 'pirate-1',
+        hit: 'hit',
+        shieldHull: '300/120',
+        defense: 'Pulse Laser kinetic 500→470→455→440 (S6 T3 F3)',
+      },
+    ]);
+    expect(rows[0]?.shieldHull).not.toBe('200/150');
+    expect(rows[0]?.defense).not.toContain('Railgun');
+  });
+
   test('attack hit_success true with every fired weapon omitting hit_success is a miss volley', () => {
     const rows = battleLogAttackRows([
       {

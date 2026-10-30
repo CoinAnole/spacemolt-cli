@@ -748,7 +748,7 @@ function damageLabel(value: unknown, fallback: string | number = 0): string | nu
   if (n !== undefined) return n;
   const digits = exactIntegerDigits(value);
   if (digits !== undefined) return digits;
-  if (typeof value === 'string' && value.trim()) return value;
+  if (typeof value === 'string' && nonEmptyString(value)) return value;
   return fallback;
 }
 
@@ -3758,14 +3758,9 @@ function omittedBulkyHint(data: Record<string, unknown>, skip?: ReadonlySet<stri
   return `omitted: ${preview}${suffix}`;
 }
 
-function defaultTag(notification: NormalizedNotification): string {
-  const raw = notification.msgType || notification.type || 'notification';
-  return raw.toUpperCase();
-}
-
 function previewGeneric(notification: NormalizedNotification, options: ResolvedPreviewOptions): NotificationPreview {
   const data = notification.data;
-  const tag = defaultTag(notification);
+  const tag = (notification.msgType || notification.type || 'notification').toUpperCase();
 
   // 1. Sender + body (matches table: sender/… + content/message/…)
   const sender = firstSafeScalar(data, SENDER_KEYS);
@@ -3881,14 +3876,6 @@ export function tryTypedNotificationPreview(
   }
 }
 
-/**
- * Build a human preview for any notification (raw or synthetic).
- * Never throws; never emits diagnostic tokens; never stringifies nested objects for human recovery.
- *
- * Completeness: Policy 5 ladder + full PREVIEW_HANDLERS registry (PR2–PR7c pure known types).
- * Table Message always consumes this via tableMessageFromPreview (PR4 / K13 Message only).
- * Inline formatNotification is layout-only over this builder (PR7c).
- */
 function applyVerboseExtras(
   preview: NotificationPreview,
   data: Record<string, unknown>,

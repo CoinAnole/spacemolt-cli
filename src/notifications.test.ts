@@ -5580,6 +5580,17 @@ describe('notification formatting', () => {
     expect(preview.headline).toContain('arrival tick 1433950');
   });
 
+  test('system jump wormhole branch formats the preview headline', () => {
+    const notification = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: true },
+    };
+    const preview = formatNotificationPreview(notification);
+    expect(preview.headline).toBe('jump → lacaille_9352 (arrival tick 1433950) wormhole');
+  });
+
   test('system tip/generic without message never dumps nested JSON', () => {
     const tipWithoutMessage = {
       type: 'system',

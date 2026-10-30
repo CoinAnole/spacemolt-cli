@@ -81,7 +81,6 @@ function withConnectingColumn(
     ...row,
     connecting_display: connectingDisplay(row.connecting),
   }));
-  // Mutate rows in place so table cells see connecting_display.
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const display = displayRows[i];

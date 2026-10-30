@@ -150,6 +150,12 @@ test('nested loot with nearby players still prints the warning and skips the obj
   expect(stdout).not.toContain('Fuel Now');
 });
 
+test('an explicit zero leftover prints the scalar', () => {
+  const stdout = renderCombat('attack', { ...playerReply, rounds: 0 });
+
+  expect(stdout).toContain('Rounds: 0');
+});
+
 test('nested loot without location aliases still uses the combat block', () => {
   const stdout = renderCombat('attack', {
     details: {

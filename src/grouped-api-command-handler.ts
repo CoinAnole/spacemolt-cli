@@ -69,11 +69,6 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     );
   }
 
-  private rewriteDryRunResult(result: string | undefined): string | undefined {
-    if (!result) return result;
-    return result.replace(`Dry run: ${this.action.command}`, `Dry run: ${this.name}`);
-  }
-
   parse(
     argv: string[],
     options: GlobalOptions,
@@ -176,7 +171,7 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
             structuredContent: undefined,
             result:
               typeof runResult.response.result === 'string'
-                ? this.rewriteDryRunResult(runResult.response.result)
+                ? runResult.response.result.replace(`Dry run: ${this.action.command}`, `Dry run: ${this.name}`)
                 : runResult.response.result,
           },
         },

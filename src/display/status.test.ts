@@ -5425,6 +5425,27 @@ test('get_state cargo share lines gloss size-1 fill and that lower is better', (
   expect(omitted).not.toContain('Ice cargo:');
 });
 
+test('get_state penalty lines print zero damage and speed penalties', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.damage_penalty = 0;
+  fixture.ship.speed_penalty = 0;
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Damage penalty: 0');
+  expect(stdout).toContain('Speed penalty: 0');
+});
+
+test('get_state home place lines print Home POI and Home System', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Home POI: sol_earth');
+  expect(stdout).toContain('Home System: sol');
+});
+
 test('get_state lists each module once and keeps stats on that row', () => {
   const stdout = renderStructuredResult(
     'get_state',

@@ -77,7 +77,52 @@ export function battleLogAttackRows(entries: unknown): BattleLogAttackRow[] {
     const snapshots = entry.snapshots;
     const attacks = Array.isArray(entry.attacks) ? entry.attacks.filter(isRecord) : [];
     for (const attack of attacks) {
-      appendAttackRows(rows, tick, attack, snapshots);
+      const fired = firedWeapons(attack);
+      if (fired.length === 0) {
+        if (attack.hit_success === false) {
+          rows.push(combatantRow(tick, attack, snapshots, 'miss', '', missDefense(attack)));
+          continue;
+        }
+        const components = recordComponents(attack.defense_components);
+        if (components.length > 0) {
+          for (const component of components) {
+            rows.push(attackRowFromComponent(tick, attack, component, snapshots));
+          }
+          continue;
+        }
+        rows.push(attackRowFromAttack(tick, attack, snapshots));
+        continue;
+      }
+
+      const hitLabel = volleyHitCell(attack, fired);
+      const byId = new Map<string, Record<string, unknown>>();
+      for (const component of recordComponents(attack.defense_components)) {
+        const id = stringLabel(component.weapon_instance_id);
+        if (id && !byId.has(id)) byId.set(id, component);
+      }
+
+      for (const weapon of fired) {
+        const id = stringLabel(weapon.instance_id);
+        const component = id ? byId.get(id) : undefined;
+        if (weaponConnected(weapon) && component) {
+          rows.push(
+            combatantRow(
+              tick,
+              attack,
+              snapshots,
+              hitLabel,
+              formatShieldHull(component.shield_damage, component.hull_damage),
+              formatBattleDefenseLine(component, 'component'),
+            ),
+          );
+          continue;
+        }
+        if (weaponConnected(weapon)) {
+          rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', unmatchedHitDefense(weapon)));
+          continue;
+        }
+        rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', weaponMissDefense(weapon, attack)));
+      }
     }
   }
   return rows;
@@ -144,60 +189,6 @@ function weaponMissDefense(weapon: Record<string, unknown>, attack: Record<strin
   const roll = formatBattleHitScale(weapon.hit_roll); // never attack.hit_roll
   if (roll !== undefined) parts.push(`roll ${roll}`);
   return parts.join(' ');
-}
-
-function appendAttackRows(
-  rows: BattleLogAttackRow[],
-  tick: unknown,
-  attack: Record<string, unknown>,
-  snapshots: unknown,
-): void {
-  const fired = firedWeapons(attack);
-  if (fired.length === 0) {
-    if (attack.hit_success === false) {
-      rows.push(combatantRow(tick, attack, snapshots, 'miss', '', missDefense(attack)));
-      return;
-    }
-    const components = recordComponents(attack.defense_components);
-    if (components.length > 0) {
-      for (const component of components) {
-        rows.push(attackRowFromComponent(tick, attack, component, snapshots));
-      }
-      return;
-    }
-    rows.push(attackRowFromAttack(tick, attack, snapshots));
-    return;
-  }
-
-  const hitLabel = volleyHitCell(attack, fired);
-  const byId = new Map<string, Record<string, unknown>>();
-  for (const component of recordComponents(attack.defense_components)) {
-    const id = stringLabel(component.weapon_instance_id);
-    if (id && !byId.has(id)) byId.set(id, component);
-  }
-
-  for (const weapon of fired) {
-    const id = stringLabel(weapon.instance_id);
-    const component = id ? byId.get(id) : undefined;
-    if (weaponConnected(weapon) && component) {
-      rows.push(
-        combatantRow(
-          tick,
-          attack,
-          snapshots,
-          hitLabel,
-          formatShieldHull(component.shield_damage, component.hull_damage),
-          formatBattleDefenseLine(component, 'component'),
-        ),
-      );
-      continue;
-    }
-    if (weaponConnected(weapon)) {
-      rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', unmatchedHitDefense(weapon)));
-      continue;
-    }
-    rows.push(combatantRow(tick, attack, snapshots, hitLabel, '', weaponMissDefense(weapon, attack)));
-  }
 }
 
 function attackRowFromComponent(

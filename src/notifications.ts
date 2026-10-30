@@ -178,14 +178,6 @@ function formatGenericNotification(
 
 export const NOTIFICATION_TYPES = [...PREVIEW_HANDLER_TYPES];
 
-/**
- * Layout-only human formatter (PR7c pure registry):
- *   1. formatNotificationPreview (typed PREVIEW_HANDLERS → Policy 5 generic)
- *   2. renderPreviewInline (timestamp + [TAG] + colors)
- *   3. On diagnostic-token / throw: re-run generic layout path
- *
- * Table Message is independent (tableMessageFromPreview); Type stays raw msg_type (K13).
- */
 export function formatNotification(
   notification: Notification,
   options?: { plain?: boolean; verbose?: boolean; noTimestamp?: boolean },

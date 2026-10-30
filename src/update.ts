@@ -16,7 +16,7 @@ export interface UpdateCheckCache {
   checked_at: string;
   latest_version: string;
   notified_at?: string;
-  notified_version?: string; // which version we last notified about
+  notified_version?: string;
 }
 
 export interface UpdateCheckOptions {
@@ -116,7 +116,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
 
     if (compareVersions(version, latestVersion) <= 0) return;
 
-    // Only show notification if we haven't recently notified about this version
     const isNewVersion = cache?.notified_version !== latestVersion;
     const lastNotified = cache?.notified_at ? new Date(cache.notified_at).getTime() : 0;
     const notifyExpired = clock.now().getTime() - lastNotified > UPDATE_NOTIFY_INTERVAL_MS;

@@ -221,6 +221,10 @@ test('summarizeAmmoEffects still scales damage_mod 1.0 to 100%', () => {
   expect(summarizeAmmoEffects(antimatterTorpedoes)).toBe('damage 100%, armor bypass 30%, shield bypass 30%');
 });
 
+test('a non-integer ammo percent keeps one decimal', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { damage_mod: 12.5 } } })).toBe('damage 12.5%');
+});
+
 test('shield damage mod prints shield 100%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { shield_damage_mod: 1 } } })).toBe('shield 100%');
 });
@@ -344,6 +348,10 @@ test('summarizeEffect prefers ammo then recurses scalars', () => {
   expect(summarizeEffect(4)).toBe('4');
   expect(summarizeEffect({ foo: { bar: 1 } })).toBe('foo: (bar: 1)');
   expect(summarizeEffect({ list: [1, { a: 2 }] })).toBe('list: [1, a: 2]');
+});
+
+test('a numeric ammo effect type is printed', () => {
+  expect(summarizeEffect({ type: 2, ammo: { damage_mod: 1 } })).toBe('type: 2, damage 100%');
 });
 
 test('armor melt without ticks prints the percent alone', () => {

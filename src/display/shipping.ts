@@ -494,7 +494,7 @@ export const shippingFormatters = [
       suppressShapeFallbackOnDecline: true,
     },
   ),
-  formatter((result) => renderShippingList(result), {
+  formatter(renderShippingList, {
     commands: ['shipping_list'],
     suppressShapeFallbackOnDecline: true,
   }),

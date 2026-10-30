@@ -275,8 +275,8 @@ const FACTION_GARAGE_SHIP_COLUMNS: Array<[string, string[]]> = [
 ];
 
 function stationGarageTitle(station: Record<string, unknown>): string {
-  const id = typeof station.base_id === 'string' && station.base_id ? station.base_id : '';
-  const name = typeof station.base_name === 'string' && station.base_name ? station.base_name : '';
+  const id = nonEmptyString(station.base_id) ?? '';
+  const name = nonEmptyString(station.base_name) ?? '';
   if (name && id && name !== id) return `${name} (${id})`;
   return name || id || 'unknown';
 }
@@ -1084,7 +1084,6 @@ export const shipFormatters = [
     { commands: ['list_drones'], shapeFallback: true },
   ),
 
-  // Drone
   namedFormatter(
     'drone',
     ['drone'],

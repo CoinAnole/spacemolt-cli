@@ -511,4 +511,16 @@ describe('get_faction_achievements', () => {
     expect(match.hintKeys).toBeUndefined();
     expect(resultFormatters.filter((item) => item.formatterName === 'get_faction_achievements')).toHaveLength(1);
   });
+
+  test('26. description without an id prints a question mark', () => {
+    const row = entry({ description: 'Stock every form.' });
+    delete row.id;
+    const stdout = stdoutOf(
+      body({
+        achievements: [row],
+      }),
+    );
+
+    expect(stdout).toContain('?: Stock every form.');
+  });
 });

@@ -852,7 +852,7 @@ function formatCommissionShip(r: Record<string, unknown>): boolean {
   }
   const commissionId = scalarDisplayString(r.commission_id);
   if (commissionId) emitLine(`ID: ${commissionId}`);
-  if (typeof r.status === 'string' && r.status) emitLine(`Status: ${r.status}`);
+  if (hasNonEmptyBaseId(r.status)) emitLine(`Status: ${r.status}`);
   const bareHull = formatYesNoBoolean(r.bare_hull);
   if (bareHull) emitLine(`Bare hull: ${bareHull}`);
   const sourcing = formatYesNoBoolean(r.source_missing_materials);

@@ -31,8 +31,7 @@ const DEDICATED_MODULE_BONUS_KEYS = [
 export function packageOperationLabel(...values: unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value === 'string' && value.trim()) return value.trim();
-    if (value === true) return 'yes';
-    if (value === false) return 'no';
+    if (formatCatalogYesNo(value)) return formatCatalogYesNo(value);
   }
   return undefined;
 }

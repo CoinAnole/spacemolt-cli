@@ -301,3 +301,17 @@ test('citizenship list skips non-string rules', () => {
   expect(stdout).toContain('Visible rule.');
   expect(stdout).not.toContain('hidden-rule-token');
 });
+
+test('citizenship list omits Reason when empires have no ineligible_reason', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    empires: [
+      {
+        empire_name: 'Solarian',
+        empire_id: 'solarian',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Empires ===');
+  expect(stdout).not.toContain('Reason');
+});

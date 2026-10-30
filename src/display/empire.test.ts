@@ -362,3 +362,39 @@ test('prints the facility rent multiplier as a Fees rent percentage', () => {
 
   expect(stdout).toContain('Fees: rent 150%');
 });
+
+test('prints an omitted tax-bracket lower_bound as brackets 0-100', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: [
+        {
+          brackets: [{ upper_bound: 100 }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('brackets 0-100');
+});
+
+test('prints reputation restore without a cap', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          bounty_rep_restoration_bps: 5000,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Reputation: restore 50%');
+  expect(stdout).not.toContain(' cap ');
+});

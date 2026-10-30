@@ -314,6 +314,14 @@ test('renders an idle arena lobby without the raw response fallback', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('arena status without an xp cap prints Arena XP today', () => {
+  const idle = { ...arenaStatusIdleFixture };
+  delete idle.xp_cap_per_skill;
+  const stdout = output('arena_status', idle);
+  expect(stdout).toContain('Arena XP today');
+  expect(stdout).not.toContain('(cap ');
+});
+
 test('renders incoming challenge and XP remaining with deterministic skill sort', () => {
   const stdout = output('arena_status', arenaStatusIncomingFixture);
   expect(stdout).toContain('Incoming challenge from Kestrel (player-77)');
@@ -903,6 +911,21 @@ test('an all-locked catalog says to win a required trial', () => {
   const stdout = output('arena_challenges', { action: 'challenges', challenges: [trial] });
 
   expect(stdout).toContain('Next: win a required trial to unlock the next stage');
+});
+
+test('a locked trial with no requirements omits the needs badge', () => {
+  const trial = trialDef({
+    challenge_id: 'trial_master',
+    name: 'The Trial Master',
+    series: 'Blood Arena',
+    stage: 1,
+    locked: true,
+    requires: [],
+  });
+  const stdout = output('arena_challenges', { action: 'challenges', challenges: [trial] });
+
+  expect(stdout).toContain('LOCKED');
+  expect(stdout).not.toContain('needs ');
 });
 
 test('multiple allowed damage types format as only energy, kinetic', () => {

@@ -28,7 +28,7 @@ import { emitFactionScanPoi, nativeScanField } from './scan-contacts.ts';
 import { formatZoneMoveReason } from './zone-move-reason.ts';
 
 function formatTimestampPreview(value: unknown): string {
-  if (value === undefined || value === null || value === '') return '';
+  if (!hasAnyField([{ value }], ['value'])) return '';
   const text = String(value);
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/.exec(text);
   return match ? `${match[1]} ${match[2]}` : text;
@@ -1148,7 +1148,7 @@ function emitMobileBaseCommission(source: Record<string, unknown>): void {
 function formatChatSender(message: Record<string, unknown>): string | undefined {
   const sender = message.sender ?? message.username ?? message.sender_name ?? message.sender_id;
   const verified = message.empire_official === true ? ' [empire_official]' : '';
-  if (sender === undefined || sender === null || sender === '') return verified.trim() || undefined;
+  if (!hasAnyField([{ sender }], ['sender'])) return verified.trim() || undefined;
   return `${sender}${verified}`;
 }
 
@@ -1325,7 +1325,6 @@ function hasNativeScanIdentity(result: Record<string, unknown>): boolean {
 }
 
 export const socialFormatters = [
-  // Chat confirmation
   namedFormatter(
     'chat_sent',
     ['content'],

@@ -280,6 +280,16 @@ test('ship capability flag prints Capabilities: cloak passive 2', () => {
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
 });
 
+test('ship capability value 0 prints Capabilities: cloak 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: 0 }] }, {}),
+    { plain: true },
+  );
+  expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak 0');
+});
+
 test('legacy-only ship prints Availability: legacy', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ legacy: true }, {}), { plain: true });

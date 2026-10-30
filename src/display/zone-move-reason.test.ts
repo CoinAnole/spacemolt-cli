@@ -24,4 +24,5 @@ test('prints other reasons trimmed as-is', () => {
   expect(formatZoneMoveReason('pulled_closer')).toBe('pulled_closer');
   expect(formatZoneMoveReason('PULLED_CLOSER')).toBe('PULLED_CLOSER');
   expect(formatZoneMoveReason('herald')).toBe('herald');
+  expect(formatZoneMoveReason('  Herald  ')).toBe('Herald');
 });

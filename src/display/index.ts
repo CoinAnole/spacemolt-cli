@@ -204,15 +204,9 @@ function resolveKeysValue(
   return { found: true, value: current };
 }
 
-function jsonValueKind(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
-  return typeof value;
-}
-
 function formatNotObjectMessage(path: string, value: unknown): string {
   const displayPath = path.trim().replace(/^\./, '') || '.';
-  const kind = jsonValueKind(value);
+  const kind = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
   if (kind === 'string' || kind === 'number' || kind === 'boolean') {
     return `"${displayPath}" is a scalar (${kind}), not an object.`;
   }

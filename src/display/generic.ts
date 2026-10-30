@@ -1666,7 +1666,6 @@ export const genericFormatters = [
     { commands: ['catalog'] },
   ),
 
-  // Generic table fallback for common list-shaped responses.
   formatter(
     (r, command) => {
       let matches = GENERIC_LIST_KEYS.filter((key) => {
@@ -1721,7 +1720,6 @@ export const genericFormatters = [
     { shapeFallback: true },
   ),
 
-  // Facility dismantle / faction_dismantle response
   formatter(
     (r, command) => {
       const action = typeof r.action === 'string' ? r.action : undefined;
@@ -1805,7 +1803,6 @@ export const genericFormatters = [
     { commands: ['dismantle_outpost'] },
   ),
 
-  // Simple message
   formatter(
     (r) => {
       if (!r.message) return false;

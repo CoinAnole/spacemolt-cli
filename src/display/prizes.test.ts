@@ -231,6 +231,24 @@ test('jump with only an origin prints jump sol and not an arrow', () => {
   expect(stdout).not.toContain('→');
 });
 
+test('jump with only poi ids prints jump sol_earth → ac_station', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () =>
+      emitPrizeRecoveries([
+        {
+          transit_kind: 'jump',
+          transit_from_poi_id: 'sol_earth',
+          transit_to_poi_id: 'ac_station',
+        },
+      ]),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('jump sol_earth → ac_station');
+});
+
 test('max-only nearby prize hull prints ?/8 and not undefined/8', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ max_hull: 8 }] }), { plain: true });

@@ -83,13 +83,12 @@ function formatDisplayValue(value: unknown): string {
 }
 
 function locationTransitLines(loc: Record<string, unknown>): string[] {
-  const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
   const named = (name: unknown, id: unknown) => {
-    const nameText = text(name);
-    const idText = text(id);
+    const nameText = usableLabel(name);
+    const idText = usableLabel(id);
     return nameText && idText && nameText !== idText ? `${nameText} (${idText})` : (nameText ?? idText);
   };
-  const type = text(loc.transit_type);
+  const type = usableLabel(loc.transit_type);
   const poi = named(loc.transit_dest_poi_name, loc.transit_dest_poi_id);
   const system = named(loc.transit_dest_system_name, loc.transit_dest_system_id);
   const destination = type === 'travel' ? (poi ?? system) : (system ?? poi);
@@ -109,7 +108,7 @@ function locationTransitLines(loc: Record<string, unknown>): string[] {
   if (typeof loc.transit_ticks_elapsed === 'number') {
     lines.push(`${c.cyan}Ticks elapsed:${c.reset} ${loc.transit_ticks_elapsed}`);
   }
-  const voidMessage = text(loc.void_message);
+  const voidMessage = usableLabel(loc.void_message);
   if (voidMessage) lines.push(`${c.dim}${voidMessage}${c.reset}`);
   return lines;
 }
@@ -1083,12 +1082,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
   }
   if (ship) {
     emitLine(`\n${c.bright}=== Ship: ${ship.name || ship.custom_name || ship.class_name || ship.id} ===${c.reset}`);
-    const shipId =
-      typeof ship.id === 'string' && ship.id !== ''
-        ? ship.id
-        : typeof ship.ship_id === 'string' && ship.ship_id !== ''
-          ? ship.ship_id
-          : undefined;
+    const shipId = usableLabel(ship.id) ?? usableLabel(ship.ship_id);
     if (shipId) emitLine(`ID: ${shipId}`);
     if (ship.class_name || ship.class_id) emitLine(`Class: ${ship.class_name || ship.class_id}`);
     if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
@@ -1227,7 +1221,6 @@ function emitLoginUnreadChat(result: Record<string, unknown>, command: string | 
 }
 
 export const statusFormatters = [
-  // Queue state
   formatter((r) => emitQueue(r.queue), { commands: ['get_queue'] }),
 
   formatter(

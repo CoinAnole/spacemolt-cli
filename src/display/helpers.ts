@@ -483,7 +483,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
   }
 
   function emitSafeIntegerLine(label: string, value: unknown, suffix: string): void {
-    if (typeof value !== 'bigint' && !(typeof value === 'number' && Number.isSafeInteger(value))) return;
+    if (!formatExactGroupedInteger(value)) return;
     const text = formatIntegerText(value);
     if (text !== undefined) emitLine(`${label}: ${text} ${suffix}`);
   }

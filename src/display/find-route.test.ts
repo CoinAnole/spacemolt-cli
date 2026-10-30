@@ -439,6 +439,14 @@ describe('find_route formatter', () => {
     expect(stdout).not.toContain('=== Route ===');
   });
 
+  test('prints Route: not found and Steps: (omitted) when found is false and the route key is absent', () => {
+    const body: Record<string, unknown> = { ...documentedMissingRouteFixture };
+    delete body.route;
+    const stdout = stdoutOf(body);
+    expect(stdout.split('\n')).toContain('Route: not found');
+    expect(stdout.split('\n')).toContain('Steps: (omitted)');
+  });
+
   test('prints route status from route length when found is omitted', () => {
     const hop: Record<string, unknown> = {
       ...documentedMissingRouteFixture,

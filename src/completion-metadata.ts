@@ -98,11 +98,6 @@ function isIdLikeArg(name: string): boolean {
   return name === 'id' || name.endsWith('_id') || name.endsWith('_ids') || name.startsWith('target_');
 }
 
-function fieldSchema(commandConfig: CommandConfig | LocalCommandConfig, arg: string) {
-  if (!('schema' in commandConfig) || !commandConfig.schema) return undefined;
-  return schemaFieldForKey(commandConfig, arg);
-}
-
 export function completionArgsForCommand(
   command: string,
   commandConfig: CommandConfig | LocalCommandConfig | undefined,
@@ -111,7 +106,8 @@ export function completionArgsForCommand(
 
   return (commandConfig.args || []).map((argDef) => {
     const name = typeof argDef === 'string' ? argDef : argDef.rest;
-    const schema = fieldSchema(commandConfig, name);
+    const schema =
+      'schema' in commandConfig && commandConfig.schema ? schemaFieldForKey(commandConfig, name) : undefined;
     const description = schema?.description || HINT_VALUES[command]?.[name] || name;
 
     if (schema?.enum?.length) {

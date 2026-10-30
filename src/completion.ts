@@ -187,10 +187,6 @@ function fishCompletionOptionWords(option: CompletionOption): string[] {
   return [option.long, option.short].filter(Boolean) as string[];
 }
 
-function fishGlobalOptionWords(): string[] {
-  return GLOBAL_COMPLETION_OPTIONS.flatMap(fishCompletionOptionWords);
-}
-
 function fishValueGlobalOptionWords(): string[] {
   return GLOBAL_COMPLETION_OPTIONS.filter((option) => option.takesValue).flatMap(fishCompletionOptionWords);
 }
@@ -541,7 +537,9 @@ function generateFishCompletion(registry: CompletionRegistry): string {
   lines.push('  set -l tokens (commandline -opc)');
   lines.push('  set -l current (commandline -ct)');
   lines.push(`  set -l value_options ${escapeFishArguments(fishValueGlobalOptionWords())}`);
-  lines.push(`  set -l global_options ${escapeFishArguments(fishGlobalOptionWords())}`);
+  lines.push(
+    `  set -l global_options ${escapeFishArguments(GLOBAL_COMPLETION_OPTIONS.flatMap(fishCompletionOptionWords))}`,
+  );
   lines.push('  set -l result');
   lines.push('  set -l skip_next 0');
   lines.push('  set -l last_index (count $tokens)');

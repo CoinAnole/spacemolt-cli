@@ -155,6 +155,18 @@ test('survey_system prints a system-id-only headline without (sol)', () => {
   expect(stdout).not.toContain('(sol)');
 });
 
+test('survey_system prints a system name without system_id and no parenthetical id', () => {
+  const stdout = stdoutOf({
+    system_name: 'Sol',
+    survey_power: 18,
+    newly_revealed: [],
+    already_revealed: [],
+  });
+
+  expect(stdout.split('\n')).toContain('=== Survey: Sol ===');
+  expect(lineContaining(stdout, '=== Survey:')).not.toContain('(');
+});
+
 test('survey_system prints Unknown for a missing system name and id', () => {
   const stdout = stdoutOf({
     survey_power: 18,
@@ -431,6 +443,18 @@ test('survey_system skips Skill XP for an empty-string xp value', () => {
   expect(stdout).not.toContain('Skill XP:');
 });
 
+test('survey_system skips a null skill XP entry and prints the other gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: null, piloting: 4 };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: piloting +4');
+  expect(stdout).not.toContain('scanning');
+  expect(stdout).not.toContain('+null');
+});
+
 test('survey_system prints negative skill XP without a leading plus', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -691,11 +715,18 @@ test('survey_system omits faint difficulty when it is not a non-empty string', (
       details.faint_signatures = [{ type: 'deep_core', hint: 'Need more survey power', difficulty: '' }];
     }),
   );
+  const numeric = stdoutOf(
+    clonePresent((details) => {
+      details.faint_signatures = [{ type: 'deep_core', hint: 'Need more survey power', difficulty: 24 }];
+    }),
+  );
 
   expect(omitted).toContain('  - deep_core: Need more survey power');
   expect(omitted).not.toContain('difficulty');
   expect(blank).toContain('  - deep_core: Need more survey power');
   expect(blank).not.toContain('difficulty');
+  expect(numeric.split('\n')).toContain('  - deep_core: Need more survey power');
+  expect(numeric).not.toContain('(difficulty');
 });
 
 test('survey_system prints signature for a faint row that omits type', () => {

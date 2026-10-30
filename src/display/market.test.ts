@@ -743,6 +743,15 @@ test('faction_query_intel keeps an older POI in a live system as a snapshot', ()
   expect(stdout).toContain('Intel tick: 900685 by Marlowe, age 5 ticks');
 });
 
+test('faction_query_intel prints a depleted resource line when remaining is 0', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [{ resource_id: 'iron_ore', richness: 3, remaining: 0 }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdoutLine(stdout, 'iron_ore')).toBe('    - iron_ore: richness 3, depleted');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('faction_query_intel prints read_at_tick when resources are missing or empty', () => {
   const fixture = cloneIntelFixture();
   firstIntelEntry(fixture).pois = [
@@ -1313,4 +1322,24 @@ test('ship buy order with being_built false prints Building: no', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Building: no');
+});
+
+test('commission_status count mismatch prints count 0 when the array is non-empty', () => {
+  const stdout = renderStructuredResult(
+    'commission_status',
+    {
+      commissions: [
+        {
+          commission_id: 'commission-1',
+          ship_name: 'Lucky Strike',
+        },
+      ],
+      count: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('count 0');
+  expect(stdout).not.toContain('=== Response ===');
 });

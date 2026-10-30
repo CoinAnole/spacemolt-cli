@@ -339,6 +339,28 @@ test('inspect package prints Contents: (empty) when contents is empty', () => {
   expect(stdout).toContain('Contents: (empty)');
 });
 
+test('inspect package prints Size: 0 when package size is zero', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_zero',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_zero',
+        label: 'Zero crate',
+        size: 0,
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Size: 0');
+});
+
 test('renders system inspect results with faction intel', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -384,6 +406,7 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).toContain('The cradle of humanity.');
   expect(stdout).toContain('Faction intel');
   expect(stdout).toContain('Earth Station');
+  expect(stdout).toContain('Known POIs (2): Earth Station, Main Belt');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -1424,6 +1447,32 @@ test('renders a POI wormhole that expires in 0', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Wormhole: Alpha (expires in 0)');
+});
+
+test('renders a wormhole with no wormhole_expires_in as Wormhole: Alpha', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: 'Alpha',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: Alpha');
+  expect(stdout).not.toContain('expires');
 });
 
 test('renders poi inspect workability columns when ship-relative fields are present', () => {
