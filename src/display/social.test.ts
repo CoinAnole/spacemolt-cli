@@ -4163,6 +4163,132 @@ test('faction_info json passes fuel_bunkers through without the table', () => {
   expect(stdout).not.toContain('Fuel bunkers');
 });
 
+test('faction_info prints server fuel totals next to the bunker table, including 0', () => {
+  const fixture = factionInfoWithRent();
+  fixture.fuel_bunkers = [
+    { base_id: 'earth_station', fuel_reserve: 10, fuel_capacity: 100 },
+    { base_id: 'nova_terra_central', base_name: 'Nova Terra Central', fuel_reserve: 20, fuel_capacity: 200 },
+  ];
+  fixture.total_fuel_reserve = 0;
+  fixture.total_fuel_capacity = 12000;
+  const stdout = renderFactionInfo(fixture);
+  const lines = stdout.split('\n');
+  const title = lines.findIndex((line) => line.includes('=== Fuel bunkers ==='));
+  const reserve = lines.indexOf('Total fuel reserve: 0');
+  const capacity = lines.indexOf(`Total fuel capacity: ${(12000).toLocaleString()}`);
+  const rent = lines.findIndex((line) => line.includes('Faction rent bill:'));
+  expect(title).toBeGreaterThan(-1);
+  expect(reserve).toBeGreaterThan(title);
+  expect(capacity).toBe(reserve + 1);
+  expect(rent).toBeGreaterThan(capacity);
+  expect(stdout).toContain('earth_station');
+  expect(stdout).toContain('| 10');
+  expect(stdout).toContain('| 20');
+  expect(stdout).not.toContain('station tank');
+  expect(stdout).not.toContain('shared');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info leaves a missing fuel total blank and does not sum bunker rows', () => {
+  const rows = [
+    { base_id: 'earth_station', fuel_reserve: 10, fuel_capacity: 40 },
+    { base_id: 'nova_terra_central', fuel_reserve: 20, fuel_capacity: 50 },
+  ];
+  const totals = (stdout: string): string[] => stdout.split('\n').filter((line) => line.startsWith('Total fuel '));
+
+  const reserveOnly = factionInfoWithRent();
+  reserveOnly.fuel_bunkers = rows;
+  reserveOnly.total_fuel_reserve = 7;
+  const reserveStdout = renderFactionInfo(reserveOnly);
+  expect(totals(reserveStdout)).toEqual(['Total fuel reserve: 7', 'Total fuel capacity:']);
+  expect(reserveStdout).toContain('| 10');
+  expect(reserveStdout).not.toContain('Total fuel reserve: 30');
+  expect(reserveStdout).not.toContain('Total fuel capacity: 0');
+  expect(reserveStdout).not.toContain('Total fuel capacity: 90');
+
+  const capacityOnly = factionInfoWithRent();
+  capacityOnly.fuel_bunkers = rows;
+  capacityOnly.total_fuel_capacity = 0;
+  expect(totals(renderFactionInfo(capacityOnly))).toEqual(['Total fuel reserve:', 'Total fuel capacity: 0']);
+
+  const neither = factionInfoWithRent();
+  neither.fuel_bunkers = rows;
+  const neitherStdout = renderFactionInfo(neither);
+  expect(neitherStdout).toContain('=== Fuel bunkers ===');
+  expect(neitherStdout).not.toContain('Total fuel');
+
+  const nullReserve = factionInfoWithRent();
+  nullReserve.fuel_bunkers = rows;
+  nullReserve.total_fuel_reserve = null;
+  nullReserve.total_fuel_capacity = 0;
+  expect(totals(renderFactionInfo(nullReserve))).toEqual(['Total fuel reserve:', 'Total fuel capacity: 0']);
+
+  const unusable = factionInfoWithRent();
+  unusable.fuel_bunkers = rows;
+  unusable.total_fuel_reserve = '4';
+  unusable.total_fuel_capacity = 1.5;
+  expect(unusable.total_fuel_reserve).toBe('4');
+  expect(totals(renderFactionInfo(unusable))).toEqual([]);
+});
+
+test('faction_info prints fuel totals when the bunker list is omitted or empty', () => {
+  const omitted = factionInfoWithRent();
+  omitted.total_fuel_reserve = 0;
+  omitted.total_fuel_capacity = 0;
+  const omittedLines = renderFactionInfo(omitted).split('\n');
+  expect(omittedLines.join('\n')).not.toContain('Fuel bunkers');
+  const omittedReserve = omittedLines.indexOf('Total fuel reserve: 0');
+  expect(omittedReserve).toBeGreaterThan(omittedLines.findIndex((line) => line.includes('=== Faction Facilities ===')));
+  expect(omittedLines[omittedReserve + 1]).toBe('Total fuel capacity: 0');
+  expect(omittedLines.findIndex((line) => line.includes('Faction rent bill:'))).toBeGreaterThan(omittedReserve);
+
+  const empty = factionInfoWithRent();
+  empty.fuel_bunkers = [];
+  empty.total_fuel_reserve = 0;
+  empty.total_fuel_capacity = 0;
+  const emptyLines = renderFactionInfo(empty).split('\n');
+  const none = emptyLines.indexOf('(None)');
+  expect(none).toBeGreaterThan(-1);
+  expect(emptyLines[none + 1]).toBe('Total fuel reserve: 0');
+  expect(emptyLines[none + 2]).toBe('Total fuel capacity: 0');
+
+  const notAnArray = factionInfoWithRent();
+  notAnArray.fuel_bunkers = { base_id: 'earth_station' };
+  notAnArray.total_fuel_reserve = 0;
+  notAnArray.total_fuel_capacity = 3;
+  const odd = renderFactionInfo(notAnArray);
+  expect(odd).not.toContain('Fuel bunkers');
+  expect(odd.split('\n').filter((line) => line.startsWith('Total fuel '))).toEqual([
+    'Total fuel reserve: 0',
+    'Total fuel capacity: 3',
+  ]);
+});
+
+test('faction_info json passes fuel totals through without the labels', () => {
+  const fixture = factionInfoWithRent();
+  fixture.fuel_bunkers = [{ base_id: 'earth_station', fuel_reserve: 10, fuel_capacity: 40 }];
+  fixture.total_fuel_reserve = 0;
+  fixture.total_fuel_capacity = 5;
+  const stdout = renderFactionInfo(fixture, 'json');
+  const parsed = JSON.parse(stdout) as { total_fuel_reserve: number; total_fuel_capacity: number };
+  expect(parsed.total_fuel_reserve).toBe(0);
+  expect(parsed.total_fuel_capacity).toBe(5);
+  expect(stdout).not.toContain('Total fuel');
+  expect(stdout).not.toContain('Fuel bunkers');
+});
+
+test('faction_info prints a bigint fuel total without summing bunker rows', () => {
+  const wide = 9007199254740993n;
+  const fixture = factionInfoWithRent();
+  fixture.fuel_bunkers = [{ base_id: 'earth_station', fuel_reserve: 1, fuel_capacity: 1 }];
+  fixture.total_fuel_reserve = wide;
+  fixture.total_fuel_capacity = 0n;
+  const lines = renderFactionInfo(fixture).split('\n');
+  expect(lines).toContain(`Total fuel reserve: ${wide.toLocaleString()}`);
+  expect(lines).toContain('Total fuel capacity: 0');
+  expect(lines).not.toContain('Total fuel reserve: 1');
+});
+
 const factionMemberPage = [
   {
     username: 'Marlowe',

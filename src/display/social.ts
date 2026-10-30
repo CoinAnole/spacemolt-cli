@@ -13,6 +13,7 @@ import {
   emitStationServicePools,
   finiteNumber,
   firstArray,
+  formatExactGroupedInteger,
   formatFacilityMaintenanceUpkeep,
   formatIntegerText,
   formatter,
@@ -73,6 +74,15 @@ function emitFactionFuelBunkers(value: unknown): void {
   if (hasAnyField(rows, ['base_name'])) columns.push(['Base', ['base_name']]);
   columns.push(['Reserve', ['fuel_reserve']], ['Capacity', ['fuel_capacity']]);
   printCompactTable('Fuel bunkers', rows, columns);
+}
+
+// Server totals. Do not sum fuel_bunkers, and do not treat a missing side as 0.
+function emitFactionFuelTotals(result: Record<string, unknown>): void {
+  const reserve = formatExactGroupedInteger(result.total_fuel_reserve);
+  const capacity = formatExactGroupedInteger(result.total_fuel_capacity);
+  if (reserve === undefined && capacity === undefined) return;
+  emitLine(`Total fuel reserve: ${reserve ?? ''}`.trimEnd());
+  emitLine(`Total fuel capacity: ${capacity ?? ''}`.trimEnd());
 }
 
 function identifierText(value: unknown): string | undefined {
@@ -1704,6 +1714,7 @@ export const socialFormatters = [
         ]);
       }
       emitFactionFuelBunkers(r.fuel_bunkers);
+      emitFactionFuelTotals(r);
       emitRentSummary('Faction rent bill', 'Faction arrears', r.faction_rent);
       if (isRecord(r.mobile_base)) emitMobileBaseSnapshot(r.mobile_base, 'info');
       if (isRecord(r.mobile_base_commission)) emitMobileBaseCommission(r.mobile_base_commission);

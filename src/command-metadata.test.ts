@@ -2638,7 +2638,7 @@ describe('command metadata', () => {
 
   test('faction info help documents faction_rent omit versus zero', () => {
     const description =
-      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base. offset and limit page the member list. members_offset, members_limit, and members_truncated describe that member-list page. members_limit is the page size, not the faction member cap. A full faction rejects joins with faction_full, and that error states the cap. Table output prints the member page (username, role, online, joined, last seen, and player id) when members is present. When members_truncated is true, the next page is offset = members_offset + members_limit, treating an omitted members_offset as 0. members_limit prints as the page size. An omitted pagination field prints nothing.';
+      'View faction details. When faction_rent is present, table output prints the treasury facility bill, and an explicit 0 prints 0cr/cycle; an omitted faction_rent prints nothing (a non-member, or a faction that owns no facilities — not an error and not zero rent). Per-facility rates are faction facility_owned. When mobile_base is present, table output prints the member snapshot after the rent lines; an omitted key prints nothing. An empty current_system_id prints System: (empty) and the departure system is the Origin line. Explicit 0 ticks and empty endpoints print as zero or empty. mobile_base_commission prints the commission id and archetype while a base is under construction and prints nothing when omitted. The two are mutually exclusive on the server. Escrow is not on this command; use faction get_mobile_base. offset and limit page the member list. members_offset, members_limit, and members_truncated describe that member-list page. members_limit is the page size, not the faction member cap. A full faction rejects joins with faction_full, and that error states the cap. Table output prints the member page (username, role, online, joined, last seen, and player id) when members is present. When members_truncated is true, the next page is offset = members_offset + members_limit, treating an omitted members_offset as 0. members_limit prints as the page size. An omitted pagination field prints nothing. The home-station fuel_bunkers row is the shared station tank. Nothing in the list marks that row, so table output prints each reserve and capacity as sent and does not relabel a row as the station tank. total_fuel_reserve and total_fuel_capacity print next to that table, including an explicit 0, and those totals include that shared tank. If one total is absent, the one that arrived prints and the other stays blank. An omitted total is not 0, and the rows are not added up in its place.';
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.info?.config;
     expect(config?.description).toBe(description);
     expect(config?.description).toContain('faction_rent');
@@ -2695,6 +2695,18 @@ describe('command metadata', () => {
     expect(help).toContain('treating an omitted members_offset as 0');
     expect(help).toContain('Member-list page size (default 50, max 100)');
     expect(help).not.toContain('Max members to return');
+    expect(config?.description).toContain('shared station tank');
+    expect(config?.description).toContain('total_fuel_reserve and total_fuel_capacity');
+    expect(config?.description).toContain('include that shared tank');
+    expect(config?.description).toContain('the other stays blank');
+    expect(config?.description).toContain('rows are not added up');
+    expect(config?.description).not.toContain('earth_station');
+    expect(help).toContain('shared station tank');
+    expect(help).toContain('total_fuel_reserve and total_fuel_capacity');
+    expect(help).toContain('include that shared tank');
+    expect(help).toContain('the other stays blank');
+    expect(help).toContain('rows are not added up');
+    expect(help).not.toContain('earth_station');
   });
 
   test('faction query_intel help documents unverified readings and live systems', () => {
