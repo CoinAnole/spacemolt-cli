@@ -15,7 +15,7 @@ const UPDATE_NOTIFY_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours between update 
 export interface UpdateCheckCache {
   checked_at: string;
   latest_version: string;
-  notified_at?: string; // when we last showed the update notice
+  notified_at?: string;
   notified_version?: string; // which version we last notified about
 }
 
@@ -97,7 +97,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
       }
     }
 
-    // Fetch from GitHub if cache is stale or missing
     if (!latestVersion) {
       const response = await transport(`https://api.github.com/repos/${repo}/releases/latest`, {
         headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'SpaceMolt-Client' },

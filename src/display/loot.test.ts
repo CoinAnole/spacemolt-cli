@@ -237,6 +237,19 @@ test('all-loot blanks missing or non-numeric quantity cells and keeps partial ro
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('all-loot row with item_id true prints true in the item cell', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.looted = [{ item_id: true }];
+    }),
+  );
+
+  expect(stdout).toContain('=== Looted ===');
+  expect(stdout).toMatch(/true\s+\|/);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('all-loot formats bigint quantities and ignores non-record rows', () => {
   const stdout = stdoutOf(
     'loot_wreck',

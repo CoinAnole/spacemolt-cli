@@ -1229,6 +1229,23 @@ test('one-item view_market book with no buy or sell orders prints (no orders)', 
   expect(stdout).toContain('(no orders)');
 });
 
+test('view_market with action, base_id, and items [] prints (empty)', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('(empty)');
+  expect(stdout).not.toContain('=== Items ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('one-item view_market tags a non-player buy source', () => {
   const stdout = renderStructuredResult(
     'view_market',
@@ -1257,6 +1274,23 @@ test('empty view_insurance policies array prints No active policies.', () => {
   const stdout = renderStructuredResult('view_insurance', { policies: [] }, options, context).stdout.join('\n');
 
   expect(stdout).toContain('No active policies.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_insurance_quote with quote.refused true prints Refused: yes', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        refused: true,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Refused: yes');
+  expect(stdout).not.toContain('Refused: no');
   expect(stdout).not.toContain('=== Response ===');
 });
 

@@ -350,7 +350,6 @@ type PreviewHandler = (
 ) => NotificationPreview | null;
 
 // ── Table Message baseline formatters (PR2; sole Message source after PR4) ───
-// Table Message is now always tableMessageFromPreview(formatNotificationPreview(...)).
 
 function records(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
@@ -1358,14 +1357,10 @@ type ArenaObjectiveRender = (input: { waveName?: string; enemiesLine?: string; o
   details: string[];
 };
 
-function definedLines(...lines: Array<string | undefined>): string[] {
-  return lines.filter((line): line is string => typeof line === 'string' && line.length > 0);
-}
-
 const ARENA_OBJECTIVE_EVENT_RENDERS: Readonly<Record<string, ArenaObjectiveRender>> = {
   wave_arrived: ({ waveName, enemiesLine }) => ({
     headline: waveName !== undefined ? `Wave arrived: ${waveName}` : 'Wave arrived',
-    details: definedLines(enemiesLine),
+    details: [enemiesLine].filter((line): line is string => typeof line === 'string' && line.length > 0),
   }),
   objective_won: ({ objectiveLabel }) => ({
     headline: objectiveLabel !== undefined ? `Objective won (${objectiveLabel})` : 'Objective won',
@@ -3671,10 +3666,6 @@ export function hasPreviewHandler(msgType: string): boolean {
   return typeof PREVIEW_HANDLERS[msgType] === 'function';
 }
 
-/**
- * Sorted msg_type keys with pure PREVIEW_HANDLERS.
- * After PR7c this is the sole known-type registry (NOTIFICATION_TYPES derives from it).
- */
 export const PREVIEW_HANDLER_TYPES: readonly string[] = Object.keys(PREVIEW_HANDLERS).sort();
 
 function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOptions {
@@ -3849,9 +3840,10 @@ export function normalizeNotification(notification: unknown): NormalizedNotifica
     };
   }
 
-  const type = typeof notification.type === 'string' && notification.type.trim() ? notification.type : 'notification';
+  const type =
+    typeof notification.type === 'string' && nonEmptyString(notification.type) ? notification.type : 'notification';
   const msgType =
-    typeof notification.msg_type === 'string' && notification.msg_type.trim() ? notification.msg_type : type;
+    typeof notification.msg_type === 'string' && nonEmptyString(notification.msg_type) ? notification.msg_type : type;
   const data = isRecord(notification.data)
     ? notification.data
     : notification.data === undefined

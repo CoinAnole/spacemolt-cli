@@ -90,14 +90,6 @@ function routeStatus(result: Record<string, unknown>): RouteStatus {
   return '(omitted)';
 }
 
-function foundDetail(value: unknown): string {
-  if (value === null) return 'Found: (null)';
-  if (typeof value === 'string') return value.trim() === '' ? 'Found: (empty)' : `Found: ${value}`;
-  const text = formatIntegerText(value);
-  if (text !== undefined) return `Found: ${text}`;
-  return 'Found: (invalid)';
-}
-
 function travelLine(result: Record<string, unknown>): string | undefined {
   const hasName = Object.hasOwn(result, 'target_poi_name');
   const hasPoi = Object.hasOwn(result, 'target_poi');
@@ -217,7 +209,15 @@ function emitFoundLine(result: Record<string, unknown>): void {
     emitLine('Found: true');
     return;
   }
-  if (found !== true && found !== false) emitLine(foundDetail(found));
+  if (found !== true && found !== false) {
+    if (found === null) emitLine('Found: (null)');
+    else if (typeof found === 'string') {
+      emitLine(found.trim() === '' ? 'Found: (empty)' : `Found: ${found}`);
+    } else {
+      const text = formatIntegerText(found);
+      emitLine(text !== undefined ? `Found: ${text}` : 'Found: (invalid)');
+    }
+  }
 }
 
 function formatFindRoute(result: Record<string, unknown>): boolean {

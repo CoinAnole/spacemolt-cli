@@ -476,6 +476,27 @@ test('prints (No catalog entries in this response) for a catalog with no items, 
   expect(stdout.split('\n')).toContain('(No catalog entries in this response)');
 });
 
+test('prints Estimated material cost: 0 without an analysis record', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'cost_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        estimated_material_cost: 0,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Estimated material cost: 0');
+  expect(stdout).not.toContain('Analysis');
+});
+
 test('renders catalog inspect Mining group for a crystal ore', () => {
   const rendered = renderStructuredResult(
     'inspect',

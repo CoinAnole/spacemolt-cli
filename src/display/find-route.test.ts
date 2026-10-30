@@ -569,6 +569,12 @@ describe('find_route formatter', () => {
     expect(row[0]).toBe('(null)');
   });
 
+  test('prints (invalid) in the player cell for a non-string fleet username', () => {
+    const stdout = stdoutOf(foundBody({ fleet_fuel: [fleetMember({ username: 1 })] }));
+    const row = cells(rowByText(stdout, 'Fleet Fuel', 'pilot-1'));
+    expect(row[0]).toBe('(invalid)');
+  });
+
   test('prints fleet rows that are not the caller without inventing a leader', () => {
     const stdout = stdoutOf(
       foundBody({

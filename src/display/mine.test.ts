@@ -183,6 +183,17 @@ test('mine prints negative mining XP without a plus sign', () => {
   expect(stdout).toContain('Skill XP: mining -1,200');
 });
 
+test('mine prints xp_gained mining string 1200 without grouping', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { mining: '1200' };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: mining +1200');
+  expect(stdout).not.toContain('Skill XP: mining +1,200');
+});
+
 test('mine prints quantity as a plain decimal without grouping', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

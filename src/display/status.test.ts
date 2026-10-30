@@ -2722,6 +2722,22 @@ test('get_location prints pathfinder drift details', () => {
   expect(stdout).toContain('Stars thin out behind you.');
 });
 
+test('get_location prints bare in-transit location output', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        in_transit: true,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Transit: in transit');
+});
+
 test('get_status and get_state print location.nearby_prizes', () => {
   const status = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
     '\n',

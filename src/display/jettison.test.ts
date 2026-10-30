@@ -155,6 +155,24 @@ test('failed jettison result prints Error', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('results-row bigint quantity prints the exact digits', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          quantity: 9007199254740993n,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Quantity: 9007199254740993');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('an unknown conversion field still dumps the response', () => {
   const { stdout } = renderJettison('jettison', {
     details: {

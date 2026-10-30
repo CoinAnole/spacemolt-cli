@@ -370,8 +370,26 @@ test('disrupt ticks prints the duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 2 } } })).toBe('disrupt 2 ticks');
 });
 
+test('disrupt damage prints the signed percent', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0.1 } } })).toBe('disrupt damage +10%');
+});
+
 test('active armor melt prints Armor melt: active for 2 ticks', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_ticks_remaining: 2 }), { plain: true });
   expect(buffer.stdout.join('\n')).toContain('Armor melt: active for 2 ticks');
+});
+
+test('armor melt percent without remaining ticks prints Armor melt: 20%', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_pct: 0.2 }), { plain: true });
+  expect(buffer.stdout).toEqual(['Effects:', '  Armor melt: 20%']);
+});
+
+test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen', amount: 5 }] }), {
+    plain: true,
+  });
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
 });

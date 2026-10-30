@@ -1320,7 +1320,7 @@ const SCAN_IDENTITY_KEYS = ['poi_id', 'scan_power', 'hops', 'facility_level', 'c
 function hasNativeScanIdentity(result: Record<string, unknown>): boolean {
   return SCAN_IDENTITY_KEYS.some((key) => {
     const value = nativeScanField(result, key);
-    return value !== undefined && value !== null && value !== '';
+    return hasAnyField([{ value }], ['value']);
   });
 }
 

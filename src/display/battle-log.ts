@@ -289,13 +289,9 @@ function formatResistBuckets(source: Record<string, unknown>): string {
   return parts.length ? `(${parts.join(' ')})` : '';
 }
 
-function formatReportedPercent(value: unknown): string | undefined {
-  const n = finiteNumber(value);
-  return n === undefined ? undefined : `${n}%`;
-}
-
 function formatIgnoredFlag(source: Record<string, unknown>): string | undefined {
-  const ign = formatReportedPercent(source.ignored_resistance_pct);
+  const n = finiteNumber(source.ignored_resistance_pct);
+  const ign = n === undefined ? undefined : `${n}%`;
   return ign ? `ign ${ign}` : undefined;
 }
 

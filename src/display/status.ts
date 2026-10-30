@@ -353,7 +353,7 @@ function formatStandingValue(value: unknown, includeBaseline = false): string | 
       }
     }
     const jailedUntil = value.jailed_until;
-    if (typeof jailedUntil === 'string' && jailedUntil !== '') {
+    if (usableLabel(jailedUntil)) {
       parts.push(`jailed until ${formatTimestampPreview(jailedUntil)}`);
     }
     const annotation = parts.length ? ` (${parts.join(', ')})` : '';

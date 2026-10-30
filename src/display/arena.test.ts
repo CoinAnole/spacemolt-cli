@@ -713,6 +713,18 @@ test('renders a fight start with enemy digest and enemy team label', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('a distinct trial-start message prints that message and the heading', () => {
+  const message = 'Boarding horns sound.';
+  const stdout = output('arena_fight', {
+    details: {
+      ...arenaFightDetails,
+      message,
+    },
+  });
+  expect(stdout).toContain(message);
+  expect(stdout).toContain('=== Trial started: Two on One ===');
+});
+
 test('accept still says opponent after the shared participant helper', () => {
   const stdout = output('arena_accept', arenaAcceptFixture);
   expect(stdout).toContain('opponent');

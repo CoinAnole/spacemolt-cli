@@ -171,6 +171,22 @@ test('renders an explicit empty appraisal message', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote with no appraisal_lines key still prints the quote', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-missing-lines',
+      origin_base_id: 'earth_station',
+      destination_base_id: 'nova_central',
+    },
+  });
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-missing-lines');
+  expect(stdout).toContain('earth_station -> nova_central');
+  expect(stdout).not.toContain('No appraisal lines.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders direct and mutation contract responses with action-specific headings', () => {
   const fixtures: Array<[string, Record<string, unknown>, string]> = [
     [

@@ -227,6 +227,20 @@ test('an empty target declines to the response dump instead of an arrival', () =
   expect(stdout).not.toContain('=== Attack ===');
 });
 
+test('a whitespace target prints the Attack header and Kind with no Target line', () => {
+  const stdout = renderCombat('attack', {
+    details: {
+      action: 'attack',
+      kind: 'npc',
+      target: '   ',
+    },
+  });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).toContain('Kind: npc');
+  expect(stdout).not.toContain('Target:');
+});
+
 test('a non-npc non-player attack kind declines to the response dump', () => {
   const stdout = renderCombat('attack', {
     details: {

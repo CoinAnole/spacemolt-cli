@@ -236,3 +236,21 @@ test('prints one remaining notification in the singular', () => {
   expect(stdout).toContain('1 more notification remaining.');
   expect(stdout).not.toContain('1 more notifications remaining.');
 });
+
+test('prints the plural remaining line when remaining is 2', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+    remaining: 2,
+  });
+
+  expect(stdout).toContain('2 more notifications remaining.');
+});

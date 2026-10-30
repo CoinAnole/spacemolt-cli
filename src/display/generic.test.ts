@@ -4339,6 +4339,27 @@ test('renders packaged craft quote with gates, ready, and output package preview
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders a packaged craft quote with no output-package label as Output package: package', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        output_package: {},
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Output package: package');
+});
+
 test('renders a non-record packaged-craft gate as the full line credits: ?', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4359,6 +4380,28 @@ test('renders a non-record packaged-craft gate as the full line credits: ?', () 
 
   expect(rendered.success).toBe(true);
   expect(rendered.stdout).toContain('  credits: ?');
+});
+
+test('renders a packaged-craft gate with no reason as the full line credits: FAIL', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        gates: {
+          credits: { ok: false },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout).toContain('  credits: FAIL');
 });
 
 test('ordinary craft quote still surfaces have_* fields', () => {

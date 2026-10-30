@@ -57,10 +57,6 @@ function formatTime(value: unknown): string {
   return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : 'unknown time';
 }
 
-/**
- * Map known pure-preview tags to colors (K14 — severity later).
- * Tag-level approximation of former writeLine handler colors; unknown tags stay magenta.
- */
 function previewTagColor(tag: string, c: NotificationColors): string {
   const upper = tag.toUpperCase();
   if (upper.startsWith('CHAT')) return c.cyan;

@@ -69,7 +69,7 @@ export function summarizeAmmoEffects(item: Record<string, unknown>): string {
   const dotPct = formatPercent(ammo.dot_pct);
   if (dotPct) {
     const ticks = finiteNumber(ammo.dot_ticks);
-    parts.push(ticks && ticks > 0 ? `burn ${dotPct}/${ticks}t` : `burn ${dotPct}`);
+    parts.push(formatTicks(ammo.dot_ticks) ? `burn ${dotPct}/${ticks}t` : `burn ${dotPct}`);
   }
 
   if (ammo.disrupt_damage !== undefined) pushSignedPercentEffect(parts, 'disrupt damage', ammo.disrupt_damage);

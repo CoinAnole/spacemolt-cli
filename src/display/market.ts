@@ -64,7 +64,7 @@ function formatStorageHint(hint: string): string {
   return hint.replace(/[ \t]+(Fuel bunker here:)/g, '\n$1');
 }
 
-function hasNonEmptyBaseId(value: unknown): boolean {
+function hasNonEmptyBaseId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
@@ -844,7 +844,7 @@ function formatCommissionShip(r: Record<string, unknown>): boolean {
   if (r.commission_id === undefined && r.ship_class === undefined) return false;
 
   emitLine(`\n${c.bright}=== Commission Created ===${c.reset}`);
-  if (typeof r.message === 'string' && r.message) emitLine(r.message);
+  if (hasNonEmptyBaseId(r.message)) emitLine(r.message);
   const shipName = scalarDisplayString(r.ship_name);
   const shipClass = scalarDisplayString(r.ship_class);
   if (shipName || shipClass) {

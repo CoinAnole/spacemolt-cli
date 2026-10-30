@@ -43,7 +43,6 @@ export function namedFormatter(
   return resultFormatter;
 }
 
-/** Normalize CLI command names for formatter matching (`faction profile` → `faction_profile`). */
 export function normalizeCommandName(command: string): string {
   const withoutV2 = command.startsWith('v2_') ? command.slice(3) : command;
   return withoutV2.replaceAll(' ', '_');
@@ -160,7 +159,6 @@ export function formatDepletionRemainingSuffix(depletionPercent: unknown): strin
   return ` (${color}${remainingPct.toFixed(2)}% remaining${c.reset})`;
 }
 
-/** True when both values are finite and used exceeds capacity. Equality is full, not over. */
 export function isOverCapacity(used: unknown, capacity: unknown): boolean {
   const usedN = finiteNumber(used);
   const capN = finiteNumber(capacity);

@@ -85,6 +85,12 @@ test('treats empty-string ship_name as missing and uses class', () => {
   expect(stdout).not.toContain('Captured Lark');
 });
 
+test('claim with ship_name and no ship_class prints the name only', () => {
+  const stdout = renderClaim(claimDetails({}, ['ship_class']));
+  expect(stdout).toContain('Captured Lark → Earth Station (earth_station)');
+  expect(stdout).not.toContain('skiff');
+});
+
 test('treats empty-string destination_name as missing and uses id', () => {
   const stdout = renderClaim(claimDetails({ destination_name: '' }));
   expect(stdout).toContain('Captured Lark (skiff) → earth_station');

@@ -229,6 +229,12 @@ test('zero module bonus omits a Reach line and prints Scramble: 2', () => {
   expect(stdout).not.toContain('Reach');
 });
 
+test('accuracy bonus prints Accuracy: 4', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ accuracy_bonus: 4 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Accuracy: 4');
+});
+
 test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });
@@ -272,6 +278,14 @@ test('ship capability flag prints Capabilities: cloak passive 2', () => {
     { plain: true },
   );
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
+});
+
+test('legacy-only ship prints Availability: legacy', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ legacy: true }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Availability: legacy');
+  expect(stdout).not.toContain('hidden');
 });
 
 test('module package operation falls back to catalog.package_operation', () => {

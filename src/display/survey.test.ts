@@ -665,6 +665,21 @@ test('survey_system recognition declines when revealed lists are not arrays', ()
   expect(stdout).not.toContain('=== Your Skills ===');
 });
 
+test('survey_system recognition declines when survey power is not finite', () => {
+  const payload = {
+    survey_power: Number.NaN,
+    newly_revealed: [],
+    already_revealed: [],
+    extra: { nested: 'object' },
+  };
+
+  expect(surveyFormatters[0]?.(payload, 'survey_system')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Survey:');
+});
+
 test('survey_system omits faint difficulty when it is not a non-empty string', () => {
   const omitted = stdoutOf(
     clonePresent((details) => {
@@ -681,6 +696,16 @@ test('survey_system omits faint difficulty when it is not a non-empty string', (
   expect(omitted).not.toContain('difficulty');
   expect(blank).toContain('  - deep_core: Need more survey power');
   expect(blank).not.toContain('difficulty');
+});
+
+test('survey_system prints signature for a faint row that omits type', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.faint_signatures = [{}];
+    }),
+  );
+
+  expect(stdout.split('\n')).toContain('  - signature');
 });
 
 function stdoutOfGetPoi(): string {

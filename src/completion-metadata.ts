@@ -90,10 +90,6 @@ export function globalOptionWords(): string[] {
   return GLOBAL_COMPLETION_OPTIONS.flatMap((option) => [option.long, option.short].filter(Boolean) as string[]);
 }
 
-function commandArgName(arg: CommandArg): string {
-  return typeof arg === 'string' ? arg : arg.rest;
-}
-
 function isRestArg(arg: CommandArg): boolean {
   return typeof arg === 'object' && Boolean(arg.rest);
 }
@@ -114,7 +110,7 @@ export function completionArgsForCommand(
   if (!commandConfig) return [];
 
   return (commandConfig.args || []).map((argDef) => {
-    const name = commandArgName(argDef);
+    const name = typeof argDef === 'string' ? argDef : argDef.rest;
     const schema = fieldSchema(commandConfig, name);
     const description = schema?.description || HINT_VALUES[command]?.[name] || name;
 

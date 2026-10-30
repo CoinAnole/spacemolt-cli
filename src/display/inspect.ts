@@ -84,7 +84,7 @@ function summarizeItemQuantities(value: unknown): string {
     .join(', ');
 }
 
-// byte-identical to shipping.ts formatCredits / formatTicks / formatBoolean
+// byte-identical to shipping.ts formatCredits / formatTicks
 function formatCredits(value: unknown): string | undefined {
   const text = formatIntegerText(value);
   return text === undefined ? undefined : `${text} cr`;
@@ -93,12 +93,6 @@ function formatCredits(value: unknown): string | undefined {
 function formatTicks(value: unknown): string | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return `${value.toLocaleString()} ticks`;
-}
-
-function formatBoolean(value: unknown): string | undefined {
-  if (value === true) return 'yes';
-  if (value === false) return 'no';
-  return undefined;
 }
 
 /**
@@ -138,7 +132,7 @@ function emitPackageShipment(shipment: Record<string, unknown>): void {
   push('Late fee if delivered now', formatCredits(shipment.late_fee_if_delivered_now));
   push('Ticks to deadline', formatTicks(shipment.ticks_to_deadline));
   push('Ticks to recovery deadline', formatTicks(shipment.ticks_to_recovery_deadline));
-  const late = formatBoolean(shipment.late);
+  const late = formatCatalogYesNo(shipment.late);
   if (late !== undefined) lines.push(`Late: ${late}`);
 
   if (!lines.length) return;

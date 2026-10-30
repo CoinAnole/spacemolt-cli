@@ -264,6 +264,19 @@ test('prints Citizenship: Closed when citizenship is closed', () => {
   expect(stdout).toContain('Citizenship: Closed');
 });
 
+test('prints Citizenship: Open for open citizenship with no requirements', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [{ empire_id: 'solarian', citizenship_open: true }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Citizenship: Open');
+});
+
 test('prints (None) under Empire Policies when empires is empty', () => {
   const stdout = renderStructuredResult(
     'get_empire_info',

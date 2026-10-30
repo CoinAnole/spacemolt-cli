@@ -29,23 +29,6 @@ function goodwillValueText(value: unknown): string {
   return String(value);
 }
 
-function pushExtraField(lines: string[], key: string, value: unknown): void {
-  if (value === undefined || value === null || value === '') return;
-  const label = key
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-  if (Array.isArray(value)) {
-    lines.push(`  ${label}: ${value.length} item(s)`);
-    return;
-  }
-  if (isRecord(value)) {
-    lines.push(`  ${label}: ${stringifyApiJson(value)}`);
-    return;
-  }
-  lines.push(`  ${label}: ${String(value)}`);
-}
-
 export function giftGoodwillLines(value: unknown): string[] {
   if (!isRecord(value)) return [];
   const lines: string[] = [];
@@ -69,7 +52,18 @@ export function giftGoodwillLines(value: unknown): string[] {
   }
   for (const [key, entry] of Object.entries(value)) {
     if (GIFT_GOODWILL_KEYS.has(key)) continue;
-    pushExtraField(lines, key, entry);
+    if (entry === undefined || entry === null || entry === '') continue;
+    const label = key
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+    if (Array.isArray(entry)) {
+      lines.push(`  ${label}: ${entry.length} item(s)`);
+    } else if (isRecord(entry)) {
+      lines.push(`  ${label}: ${stringifyApiJson(entry)}`);
+    } else {
+      lines.push(`  ${label}: ${String(entry)}`);
+    }
   }
   return lines;
 }

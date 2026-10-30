@@ -685,6 +685,11 @@ test('get_wrecks prints carrion on an age-death body and omits it on a ship wrec
   expect(cloud).not.toContain('cr');
 });
 
+test('get_wrecks prints (No wrecks at this location) for an empty wrecks array', () => {
+  const stdout = renderGetWrecks({ wrecks: [] }).stdout.join('\n');
+  expect(stdout).toContain('(No wrecks at this location)');
+});
+
 test('get_wrecks prints Expires in when expire_tick is absent', () => {
   const fixture = cloneWrecksFixture();
   delete wreckAt(fixture, 1).expire_tick;

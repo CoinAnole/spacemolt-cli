@@ -1366,10 +1366,8 @@ export const genericFormatters = [
       if (!hasEspionageMarkers || r.action === 'dock') return false;
 
       emitLine(`\n${c.bright}=== Espionage ===${c.reset}`);
-      if (r.outcome !== undefined && r.outcome !== null && r.outcome !== '') emitLine(`Outcome: ${r.outcome}`);
-      if (r.intel_type !== undefined && r.intel_type !== null && r.intel_type !== '') {
-        emitLine(`Intel type: ${r.intel_type}`);
-      }
+      emitOptionalValue('Outcome', r.outcome);
+      emitOptionalValue('Intel type', r.intel_type);
       emitLine('');
       emitLine(r.story.trimEnd());
       return true;

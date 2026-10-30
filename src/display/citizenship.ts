@@ -12,7 +12,7 @@ import {
 function formatCitizenshipId(value: unknown, key?: string): string | undefined {
   if (isRecord(value)) {
     const id = value.empire_id ?? value.id ?? value.name ?? key;
-    return id === undefined || id === null || id === '' ? undefined : String(id);
+    return hasAnyField([{ id }], 'id') ? String(id) : undefined;
   }
   if (typeof value === 'string') return value;
   if (value === true && key) return key;
