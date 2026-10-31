@@ -157,6 +157,21 @@ test('freight quote prints uninsurable reason', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote appraisal line prints its uninsurable reason', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      appraisal_lines: [
+        {
+          item_id: 'iron_ore',
+          uninsurable_reason: 'opened seal',
+        },
+      ],
+    },
+  });
+  expect(stdout).toContain('opened seal');
+});
+
 test('renders an explicit empty appraisal message', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -578,6 +593,22 @@ test('renders tracking events in server order with returned location components 
   expect(stdout).toContain('nova_central');
   expect(stdout.indexOf('fingerprint-one')).toBeLessThan(stdout.indexOf('fingerprint-two'));
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('freight tracking location joins system, poi, and base', () => {
+  const stdout = output('shipping_track', {
+    action: 'track',
+    contract,
+    events: [
+      {
+        system_id: 'sol',
+        poi_id: 'earth_orbit',
+        base_id: 'nova_central',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('sol / earth_orbit / nova_central');
 });
 
 test('renders an explicit empty tracking message', () => {

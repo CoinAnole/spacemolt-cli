@@ -102,9 +102,7 @@ function isRoutineCraftingProgress(notification: Notification): boolean {
 }
 
 function notificationMsgType(notification: Notification): string {
-  return typeof notification.msg_type === 'string' && notification.msg_type.trim()
-    ? notification.msg_type
-    : notification.type;
+  return metadataString(notification.msg_type) ? (notification.msg_type ?? notification.type) : notification.type;
 }
 
 /** Commands whose successful action_result frames are high-volume travel noise. */
@@ -376,17 +374,6 @@ function systemProgressSummary(progress: Notification[]): Notification {
   };
 }
 
-function buildSummary(kind: SummaryKind, progress: Notification[]): Notification {
-  switch (kind) {
-    case 'crafting':
-      return craftingSummary(progress);
-    case 'action_result':
-      return actionResultSummary(progress);
-    case 'system_progress':
-      return systemProgressSummary(progress);
-  }
-}
-
 export function presentNotifications(notifications?: APIResponse['notifications']): PresentedNotifications {
   const raw = notifications ?? [];
   const groups = new Map<SummaryKind, number[]>();
@@ -423,7 +410,19 @@ export function presentNotifications(notifications?: APIResponse['notifications'
     if (!progress.length) continue;
     if (kind !== 'crafting' && progress.length < 2) continue;
     const firstIndex = indexes[0] ?? 0;
-    summaryAtIndex.set(firstIndex, buildSummary(kind, progress));
+    let summary: Notification;
+    switch (kind) {
+      case 'crafting':
+        summary = craftingSummary(progress);
+        break;
+      case 'action_result':
+        summary = actionResultSummary(progress);
+        break;
+      case 'system_progress':
+        summary = systemProgressSummary(progress);
+        break;
+    }
+    summaryAtIndex.set(firstIndex, summary);
     for (const index of indexes) routineIndexes.add(index);
     summaries.push({ type: kind, count: progress.length });
   }

@@ -16,19 +16,6 @@ const GIFT_GOODWILL_FIELDS = [
 
 const GIFT_GOODWILL_KEYS = new Set<string>(GIFT_GOODWILL_FIELDS.map(([key]) => key));
 
-function goodwillValueText(value: unknown): string {
-  if (typeof value === 'bigint' || (typeof value === 'number' && Number.isInteger(value))) return String(value);
-  if (
-    typeof value === 'string' ||
-    typeof value === 'boolean' ||
-    (typeof value === 'number' && Number.isFinite(value))
-  ) {
-    return String(value);
-  }
-  if (isRecord(value) || Array.isArray(value)) return stringifyApiJson(value);
-  return String(value);
-}
-
 export function giftGoodwillLines(value: unknown): string[] {
   if (!isRecord(value)) return [];
   const lines: string[] = [];
@@ -48,7 +35,21 @@ export function giftGoodwillLines(value: unknown): string[] {
       lines.push(`  ${label}: ${fieldValue}`);
       continue;
     }
-    lines.push(`  ${label}: ${goodwillValueText(fieldValue)}`);
+    let valueText: string;
+    if (typeof fieldValue === 'bigint' || (typeof fieldValue === 'number' && Number.isInteger(fieldValue))) {
+      valueText = String(fieldValue);
+    } else if (
+      typeof fieldValue === 'string' ||
+      typeof fieldValue === 'boolean' ||
+      (typeof fieldValue === 'number' && Number.isFinite(fieldValue))
+    ) {
+      valueText = String(fieldValue);
+    } else if (isRecord(fieldValue) || Array.isArray(fieldValue)) {
+      valueText = stringifyApiJson(fieldValue);
+    } else {
+      valueText = String(fieldValue);
+    }
+    lines.push(`  ${label}: ${valueText}`);
   }
   for (const [key, entry] of Object.entries(value)) {
     if (GIFT_GOODWILL_KEYS.has(key)) continue;

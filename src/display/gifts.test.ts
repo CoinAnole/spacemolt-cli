@@ -47,6 +47,12 @@ describe('emitGiftEntries', () => {
     expect(stdout).not.toContain('...');
   });
 
+  test('trailing note spaces are stripped', () => {
+    const { stdout } = renderGifts([{ message: 'hello  ' }]);
+    expect(stdout).toContain('  Note: hello');
+    expect(stdout).not.toContain('  Note: hello  ');
+  });
+
   test('item line omits the id suffix when name and item_id are both fuel_cell', () => {
     const { stdout } = renderGifts([
       {
@@ -66,6 +72,16 @@ describe('emitGiftEntries', () => {
     const row = stdout.split('\n').find((line) => line.startsWith('    '));
     expect(row).toBe('    4 rations');
     expect(stdout).not.toContain('(rations)');
+  });
+
+  test('a name without item_id renders 12 Fuel Cell', () => {
+    const { stdout } = renderGifts([
+      {
+        items: [{ name: 'Fuel Cell', quantity: 12 }],
+      },
+    ]);
+    const row = stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    12 Fuel Cell');
   });
 
   test('ship lines keep class id only when it is not already the label', () => {

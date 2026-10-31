@@ -167,7 +167,7 @@ function formatFieldsNotFoundMessage(result: Record<string, unknown>, fields: st
 
 function formatAvailableTopLevelKeys(result: Record<string, unknown>): string {
   const keys = Object.keys(result);
-  return keys.length > 0 ? `Available top-level keys: ${keys.join(', ')}` : 'Available top-level keys:';
+  return formatAvailableKeys(result) ? `Available top-level keys: ${keys.join(', ')}` : 'Available top-level keys:';
 }
 
 function normalizeKeysPath(result: Record<string, unknown>, path: string): string {

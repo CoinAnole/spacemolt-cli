@@ -3542,6 +3542,26 @@ test('renders craft dry-run details without raw response fallback', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders a craft venue with only venue set', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        dry_run: true,
+        recipe: 'Build Power Cell',
+        venue: 'Station Workshop',
+        facility_id: 'workshop:player:station',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Venue: Station Workshop\n');
+});
+
 test('renders dry-run route previews for craft cancellation payloads', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4326,6 +4346,33 @@ test('renders bulk craft results with rental and fee columns', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders a missing craft summary count when succeeded is omitted', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: true,
+            recipe: 'Refine Steel',
+            message: 'Queued.',
+          },
+        ],
+        summary: { total: 2, failed: 0 },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Summary: ? succeeded, 0 failed, 2 total');
+});
+
 test('renders packaged craft quote with gates, ready, and output package preview', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4435,6 +4482,29 @@ test('renders a packaged craft quote with no output-package label as Output pack
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Output package: package');
+});
+
+test('renders a one-sided package size when size_max is omitted', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        output_package: {
+          size_used: 12,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Size: 12/?');
 });
 
 test('renders a non-record packaged-craft gate as the full line credits: ?', () => {

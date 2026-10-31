@@ -732,7 +732,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
     const tag = faction.tag ? ` [${faction.tag}]` : '';
     const role = faction.role ? ` (${faction.role})` : '';
     emitLine(`Faction: ${name}${tag}${role}`);
-    if (kind === 'v2' && typeof faction.joined_at === 'string' && faction.joined_at !== '') {
+    if (kind === 'v2' && usableLabel(faction.joined_at)) {
       emitLine(`Joined: ${formatTimestampPreview(faction.joined_at) || faction.joined_at}`);
     }
   }
@@ -1722,7 +1722,6 @@ export const statusFormatters = [
     { commands: ['get_nearby', 'subscribe_observation'], shapeFallback: true },
   ),
 
-  // Skills state: skills as object map of skill_id -> skill data
   formatter((r) => emitSkillMap(r.skills), { commands: ['get_skills'], shapeFallback: true }),
 
   formatter(

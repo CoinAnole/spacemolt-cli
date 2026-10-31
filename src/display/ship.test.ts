@@ -694,6 +694,14 @@ test('get_wrecks prints carrion on an age-death body and omits it on a ship wrec
   expect(cloud).not.toContain('cr');
 });
 
+test('get_wrecks omits the victim suffix when victim_name is omitted', () => {
+  const fixture = cloneWrecksFixture();
+  delete wreckAt(fixture, 0).victim_name;
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  const shipLine = lucky.split('\n').find((line) => line.startsWith('  Ship:'));
+  expect(shipLine).toBe('  Ship: Lucky Strike / skiff');
+});
+
 test('get_wrecks prints (No wrecks at this location) for an empty wrecks array', () => {
   const stdout = renderGetWrecks({ wrecks: [] }).stdout.join('\n');
   expect(stdout).toContain('(No wrecks at this location)');

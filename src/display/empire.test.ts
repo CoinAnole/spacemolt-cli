@@ -457,3 +457,17 @@ test('prints an income_tax string withheld instead of the raw response dump', ()
   expect(stdout).toContain('Income tax: withheld');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('prints a sales_tax_rates record instead of the raw response dump', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      sales_tax_rates: { crimson: 200 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Sales tax rates: crimson 2%');
+  expect(stdout).not.toContain('=== Response ===');
+});

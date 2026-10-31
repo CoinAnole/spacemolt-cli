@@ -156,6 +156,12 @@ test('an explicit zero leftover prints the scalar', () => {
   expect(stdout).toContain('Rounds: 0');
 });
 
+test('an attack reply with engaged true prints Engaged: true', () => {
+  const stdout = renderCombat('attack', { ...playerReply, engaged: true });
+
+  expect(stdout).toContain('Engaged: true');
+});
+
 test('an empty-string leftover does not print Note', () => {
   const stdout = renderCombat('attack', { ...playerReply, note: '' });
 
@@ -281,6 +287,19 @@ test('a non-npc non-player attack kind declines to the response dump', () => {
       poi_id: 'sol_belt',
       poi_name: 'Belt',
       nearby_players: [{ username: 'Ibis' }],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Attack ===');
+});
+
+test('action engage with kind npc and a target id prints the response dump and not the Attack header', () => {
+  const stdout = renderCombat('attack', {
+    details: {
+      action: 'engage',
+      kind: 'npc',
+      target: 'creature-1',
     },
   });
 

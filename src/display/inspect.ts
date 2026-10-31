@@ -84,7 +84,6 @@ function summarizeItemQuantities(value: unknown): string {
     .join(', ');
 }
 
-// byte-identical to shipping.ts formatCredits / formatTicks
 function formatCredits(value: unknown): string | undefined {
   const text = formatIntegerText(value);
   return text === undefined ? undefined : `${text} cr`;

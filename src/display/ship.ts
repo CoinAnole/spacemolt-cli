@@ -479,7 +479,6 @@ export function emitInstalledModules(
     }
     if (longest > 0) {
       columns.push(['Stats', ['stats_display']]);
-      // Default cells stop at 32, which cuts a stats list. Widen to the longest stats cell.
       if (longest > 32) maxCellWidth = longest;
     }
   }

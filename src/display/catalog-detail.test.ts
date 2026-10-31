@@ -242,6 +242,12 @@ test('cloak strength prints Cloak: 4', () => {
   expect(buffer.stdout.join('\n')).toContain('Cloak: 4');
 });
 
+test('webify strength prints Webify: 3', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ webify_strength: 3 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Webify: 3');
+});
+
 test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });
@@ -291,6 +297,10 @@ test('missing quantity prints ?x Steel Plate', () => {
 
 test('item_id name fallback prints 2x steel_plate', () => {
   expect(summarizeNamedItemQuantities([{ item_id: 'steel_plate', quantity: 2 }])).toBe('2x steel_plate');
+});
+
+test('id fallback prints 2x plate', () => {
+  expect(summarizeNamedItemQuantities([{ id: 'plate', quantity: 2 }])).toBe('2x plate');
 });
 
 test('item_name is preferred over item_id', () => {

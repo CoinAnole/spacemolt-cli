@@ -1084,6 +1084,15 @@ test('faction_query_intel prints descriptions when intel tick is omitted', () =>
   expect(stdout).not.toContain('Intel tick:');
 });
 
+test('faction_query_intel prints Police: 0', () => {
+  const fixture = cloneIntelFixture();
+  const entry = firstIntelEntry(fixture) as IntelResult['entries'][number] & { police_level?: number };
+  entry.police_level = 0;
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('Police: 0');
+});
+
 test('faction_query_intel --format text uses the description lines', () => {
   const fixture = cloneIntelFixture();
   firstIntelEntry(fixture).description = '  Birthplace system  ';
@@ -1318,6 +1327,24 @@ test('empty view_insurance policies array prints No active policies.', () => {
 
   expect(stdout).toContain('No active policies.');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('view_insurance risk factors without policy id use the ship class', () => {
+  const stdout = renderStructuredResult(
+    'view_insurance',
+    {
+      policies: [
+        {
+          ship_class: 'prospector',
+          risk_factors: [{ name: 'Recent deaths', multiplier: 1.4, detail: 'One loss in the last 7 days' }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Risk Factors (prospector) ===');
 });
 
 test('get_insurance_quote with quote.refused true prints Refused: yes', () => {

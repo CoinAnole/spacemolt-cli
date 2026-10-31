@@ -114,6 +114,52 @@ test('prints Creator: PilotOne when the package creator has a username and no fa
   expect(line).not.toContain('/');
 });
 
+test('prints Owner: PilotOne for an owner without type', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_owner',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_owner',
+        label: 'Survey Supplies',
+        owner: { id: 'p1', name: 'PilotOne' },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Owner:'));
+  expect(line).toBe('Owner: PilotOne');
+  expect(line).not.toContain('(');
+});
+
+test('prints Package for a package without a label', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_bare',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_bare',
+        size: 10,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Package');
+  expect(stdout).not.toContain('Package:');
+});
+
 test('renders package inspect freight shipment summary when nested shipment is present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -590,6 +636,26 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Page ?/1 (? total) for a partial catalog page when only total_pages is set', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'partial_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        total_pages: 1,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Page ?/1 (? total)');
+});
+
 test('inspect catalog prints Entries and omits Details when more than one item is returned', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -757,6 +823,43 @@ test('renders single recipe catalog inspect with inputs and outputs', () => {
   expect(stdout).not.toContain('Produced by:');
   expect(stdout).toContain('Package operation: pack');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints the Recipes table and omits Details and Inputs for two catalog recipes', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'logistics_recipes',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'pack_package',
+            name: 'Pack Package',
+            category: 'logistics',
+            crafting_time: 1,
+            inputs: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 20 }],
+          },
+          {
+            id: 'unpack_package',
+            name: 'Unpack Package',
+            category: 'logistics',
+            crafting_time: 5,
+            inputs: [{ item_id: 'cargo_package', name: 'Cargo Package', quantity: 1 }],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Recipes ===');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('Inputs');
 });
 
 test('renders unpack recipe package_operation string', () => {
@@ -1839,6 +1942,28 @@ test('prints Base: Earth Station when base_name is set and has_base is not true'
   expect(stdout.split('\n')).toContain('Base: Earth Station');
 });
 
+test('prints Base: earth_station for a base_id-only POI base', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_orbit',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'earth_orbit',
+          name: 'Earth Orbit',
+          base_id: 'earth_station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Base: earth_station');
+  expect(stdout.split('\n')).not.toContain('Base: yes');
+});
+
 test('renders base inspect results with station defences', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1917,6 +2042,27 @@ test('prints Fuel: 0/? when fuel is 0 and max_fuel is absent', () => {
   expect(stdout.split('\n')).toContain('Fuel: 0/?');
 });
 
+test('prints Fuel: ?/500 when station fuel is missing and max_fuel is 500', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          max_fuel: 500,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Fuel: ?/500');
+});
+
 test('prints Condition: unknown (?% satisfaction) when the condition record has no text or percent', () => {
   const stdout = renderStructuredResult(
     'inspect',
@@ -1936,6 +2082,27 @@ test('prints Condition: unknown (?% satisfaction) when the condition record has 
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Condition: unknown (?% satisfaction)');
+});
+
+test('prints Condition: unknown (0% satisfaction) when satisfaction is 0 and there is no text', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+        condition: { satisfaction_pct: 0 },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Condition: unknown (0% satisfaction)');
 });
 
 test('renders nested base repairs without a second wrecked line', () => {

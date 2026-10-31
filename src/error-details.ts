@@ -111,9 +111,8 @@ function usableString(value: unknown): string | undefined {
 function finiteQuantity(value: unknown): number | undefined {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return undefined;
-    const parsed = Number(trimmed);
+    if (!usableString(value)) return undefined;
+    const parsed = Number(value.trim());
     return Number.isFinite(parsed) ? parsed : undefined;
   }
   return undefined;

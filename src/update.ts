@@ -61,10 +61,10 @@ export function compareVersions(current: string, latest: string): number {
   for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
     const curr = currentParts[i] || 0;
     const lat = latestParts[i] || 0;
-    if (lat > curr) return 1; // latest is newer
-    if (lat < curr) return -1; // current is newer
+    if (lat > curr) return 1;
+    if (lat < curr) return -1;
   }
-  return 0; // equal
+  return 0;
 }
 
 export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise<void> {

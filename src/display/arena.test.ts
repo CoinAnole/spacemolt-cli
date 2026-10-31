@@ -378,6 +378,16 @@ test('omits (you) when more than one pilot shares your_side', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('an arena challenge with expires_tick NaN ends Expires with a newline and no digits', () => {
+  const details = {
+    ...(arenaChallengeFixture.details as Record<string, unknown>),
+    expires_tick: Number.NaN,
+  };
+  const stdout = output('arena_challenge', { ...arenaChallengeFixture, details });
+  expect(stdout).toContain('Expires: tick \n');
+  expect(stdout).not.toMatch(/Expires: tick \d/);
+});
+
 test('renders challenge, decline, and cancel mutation copy', () => {
   const challenge = output('arena_challenge', arenaChallengeFixture);
   expect(challenge).toContain('Challenge sent to Kestrel (player-77)');

@@ -129,10 +129,6 @@ function previewTagColor(tag: string, c: NotificationColors): string {
   }
 }
 
-/**
- * Render a pure NotificationPreview as colored multi-line output.
- * Does not show omittedHint by default (verbose-only, PR 8).
- */
 function renderPreviewInline(
   preview: NotificationPreview,
   time: string,

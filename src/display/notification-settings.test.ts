@@ -292,3 +292,22 @@ test('a numeric unix-millisecond notification timestamp prints the UTC second pr
   expect(stdout).toContain('2026-05-23 18:59:39');
   expect(stdout).not.toContain(String(timestamp));
 });
+
+test('prints notification in the Type cell when msg_type, type, and data.type are blank', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        msg_type: '',
+        type: '',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { type: '', message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
+  const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
+  expect(typeCell).toBe('notification');
+});

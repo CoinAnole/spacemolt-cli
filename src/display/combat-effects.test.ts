@@ -378,6 +378,10 @@ test('positive accuracy prints a leading plus', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');
 });
 
+test('anti_small_mod 0.1 prints small +10%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { anti_small_mod: 0.1 } } })).toBe('small +10%');
+});
+
 test('negative accuracy prints accuracy -10%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: -0.1 } } })).toBe('accuracy -10%');
 });
@@ -416,6 +420,14 @@ test('explicit zero burn damage prints Effects and Burn: 3 ticks, 0 hull/tick', 
   expect(buffer.stdout).toEqual(['Effects:', '  Burn: 3 ticks, 0 hull/tick']);
 });
 
+test('burn_ticks_remaining 0 leaves stdout empty and does not print Effects or Burn', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ burn_ticks_remaining: 0 }), { plain: true });
+  expect(buffer.stdout).toEqual([]);
+  expect(buffer.stdout.join('\n')).not.toContain('Effects');
+  expect(buffer.stdout.join('\n')).not.toContain('Burn');
+});
+
 test('active armor melt prints Armor melt: active for 2 ticks', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_ticks_remaining: 2 }), { plain: true });
@@ -434,6 +446,16 @@ test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
     plain: true,
   });
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
+test('a weapon_damage buff with amount 0 prints Buff: weapon_damage 0%', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitShipCombatEffects({ active_buffs: [{ stat: 'weapon_damage', amount: 0 }] }),
+    { plain: true },
+  );
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: weapon_damage 0%']);
 });
 
 test('a buff without a stat prints Buff: buff +5%', () => {

@@ -1542,7 +1542,6 @@ export const socialFormatters = [
         const marinesRecruited = scalarFrom('marines_recruited');
         const marinesTreated = scalarFrom('marines_treated');
         const insuranceVoided = scalarFrom('insurance_voided');
-        // faction.refuel data (untyped ActionLogData): username/player_id, fuel, base_id/base_name
         const username = scalarFrom('username');
         const playerId = scalarFrom('player_id');
         const fuelAmount = scalarFrom('fuel') ?? scalarFrom('faction_fuel') ?? scalarFrom('ally_fuel');

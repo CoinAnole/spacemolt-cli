@@ -56,8 +56,6 @@ export function commandNameEquals(command: string | undefined, expected: string)
 export function formatterMatchesCommand(formatter: ResultFormatter, command: string): boolean {
   const commands = formatter.commands;
   if (!commands?.length) return false;
-  // Grouped CLI surfaces pass display names like "faction profile"; formatters
-  // register the internal underscore form "faction_profile".
   const normalized = normalizeCommandName(command);
   return commands.includes(command) || commands.includes(normalized);
 }

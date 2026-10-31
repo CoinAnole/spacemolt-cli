@@ -4706,6 +4706,17 @@ test('get_nearby prints every empire NPC row when the header is the array length
   expect(stdout).not.toContain('... and');
 });
 
+test('get_nearby falls back an empire NPC name to npc_id or Unknown', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    empire_npcs: [{ npc_id: 'npc-1', ship_class: 'interceptor' }, { ship_class: 'courier' }],
+  });
+  const lines = stdout.split('\n');
+
+  expect(lines.find((line) => line.includes('interceptor'))).toBe('  npc-1 (interceptor)');
+  expect(lines.find((line) => line.includes('courier'))).toBe('  Unknown (courier)');
+});
+
 test('get_location prints every nearby player row when the count matches the array', () => {
   const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
   fixture.location.nearby_player_count = 11;

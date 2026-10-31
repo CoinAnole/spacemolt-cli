@@ -702,7 +702,7 @@ function formatYesNoBoolean(value: unknown): string | undefined {
 }
 
 function scalarDisplayString(value: unknown): string | undefined {
-  if (typeof value === 'string' && value !== '') return value;
+  if (hasNonEmptyBaseId(value)) return value;
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return undefined;
 }
@@ -941,7 +941,7 @@ function formatSupplyCommission(r: Record<string, unknown>): boolean {
   if (commissionId) emitLine(`ID: ${commissionId}`);
   const donated = formatDonatedSupplyItem(r);
   if (donated) emitLine(`Donated: ${donated}`);
-  if (typeof r.commission_status === 'string' && r.commission_status) {
+  if (hasNonEmptyBaseId(r.commission_status)) {
     emitLine(`Status: ${r.commission_status}`);
   }
   const allSourced = formatYesNoBoolean(r.all_sourced);
