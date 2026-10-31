@@ -176,7 +176,7 @@ function numericDataField(notification: Notification, field: string): number | u
 function stringDataField(notification: Notification, field: string): string | undefined {
   const data = isRecord(notification.data) ? notification.data : undefined;
   const value = data?.[field];
-  return typeof value === 'string' && value.trim() ? value : undefined;
+  return typeof value === 'string' && metadataString(value) ? value : undefined;
 }
 
 function jobIdsFrom(notification: Notification): string[] {

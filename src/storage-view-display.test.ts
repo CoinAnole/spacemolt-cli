@@ -78,10 +78,28 @@ describe('rewriteStorageViewHint', () => {
     expect(rewriteStorageViewHint(content)).toEqual(content);
   });
 
+  test('returns the same content for an empty hint', () => {
+    const content = { hint: '' };
+
+    expect(rewriteStorageViewHint(content)).toEqual(content);
+  });
+
   test('leaves a multi-station hint unchanged when no station id is available', () => {
     const content = { hint: '100 items in storage at alpha, beta' };
 
     expect(rewriteStorageViewHint(content)).toEqual(content);
+  });
+
+  test('rewrites a multi-station hint for a requested station id without base_id', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        hint: '100 items in storage at alpha, beta',
+        items: [{ item_id: 'ore', quantity: 40 }],
+      },
+      { requestedStationId: 'alpha' },
+    );
+
+    expect(rewritten.hint).toBe('40 items in storage at alpha (100 total across 2 stations)');
   });
 });
 

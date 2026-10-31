@@ -430,6 +430,12 @@ describe('find_route formatter', () => {
     expect(stdout.split('\n')).toContain('Steps: (invalid)');
   });
 
+  test('prints Route: not found and Steps: (invalid) for found false with a non-array route', () => {
+    const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: false, route: 'sol' });
+    expect(stdout.split('\n')).toContain('Route: not found');
+    expect(stdout.split('\n')).toContain('Steps: (invalid)');
+  });
+
   test('prints Steps: (omitted) when a found route omits route', () => {
     const fixture = structuredClone(findRouteHighValueFixture);
     delete fixture.route;

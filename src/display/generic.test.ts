@@ -3037,6 +3037,20 @@ test('does not render catalog item Details for a non-catalog items list', () => 
   expect(stdout).not.toContain('Mining group:');
 });
 
+test('get_mobile_base prints structuredContent system when system is omitted', () => {
+  const rendered = renderStructuredResult(
+    'get_mobile_base',
+    { structuredContent: { system: 'nested_system' } },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Mobile base location');
+  expect(stdout).toContain('System: nested_system');
+});
+
 test('renders catalog facilities with maintenance_fuel and maintenance_inputs req. stock', () => {
   const rendered = renderStructuredResult(
     'catalog',
@@ -3734,6 +3748,23 @@ test('renders recycle job retarget with zero remaining runs and auto-undock', ()
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('recycle job_id prints Recycle Queued', () => {
+  const rendered = renderStructuredResult(
+    'recycle',
+    {
+      details: {
+        job_id: 'recycle-job-1',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recycle Queued ===');
+});
+
 test('renders package pack job with action package label and eta', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4344,6 +4375,33 @@ test('renders bulk craft results with rental and fee columns', () => {
   expect(stdout).toContain('90cr');
   expect(stdout).toContain('Summary: 2 succeeded, 0 failed, 2 total');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('bulk craft results use the Craft Results heading', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: true,
+            job_id: 'bulk-own-1',
+            recipe: 'Refine Steel',
+            message: 'Queued.',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Results ===');
 });
 
 test('renders a missing craft summary count when succeeded is omitted', () => {

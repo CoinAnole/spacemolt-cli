@@ -322,3 +322,28 @@ test('travel with only system ids prints travel sol → alpha_centauri', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('travel sol → alpha_centauri');
 });
+
+test('empty-string transit_kind prints sol / earth_station and not an arrow', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitPrizeRecoveries([{ transit_kind: '', system_id: 'sol', poi_id: 'earth_station' }]),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('sol / earth_station');
+  expect(stdout).not.toContain('→');
+});
+
+test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and returns true', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(
+    buffer,
+    () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }], prizeCount: 0 }),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (0):');
+  expect(stdout).toContain('prize-1');
+  expect(printed).toBe(true);
+});

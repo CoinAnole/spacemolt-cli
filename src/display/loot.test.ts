@@ -194,6 +194,18 @@ test('all-loot prints Skill XP after the message and drops zero or empty maps', 
   expect(scalarXp).not.toContain('8');
 });
 
+test('empty-string loot skill is omitted from Skill XP', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllXpFixture, (details) => {
+      details.xp_gained = { armor: '', scanning: 2 };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: scanning +2');
+  expect(stdout).not.toContain('armor');
+});
+
 test('all-loot Skill XP keeps skill order and signs negative values', () => {
   const stdout = stdoutOf(
     'loot_wreck',

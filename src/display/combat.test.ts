@@ -186,6 +186,12 @@ test('nested loot without location aliases still uses the combat block', () => {
   expect(stdout).not.toContain('Arrived at');
 });
 
+test('an empty-array leftover renders an attack reply with tags as 0 item(s)', () => {
+  const stdout = renderCombat('attack', { ...playerReply, tags: [] });
+
+  expect(stdout).toContain('Tags: 0 item(s)');
+});
+
 test('details auto_undocked true prints yes and the dock-state line, not the cyan banner', () => {
   const stdout = renderCombat('attack', {
     details: { ...attackBrandedFixture.details, auto_undocked: true },

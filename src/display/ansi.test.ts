@@ -98,4 +98,30 @@ describe('ANSI display helpers', () => {
     expect(formatPlayer({ anonymous: true }, colorCodes(true), true)).toBe('[Anonymous]');
     expect(formatPlayer({})).toBe('Unknown');
   });
+
+  test('formatPlayer colorizes the name from primary_color and secondary_color', () => {
+    expect(
+      formatPlayer({
+        username: 'coin',
+        primary_color: '#112233',
+        secondary_color: '#445566',
+      }),
+    ).toBe('\x1b[38;2;17;34;51m\x1b[48;2;68;85;102mcoin\x1b[0m');
+  });
+
+  test('formatPlayer colorizes docked and offline markers', () => {
+    const formatted = formatPlayer({
+      username: 'coin',
+      ship_class: 'Prospector',
+      docked: true,
+      offline: true,
+    });
+    const dockedAt = formatted.indexOf('[DOCKED]');
+    const offlineAt = formatted.indexOf('[OFFLINE]');
+
+    expect(formatted.indexOf(rawColors.cyan)).toBeGreaterThanOrEqual(0);
+    expect(formatted.indexOf(rawColors.dim)).toBeGreaterThanOrEqual(0);
+    expect(dockedAt).toBeGreaterThan(formatted.indexOf(rawColors.cyan));
+    expect(offlineAt).toBeGreaterThan(formatted.indexOf(rawColors.dim));
+  });
 });

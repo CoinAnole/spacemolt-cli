@@ -146,6 +146,19 @@ test('renders freight quotes with route, actors, costs, liability, and appraisal
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('one-sided freight quote omits Route when destination_base_id is omitted', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      origin_base_id: 'earth_station',
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).not.toContain('Route:');
+});
+
 test('freight quote prints uninsurable reason', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -327,6 +340,15 @@ test('renders listing eligibility beside reasons and preserves zero and false va
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('missing freight-list page prints page ? when total is omitted', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [{ contract: { ...contract, id: 'shipment-page-1' } }],
+  });
+
+  expect(stdout).toContain('page ?, 1 of 1');
+});
+
 test('renders an explicit empty listing message with pagination', () => {
   const stdout = output('shipping_list', {
     action: 'list',
@@ -462,6 +484,15 @@ test('renders an explicit empty active freight message', () => {
   expect(defaultEmpty).toContain('tick 100 · 0 contracts');
   expect(defaultEmpty).toContain('No active freight contracts.');
   expect(defaultEmpty).not.toContain('=== Response ===');
+});
+
+test('missing active-freight tick prints tick ? for an empty shipment list', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    shipments: [],
+  });
+
+  expect(stdout).toContain('tick ? · 0 contracts');
 });
 
 test('declines malformed active freight payloads and preserves the raw fallback', () => {
@@ -735,6 +766,22 @@ test('renders unlimited liability without remaining or single-package limits', (
   expect(stdout).toContain('Aggregate liability: 33,000 cr (unlimited)');
   expect(stdout).not.toContain('Remaining aggregate liability');
   expect(stdout).not.toContain('Single-package liability');
+});
+
+test('aggregate liability without a limit prints the amount only', () => {
+  const { aggregate_liability_limit: _aggregateLiabilityLimit, ...capacity } = {
+    ...carrierCapacity,
+    liability_unlimited: false,
+  };
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity,
+    progression: carrierProgression,
+    debts: [],
+  });
+
+  expect(stdout).toContain('Aggregate liability: 33,000 cr\n');
 });
 
 test('renders debt payment changes separately from remaining debts', () => {

@@ -73,6 +73,22 @@ test.each(['jettison', 'storage jettison', 'storage_jettison'])('%s prints conve
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('null conversion output quantity keeps the item id and omits Output Quantity', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      conversion: {
+        output_item_id: 'water_ice',
+        output_quantity: null,
+      },
+    },
+  });
+
+  expect(stdout).toContain('Output Item Id: water_ice');
+  expect(stdout).not.toContain('Output Quantity');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('omitted conversion prints no output lines', () => {
   const { stdout, stderr } = renderJettison('jettison', {
     details: {
@@ -236,4 +252,15 @@ test('blank jettison action with item_id prints === Result ===', () => {
 
   expect(stderr).toBe('');
   expect(stdout).toContain('=== Result ===');
+});
+
+test('more than 16 jettison scalar fields decline to the raw response', () => {
+  const details: Record<string, string> = { action: 'jettison' };
+  for (let index = 1; index <= 16; index += 1) {
+    details[`extra_${index}`] = 'set';
+  }
+  const { stdout } = renderJettison('jettison', { details });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Jettison ===');
 });

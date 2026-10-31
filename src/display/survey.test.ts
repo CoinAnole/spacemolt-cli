@@ -360,6 +360,22 @@ test('survey_system appends [deep core] on a deposit row', () => {
   expect(stdout).toContain('Sol Inner Belt (sol_inner_belt)  asteroid_belt [common] [deep core]');
 });
 
+test('survey_system prints a whitespace POI class as the exact headline and no class brackets', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      const deposits = details.deposits;
+      if (!Array.isArray(deposits) || !deposits[0] || typeof deposits[0] !== 'object') {
+        throw new Error('expected deposit row');
+      }
+      (deposits[0] as Record<string, unknown>).class = '   ';
+    }),
+  );
+
+  const headline = stdout.split('\n').find((entry) => entry.includes('sol_inner_belt'));
+  expect(headline).toBe('  - Sol Inner Belt (sol_inner_belt)  asteroid_belt');
+  expect(headline).not.toContain('[');
+});
+
 test('survey_system empty resources on a hit omit resource lines', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

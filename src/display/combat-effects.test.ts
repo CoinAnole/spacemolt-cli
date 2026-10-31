@@ -303,6 +303,10 @@ test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses',
   expect(summarizeModuleBonuses({ reach: 3, shield_bonus: 0, speed_penalty: 0, cpu_usage: 9 })).toBe('reach 3');
 });
 
+test('summarizeModuleBonuses drops a non-flag true shield_bonus and keeps reach 3', () => {
+  expect(summarizeModuleBonuses({ reach: 3, shield_bonus: true })).toBe('reach 3');
+});
+
 test('omitted passenger fields leave only reach', () => {
   expect(summarizeModuleBonuses({ passenger_bonus: 4, dining_rate: 2, leisure_power: 1, reach: 3 })).toBe('reach 3');
 });
@@ -330,6 +334,10 @@ test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fracti
   expect(summarizeModuleBonuses({ extra_flux_bonus: 7, odd_penalty: 4, reach: 2 })).toBe(
     'reach 2, extra flux +7, odd -4',
   );
+});
+
+test('summarizeModuleBonuses prints an unsigned flux_power suffix as flux 3', () => {
+  expect(summarizeModuleBonuses({ flux_power: 3 })).toBe('flux 3');
 });
 
 test('summarizeModuleEffects joins bonuses and combat special effects', () => {
@@ -360,6 +368,14 @@ test('summarizeEffect prefers ammo then recurses scalars', () => {
 
 test('a numeric ammo effect type is printed', () => {
   expect(summarizeEffect({ type: 2, ammo: { damage_mod: 1 } })).toBe('type: 2, damage 100%');
+});
+
+test('a whitespace effect type skips the type prefix and prints damage 100%', () => {
+  expect(summarizeEffect({ type: '   ', ammo: { damage_mod: 1 } })).toBe('damage 100%');
+});
+
+test('summarizeEffect drops an empty nested record', () => {
+  expect(summarizeEffect({ foo: {} })).toBe('');
 });
 
 test('armor melt without ticks prints the percent alone', () => {
@@ -446,6 +462,14 @@ test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
     plain: true,
   });
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
+test('a hull_regen buff with no amount prints Buff: hull_regen', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen' }] }), {
+    plain: true,
+  });
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen']);
 });
 
 test('a weapon_damage buff with amount 0 prints Buff: weapon_damage 0%', () => {

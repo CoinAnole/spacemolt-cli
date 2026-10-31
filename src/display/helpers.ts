@@ -823,7 +823,6 @@ function repairQueueRows(value: unknown): Array<Record<string, unknown>> {
   }));
 }
 
-/** StationRepairResponse from get_base / inspect docked base. No-op if empty. */
 export function emitStationRepairs(repairs: unknown, options: { skipWrecked?: boolean } = {}): boolean {
   if (!isRecord(repairs) || !hasStationRepairWork(repairs)) return false;
 

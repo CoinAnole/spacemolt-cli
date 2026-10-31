@@ -60,10 +60,6 @@ function formatPriceDepth(depth: BestPriceDepth | undefined): { price: string; d
   };
 }
 
-function formatStorageHint(hint: string): string {
-  return hint.replace(/[ \t]+(Fuel bunker here:)/g, '\n$1');
-}
-
 function hasNonEmptyBaseId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
@@ -331,9 +327,9 @@ function formatFillCounterparties(fills: unknown): string {
   const counterparties: string[] = [];
   const seen = new Set<string>();
   for (const fill of fills) {
-    if (!isRecord(fill) || typeof fill.counterparty !== 'string') continue;
-    const counterparty = fill.counterparty.trim();
-    if (!counterparty || seen.has(counterparty)) continue;
+    if (!isRecord(fill)) continue;
+    const counterparty = trimmedIntelText(fill.counterparty);
+    if (counterparty === undefined || seen.has(counterparty)) continue;
     counterparties.push(counterparty);
     seen.add(counterparty);
   }
@@ -1138,7 +1134,6 @@ export const marketFormatters = [
     { commands: ['get_trades'] },
   ),
 
-  // Market listings (legacy/other paths; does not apply to real get_trades trade offers)
   formatter(
     (r) => {
       if (!Array.isArray(r.listings)) return false;
@@ -1332,7 +1327,8 @@ export const marketFormatters = [
       if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
-      if (hasNonEmptyBaseId(r.hint)) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
+      if (hasNonEmptyBaseId(r.hint))
+        emitLine(`${c.dim}${r.hint.replace(/[ \t]+(Fuel bunker here:)/g, '\n$1')}${c.reset}\n`);
       if (!isLocationsOnly) {
         printItemTable(items);
         if (ships.length) {

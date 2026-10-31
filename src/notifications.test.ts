@@ -1033,6 +1033,18 @@ describe('notification formatting', () => {
     }
   });
 
+  test('formats a plain line for a missing timestamp', () => {
+    const output = stripAnsi(
+      formatNotification({
+        type: 'system',
+        msg_type: 'system',
+        data: { message: 'Status nominal.' },
+      } as unknown as Parameters<typeof formatNotification>[0]).join('\n'),
+    );
+
+    expect(output).toContain('[unknown time]');
+  });
+
   test('formats ship_captured with prize fields as origin plus claim_prize', () => {
     const output = stripAnsi(
       formatNotification({
@@ -5888,6 +5900,14 @@ describe('notification formatting', () => {
       expect(formatInventoryPreview(null)).toBeUndefined();
       expect(formatInventoryPreview('credits')).toBeUndefined();
       expect(formatInventoryPreview({ nested: { ore_iron: 5 } })).toBeUndefined();
+    });
+
+    test('formats a module row without quantity as one unit', () => {
+      expect(formatInventoryPreview([{ module_id: 'laser_1' }])).toBe('1 item: laser_1×1');
+    });
+
+    test('returns undefined for quantity 0', () => {
+      expect(formatInventoryPreview([{ item_id: 'ore_iron', quantity: 0 }])).toBeUndefined();
     });
 
     test('pirate_destroyed nested loot never JSON.stringifies', () => {

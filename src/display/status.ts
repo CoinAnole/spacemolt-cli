@@ -1184,7 +1184,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       for (const hint of hints) emitLine(`  - ${hint.trim()}`);
     }
   }
-  if (typeof result.message === 'string' && result.message !== '') emitLine(`${c.dim}${result.message}${c.reset}`);
+  if (usableLabel(result.message)) emitLine(`${c.dim}${result.message}${c.reset}`);
   if (typeof result.version === 'string' && result.version !== '') emitLine(`Version: ${result.version}`);
 
   if (isRecord(result.details) && Object.keys(result.details).length > 0) {

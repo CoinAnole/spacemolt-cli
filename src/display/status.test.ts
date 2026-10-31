@@ -1320,6 +1320,34 @@ test('get_player omits arena stats at 0/0/0 with no XP', () => {
   expect(stdout).not.toContain('Arena XP today');
 });
 
+test('get_player prints a skill level without XP', () => {
+  const fixture = structuredClone(playerProfileFixture) as {
+    player: { stats: Record<string, unknown> };
+  };
+  fixture.player.stats = { piloting: { level: 5 } };
+  const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Piloting: Level 5');
+  expect(stdout).not.toContain('XP');
+});
+
+test('get_player prints skill XP without a level', () => {
+  const fixture = structuredClone(playerProfileFixture) as {
+    player: { stats: Record<string, unknown> };
+  };
+  fixture.player.stats = { crafting: { xp: 175 } };
+  const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Crafting: 175 XP');
+});
+
+test('get_player prints flat piloting_level and piloting_xp', () => {
+  const fixture = structuredClone(playerProfileFixture) as {
+    player: { stats: Record<string, unknown> };
+  };
+  fixture.player.stats = { piloting_level: 4, piloting_xp: 9 };
+  const stdout = renderStructuredResult('get_player', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Piloting: Level 4 (9 XP)');
+});
+
 test('get_status does not print arena stats', () => {
   const fixture = structuredClone(getStatusFixture) as { player: Record<string, unknown> };
   fixture.player.stats = { arena_wins: 3, arena_losses: 1, arena_knockouts: 7 };
@@ -1591,6 +1619,17 @@ test('pay_bounty prints faction treasury source and faction credits', () => {
 
   expect(stdout).toContain('Paid from: faction');
   expect(stdout).toContain('Faction credits: 90,000');
+});
+
+test('pay_bounty prints zero faction credits', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, faction_credits: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Faction credits: 0');
 });
 
 test('get_poi nested station prints indented ID and POI and skips Station Base ID', () => {
@@ -3380,6 +3419,17 @@ test('get_map system detail prints labeled chart fields including Description', 
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('get_map system detail prints a zero galactic x', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, position: { x: 0, y: 4 } },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Position: (0, 4)');
+});
+
 test('get_map system detail omits Description when missing or whitespace-only', () => {
   const withoutDescription = structuredClone(getMapSystemFixture) as { description?: string };
   delete withoutDescription.description;
@@ -4590,6 +4640,37 @@ test('get_nearby prints a question mark for a missing creature hull side', () =>
 
   expectNearbyFormatterEngaged(stdout);
   expect(stdout).toContain('hull ?/40');
+});
+
+test('get_nearby prints creature hull 0', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-wild-1',
+        name: 'Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        hull: 0,
+        max_hull: 40,
+      },
+    ],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('hull 0/40');
+  expect(stdout).not.toContain('hull ?/40');
+});
+
+test('get_nearby prints Unknown for a creature with no identity', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [{}],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout.split('\n')).toContain('  Unknown');
+  expect(stdout).not.toContain('[');
 });
 
 test.each([

@@ -562,6 +562,14 @@ test('formatEnemyDigest marks a singleton boss and otherwise prints count × nam
   ).toBe('1× Ring Cleaver (Fighter)');
 });
 
+test('formatEnemyDigest prints a count-2 Gravemaker boss as 2× Gravemaker (Cruiser)', () => {
+  expect(
+    formatEnemyDigest([
+      { name: 'Gravemaker', ship_class: 'gravemaker', ship_class_name: 'Cruiser', count: 2, is_boss: true },
+    ]),
+  ).toBe('2× Gravemaker (Cruiser)');
+});
+
 test('formatEnemyDigest appends flees only when the flag is true', () => {
   const runner = {
     name: 'Ring Runner',

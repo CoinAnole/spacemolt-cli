@@ -63,17 +63,6 @@ export function groupActionDisplayName(group: string, action: string): string {
   return `${group} ${action}`;
 }
 
-export function groupEntryConfig(group: GroupedCommandName): CommandGroupEntryConfig {
-  return {
-    commandGroup: group,
-    usage: '<action> [args...]',
-    description: GROUP_DESCRIPTIONS[group],
-    category: 'Command groups',
-    args: ['action'],
-    required: ['action'],
-  };
-}
-
 export function splitGroupedCommands(commands: Record<string, CommandConfig>): {
   commands: Record<string, CommandConfig>;
   commandGroups: CommandGroups;
@@ -82,7 +71,17 @@ export function splitGroupedCommands(commands: Record<string, CommandConfig>): {
   const acceptedCommands: Record<string, CommandConfig> = {};
   const commandGroups: CommandGroups = {};
   const allGroupEntries = Object.fromEntries(
-    GROUPED_COMMANDS.map((group) => [group, groupEntryConfig(group)]),
+    GROUPED_COMMANDS.map((group) => [
+      group,
+      {
+        commandGroup: group,
+        usage: '<action> [args...]',
+        description: GROUP_DESCRIPTIONS[group],
+        category: 'Command groups',
+        args: ['action'],
+        required: ['action'],
+      },
+    ]),
   ) as Record<GroupedCommandName, CommandGroupEntryConfig>;
 
   for (const [command, config] of Object.entries(commands)) {

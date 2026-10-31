@@ -310,6 +310,15 @@ test('citizenship apply prints an explicit zero fee paid', () => {
   expect(stdout).toContain('Fee paid: 0 cr');
 });
 
+test('citizenship apply prints an explicit zero status', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    empire_id: 'solarian',
+    status: 0,
+  });
+
+  expect(stdout).toContain('Status: 0');
+});
+
 test('citizenship list skips non-string rules', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

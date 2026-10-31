@@ -144,6 +144,17 @@ test('list_ships active_ship_class fallback when no owned row matches', () => {
   expect(stdout).toContain('Active ship: lithosphere (ship-missing)');
 });
 
+test('list_ships prints an id-only active ship', () => {
+  const fixture = cloneListShips();
+  fixture.active_ship_id = 'ship-x';
+  delete fixture.active_ship_class;
+
+  const stdout = renderListShips(fixture).stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Active ship:'));
+  expect(line).toBe('Active ship: ship-x');
+  expect(line).not.toContain('(');
+});
+
 test('list_ships Name falls back to class_name when custom_name is absent', () => {
   const fixture = cloneListShips();
   const ships = cloneShips(fixture);

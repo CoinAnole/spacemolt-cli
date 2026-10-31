@@ -86,7 +86,7 @@ function summarizeObjective(objective: unknown): string {
     objective.item_id ??
     objective.target_player_id;
   const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]
-    .filter((part) => part !== undefined && part !== null && part !== '')
+    .filter((part) => presentCount(part))
     .map(String);
   return parts.join(' ');
 }
@@ -648,10 +648,6 @@ function stationFromWorkshopFacilityId(value: unknown): string | undefined {
   return parts[parts.length - 1] || undefined;
 }
 
-function formatCraftJobStation(job: Record<string, unknown>, result: Record<string, unknown>): string | undefined {
-  return formatCraftStation(job) ?? stationFromWorkshopFacilityId(job.facility_id) ?? formatCraftStation(result);
-}
-
 function craftTitle(command: string, result: Record<string, unknown>): string {
   const base = command === 'recycle' || result.mode === 'recycle' ? 'Recycle' : 'Craft';
   if (result.dry_run === true) return `${base} Quote`;
@@ -743,7 +739,8 @@ function craftJobRows(
 ): Array<Record<string, unknown>> {
   return jobs.map((job) => ({
     ...job,
-    station_display: formatCraftJobStation(job, result),
+    station_display:
+      formatCraftStation(job) ?? stationFromWorkshopFacilityId(job.facility_id) ?? formatCraftStation(result),
     runs_display:
       job.runs_total === undefined
         ? undefined
@@ -813,7 +810,7 @@ function stationGiftBulkDetail(entry: Record<string, unknown>): string | undefin
 function isBadPresentGoodwill(result: Record<string, unknown>): boolean {
   if (!Object.hasOwn(result, 'goodwill')) return false;
   const goodwill = result.goodwill;
-  if (goodwill === undefined || goodwill === null || goodwill === '') return false;
+  if (!presentCount(goodwill)) return false;
   return !isRecord(goodwill);
 }
 

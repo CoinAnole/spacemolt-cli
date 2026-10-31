@@ -3593,7 +3593,6 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   friend_offline: previewFriendOffline,
   faction_invite: previewFactionInvite,
   faction_mobile_base_update: previewFactionMobileBaseUpdate,
-  // 0.573.2 ops + diplomacy
   faction_war_declared: previewFactionWarDeclared,
   faction_peace_proposal: previewFactionPeaceProposal,
   faction_peace_accepted: previewFactionPeaceAccepted,

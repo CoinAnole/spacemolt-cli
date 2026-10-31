@@ -390,3 +390,32 @@ test('empty category does not print Category:', () => {
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: '', type: 'ore' }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).not.toContain('Category:');
 });
+
+test('empty-string empire does not fall back to faction', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: '', faction: 'outerrim' }, {}), {
+    plain: true,
+  });
+  expect(buffer.stdout.join('\n')).not.toContain('Empire:');
+});
+
+test('non-finite ship price omits Price', () => {
+  const nan = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(nan, () => emitCatalogShipDetail({ price: Number.NaN }, {}), { plain: true });
+  expect(nan.stdout.join('\n')).not.toContain('Price:');
+
+  const text = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(text, () => emitCatalogShipDetail({ price: '100' }, {}), { plain: true });
+  expect(text.stdout.join('\n')).not.toContain('Price:');
+});
+
+test('empty-string capability value prints Capabilities: cloak', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: '' }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+});

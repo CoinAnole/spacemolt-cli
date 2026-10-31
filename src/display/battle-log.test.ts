@@ -324,6 +324,18 @@ describe('formatBattleDefenseLine', () => {
       ),
     ).toBe('kinetic (S6)');
   });
+
+  test('an attack with no weapons array and kinetic shield resist is kinetic (S6)', () => {
+    expect(
+      formatBattleDefenseLine(
+        {
+          damage_type: 'kinetic',
+          shield_resist_pct: 6,
+        },
+        'attack',
+      ),
+    ).toBe('kinetic (S6)');
+  });
 });
 
 describe('resolveCombatantLabel', () => {
