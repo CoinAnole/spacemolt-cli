@@ -427,13 +427,6 @@ function printCatalogTruncationWarning(command: string | undefined, result: Reco
   if (warning) emitLine(`${c.yellow}${warning}${c.reset}`);
 }
 
-function titleForListKey(key: string): string {
-  return key
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
 function isScalarDisplayValue(value: unknown): boolean {
   return value === null || ['string', 'number', 'boolean'].includes(typeof value);
 }
@@ -1036,9 +1029,7 @@ function insertOptionalColumn(
   fields: string[],
   afterLabel?: string,
 ): void {
-  if (
-    !rows.some((row) => fields.some((field) => row[field] !== undefined && row[field] !== null && row[field] !== ''))
-  ) {
+  if (!rows.some((row) => fields.some((field) => presentCount(row[field])))) {
     return;
   }
   const entry: [string, string[]] = [label, fields];
@@ -1696,7 +1687,10 @@ export const genericFormatters = [
       const columns = scalarColumns(recordRows, columnCandidates);
       if (recordRows.length > 0 && columns.length < 1) return false;
 
-      const title = titleForListKey(key);
+      const title = key
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
       printCompactTable(title, recordRows, columns.length ? columns : [['ID', ['id']]], {
         maxCellWidth: key === 'items' ? 80 : undefined,
       });
@@ -1827,7 +1821,6 @@ export const genericFormatters = [
       const depositFixer = commandNameEquals(command, 'storage_deposit') && isRecord(r.fixer) ? r.fixer : undefined;
       const depositGoodwill =
         commandNameEquals(command, 'storage_deposit') && isRecord(r.goodwill) ? r.goodwill : undefined;
-      // Skip dest keys flattened from sibling location; keep native details fields.
       const entries = Object.entries(r).filter(([key, value]) => {
         if (depositFixer && key === 'fixer') return false;
         if (depositGoodwill && key === 'goodwill') return false;

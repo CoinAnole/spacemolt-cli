@@ -936,7 +936,7 @@ function formatSupplyCommission(r: Record<string, unknown>): boolean {
   if (!Array.isArray(r.materials) && (r.item_id === undefined || r.supplied === undefined)) return false;
 
   emitLine(`\n${c.bright}=== Commission Supplied ===${c.reset}`);
-  if (typeof r.message === 'string' && r.message) emitLine(r.message);
+  if (hasNonEmptyBaseId(r.message)) emitLine(r.message);
   const commissionId = scalarDisplayString(r.commission_id);
   if (commissionId) emitLine(`ID: ${commissionId}`);
   const donated = formatDonatedSupplyItem(r);
@@ -1332,7 +1332,7 @@ export const marketFormatters = [
       if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
-      if (typeof r.hint === 'string' && r.hint) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
+      if (hasNonEmptyBaseId(r.hint)) emitLine(`${c.dim}${formatStorageHint(r.hint)}${c.reset}\n`);
       if (!isLocationsOnly) {
         printItemTable(items);
         if (ships.length) {

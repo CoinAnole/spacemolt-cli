@@ -273,3 +273,22 @@ test('a numeric unix-second notification timestamp prints the UTC second preview
   expect(stdout).toContain('2026-05-23 18:59:39');
   expect(stdout).not.toContain(String(timestamp));
 });
+
+test('a numeric unix-millisecond notification timestamp prints the UTC second preview', () => {
+  const timestamp = 1779562779000;
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('2026-05-23 18:59:39');
+  expect(stdout).not.toContain(String(timestamp));
+});

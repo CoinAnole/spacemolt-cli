@@ -1084,7 +1084,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
     if (shipId) emitLine(`ID: ${shipId}`);
     if (ship.class_name || ship.class_id) emitLine(`Class: ${ship.class_name || ship.class_id}`);
     if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
-    if (typeof ship.location === 'string' && ship.location !== '') emitLine(`Ship location: ${ship.location}`);
+    if (usableLabel(ship.location)) emitLine(`Ship location: ${ship.location}`);
     emitLine(`Hull: ${ship.hull}/${ship.max_hull}`);
     emitLine(`Shield: ${ship.shield}/${ship.max_shield} (+${ship.shield_recharge}/tick)`);
     emitLine(`Armor: ${ship.armor || 0}`);
@@ -1886,7 +1886,6 @@ export const statusFormatters = [
     { commands: ['decline_mission'] },
   ),
 
-  // Arrival (travel/jump)
   namedFormatter(
     'arrival',
     ['poi_id', 'online_players'],

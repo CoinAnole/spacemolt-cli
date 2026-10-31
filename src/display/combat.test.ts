@@ -156,6 +156,13 @@ test('an explicit zero leftover prints the scalar', () => {
   expect(stdout).toContain('Rounds: 0');
 });
 
+test('an empty-string leftover does not print Note', () => {
+  const stdout = renderCombat('attack', { ...playerReply, note: '' });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Note:');
+});
+
 test('nested loot without location aliases still uses the combat block', () => {
   const stdout = renderCombat('attack', {
     details: {
@@ -245,6 +252,20 @@ test('a whitespace target prints the Attack header and Kind with no Target line'
   expect(stdout).toContain('=== Attack ===');
   expect(stdout).toContain('Kind: npc');
   expect(stdout).not.toContain('Target:');
+});
+
+test('a target name with a whitespace target id prints Target: Belt-Grazer', () => {
+  const stdout = renderCombat('attack', {
+    details: {
+      action: 'attack',
+      kind: 'npc',
+      target: '   ',
+      target_name: 'Belt-Grazer',
+    },
+  });
+
+  expect(stdout).toContain('Target: Belt-Grazer');
+  expect(stdout).not.toContain('Target: Belt-Grazer (');
 });
 
 test('a non-npc non-player attack kind declines to the response dump', () => {

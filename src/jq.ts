@@ -420,7 +420,9 @@ function evalObjectConstruction(data: unknown, expr: string): Record<string, unk
   for (const entry of splitTopLevel(body, ',')) {
     const trimmedEntry = entry.trim();
     if (!trimmedEntry) continue;
-    const colonIndex = findTopLevelDelimiter(trimmedEntry, ':');
+    const parts = splitTopLevel(trimmedEntry, ':');
+    const firstPart = parts[0];
+    const colonIndex = parts.length === 1 || firstPart === undefined ? -1 : firstPart.length;
     if (colonIndex === -1) {
       const key = parseObjectShorthandKey(trimmedEntry);
       result[key] = evaluateJq(data, `.${key}`);
@@ -489,12 +491,6 @@ function splitTopLevel(value: string, delimiter: string): string[] {
 
   parts.push(value.slice(start));
   return parts;
-}
-
-function findTopLevelDelimiter(value: string, delimiter: string): number {
-  const parts = splitTopLevel(value, delimiter);
-  const firstPart = parts[0];
-  return parts.length === 1 || firstPart === undefined ? -1 : firstPart.length;
 }
 
 function isQuoted(value: string): boolean {

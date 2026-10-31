@@ -672,7 +672,7 @@ export const shipFormatters = [
 
       for (const station of stations) {
         emitLine(`\n${c.bright}=== ${stationGarageTitle(station)} ===${c.reset}`);
-        if (typeof station.system_name === 'string' && station.system_name) {
+        if (nonEmptyString(station.system_name)) {
           emitLine(`System: ${station.system_name}`);
         }
         emitLine(`Used: ${station.used ?? '?'}/${station.capacity ?? '?'}`);

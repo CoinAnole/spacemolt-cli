@@ -376,12 +376,7 @@ function renderUnknownCommand(
   if (wantsMachineReadableErrorOutput(invocation.options)) {
     printJsonError('unknown_command', `Unknown command: ${commandName}`, context.writer);
   } else {
-    displayUnknownCommand(
-      commandName,
-      context.writer,
-      { plain: context.config?.plain ?? context.output?.plain },
-      commandRegistry,
-    );
+    displayUnknownCommand(commandName, context.writer, { plain: outputFromContext(context).plain }, commandRegistry);
   }
   return 1;
 }

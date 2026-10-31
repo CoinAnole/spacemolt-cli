@@ -1281,6 +1281,15 @@ test('get_poi prints ? for omitted faction fuel capacity', () => {
   expect(stdout).toContain('Faction Fuel: 320/?');
 });
 
+test('get_poi services prints Services for a non-empty list', () => {
+  const fixture = {
+    ...poiInfoFixture,
+    services: ['refuel'],
+  };
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Services: refuel');
+});
+
 test('get_player prints arena record and XP after skill stats', () => {
   const stdout = renderStructuredResult(
     'get_player',
@@ -3624,6 +3633,14 @@ test('get_system string-only pois stay unchanged', () => {
   expect(stdout).toContain('  - sol_earth');
   expect(stdout).toContain('Current POI: Earth (planet) [garden]');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system string connections print a bare id', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  (fixture.system as { connections: unknown }).connections = ['alpha_centauri'];
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('  - alpha_centauri');
 });
 
 test('get_system prints class without station when has_base is false', () => {

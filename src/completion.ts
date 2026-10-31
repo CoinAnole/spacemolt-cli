@@ -71,14 +71,6 @@ function commandDescription(command: string, registry: CompletionRegistry): stri
   );
 }
 
-function getCommandArgNames(
-  command: string,
-  registry: CompletionRegistry,
-  config: CommandConfig | LocalCommandConfig | undefined = allCommands(registry)[command],
-): string[] {
-  return completionArgsForCommand(command, config).map((arg) => arg.name);
-}
-
 function getFieldSchema(
   command: string,
   arg: string,
@@ -217,7 +209,7 @@ function pushZshCommandArguments(
   indent: string,
   config?: CommandConfig | LocalCommandConfig,
 ): void {
-  const args = getCommandArgNames(command, registry, config);
+  const args = completionArgsForCommand(command, config ?? allCommands(registry)[command]).map((arg) => arg.name);
   if (args.length === 0) {
     lines.push(`${indent}_message "no arguments"`);
     return;

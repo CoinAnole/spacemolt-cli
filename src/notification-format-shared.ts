@@ -689,7 +689,6 @@ function previewSystem(
     };
   }
 
-  // Travel progress: action → destination (arrival tick N) [wormhole]
   const action = safeScalar(data.action);
   if (action !== undefined) {
     const bits = [String(action)];
@@ -3558,7 +3557,6 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   action_error: previewActionError,
   system: previewSystem,
 
-  // PR7a combat domain
   combat_update: previewCombatUpdate,
   player_died: previewPlayerDied,
   player_kill: previewPlayerKill,
@@ -3608,7 +3606,6 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   base_destroyed: previewBaseDestroyed,
   scan_result: previewScanResult,
   scan_detected: previewScanDetected,
-  // Remainder (PR7c)
   mining_yield: previewMiningYield,
   drone_update: previewDroneUpdate,
   drone_destroyed: previewDroneDestroyed,

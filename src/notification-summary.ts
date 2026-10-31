@@ -279,10 +279,10 @@ function sortedTimeSpan(progress: Notification[]): {
 function actionResultMessage(notification: Notification): string | undefined {
   const data = isRecord(notification.data) ? notification.data : undefined;
   const result = isRecord(data?.result) ? data.result : undefined;
-  if (typeof result?.message === 'string' && result.message.trim()) return result.message;
+  if (typeof result?.message === 'string' && metadataString(result.message)) return result.message;
   const details = isRecord(result?.details) ? result.details : undefined;
-  if (typeof details?.message === 'string' && details.message.trim()) return details.message;
-  if (typeof details?.action === 'string' && details.action.trim()) {
+  if (typeof details?.message === 'string' && metadataString(details.message)) return details.message;
+  if (typeof details?.action === 'string' && metadataString(details.action)) {
     const system =
       (typeof details.system === 'string' && details.system) ||
       (typeof details.system_id === 'string' && details.system_id) ||

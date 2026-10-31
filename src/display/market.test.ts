@@ -279,6 +279,23 @@ test('sell prints smuggling XP without a level-up line', () => {
   expect(stdout).not.toContain('From storage');
 });
 
+test('sell quantity-only auto-listed prints Auto-listed: 4 without an @ price', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      auto_listed: { quantity: 4 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Auto-listed: 4');
+  expect(stdout).not.toContain('@');
+});
+
 test('sell prints cargo and storage counts after fills and before unsold', () => {
   const stdout = renderStructuredResult(
     'sell',
@@ -750,6 +767,23 @@ test('faction_query_intel prints a depleted resource line when remaining is 0', 
 
   expect(stdoutLine(stdout, 'iron_ore')).toBe('    - iron_ore: richness 3, depleted');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel prints depleted when remaining_display is depleted and remaining is 10', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [
+    {
+      resource_id: 'iron_ore',
+      richness: 3,
+      remaining: 10,
+      max_remaining: 40,
+      remaining_display: 'depleted',
+    },
+  ];
+  const stdout = renderIntel(fixture);
+
+  expect(stdoutLine(stdout, 'iron_ore')).toBe('    - iron_ore: richness 3, depleted');
+  expect(stdout).not.toContain('10/40');
 });
 
 test('faction_query_intel prints read_at_tick when resources are missing or empty', () => {
@@ -1379,4 +1413,29 @@ test('get_trades buy price modifier prints buy and sell price modifiers', () => 
 
   expect(stdout).toContain('Buy price modifier:');
   expect(stdout).toContain('Sell price modifier:');
+});
+
+test('get_trades buy_price_modifier 0 prints no buy or sell price modifier lines', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+          seller_name: 'Ada',
+        },
+      ],
+      buy_price_modifier: 0,
+      sell_price_modifier: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('ore_iron: 1 @ 10 each');
+  expect(stdout).not.toContain('Buy price modifier:');
+  expect(stdout).not.toContain('Sell price modifier:');
 });

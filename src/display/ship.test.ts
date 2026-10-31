@@ -1073,6 +1073,21 @@ test('station refuel omits a reconstructed total when market_cost is a bigint', 
   expect(stdout).not.toContain('9007199254740992');
 });
 
+test('non-station refuel fuel cost prints Fuel cost for a numeric cost', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      source: 'ship_transfer',
+      cost: 100,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Fuel cost: 100 cr');
+});
+
 function renderRepair(fixture: Record<string, unknown>) {
   return renderStructuredResult('repair', structuredClone(fixture), options, context);
 }

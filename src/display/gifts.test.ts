@@ -223,6 +223,11 @@ describe('emitGiftEntries', () => {
     expect(renderGifts([]).stdout).toBe('');
   });
 
+  test('non-array gifts print nothing', () => {
+    expect(renderGifts(undefined).stdout).toBe('');
+    expect(renderGifts('ship-9').stdout).toBe('');
+  });
+
   test('timestamps use the text clock and leave objects unprinted', () => {
     const iso = renderGifts([{ sender: 'Ada', timestamp: '2026-09-23T14:05:00Z' }]);
     expect(iso.stdout).toContain('When: 2026-09-23 14:05');

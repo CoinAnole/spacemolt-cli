@@ -243,6 +243,10 @@ test('summarizeCombatSpecialEffects omits empty, zero, false, and non-scalars', 
   ).toBe('');
 });
 
+test('a non-finite combat effect is omitted', () => {
+  expect(summarizeCombatSpecialEffects({ aoe_radius: Number.NaN, chain_targets: Number.POSITIVE_INFINITY })).toBe('');
+});
+
 test('summarizeCombatSpecialEffects formats booleans, durations, and split dot tokens', () => {
   expect(summarizeCombatSpecialEffects({ shield_phase: true })).toBe('shield phase');
   expect(summarizeCombatSpecialEffects({ system_disable_ticks: 1 })).toBe('disable systems 1 tick');
@@ -386,14 +390,30 @@ test('bonus disrupt ticks prints bonus disrupt 2 ticks', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_ticks: 2 } } })).toBe('bonus disrupt 2 ticks');
 });
 
+test('bonus disrupt speed prints the signed percent', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_speed: 0.1 } } })).toBe('bonus disrupt speed +10%');
+});
+
 test('disrupt damage prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0.1 } } })).toBe('disrupt damage +10%');
+});
+
+test('disrupt speed prints the signed percent', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_speed: 0.1 } } })).toBe('disrupt speed +10%');
 });
 
 test('burn without per-tick damage prints Effects and Burn: 3 ticks', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ burn_ticks_remaining: 3 }), { plain: true });
   expect(buffer.stdout).toEqual(['Effects:', '  Burn: 3 ticks']);
+});
+
+test('explicit zero burn damage prints Effects and Burn: 3 ticks, 0 hull/tick', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ burn_ticks_remaining: 3, burn_damage_per_tick: 0 }), {
+    plain: true,
+  });
+  expect(buffer.stdout).toEqual(['Effects:', '  Burn: 3 ticks, 0 hull/tick']);
 });
 
 test('active armor melt prints Armor melt: active for 2 ticks', () => {

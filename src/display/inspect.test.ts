@@ -490,6 +490,36 @@ test('prints Known POIs: 2 when faction system POI records have no usable name o
   expect(stdout).not.toContain('Known POIs (2)');
 });
 
+test('prints a Known POIs suffix when faction system intel has more than 12 POIs', () => {
+  const pois = Array.from({ length: 13 }, (_, index) => ({
+    id: `poi_${index + 1}`,
+    name: index === 12 ? 'omitted_thirteenth_poi' : `Station ${index + 1}`,
+  }));
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        name: 'Sol',
+        pois,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Known POIs (13):');
+  expect(stdout).toContain(', ... and 1 more');
+  expect(stdout).not.toContain('omitted_thirteenth_poi');
+});
+
 test('inspect system prints Online and POIs when those counts are present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -558,6 +588,31 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).toContain('Page 1/1');
   expect(stdout).not.toContain('Mining group');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inspect catalog prints Entries and omits Details when more than one item is returned', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ores',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [
+          { id: 'iron_ore', name: 'Iron Ore', category: 'ore', size: 1, base_value: 2 },
+          { id: 'copper_ore', name: 'Copper Ore', category: 'ore', size: 1, base_value: 3 },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Entries ===');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('=== Entry ===');
 });
 
 test('prints (No catalog entries in this response) for a catalog with no items, recipes, or analysis', () => {
@@ -1578,6 +1633,32 @@ test('renders a wormhole with no wormhole_expires_in as Wormhole: Alpha', () => 
   expect(stdout).not.toContain('expires');
 });
 
+test('renders a wormhole from wormhole_destination_id when the destination name is absent', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination_id: 'alpha_centauri',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: alpha_centauri');
+  expect(stdout).not.toContain('expires');
+});
+
 test('renders poi inspect workability columns when ship-relative fields are present', () => {
   const rendered = renderStructuredResult('inspect', structuredClone(inspectPoiFixture), options, context);
   const stdout = rendered.stdout.join('\n');
@@ -1736,6 +1817,28 @@ test('prints Base: yes when has_base is true without base_name or base_id', () =
   expect(stdout.split('\n')).toContain('Base: yes');
 });
 
+test('prints Base: Earth Station when base_name is set and has_base is not true', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_orbit',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'earth_orbit',
+          name: 'Earth Orbit',
+          has_base: false,
+          base_name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Base: Earth Station');
+});
+
 test('renders base inspect results with station defences', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1791,6 +1894,48 @@ test('renders base inspect results with station defences', () => {
   expect(stdout).toContain('A busy trade hub.');
   expect(stdout).not.toContain('=== Repairs ===');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints Fuel: 0/? when fuel is 0 and max_fuel is absent', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          fuel: 0,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Fuel: 0/?');
+});
+
+test('prints Condition: unknown (?% satisfaction) when the condition record has no text or percent', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+        condition: {},
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Condition: unknown (?% satisfaction)');
 });
 
 test('renders nested base repairs without a second wrecked line', () => {

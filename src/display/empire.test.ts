@@ -443,3 +443,17 @@ test('prints an income_tax record note flat instead of the raw response dump', (
   expect(stdout).toContain('Income tax: note flat');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('prints an income_tax string withheld instead of the raw response dump', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: 'withheld',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Income tax: withheld');
+  expect(stdout).not.toContain('=== Response ===');
+});

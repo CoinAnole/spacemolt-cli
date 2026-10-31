@@ -187,6 +187,19 @@ test('survey_system prints Unknown for a newly revealed POI with no name or id',
   expect(stdout.split('\n')).toContain('  - Unknown');
 });
 
+test('survey_system prints a newly revealed POI id when the name is missing', () => {
+  const stdout = stdoutOf({
+    system_name: 'Sol',
+    survey_power: 18,
+    newly_revealed: [{ id: 'sol_bare_rock' }],
+    already_revealed: [],
+  });
+
+  expect(stdout.split('\n')).toContain('  - sol_bare_rock');
+  expect(stdout).not.toContain('Unknown');
+  expect(stdout).not.toContain('(sol_bare_rock)');
+});
+
 test('survey_system envelope V2Missions prints survey output then one Active Missions table', () => {
   const stdout = stdoutOf(structuredClone(surveySystemMissionsFixture));
 
@@ -441,6 +454,22 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
 
   expect(empty).not.toContain('Skill XP:');
   expect(zero).not.toContain('Skill XP:');
+});
+
+test('survey_system skips Skill XP when xp_gained is not a record', () => {
+  const number = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = 8;
+    }),
+  );
+  const array = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = [];
+    }),
+  );
+
+  expect(number).not.toContain('Skill XP:');
+  expect(array).not.toContain('Skill XP:');
 });
 
 test('survey_system skips Skill XP for an empty-string xp value', () => {

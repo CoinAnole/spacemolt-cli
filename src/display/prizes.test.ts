@@ -91,6 +91,12 @@ test('claim with ship_name and no ship_class prints the name only', () => {
   expect(stdout).not.toContain('skiff');
 });
 
+test('claim without destination_base_id prints the station name only', () => {
+  const stdout = renderClaim(claimDetails({}, ['destination_base_id']));
+  expect(stdout).toContain('Captured Lark (skiff) → Earth Station');
+  expect(stdout).not.toContain('earth_station');
+});
+
 test('treats empty-string destination_name as missing and uses id', () => {
   const stdout = renderClaim(claimDetails({ destination_name: '' }));
   expect(stdout).toContain('Captured Lark (skiff) → earth_station');
@@ -281,6 +287,14 @@ test('poi-only transit with no kind prints ac_station and not an arrow', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('ac_station');
   expect(stdout).not.toContain('→');
+});
+
+test('system-only parked recovery prints sol and not a slash', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ system_id: 'sol' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('sol');
+  expect(stdout).not.toContain('/');
 });
 
 test('travel with only system ids prints travel sol → alpha_centauri', () => {

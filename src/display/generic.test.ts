@@ -3091,6 +3091,30 @@ test('renders catalog facilities with maintenance_fuel and maintenance_inputs re
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders catalog facilities power_supply 0 as 0 supply', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      type: 'facilities',
+      items: [
+        {
+          id: 'bunker_fed_reactor',
+          name: 'Bunker-Fed Reactor',
+          category: 'infrastructure',
+          level: 1,
+          power_supply: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('0 supply');
+});
+
 function catalogSkillsHeader(stdout: string): string | undefined {
   return stdout.split('\n').find((line) => line.includes('Name') && line.includes('ID') && line.includes('Max'));
 }
@@ -3802,6 +3826,38 @@ test('renders craft quote capacity available as yes/no', () => {
   const garbageOut = garbage.stdout.join('\n');
   expect(garbage.success).toBe(true);
   expect(garbageOut).not.toContain('Capacity available');
+});
+
+test('renders a one-tick Time/run craft quote', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        cost: {
+          inputs: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
+        },
+        dry_run: true,
+        effective_time_per_run: 1,
+        est_completion_tick: 1131729,
+        facility_id: 'workshop:player:station',
+        have_credits: true,
+        have_inputs: true,
+        mode: 'craft',
+        produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+        recipe: 'Build Power Cell',
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Time/run: 1 tick');
 });
 
 test('renders craft queue total_jobs and truncation message', () => {

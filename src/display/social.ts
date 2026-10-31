@@ -214,7 +214,7 @@ function formatArenaOnlyFleetLine(arenaOnly: unknown): string | undefined {
 }
 
 function isDefinedLineValue(value: unknown): boolean {
-  if (value === undefined || value === null || value === '') return false;
+  if (!hasAnyField([{ value }], ['value'])) return false;
   if (isRecord(value) || Array.isArray(value)) return false;
   return true;
 }
@@ -473,11 +473,6 @@ function listBattlesNextLine(result: Record<string, unknown>, rowCount: number):
   args.push(`offset=${base + rowCount}`);
   if (query.captured === true) args.push('captured=true');
   return `Next: spacemolt list_battles ${args.join(' ')}`;
-}
-
-function listBattlesEmptyLine(total: unknown): string {
-  if (typeof total === 'number' && total > 0) return 'No battles on this page.';
-  return 'No battles.';
 }
 
 function boardingStatusColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
@@ -1965,7 +1960,6 @@ export const socialFormatters = [
 
       const facilities = firstArray(r, ['faction_facilities']);
       if (!facilities) return false;
-      // Reject grouped facility_list payloads
       if (Array.isArray(r.station_facilities) || Array.isArray(r.player_facilities)) return false;
 
       emitOptionalLine('Faction', r.faction_id);
@@ -2347,7 +2341,7 @@ export const socialFormatters = [
       const rowCount = Array.isArray(result.battles) ? result.battles.length : 0;
       emitLine(listBattlesHeader(rowCount, result));
       if (rowCount === 0) {
-        emitLine(listBattlesEmptyLine(result.total));
+        emitLine(typeof result.total === 'number' && result.total > 0 ? 'No battles on this page.' : 'No battles.');
         return true;
       }
 
@@ -2375,7 +2369,6 @@ export const socialFormatters = [
     { commands: ['list_battles'] },
   ),
 
-  // Battle log (tick-by-tick compact replay)
   formatter(
     (r) => {
       const entries = firstArray(r, ['entries']);

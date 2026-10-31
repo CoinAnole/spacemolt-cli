@@ -163,6 +163,17 @@ test('mine skips Skill XP for empty, zero, and non-record maps', () => {
   expect(scalar).not.toContain('=== Response ===');
 });
 
+test('mine skips Skill XP for an empty-string mining XP value', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { mining: '' };
+    }),
+  );
+
+  expect(stdout).toContain('=== Mine ===');
+  expect(stdout).not.toContain('Skill XP:');
+});
+
 test('mine joins multiple non-zero XP entries', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

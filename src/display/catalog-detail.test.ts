@@ -236,6 +236,12 @@ test('accuracy bonus prints Accuracy: 4', () => {
   expect(buffer.stdout.join('\n')).toContain('Accuracy: 4');
 });
 
+test('cloak strength prints Cloak: 4', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ cloak_strength: 4 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Cloak: 4');
+});
+
 test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });
@@ -287,8 +293,26 @@ test('item_id name fallback prints 2x steel_plate', () => {
   expect(summarizeNamedItemQuantities([{ item_id: 'steel_plate', quantity: 2 }])).toBe('2x steel_plate');
 });
 
+test('item_name is preferred over item_id', () => {
+  expect(summarizeNamedItemQuantities([{ item_name: 'Plate', item_id: 'plate', quantity: 1 }])).toBe('1x Plate');
+});
+
 test('non-string id returns empty from joinStringIds', () => {
   expect(joinStringIds(['laser', 1])).toBe('');
+});
+
+test('joinStringIds drops empty strings', () => {
+  expect(joinStringIds(['', 'laser'])).toBe('laser');
+});
+
+test('non-string passive recipes are dropped', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ passive_recipes: ['refine_steel', 1, 'smelt'] }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Passive recipes: refine_steel, smelt');
+  expect(stdout).not.toContain('refine_steel, 1');
 });
 
 test('ship capability flag prints Capabilities: cloak passive 2', () => {
@@ -317,6 +341,16 @@ test('legacy-only ship prints Availability: legacy', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Availability: legacy');
   expect(stdout).not.toContain('hidden');
+});
+
+test('empire is preferred when it differs from faction', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: 'nebula', faction: 'solarian' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Empire: nebula');
+  expect(stdout).not.toContain('solarian');
 });
 
 test('hidden-only ship prints Availability: hidden', () => {

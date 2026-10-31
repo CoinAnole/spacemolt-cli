@@ -119,7 +119,10 @@ function buildMatchers(options: OutputSearchOptions): MatcherBuildResult {
 }
 
 function substringMatcher(option: string, pattern: string, scopes: SearchScope[]): SearchMatcher {
-  const needles = searchNeedles(pattern);
+  const needles = pattern
+    .split(',')
+    .map((part) => normalizeSearchText(part))
+    .filter(Boolean);
   return {
     option,
     scopes: new Set(scopes),
@@ -143,13 +146,6 @@ function regexMatcher(option: string, pattern: string, scopes: SearchScope[]): S
       return regex.test(value);
     },
   };
-}
-
-function searchNeedles(pattern: string): string[] {
-  return pattern
-    .split(',')
-    .map((part) => normalizeSearchText(part))
-    .filter(Boolean);
 }
 
 function normalizeSearchText(value: string): string {
