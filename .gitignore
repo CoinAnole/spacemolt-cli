@@ -49,7 +49,6 @@ official-client
 # A docs/README.md is explicitly allowed (and committed) to document this policy.
 .kilo
 .codex
-.grok/
 docs/**
 !docs/README.md
 reports/**
