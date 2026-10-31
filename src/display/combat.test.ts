@@ -219,6 +219,15 @@ test.each([
   expect(stdout).not.toContain('[AUTO-DOCKED]');
 });
 
+test('details auto_docked yes does not print an Auto-docked line', () => {
+  const stdout = renderCombat('attack', {
+    details: { ...attackBrandedFixture.details, auto_docked: 'yes' },
+  });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Auto-docked');
+});
+
 test('details auto_undocked false prints no and does not append the dock-state line', () => {
   const stdout = renderCombat('attack', {
     details: { ...attackBrandedFixture.details, auto_undocked: false },

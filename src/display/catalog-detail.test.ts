@@ -329,6 +329,12 @@ test('hidden module prints Hidden: yes', () => {
   expect(buffer.stdout.join('\n')).toContain('Hidden: yes');
 });
 
+test('module class_name prints Class: Shield', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ class_name: 'Shield' }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Class: Shield');
+});
+
 test('quantity 0 prints 0x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: 0 }])).toBe('0x Steel Plate');
 });
@@ -377,6 +383,15 @@ test('ship capability flag prints Capabilities: cloak passive 2', () => {
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
 });
 
+test('padded capability type prints Capabilities: cloak', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [{ type: '  cloak  ' }] }, {}), {
+    plain: true,
+  });
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+});
+
 test('ship capability value 0 prints Capabilities: cloak 0', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -421,6 +436,12 @@ test('module package operation falls back to catalog.package_operation', () => {
   expect(buffer.stdout.join('\n')).toContain('Package operation: unpack');
 });
 
+test('item package operation prints Package operation: pack', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ package_operation: 'pack' }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Package operation: pack');
+});
+
 test('item category falls back to type when category is absent', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ type: 'ore' }, {}), { plain: true });
@@ -431,6 +452,12 @@ test('empty category does not print Category:', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: '', type: 'ore' }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).not.toContain('Category:');
+});
+
+test('item tier prints Tier: 2', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ tier: 2 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Tier: 2');
 });
 
 test('empty-string empire does not fall back to faction', () => {

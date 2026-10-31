@@ -3379,6 +3379,13 @@ test('get_status_summary prints Crew occupancy and omits it without personnel or
   expect(ridingOut).toContain('passenger on Ibis');
 });
 
+test('get_status prints the riding ship id', () => {
+  const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
+  riding.riding = { carrier: 'Ibis', ship_id: 'ship-ibis-1' };
+  const stdout = renderStructuredResult('get_status', riding, options, context).stdout.join('\n');
+  expect(stdout).toContain("Riding aboard: Ibis's ship (ship-ibis-1)");
+});
+
 test('get_status_summary still prints Crew 0/6 when incapacitated', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   fixture.ship.personnel = {
@@ -5528,6 +5535,16 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   expect(stdout.split('Credits: 4242').length - 1).toBe(1);
 });
 
+test('get_state prints the riding ship id', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain("Riding aboard: Ibis's ship (carrier-ship-1)");
+});
+
 test('get_state cargo share lines gloss size-1 fill and that lower is better', () => {
   const snapshot = renderStructuredResult(
     'get_state',
@@ -6256,6 +6273,14 @@ test('get_status does not print location transit and still prints top-level trav
   expect(traveling).not.toContain('Transit:');
 });
 
+test('omitted travel destination and arrival tick print 0% to unknown when travel_progress is 0', () => {
+  const traveling = renderStatusTable('get_status', {
+    player: { username: 'Marlowe' },
+    travel_progress: 0,
+  });
+  expect(traveling).toContain('0% to unknown (arrival tick: ?)');
+});
+
 test('get_state keeps the location snapshot for an id-only payload', () => {
   const stdout = renderStatusTable('get_state', idOnlyStatusPayload);
   const lines = stdout.split('\n');
@@ -6376,4 +6401,20 @@ test('get_skills prints (MAX) for the max-level skill branch', () => {
   mining.level = mining.max_level;
   const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('(MAX)');
+});
+
+test('get_skills prints xp for a below-max skill without next_level_xp', () => {
+  const fixture = structuredClone(skillsFixture);
+  const mining: { level: number; max_level: number; next_level_xp?: number } = fixture.skills.mining;
+  delete mining.next_level_xp;
+  const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Mining: Level 3/10 (450 XP)');
+});
+
+test('get_skills prints the Other heading for a skill with no category', () => {
+  const fixture = structuredClone(skillsFixture);
+  const mining: { category?: string } = fixture.skills.mining;
+  delete mining.category;
+  const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Other:');
 });

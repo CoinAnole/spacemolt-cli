@@ -514,7 +514,7 @@ export const shippingFormatters = [
     commands: ['shipping_pay_debt'],
     suppressShapeFallbackOnDecline: true,
   }),
-  formatter((result, command) => renderSettlement(result, command), {
+  formatter(renderSettlement, {
     commands: ['shipping_deliver', 'shipping_return', 'shipping_cancel'],
     suppressShapeFallbackOnDecline: true,
   }),

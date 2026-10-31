@@ -103,6 +103,23 @@ test('buy prints a bigint total_cost instead of a rounded fill sum', () => {
   expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
 });
 
+test('buy prints Total cost when nothing was filled', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      total_cost: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Total cost: 0 cr');
+  expect(stdout).not.toContain('Instant fills:');
+});
+
 test('create_sell_order prints bigint quantity_filled and total_earned', () => {
   const stdout = renderStructuredResult(
     'create_sell_order',
@@ -1418,6 +1435,23 @@ test('empty get_trades listings prints (No listings at this market)', () => {
   expect(stdout).toContain('(No listings at this market)');
 });
 
+test('get_trades incoming offer without offerer_name prints someone', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      incoming: [
+        {
+          trade_id: 'trade-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('someone offers');
+});
+
 test('get_trades buy price modifier prints buy and sell price modifiers', () => {
   const stdout = renderStructuredResult(
     'get_trades',
@@ -1465,4 +1499,41 @@ test('get_trades buy_price_modifier 0 prints no buy or sell price modifier lines
   expect(stdout).toContain('ore_iron: 1 @ 10 each');
   expect(stdout).not.toContain('Buy price modifier:');
   expect(stdout).not.toContain('Sell price modifier:');
+});
+
+test('get_trades listing with no seller prints Seller: NPC', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: NPC');
+});
+
+test('faction storage prints a bigint credit balance without grouping', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      credits: 9007199254740993n,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Faction credits: 9007199254740993');
+  expect(stdout).not.toContain('9,007,199,254,740,993');
 });

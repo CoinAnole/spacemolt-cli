@@ -464,14 +464,18 @@ test('groupTrialsBySeries preserves server order and marks here from any row', (
       poi_name: 'Other Arena',
       poi_id: 'other_arena',
     }),
+    trialDef({ challenge_id: 'd', name: 'D', series: 'Far Ring', stage: 1, at_this_arena: false }),
+    trialDef({ challenge_id: 'e', name: 'E', series: 'Far Ring', stage: 2, at_this_arena: true }),
   ]);
-  expect(sections).toHaveLength(2);
+  expect(sections).toHaveLength(3);
   expect(sections[0]?.series).toBe('Blood Arena');
   expect(sections[0]?.here).toBe(true);
   expect(sections[0]?.trials).toHaveLength(2);
   expect(sections[1]?.series).toBe('The Swarm');
   expect(sections[1]?.here).toBe(false);
   expect(sections[1]?.poi_name).toBe('Other Arena');
+  expect(sections[2]?.series).toBe('Far Ring');
+  expect(sections[2]?.here).toBe(true);
 });
 
 test('a differing trial poi renders the catalog row with @ Other Arena', () => {

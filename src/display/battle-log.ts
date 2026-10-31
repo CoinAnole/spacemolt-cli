@@ -90,7 +90,16 @@ export function battleLogAttackRows(entries: unknown): BattleLogAttackRow[] {
           }
           continue;
         }
-        rows.push(attackRowFromAttack(tick, attack, snapshots));
+        rows.push(
+          combatantRow(
+            tick,
+            attack,
+            snapshots,
+            hitCell(attack.hit_success),
+            formatShieldHull(attack.shield_damage, attack.hull_damage),
+            formatBattleDefenseLine(attack, 'attack'),
+          ),
+        );
         continue;
       }
 
@@ -204,17 +213,6 @@ function attackRowFromComponent(
     hitCell(attack.hit_success),
     formatShieldHull(component.shield_damage, component.hull_damage),
     formatBattleDefenseLine(component, 'component'),
-  );
-}
-
-function attackRowFromAttack(tick: unknown, attack: Record<string, unknown>, snapshots: unknown): BattleLogAttackRow {
-  return combatantRow(
-    tick,
-    attack,
-    snapshots,
-    hitCell(attack.hit_success),
-    formatShieldHull(attack.shield_damage, attack.hull_damage),
-    formatBattleDefenseLine(attack, 'attack'),
   );
 }
 

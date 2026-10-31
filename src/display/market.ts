@@ -96,10 +96,7 @@ function emitStorageGifts(result: Record<string, unknown>): void {
 }
 
 function itemCategory(item: Record<string, unknown>): string | undefined {
-  const value = item.category;
-  if (typeof value !== 'string') return undefined;
-  const text = value.trim();
-  return text.length > 0 ? text : undefined;
+  return trimmedIntelText(item.category);
 }
 
 function marketSummaryRows(items: Array<Record<string, unknown>>): Array<Record<string, unknown>> {

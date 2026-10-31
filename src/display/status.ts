@@ -1530,7 +1530,6 @@ export const statusFormatters = [
     { commands: ['get_commands'] },
   ),
 
-  // System info
   namedFormatter(
     'system_info',
     ['system', 'security_status'],

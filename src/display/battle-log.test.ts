@@ -209,12 +209,23 @@ describe('formatShieldHull', () => {
     expect(formatShieldHull(undefined, undefined)).toBe('');
     expect(formatShieldHull('x', 'y')).toBe('');
   });
+
+  test('suffixes an explicit zero on either side alone', () => {
+    expect(formatShieldHull(0, undefined)).toBe('0s');
+    expect(formatShieldHull(undefined, 0)).toBe('0h');
+  });
 });
 
 describe('formatBattleDefenseLine', () => {
   test('formats a single component stage chain', () => {
     expect(formatBattleDefenseLine(pulseLaserComponent(), 'component')).toBe(
       'Pulse Laser kinetic 500→470→455→440 (S6 T3 F3)',
+    );
+  });
+
+  test('prints a zero stage hop in the arrow chain', () => {
+    expect(formatBattleDefenseLine(pulseLaserComponent({ after_shield_resist: 0 }), 'component')).toBe(
+      'Pulse Laser kinetic 500→0→455→440 (S6 T3 F3)',
     );
   });
 
@@ -259,6 +270,20 @@ describe('formatBattleDefenseLine', () => {
         'component',
       ),
     ).toBe('Pulse Laser kinetic 400→350 (S6 F3)');
+  });
+
+  test('omits parentheses when no resist percent is finite', () => {
+    expect(
+      formatBattleDefenseLine(
+        {
+          weapon_name: 'Pulse Laser',
+          damage_type: 'kinetic',
+          incoming_damage: 400,
+          after_flat_reduction: 350,
+        },
+        'component',
+      ),
+    ).toBe('Pulse Laser kinetic 400→350');
   });
 
   test('appends bypass flags only when truthy or non-zero', () => {

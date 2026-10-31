@@ -267,6 +267,13 @@ describe('emitGiftEntries', () => {
     expect(objectStamp.stdout).not.toContain('[object Object]');
   });
 
+  test('NaN timestamp omits When: and does not print NaN', () => {
+    const { stdout } = renderGifts([{ sender: 'Ada', timestamp: Number.NaN }]);
+    expect(stdout).toContain('From: Ada');
+    expect(stdout).not.toContain('When:');
+    expect(stdout).not.toContain('NaN');
+  });
+
   test('out-of-range numeric timestamp prints String(1e20), not an ISO clock', () => {
     const { stdout } = renderGifts([{ sender: 'Ada', timestamp: 1e20 }]);
     const when = stdout.split('\n').find((line) => line.includes('When:'));

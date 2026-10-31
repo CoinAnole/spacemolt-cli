@@ -126,6 +126,12 @@ test('prints assigned-only crew without disposition', () => {
   expect(stdout).not.toContain('aboard');
 });
 
+test('empty-string crew disposition prints Crew: 1', () => {
+  const stdout = renderClaim(claimDetails({ crew_assigned: 1, crew_disposition: '' }));
+  const line = stdout.split('\n').find((row) => row.includes('Crew:'));
+  expect(line).toBe('Crew: 1');
+});
+
 test('prints disposition-only crew without assigned count', () => {
   const stdout = renderClaim(claimDetails({}, ['crew_assigned']));
   expect(stdout).toContain('Crew: aboard');
@@ -143,6 +149,11 @@ test('omits Status when missing and still accepts', () => {
   const stdout = renderClaim(claimDetails({}, ['status']));
   expect(stdout).toContain('=== Claim Prize ===');
   expect(stdout).toContain('Prize ID: prize-1');
+  expect(stdout).not.toContain('Status:');
+});
+
+test('empty-string status omits Status:', () => {
+  const stdout = renderClaim(claimDetails({ status: '' }));
   expect(stdout).not.toContain('Status:');
 });
 
@@ -223,6 +234,14 @@ test('one-sided nearby prize hull prints 8/? and not 8/undefined', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('8/?');
   expect(stdout).not.toContain('8/undefined');
+});
+
+test('numeric in_combat prints Combat and not yes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ in_combat: 1 }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Combat');
+  expect(stdout).not.toContain('yes');
 });
 
 test('hull 0 prints 0/8 and not ?/8', () => {

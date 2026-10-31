@@ -1151,6 +1151,23 @@ test('station refuel omits a reconstructed total when market_cost is a bigint', 
   expect(stdout).not.toContain('9007199254740992');
 });
 
+test('refuel prints a zero fuel delta as (0) and not (+0)', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      fuel: 0,
+      fuel_now: 20,
+      fuel_max: 100,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Ship fuel: 20/100 (0)');
+  expect(stdout).not.toContain('(+0)');
+});
+
 test('non-station refuel fuel cost prints Fuel cost for a numeric cost', () => {
   const stdout = renderStructuredResult(
     'refuel',

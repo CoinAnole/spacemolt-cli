@@ -370,6 +370,17 @@ test('summarizeEffect prefers ammo then recurses scalars', () => {
   expect(summarizeEffect({ list: [1, { a: 2 }] })).toBe('list: [1, a: 2]');
 });
 
+test('summarizeEffect prints boolean scalars', () => {
+  expect(summarizeEffect(true)).toBe('true');
+  expect(summarizeEffect(false)).toBe('false');
+});
+
+test('summarizeEffect drops an empty array', () => {
+  const summary = summarizeEffect({ list: [] });
+  expect(summary).toBe('');
+  expect(summary).not.toContain('list');
+});
+
 test('a numeric ammo effect type is printed', () => {
   expect(summarizeEffect({ type: 2, ammo: { damage_mod: 1 } })).toBe('type: 2, damage 100%');
 });
@@ -384,6 +395,12 @@ test('a whitespace effect type skips the type prefix and prints damage 100%', ()
 
 test('summarizeEffect drops an empty nested record', () => {
   expect(summarizeEffect({ foo: {} })).toBe('');
+});
+
+test('summarizeEffect drops an empty-string scalar field', () => {
+  const summary = summarizeEffect({ note: '' });
+  expect(summary).toBe('');
+  expect(summary).not.toContain('note');
 });
 
 test('armor melt without ticks prints the percent alone', () => {
