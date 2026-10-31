@@ -704,7 +704,6 @@ function previewSystem(
     };
   }
 
-  // Scalar message only
   const message = safeScalar(data.message);
   if (message !== undefined) {
     return {
@@ -1646,8 +1645,7 @@ function scalarOr(value: unknown, fallback: string): string {
 
 function positiveNumber(value: unknown): string | number | undefined {
   if (typeof value === 'bigint') return value > 0n ? formatIntegerText(value) : undefined;
-  const n = finiteNumber(value);
-  return n !== undefined && n > 0 ? n : undefined;
+  return positiveFinite(value);
 }
 
 function stringList(value: unknown): string[] {

@@ -406,6 +406,11 @@ describe('battleLogCombatantRows', () => {
     expect(rows[2]).toEqual({ player_id: 'player-2', username: 'Nova' });
   });
 
+  test('keeps a snapshot whose player_id is 0', () => {
+    const rows = battleLogCombatantRows([{ tick: 0, snapshots: [{ player_id: 0 }] }]);
+    expect(rows).toEqual([{ player_id: 0 }]);
+  });
+
   test('is empty when snapshots are omitted or empty', () => {
     expect(battleLogCombatantRows(undefined)).toEqual([]);
     expect(battleLogCombatantRows([])).toEqual([]);

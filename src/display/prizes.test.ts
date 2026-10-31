@@ -289,6 +289,13 @@ test('kind-only transit prints jump and not an arrow', () => {
   expect(stdout).not.toContain('→');
 });
 
+test('non-record prize recoveries return false and print nothing', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([null, 'hull']), { plain: true });
+  expect(printed).toBe(false);
+  expect(buffer.stdout.join('\n')).toBe('');
+});
+
 test('poi-only transit with no kind prints ac_station and not an arrow', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_to_poi_id: 'ac_station' }]), { plain: true });

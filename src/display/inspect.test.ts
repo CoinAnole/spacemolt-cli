@@ -138,6 +138,32 @@ test('prints Creator: p1 for a creator player_id with no username', () => {
   expect(line).toBe('Creator: p1');
 });
 
+test('prints Creator from faction when the creator has no username or player id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_creator_faction',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_creator_faction',
+        label: 'Survey Supplies',
+        creator: {
+          faction: { type: 'player_faction', id: 'f1', name: 'Survey Corps', tag: 'SRV' },
+        },
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Creator:'));
+  expect(line).toBe('Creator: Survey Corps [SRV]');
+});
+
 test('prints Owner: PilotOne for an owner without type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -785,6 +811,26 @@ test('prints Page ?/1 (? total) for a partial catalog page when only total_pages
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Page ?/1 (? total)');
+});
+
+test('prints Page 1/? (? total) when only the catalog page is set', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'page_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        page: 1,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Page 1/? (? total)');
 });
 
 test('prints Page 0/2 (0 total) for a zero catalog page', () => {
@@ -1810,6 +1856,58 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints POI Online: 0 when summary online is zero', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          online: 0,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Online: 0');
+});
+
+test('prints POI resources from summary when detail resources are absent', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          resources: [{ resource_id: 'iron_ore', remaining: 5000, richness: 3 }],
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('iron_ore');
+});
+
 test('prints Active battle when detail.active_battle.battle_id is set', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2172,6 +2270,55 @@ test('renders base inspect results with station defences', () => {
   expect(stdout).toContain('A busy trade hub.');
   expect(stdout).not.toContain('=== Repairs ===');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints Facilities: 0 for an empty facilities array', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          facilities: [],
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const lines = stdout.split('\n');
+  const facilitiesLine = lines.indexOf('Facilities: 0');
+  expect(lines).toContain('Facilities: 0');
+  expect(lines[facilitiesLine + 1]?.startsWith('  ')).not.toBe(true);
+});
+
+test('prints a facilities suffix when a station has more than 12 facilities', () => {
+  const facilities = Array.from({ length: 13 }, (_, index) =>
+    index === 12 ? 'omitted_thirteenth_facility' : `facility_${index + 1}`,
+  );
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          facilities,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(', ... and 1 more');
+  expect(stdout).not.toContain('omitted_thirteenth_facility');
 });
 
 test('prints Fuel: 0/? when fuel is 0 and max_fuel is absent', () => {

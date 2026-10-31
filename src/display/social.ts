@@ -496,15 +496,11 @@ function emitBoardingStatusTable(battle: Record<string, unknown>, result: Record
   printCompactTable('Boarding', boarding, boardingStatusColumns(boarding));
 }
 
-function battleLogEntryTick(entry: Record<string, unknown>, index: number): unknown {
-  return entry.tick ?? entry.battle_tick ?? index;
-}
-
 function flattenTickRecords(entries: Array<Record<string, unknown>>, field: string): Array<Record<string, unknown>> {
   const rows: Array<Record<string, unknown>> = [];
   entries.forEach((entry, index) => {
     const items = Array.isArray(entry[field]) ? entry[field].filter(isRecord) : [];
-    const tick = battleLogEntryTick(entry, index);
+    const tick = entry.tick ?? entry.battle_tick ?? index;
     for (const item of items) {
       rows.push({ ...item, tick });
     }

@@ -396,7 +396,6 @@ function summarizePowerFuelInputs(value: unknown): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
-/** Canonical station Base ID and optional station POI ID. */
 export function emitStationIds(base: unknown, indent = ''): boolean {
   if (!isRecord(base)) return false;
   emitLine(`${indent}ID: ${base.id || base.base_id || 'unknown'}`);

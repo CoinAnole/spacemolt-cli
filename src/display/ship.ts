@@ -683,7 +683,6 @@ export const shipFormatters = [
     { commands: ['faction_garages'] },
   ),
 
-  // Ship status
   namedFormatter(
     'ship',
     ['ship', 'modules'],
@@ -746,7 +745,7 @@ export const shipFormatters = [
 
       emitLine(`\n${c.bright}=== Station: ${base.name || base.id} ===${c.reset}`);
       emitLine(`ID: ${base.id || base.base_id || 'unknown'}`);
-      if (typeof base.type === 'string' && base.type) emitLine(`Type: ${base.type}`);
+      if (nonEmptyString(base.type)) emitLine(`Type: ${base.type}`);
       if (base.poi_id) emitLine(`POI: ${base.poi_id}`);
       emitLine(`Empire: ${base.empire || 'None'}`);
       if (base.faction_id) emitLine(`Faction: ${base.faction_id}`);

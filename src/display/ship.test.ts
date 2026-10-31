@@ -374,6 +374,65 @@ test('faction_garages station with empty ships prints none', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('faction_garages prints Ships: ? when total_ships is omitted', () => {
+  const omitted = renderFactionGarages({
+    station_count: 0,
+    stations: [],
+  }).stdout.join('\n');
+  expect(omitted).toContain('Ships: ?');
+  expect(omitted).not.toContain('Ships: 0');
+
+  const zero = renderFactionGarages({
+    station_count: 0,
+    total_ships: 0,
+    stations: [],
+  }).stdout.join('\n');
+  expect(zero).toContain('Ships: 0');
+  expect(zero).not.toContain('Ships: ?');
+});
+
+test('faction_garages prints unknown for a nameless station', () => {
+  const stdout = renderFactionGarages({
+    station_count: 1,
+    total_ships: 0,
+    stations: [{}],
+  }).stdout.join('\n');
+
+  expect(stdout).toContain('=== unknown ===');
+});
+
+test('faction_garages prints Used: ?/? when station used and capacity are omitted', () => {
+  const stdout = renderFactionGarages({
+    station_count: 1,
+    total_ships: 0,
+    stations: [{ base_id: 'nova_terra_central' }],
+  }).stdout.join('\n');
+
+  expect(stdout).toContain('Used: ?/?');
+});
+
+test('list_ships prints Used: 0/? when faction garage capacity is omitted', () => {
+  const active = listShipsFixture.ships[0];
+  expect(active).toBeDefined();
+  const fixture = {
+    count: 1,
+    ships: active ? [active] : [],
+    faction_garage: [],
+    faction_garage_used: 0,
+  };
+
+  const stdout = renderListShips(fixture).stdout.join('\n');
+  expect(stdout).toContain('Used: 0/?');
+});
+
+test('list_ships prints the message line when message is non-empty', () => {
+  const fixture = cloneListShips();
+  fixture.message = 'Fleet roster ready';
+  const stdout = renderListShips(fixture).stdout.join('\n');
+
+  expect(stdout).toContain('Fleet roster ready');
+});
+
 function renderShip(fixture: Record<string, unknown>) {
   return renderStructuredResult('get_ship', structuredClone(fixture), options, context);
 }

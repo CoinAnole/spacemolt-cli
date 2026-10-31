@@ -243,6 +243,51 @@ test('renders direct and mutation contract responses with action-specific headin
   }
 });
 
+test('renders the shipping_get delivered_at branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, delivered_at: '2026-07-17T10:35:00Z' },
+  });
+  expect(stdout).toContain('Delivered: 2026-07-17T10:35:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_get breached_at branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, breached_at: '2026-07-17T10:40:00Z' },
+  });
+  expect(stdout).toContain('Breached: 2026-07-17T10:40:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_get settled_at branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, settled_at: '2026-07-17T11:00:00Z' },
+  });
+  expect(stdout).toContain('Settled: 2026-07-17T11:00:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_get insurer branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, insurer: { kind: 'faction', id: 'lloyds' } },
+  });
+  expect(stdout).toContain('Insurer: faction:lloyds');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_get salvage-owner branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, salvage_owner: { kind: 'player', id: 'salvager-1' } },
+  });
+  expect(stdout).toContain('Salvage owner: player:salvager-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('keeps mutation envelopes unchanged in JSON output', () => {
   const fixture = {
     details: { action: 'post', contract },
@@ -713,6 +758,42 @@ test('renders carrier profile capacity, progression, debt blocking, and debts', 
   expect(stdout).toContain('Acceptance blocked: yes');
   expect(stdout).toContain('=== Outstanding Debts ===');
   expect(stdout).toContain('debt-1');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_profile last-consequence branch', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, last_consequence_at: '2026-07-17T08:00:00Z' },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+  expect(stdout).toContain('Last consequence: 2026-07-17T08:00:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_profile last-recovery branch', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, last_recovery_at: '2026-07-17T09:30:00Z' },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+  expect(stdout).toContain('Last recovery: 2026-07-17T09:30:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_profile paid_at branch', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [{ ...freightDebt, paid_at: '2026-07-17T12:30:00Z' }],
+  });
+  expect(stdout).toContain('2026-07-17T12:30:00Z');
   expect(stdout).not.toContain('=== Response ===');
 });
 

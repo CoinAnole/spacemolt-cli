@@ -3576,6 +3576,26 @@ test('renders a craft venue with only venue set', () => {
   expect(stdout).toContain('Venue: Station Workshop\n');
 });
 
+test('craft venue prints venue_type when venue is omitted', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        dry_run: true,
+        recipe: 'Build Power Cell',
+        venue_type: 'workshop',
+        facility_id: 'workshop:player:station',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Venue: workshop\n');
+});
+
 test('renders dry-run route previews for craft cancellation payloads', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -3683,6 +3703,27 @@ test('renders queued craft details with job id and output', () => {
   expect(stdout).not.toContain('Label:');
   expect(stdout).not.toContain('ETA:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('craft Runs uses quantity when runs is omitted', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'job',
+        job_id: 'craft-job-1',
+        quantity: 4,
+        recipe: 'Build Power Cell',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Runs: 4');
 });
 
 test('renders craft job retarget details instead of a queued response', () => {
@@ -4563,6 +4604,29 @@ test('renders a one-sided package size when size_max is omitted', () => {
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Size: 12/?');
+});
+
+test('packaged quote size prints ? when size_used is omitted', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        output_package: {
+          size_max: 50,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Size: ?/50');
 });
 
 test('renders a non-record packaged-craft gate as the full line credits: ?', () => {

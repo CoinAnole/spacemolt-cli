@@ -756,6 +756,17 @@ test('a distinct trial-start message prints that message and the heading', () =>
   expect(stdout).toContain('=== Trial started: Two on One ===');
 });
 
+test('a wrapped trial-start message is not printed twice', () => {
+  const message = '=== Trial started: Two on One ===';
+  const stdout = output('arena_fight', {
+    details: {
+      ...arenaFightDetails,
+      message,
+    },
+  });
+  expect(stdout.split(message).length - 1).toBe(1);
+});
+
 test('accept still says opponent after the shared participant helper', () => {
   const stdout = output('arena_accept', arenaAcceptFixture);
   expect(stdout).toContain('opponent');

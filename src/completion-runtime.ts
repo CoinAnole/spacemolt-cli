@@ -264,10 +264,6 @@ function nestedCommandContext(
   };
 }
 
-function normalizeCompletionField(field: string): string {
-  return field.replace(/^-+/, '').replace(/-/g, '_');
-}
-
 function isProfileDefaultValue(input: CompletionRequest): boolean {
   const wordIndex = currentWordIndex(input);
   const firstArgIndex = input.words[0] === 'spacemolt' ? 1 : 0;
@@ -370,7 +366,7 @@ function commandFieldValueCandidates(
       .find((action) => action.command === context.command)?.config;
   if (!commandConfig) return [];
 
-  const normalizedField = normalizeCompletionField(context.field);
+  const normalizedField = context.field.replace(/^-+/, '').replace(/-/g, '_');
   const field = commandConfig.aliases?.[normalizedField] || normalizedField;
   const arg = completionArgsForCommand(context.command, commandConfig).find((candidate) => candidate.name === field);
   if (!arg?.values?.length) return [];

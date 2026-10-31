@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
 import {
+  emitResourceInfoLines,
   finiteNumber,
   formatIntegerText,
   formatResourceWorkabilitySuffix,
@@ -83,5 +84,13 @@ describe('formatResourceWorkabilitySuffix', () => {
     });
     expect(result).toContain('too sparse');
     expect(result).toContain(rawColors.red);
+  });
+});
+
+describe('emitResourceInfoLines', () => {
+  test('resource line uses resource_id when name is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitResourceInfoLines([{ resource_id: 'ore_iron' }]), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('ore_iron');
   });
 });

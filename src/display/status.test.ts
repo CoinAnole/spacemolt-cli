@@ -5410,6 +5410,29 @@ test('get_state without a player does not fall through to the short status view'
   expect(stdout).toContain('Ship:');
 });
 
+test('get_state prints Ship: (none) when ship and riding are absent', () => {
+  const stdout = renderStructuredResult('get_state', { version: 'v2' }, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Ship: (none)');
+  expect(stdout).not.toContain('Riding aboard:');
+});
+
+test('get_state prints the escape-pod warning when ship.class_id is escape_pod', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.class_id = 'escape_pod';
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('WARNING: You are in an Escape Pod!');
+});
+
+test('get_state prints slot counts when only defense_slots is set', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.defense_slots = 1;
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Slots: 0 weapon, 1 defense, 0 utility');
+});
+
 test('get_state prints grouped State credits only when they differ from the player', () => {
   const duplicate = renderStructuredResult(
     'get_state',

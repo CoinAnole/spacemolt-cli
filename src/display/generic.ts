@@ -851,7 +851,7 @@ function emitReceiptGoodwill(value: unknown, heading = 'Goodwill:'): boolean {
 }
 
 function bulkGiftAmountCell(value: unknown): string | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
+  if (presentCount(value) === undefined) return undefined;
   if (
     typeof value === 'bigint' ||
     typeof value === 'number' ||
@@ -1821,7 +1821,7 @@ export const genericFormatters = [
       const entries = Object.entries(r).filter(([key, value]) => {
         if (depositFixer && key === 'fixer') return false;
         if (depositGoodwill && key === 'goodwill') return false;
-        return value !== undefined && value !== null && value !== '' && !isAliasCopiedDumpKey(r, key);
+        return presentCount(value) !== undefined && !isAliasCopiedDumpKey(r, key);
       });
       const isStorageTransfer =
         commandNameEquals(command, 'storage_deposit') || commandNameEquals(command, 'storage_withdraw');

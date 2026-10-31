@@ -203,6 +203,23 @@ test('renders statement period started as none for unix epoch', () => {
   expect(stdout).toContain('Period started: none');
 });
 
+test('renders a millisecond epoch string as Period started: none', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        period_started_at: '1970-01-01T00:00:00.000Z',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Period started: none');
+});
+
 test('omits statement period started when the timestamp is unparseable', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -470,4 +487,18 @@ test('prints a sales_tax_rates record instead of the raw response dump', () => {
 
   expect(stdout).toContain('Sales tax rates: crimson 2%');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an empty sales-tax reason without a parenthetical', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      sales_tax_rates: [{ empire: 'solarian', rate_bps: 100, reason: '' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const ratesLine = stdout.split('\n').find((line) => line.startsWith('Sales tax rates:'));
+  expect(ratesLine).toBe('Sales tax rates: solarian 1%');
 });

@@ -4455,6 +4455,21 @@ test('faction_info json passes the member page through without table labels', ()
   expect(stdout).not.toContain('Next page');
 });
 
+test('renders an array of top contributions for faction_intel_status', () => {
+  const stdout = renderStructuredResult(
+    'faction_intel_status',
+    {
+      intel_level: 3,
+      top_contributions: [{ contributor: 'Marlowe', count: 4 }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Top Contributions ===');
+  expect(stdout).toContain('Marlowe');
+});
+
 test('faction get_mobile_base prints stationary, preparing, and isolated snapshots', () => {
   const stationary = renderCommand('faction_get_mobile_base', factionGetMobileBaseFixture);
   expect(stationary).toContain('=== Faction Mobile Base: Civitas ===');

@@ -1185,7 +1185,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
     }
   }
   if (usableLabel(result.message)) emitLine(`${c.dim}${result.message}${c.reset}`);
-  if (typeof result.version === 'string' && result.version !== '') emitLine(`Version: ${result.version}`);
+  if (usableLabel(result.version)) emitLine(`Version: ${result.version}`);
 
   if (isRecord(result.details) && Object.keys(result.details).length > 0) {
     emitLine(`\n${c.bright}=== Details ===${c.reset}`);

@@ -237,12 +237,6 @@ function formatOrderPage(result: Record<string, unknown>): string {
   return `page ${page}/${totalPages}`;
 }
 
-function marketOrderContext(result: Record<string, unknown>): string {
-  return [result.base, result.scope, result.sort_by, formatOrderCount(result.total), formatOrderPage(result)]
-    .filter((part): part is string => hasNonEmptyBaseId(part))
-    .join(' | ');
-}
-
 function marketOrderRows(orders: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   return orders.map((order) => ({
     ...order,
@@ -259,7 +253,9 @@ function marketOrderRows(orders: Array<Record<string, unknown>>): Array<Record<s
 
 function printMarketOrders(result: Record<string, unknown>, orders: Array<Record<string, unknown>>): void {
   emitLine(`\n${c.bright}=== Orders ===${c.reset}`);
-  const context = marketOrderContext(result);
+  const context = [result.base, result.scope, result.sort_by, formatOrderCount(result.total), formatOrderPage(result)]
+    .filter((part): part is string => hasNonEmptyBaseId(part))
+    .join(' | ');
   if (context) emitLine(context);
   if (!isMissingDisplayValue(result.hint)) emitLine(String(result.hint));
 
@@ -837,7 +833,7 @@ function formatCommissionShipyardTier(here: unknown, required: unknown): string 
 }
 
 function formatCommissionShip(r: Record<string, unknown>): boolean {
-  if (r.commission_id === undefined && r.ship_class === undefined) return false;
+  if (!hasAnyField(r, ['commission_id', 'ship_class'])) return false;
 
   emitLine(`\n${c.bright}=== Commission Created ===${c.reset}`);
   if (hasNonEmptyBaseId(r.message)) emitLine(r.message);
@@ -1437,7 +1433,6 @@ export const marketFormatters = [
     { commands: ['buy'], shapeFallback: true },
   ),
 
-  // Market orders
   namedFormatter(
     'market_orders',
     ['orders'],

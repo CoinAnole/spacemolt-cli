@@ -288,6 +288,10 @@ test('special is kept only when combat special effects are empty', () => {
   expect(summarizeModuleBonuses({ special: 'dropped', combat_effects: { shield_phase: true } })).toBe('');
 });
 
+test('an empty special string is not appended', () => {
+  expect(summarizeModuleBonuses({ reach: 3, special: '' })).toBe('reach 3');
+});
+
 test('MODULE_BONUS_EXCLUSIONS includes required_skills', () => {
   expect(MODULE_BONUS_EXCLUSIONS.has('required_skills')).toBe(true);
   expect(summarizeModuleBonuses({ reach: 3, required_skills: { scanning: 3 } })).toBe('reach 3');
@@ -370,6 +374,10 @@ test('a numeric ammo effect type is printed', () => {
   expect(summarizeEffect({ type: 2, ammo: { damage_mod: 1 } })).toBe('type: 2, damage 100%');
 });
 
+test('a boolean ammo effect type is printed', () => {
+  expect(summarizeEffect({ type: true, ammo: { damage_mod: 1 } })).toBe('type: true, damage 100%');
+});
+
 test('a whitespace effect type skips the type prefix and prints damage 100%', () => {
   expect(summarizeEffect({ type: '   ', ammo: { damage_mod: 1 } })).toBe('damage 100%');
 });
@@ -398,8 +406,16 @@ test('anti_small_mod 0.1 prints small +10%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { anti_small_mod: 0.1 } } })).toBe('small +10%');
 });
 
+test('anti_large_mod 0.1 prints large +10%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { anti_large_mod: 0.1 } } })).toBe('large +10%');
+});
+
 test('negative accuracy prints accuracy -10%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: -0.1 } } })).toBe('accuracy -10%');
+});
+
+test('anti_drone_mod 0.1 prints drone +10%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { anti_drone_mod: 0.1 } } })).toBe('drone +10%');
 });
 
 test('disrupt ticks prints the duration', () => {
@@ -464,6 +480,16 @@ test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
 });
 
+test('an empty item_id omits the from clause', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen', amount: 5, item_id: '' }] }),
+    { plain: true },
+  );
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
 test('a hull_regen buff with no amount prints Buff: hull_regen', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen' }] }), {
@@ -486,4 +512,14 @@ test('a buff without a stat prints Buff: buff +5%', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ amount: 5 }] }), { plain: true });
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: buff +5%']);
+});
+
+test('expires tick 0 prints on a hull_regen buff', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen', expires_at: 0 }] }),
+    { plain: true },
+  );
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen, expires tick 0']);
 });

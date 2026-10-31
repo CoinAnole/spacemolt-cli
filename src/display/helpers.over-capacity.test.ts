@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
-import { isOverCapacity, overCapacitySuffix, withDisplayRenderBuffer } from './helpers.ts';
+import { emitStationFuelPricing, isOverCapacity, overCapacitySuffix, withDisplayRenderBuffer } from './helpers.ts';
 
 function withBuffer<T>(fn: () => T, options: { plain?: boolean } = {}): T {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
@@ -86,5 +86,13 @@ describe('overCapacitySuffix', () => {
     expect(colored).toContain('(over capacity)');
     expect(colored).toContain(rawColors.yellow);
     expect(colored).not.toBe(suffixPlain(40, 34));
+  });
+});
+
+describe('emitStationFuelPricing', () => {
+  test('fuel price prints explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationFuelPricing({ fuel_price: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Fuel Price: 0 credits');
   });
 });

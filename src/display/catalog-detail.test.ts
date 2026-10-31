@@ -248,6 +248,48 @@ test('webify strength prints Webify: 3', () => {
   expect(buffer.stdout.join('\n')).toContain('Webify: 3');
 });
 
+test('disruptor bonus prints Disruptor: 3', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ disruptor_power: 3 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Disruptor: 3');
+});
+
+test('salvage bonus prints Salvage: 2', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ salvage_bonus: 2 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Salvage: 2');
+});
+
+test('scanner bonus prints Scanner: 5', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ scanner_power: 5 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Scanner: 5');
+});
+
+test('survey bonus prints Survey: 4', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ survey_power: 4 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Survey: 4');
+});
+
+test('repair bonus prints Repair: 5', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ armor_repair_rate: 5 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Repair: 5');
+});
+
+test('remote repair bonus prints Remote repair: 6', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ remote_repair_power: 6 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Remote repair: 6');
+});
+
+test('tow penalty prints Tow penalty: 30', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ tow_speed_penalty: 30 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).toContain('Tow penalty: 30');
+});
+
 test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });
