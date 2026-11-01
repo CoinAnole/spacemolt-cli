@@ -161,6 +161,34 @@ test('survey_system skips an empty or non-string survey message', () => {
   expect(objectMessage).toContain('Bloom: active (intensity 0.8)\nA faint resonance west of the belt.');
 });
 
+test('survey_system skips an empty or non-string surveyed POI description', () => {
+  const poi = {
+    id: 'sol_kaiser_vein',
+    name: 'Kaiser Vein',
+    type: 'asteroid_belt',
+  };
+  const empty = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = [];
+      details.already_revealed = [];
+      details.newly_revealed = [{ ...poi, description: '' }];
+    }),
+  );
+  expect(empty.split('\n')).toContain('  - Kaiser Vein (sol_kaiser_vein)  asteroid_belt');
+  expect(empty.split('\n').some((line) => line.startsWith('    ') && !line.startsWith('    -'))).toBe(false);
+
+  const nonString = stdoutOf(
+    clonePresent((details) => {
+      details.deposits = [];
+      details.already_revealed = [];
+      details.newly_revealed = [{ ...poi, description: { note: 'DESCRIPTION_OBJECT' } }];
+    }),
+  );
+  expect(nonString.split('\n')).toContain('  - Kaiser Vein (sol_kaiser_vein)  asteroid_belt');
+  expect(nonString).not.toContain('DESCRIPTION_OBJECT');
+  expect(nonString.split('\n').some((line) => line.startsWith('    ') && !line.startsWith('    -'))).toBe(false);
+});
+
 test('survey_system prints a system-id-only headline without (sol)', () => {
   const stdout = stdoutOf({
     system_id: 'sol',
@@ -487,6 +515,18 @@ test('survey_system omits Bloom when only status or only intensity is present', 
   expect(intensityOnly).not.toContain('Bloom:');
 });
 
+test('survey_system omits Bloom for an empty bloom_status with intensity 0.8', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.bloom_status = '';
+      details.bloom_intensity = 0.8;
+    }),
+  );
+
+  expect(stdout).not.toContain('Bloom:');
+  expect(stdout).toContain('Survey power: 18');
+});
+
 test('survey_system skips Skill XP for empty and zero maps', () => {
   const empty = stdoutOf(
     clonePresent((details) => {
@@ -592,6 +632,27 @@ test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () =>
   expect(header).not.toContain('Ranched By');
   expect(lineContaining(stdout, 'ember_grazer')).toMatch(/ 0\s*$/);
   expect(stdout).not.toContain('Ranched By');
+});
+
+test('survey_system omits Ranched for a NaN ranched value and does not print NaN', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: Number.NaN,
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).not.toContain('Ranched');
+  expect(stdout).not.toContain('NaN');
 });
 
 test('survey_system prints the Ranched column when only ranched_by is set', () => {

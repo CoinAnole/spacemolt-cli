@@ -870,8 +870,7 @@ function formatCommissionShip(r: Record<string, unknown>): boolean {
 function formatAnalyzeMarket(r: Record<string, unknown>): boolean {
   if (!Array.isArray(r.insights) || !r.insights.every(isRecord)) return false;
 
-  const station = typeof r.station === 'string' ? r.station : '';
-  const title = station ? `Market Analysis: ${station}` : 'Market Analysis';
+  const title = hasNonEmptyBaseId(r.station) ? `Market Analysis: ${r.station}` : 'Market Analysis';
   emitLine(`\n${c.bright}=== ${title} ===${c.reset}`);
   const skill = finiteNumber(r.skill_level);
   if (skill !== undefined) emitLine(`Trading skill: ${skill}`);

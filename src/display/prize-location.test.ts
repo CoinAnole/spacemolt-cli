@@ -35,6 +35,18 @@ test('ids only lock site and location strings', () => {
   expect(formatPrizeCaptureLocation(data)).toBe('sol_cloudbank (sol)');
 });
 
+test('whitespace prize names fall back to poi and system ids', () => {
+  const data = {
+    prize_id: 'prize-1',
+    prize_poi_id: 'sol_cloudbank',
+    prize_poi_name: '  ',
+    prize_system_id: 'sol',
+    prize_system_name: '  ',
+  };
+  expect(formatPrizeCaptureSite(data)).toBe('prize prize-1 at sol_cloudbank (sol)');
+  expect(formatPrizeCaptureLocation(data)).toBe('sol_cloudbank (sol)');
+});
+
 test('hidden / in-transit system-only uses in for site and a preposition-free location', () => {
   const data = {
     prize_id: 'prize-1',

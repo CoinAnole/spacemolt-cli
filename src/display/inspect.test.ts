@@ -863,6 +863,27 @@ test('prints System: sol when a system has a system_id and no name', () => {
   expect(stdout.split('\n')).toContain('System: sol');
 });
 
+test('prints Station: earth_station when a base has an id and no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Station: earth_station');
+});
+
 test('prints Name: Sol for the system faction-intel name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1349,6 +1370,28 @@ test('prints Analysis and the raw materials quantity line for a catalog analysis
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Analysis');
   expect(stdout.split('\n')).toContain('Raw materials: 20× Iron Ore');
+});
+
+test('prints Raw materials: 20× iron_ore for a raw-material row with no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: [{ item_id: 'iron_ore', quantity: 20, category: 'ore' }],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Raw materials: 20× iron_ore');
 });
 
 test('prints Raw materials: ?× Iron Ore for a raw-material row with no quantity', () => {
@@ -2378,6 +2421,62 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('Lock');
   expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints Position: (4, 9) from detail.poi.position when summary has no position', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          poi: {
+            position: { x: 4, y: 9 },
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Position: (4, 9)');
+});
+
+test('prints Summary only note. from summary.description when detail omits description', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          description: 'Summary only note.',
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Summary only note.');
 });
 
 test('prints POI: ice_poi when a POI summary has only an id', () => {
