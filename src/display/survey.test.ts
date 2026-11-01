@@ -246,6 +246,19 @@ test('survey_system prints Unknown for a newly revealed POI with no name or id',
   expect(stdout.split('\n')).toContain('  - Unknown');
 });
 
+test('survey_system prints Newly Revealed: (none) for non-record newly revealed entries', () => {
+  const stdout = stdoutOf({
+    survey_power: 18,
+    newly_revealed: ['RAW_NEWLY_REVEALED', 7, null],
+    already_revealed: [],
+  });
+
+  expect(stdout).toContain('Newly Revealed:\n  (none)');
+  expect(stdout).not.toContain('RAW_NEWLY_REVEALED');
+  expect(stdout).not.toContain('7');
+  expect(stdout).not.toContain('null');
+});
+
 test('survey_system prints a newly revealed POI id when the name is missing', () => {
   const stdout = stdoutOf({
     system_name: 'Sol',

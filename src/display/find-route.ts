@@ -212,7 +212,7 @@ function emitFoundLine(result: Record<string, unknown>): void {
   if (found !== true && found !== false) {
     if (found === null) emitLine('Found: (null)');
     else if (typeof found === 'string') {
-      emitLine(found.trim() === '' ? 'Found: (empty)' : `Found: ${found}`);
+      emitLine(trimmedText(found) ? `Found: ${found}` : 'Found: (empty)');
     } else {
       const text = formatIntegerText(found);
       emitLine(text !== undefined ? `Found: ${text}` : 'Found: (invalid)');

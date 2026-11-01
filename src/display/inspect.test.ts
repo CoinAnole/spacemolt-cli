@@ -1551,6 +1551,33 @@ test('prints Inputs: ?× Cargo Container for a recipe input with no quantity', (
   expect(line).toBe('Inputs: ?× Cargo Container');
 });
 
+test('prints Inputs: 2× cargo_container for a recipe input with no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'pack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'pack_package',
+            name: 'Pack Package',
+            inputs: [{ item_id: 'cargo_container', quantity: 2 }],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
+  expect(line).toBe('Inputs: 2× cargo_container');
+});
+
 test('prints the Recipes table and omits Details and Inputs for two catalog recipes', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2598,6 +2625,37 @@ test('prints POI resources from summary when detail resources are absent', () =>
   expect(stdout).toContain('iron_ore');
 });
 
+test('omits Resources when detail.resources is empty and summary has a resource id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          resources: [{ resource_id: 'iron_ore', remaining: 5000, richness: 3 }],
+        },
+        detail: {
+          resources: [],
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('iron_ore');
+  expect(stdout).not.toContain('Resources');
+});
+
 test('prints Active battle when detail.active_battle.battle_id is set', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2811,6 +2869,44 @@ test('prints the resource Power cell 0 for supported_power 0', () => {
   expect(cells[3]).toBe('0');
 });
 
+test('prints the resource Lock cell 0 for lock_minimum_stock 0', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          resources: [
+            {
+              resource_id: 'ore_iron',
+              lock_minimum_stock: 0,
+            },
+          ],
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const lines = stdout.split('\n');
+  const header = lines.find((line) => line.includes('Lock'));
+  const ironLine = lines.find((line) => line.includes('ore_iron'));
+  expect(ironLine).toBeDefined();
+  const lockIndex =
+    header
+      ?.split('|')
+      .map((cell) => cell.trim())
+      .indexOf('Lock') ?? -1;
+  const cells = ironLine?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(cells[lockIndex]).toBe('0');
+});
+
 const DEEP_CORE_LINE = 'Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)';
 
 function inspectPoiDeepCoreCount(stdout: string): number {
@@ -2939,6 +3035,31 @@ test('prints Class: nav_buoy for a summary type without class and does not set f
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Class: nav_buoy');
   expect(stdout).not.toContain('Faction intel');
+});
+
+test('prints Class: asteroid_belt for summary class over type', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nav_buoy',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'nav_buoy',
+          name: 'Nav Buoy',
+          class: 'asteroid_belt',
+          type: 'nav_buoy',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: asteroid_belt');
+  expect(stdout).not.toContain('Class: nav_buoy');
 });
 
 test('prints the trimmed faction-intel POI description without the untrimmed source', () => {
@@ -3173,6 +3294,30 @@ test('renders base inspect results with station defences', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('omits a station description that is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          description: '   ',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('   ');
+});
+
 test('prints Facilities: 0 for an empty facilities array', () => {
   const stdout = renderStructuredResult(
     'inspect',
@@ -3283,6 +3428,27 @@ test('prints Fuel: ?/500 when station fuel is missing and max_fuel is 500', () =
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Fuel: ?/500');
+});
+
+test('omits Fuel when a station has neither fuel nor max_fuel', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('Fuel:');
 });
 
 test('prints Condition: unknown (?% satisfaction) when the condition record has no text or percent', () => {
