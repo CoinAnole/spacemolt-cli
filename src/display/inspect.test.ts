@@ -863,6 +863,26 @@ test('prints System: sol when a system has a system_id and no name', () => {
   expect(stdout.split('\n')).toContain('System: sol');
 });
 
+test('prints System: 0 and omits ID: 0 for a system_id of 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 0,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: 0');
+  expect(stdout).not.toContain('ID: 0');
+});
+
 test('prints Station: earth_station when a base has an id and no name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1349,6 +1369,27 @@ test('prints Analysis and omits (No catalog entries in this response) for an ana
   expect(stdout).not.toContain('(No catalog entries in this response)');
 });
 
+test('omits Raw materials when catalog analysis has no raw_materials', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {},
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Analysis');
+  expect(stdout).not.toContain('Raw materials:');
+});
+
 test('prints Analysis and the raw materials quantity line for a catalog analysis record', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1646,6 +1687,36 @@ test('renders unpack recipe package_operation string', () => {
   expect(stdout).not.toContain('Produced by:');
   expect(stdout).toContain('Package operation: unpack');
   expect(stdout).not.toContain('Package operation: yes');
+});
+
+test('omits Outputs when a single catalog recipe has no outputs', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'unpack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'unpack_package',
+            name: 'Unpack Package',
+            category: 'logistics',
+            crafting_time: 5,
+            package_operation: 'unpack',
+            description: 'Open a cargo package.',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Outputs:');
 });
 
 test('packageOperationLabel trims strings and maps booleans', () => {
@@ -2506,6 +2577,35 @@ test('prints Summary only note. from summary.description when detail omits descr
   expect(stdout).toContain('Summary only note.');
 });
 
+test('prints a top-level poi description when summary and detail omit description', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+          },
+        },
+        description: 'Top-level belt note.',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Top-level belt note.');
+});
+
 test('prints POI: ice_poi when a POI summary has only an id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2524,6 +2624,56 @@ test('prints POI: ice_poi when a POI summary has only an id', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('POI: ice_poi');
+});
+
+test('prints POI: Frozen Reach from detail.poi.name when the summary has no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+        },
+        detail: {
+          poi: {
+            name: 'Frozen Reach',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: Frozen Reach');
+});
+
+test('prints ID: ice_poi from detail.poi.id when the summary has no id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          name: 'Frozen Reach',
+        },
+        detail: {
+          poi: {
+            id: 'ice_poi',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: ice_poi');
 });
 
 test('prints POI: POI for an empty POI object', () => {
@@ -3011,6 +3161,33 @@ test('prints Class: ice_field from detail.poi.class when summary has no class or
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Class: ice_field');
+});
+
+test('prints Class: nav_buoy from detail.poi.type when summary class, summary type, and detail class are absent', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nav_buoy',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'nav_buoy',
+          name: 'Nav Buoy',
+        },
+        detail: {
+          poi: {
+            type: 'nav_buoy',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: nav_buoy');
 });
 
 test('prints Class: nav_buoy for a summary type without class and does not set faction intel', () => {

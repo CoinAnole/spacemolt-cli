@@ -497,6 +497,23 @@ test('survey_system omitted anomaly_hint prints no hint text', () => {
   expect(stdout).not.toContain('A faint resonance west of the belt.');
 });
 
+test('survey_system omits an empty anomaly_hint with no hint text and no whitespace-only line', () => {
+  const omitted = stdoutOf(
+    clonePresent((details) => {
+      delete details.anomaly_hint;
+    }),
+  );
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.anomaly_hint = '';
+    }),
+  );
+
+  expect(stdout).not.toContain('A faint resonance west of the belt.');
+  expect(stdout.split('\n').some((line) => /^\s+$/.test(line))).toBe(false);
+  expect(stdout).toBe(omitted);
+});
+
 test('survey_system omitted bloom does not interpolate undefined', () => {
   const rendered = renderSurvey(
     clonePresent((details) => {
