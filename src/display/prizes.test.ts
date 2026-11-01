@@ -249,6 +249,14 @@ test('numeric in_combat prints Combat and not yes', () => {
   expect(stdout).not.toContain('yes');
 });
 
+test('empty ship_name does not print a Name column', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ ship_name: '' }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prize ID');
+  expect(stdout).not.toContain('Name');
+});
+
 test('hull 0 prints 0/8 and not ?/8', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ hull: 0, max_hull: 8 }] }), { plain: true });
@@ -328,6 +336,14 @@ test('poi-only transit with no kind prints ac_station and not an arrow', () => {
   expect(stdout).not.toContain('→');
 });
 
+test('transit_from_system_id only prints sol and not an arrow', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_from_system_id: 'sol' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('sol');
+  expect(stdout).not.toContain('→');
+});
+
 test('system-only parked recovery prints sol and not a slash', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ system_id: 'sol' }]), { plain: true });
@@ -376,6 +392,17 @@ test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and retur
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Prizes (0):');
   expect(stdout).toContain('prize-1');
+  expect(printed).toBe(true);
+});
+
+test('positive prizeCount with an empty prize array prints Prizes (4) and returns true', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [], prizeCount: 4 }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (4):');
+  expect(stdout).not.toContain('Prize ID');
   expect(printed).toBe(true);
 });
 

@@ -149,6 +149,25 @@ test('create_sell_order prints bigint quantity_filled and total_earned', () => {
   expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
 });
 
+test('create_sell_order bigint quantity_filled without quantity_listed omits Remaining listed', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      quantity: 4,
+      quantity_filled: 9007199254740993n,
+      order_id: 'order-1',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(`Instant fills: ${9007199254740993n.toLocaleString()}`);
+  expect(stdout).not.toContain('Remaining listed');
+});
+
 test('create_sell_order prints a bigint quantity_listed instead of a zero remainder', () => {
   const stdout = renderStructuredResult(
     'create_sell_order',
@@ -1328,6 +1347,13 @@ test('supply_commission formats an all-sourced receipt without a materials array
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('supply_commission donated supplied of 0 prints x0', () => {
+  const stdout = renderSupplyCommission({ ...supplyCommissionFixture, supplied: 0 }).stdout.join('\n');
+
+  expect(stdout).toContain('x0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('one-item view_market book with no buy or sell orders prints (no orders)', () => {
   const stdout = renderStructuredResult(
     'view_market',
@@ -1452,6 +1478,23 @@ test('view_insurance risk factors without policy id use the ship class', () => {
   expect(stdout).toContain('=== Risk Factors (prospector) ===');
 });
 
+test('view_insurance risk factors with neither policy id nor ship class use policy', () => {
+  const stdout = renderStructuredResult(
+    'view_insurance',
+    {
+      policies: [
+        {
+          risk_factors: [{ name: 'Recent deaths', multiplier: 1.4, detail: 'One loss in the last 7 days' }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Risk Factors (policy) ===');
+});
+
 test('get_insurance_quote with quote.refused true prints Refused: yes', () => {
   const stdout = renderStructuredResult(
     'get_insurance_quote',
@@ -1488,6 +1531,32 @@ test('ship buy order with being_built false prints Building: no', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Building: no');
+});
+
+test('browse_ships listing with ship_id, a numeric price, hull, and shield 0 prints the hull line', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          hull: 80,
+          max_hull: 100,
+          shield: 0,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Hull: 80/100');
+  expect(stdout).not.toContain('Shield');
 });
 
 test('ship buy order at a different station prints Station: Luna Station', () => {
@@ -1561,6 +1630,25 @@ test('get_trades incoming offer without offerer_name prints someone', () => {
   expect(stdout).toContain('someone offers');
 });
 
+test('get_trades incoming offer expires_at prints Expires', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      incoming: [
+        {
+          trade_id: 'trade-1',
+          expires_at: '2026-11-01T00:00:00Z',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Expires: 2026-11-01T00:00:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_trades buy price modifier prints buy and sell price modifiers', () => {
   const stdout = renderStructuredResult(
     'get_trades',
@@ -1628,6 +1716,27 @@ test('get_trades listing with no seller prints Seller: NPC', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Seller: NPC');
+});
+
+test('get_trades listing seller_name prints Seller: Ada', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+          seller_name: 'Ada',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: Ada');
 });
 
 test('faction storage prints a bigint credit balance without grouping', () => {

@@ -717,6 +717,67 @@ test('prints Visited: false when system visited is false', () => {
   expect(stdout.split('\n')).toContain('Visited: false');
 });
 
+test('omits Connections when a system connections array is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        connections: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('System: Sol');
+  expect(stdout).not.toContain('Connections:');
+});
+
+test('omits a system description that is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        description: '   ',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('System: Sol');
+  expect(stdout.split('\n')).not.toContain('   ');
+});
+
+test('prints System: unknown when a system has no name and no system_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'system',
+      system: {},
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: unknown');
+});
+
 test('prints Name: Sol for the system faction-intel name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1138,6 +1199,27 @@ test('prints Estimated material cost: 0 inside an analysis record', () => {
   expect(stdout).toContain('Estimated material cost: 0');
 });
 
+test('prints Analysis and omits (No catalog entries in this response) for an analysis-only item catalog', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {},
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Analysis');
+  expect(stdout).not.toContain('(No catalog entries in this response)');
+});
+
 test('prints Analysis and the raw materials quantity line for a catalog analysis record', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1159,6 +1241,28 @@ test('prints Analysis and the raw materials quantity line for a catalog analysis
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Analysis');
   expect(stdout.split('\n')).toContain('Raw materials: 20× Iron Ore');
+});
+
+test('prints Raw materials: ?× Iron Ore for a raw-material row with no quantity', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: [{ item_id: 'iron_ore', name: 'Iron Ore', category: 'ore' }],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Raw materials: ?× Iron Ore');
 });
 
 test('renders catalog inspect Mining group for a crystal ore', () => {
@@ -2532,6 +2636,33 @@ test('prints Class: ice_field for faction-intel class without a summary class or
       },
       faction_poi_intel: {
         class: 'ice_field',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: ice_field');
+});
+
+test('prints Class: ice_field from detail.poi.class when summary has no class or type', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+        detail: {
+          poi: {
+            class: 'ice_field',
+          },
+        },
       },
     },
     options,

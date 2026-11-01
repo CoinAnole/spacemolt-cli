@@ -306,6 +306,12 @@ test('shield without recharge prints the exact line Shield: 700 and not a tick s
   expect(buffer.stdout.join('\n')).not.toContain('/tick');
 });
 
+test('base_shield_recharge alone does not print Shield', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield_recharge: 12 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).not.toContain('Shield');
+});
+
 test('whitespace description is omitted', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ description: '   ', class: 'Shuttle' }, {}), {
@@ -441,6 +447,17 @@ test('ship capability flag prints Capabilities: cloak passive 2', () => {
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
 });
 
+test('whitespace capability flag prints Capabilities: cloak', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', flag: '   ' }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+});
+
 test('padded capability type prints Capabilities: cloak', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [{ type: '  cloak  ' }] }, {}), {
@@ -498,6 +515,20 @@ test('item package operation prints Package operation: pack', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ package_operation: 'pack' }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).toContain('Package operation: pack');
+});
+
+test('whitespace package_operation falls through to catalog and is omitted without a fallback', () => {
+  const fallback = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    fallback,
+    () => emitCatalogItemDetail({ package_operation: '   ' }, { package_operation: 'unpack' }),
+    { plain: true },
+  );
+  expect(fallback.stdout.join('\n')).toContain('Package operation: unpack');
+
+  const blank = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(blank, () => emitCatalogItemDetail({ package_operation: '   ' }, {}), { plain: true });
+  expect(blank.stdout.join('\n')).not.toContain('Package operation');
 });
 
 test('item category falls back to type when category is absent', () => {

@@ -387,6 +387,17 @@ test('mine prints drone_id between deposit and XP', () => {
   );
 });
 
+test('mine empty-string drone_id prints the Mine heading and omits Drone', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.drone_id = '';
+    }),
+  );
+
+  expect(stdout).toContain('=== Mine ===');
+  expect(stdout).not.toContain('Drone:');
+});
+
 test('mine declines scalar no-kind yield to the raw fallback', () => {
   const payload = {
     resource_id: 'ore_iron',

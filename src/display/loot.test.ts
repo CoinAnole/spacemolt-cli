@@ -276,6 +276,23 @@ test('all-loot row with item_id 1500 prints 1500 in the item cell', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('all-loot row with bigint item_id prints 9007199254740993 in the item cell', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.looted = [{ item_id: 9007199254740993n }];
+    }),
+  );
+  const rounded = Number(9007199254740993n).toLocaleString();
+
+  expect(stdout).toContain('=== Looted ===');
+  expect(stdout).toContain('9007199254740993');
+  expect(stdout).toMatch(/9007199254740993\s+\|/);
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain(rounded);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('all-loot formats bigint quantities and ignores non-record rows', () => {
   const stdout = stdoutOf(
     'loot_wreck',

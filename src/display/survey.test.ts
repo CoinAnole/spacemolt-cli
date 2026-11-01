@@ -173,6 +173,19 @@ test('survey_system prints a system-id-only headline without (sol)', () => {
   expect(stdout).not.toContain('(sol)');
 });
 
+test('survey_system prints === Survey: sol === for an empty system_name and does not contain (sol)', () => {
+  const stdout = stdoutOf({
+    system_name: '',
+    system_id: 'sol',
+    survey_power: 18,
+    newly_revealed: [],
+    already_revealed: [],
+  });
+
+  expect(stdout).toContain('=== Survey: sol ===');
+  expect(stdout).not.toContain('(sol)');
+});
+
 test('survey_system prints a system name without system_id and no parenthetical id', () => {
   const stdout = stdoutOf({
     system_name: 'Sol',
@@ -536,6 +549,16 @@ test('survey_system prints negative skill XP without a leading plus', () => {
   );
 
   expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning -4');
+});
+
+test('survey_system prints Skill XP: scanning +NaN for a non-finite scanning gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: Number.NaN };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning +NaN');
 });
 
 test('survey_system prints a non-number skill XP value for scanning', () => {
