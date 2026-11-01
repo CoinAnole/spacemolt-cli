@@ -402,3 +402,17 @@ test('mine declines scalar no-kind filtered to the raw fallback', () => {
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Mine ===');
 });
+
+test('filtered mine result with an empty message declines to the raw fallback', () => {
+  const payload = {
+    kind: 'filtered',
+    filtered: true,
+    message: '',
+  };
+
+  expect(mineFormatters[0]?.(payload, 'mine')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Mine ===');
+});

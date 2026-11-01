@@ -506,7 +506,7 @@ export const shippingFormatters = [
     commands: ['shipping_track'],
     suppressShapeFallbackOnDecline: true,
   }),
-  formatter((result) => renderShippingProfile(result), {
+  formatter(renderShippingProfile, {
     commands: ['shipping_profile'],
     suppressShapeFallbackOnDecline: true,
   }),

@@ -150,6 +150,13 @@ test('nested loot with nearby players still prints the warning and skips the obj
   expect(stdout).not.toContain('Fuel Now');
 });
 
+test('an attack reply with a bigint leftover does not print that scalar label', () => {
+  const stdout = renderCombat('attack', { ...playerReply, marker: 1n });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Marker');
+});
+
 test('an explicit zero leftover prints the scalar', () => {
   const stdout = renderCombat('attack', { ...playerReply, rounds: 0 });
 

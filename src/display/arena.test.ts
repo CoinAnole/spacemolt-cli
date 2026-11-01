@@ -129,6 +129,15 @@ test('arenaStatLines keeps XP when the record is all zeros', () => {
   );
 });
 
+test('arenaStatLines omits the parenthetical day when day is an empty string', () => {
+  const lines = arenaStatLines(
+    { arena_wins: 0, arena_losses: 0, arena_knockouts: 0 },
+    { by_skill: { gunnery: 10 }, day: '' },
+  );
+  expect(lines).toEqual(['Arena XP today: gunnery 10']);
+  expect(lines.join('\n')).not.toContain('(');
+});
+
 test('an explicit zero arena XP skill stays on the Arena XP line', () => {
   expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, { by_skill: { gunnery: 0 } })).toEqual([
     'Arena XP today: gunnery 0',
@@ -243,6 +252,11 @@ test('battleRulesetFromCategory treats wildlife and hunt as the hunt ruleset', (
   expect(battleRulesetFromCategory('arena')).toBe('arena');
 });
 
+test('battleRulesetFromCategory treats an empty or whitespace category as standard', () => {
+  expect(battleRulesetFromCategory('')).toBe('standard');
+  expect(battleRulesetFromCategory('   ')).toBe('standard');
+});
+
 test('battleRulesetFromLogEntries is arena when any tick is flagged', () => {
   expect(battleRulesetFromLogEntries([{ tick: 1 }, { tick: 2, arena: true }])).toBe('arena');
   expect(battleRulesetFromLogEntries([{ tick: 1, arena: false }])).toBe('standard');
@@ -336,6 +350,18 @@ test('renders incoming challenge and XP remaining with deterministic skill sort'
   expect(stdout).toContain('380');
   expect(stdout).toContain('460');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('arena status with xp cap 100 and gunnery 150 prints remaining 0 not a negative', () => {
+  const stdout = output('arena_status', {
+    ...arenaStatusIdleFixture,
+    xp_cap_per_skill: 100,
+    xp_used_today: { gunnery: 150 },
+  });
+  expect(stdout).toContain('Remaining');
+  expect(stdout).toMatch(/gunnery \| 150 +\|\s+0\s*$/m);
+  expect(stdout).not.toContain('-50');
+  expect(stdout).not.toMatch(/-\d/);
 });
 
 test('renders an in-battle lobby when the pilot has left the arena POI', () => {
@@ -518,6 +544,15 @@ test('suggestedFight falls back to the first unlocked trial when all are away an
   expect(suggestedFight(trials)?.challenge_id).toBe('first_blood');
 });
 
+test('suggestedFight at-this-arena rematch picks here when an earlier unlocked trial is away and already won', () => {
+  const trials = sixteenTrialMidSeries().map((trial) => {
+    if (trial.challenge_id === 'first_blood') return { ...trial, at_this_arena: false, wins: 1 };
+    if (trial.challenge_id === 'two_on_one') return { ...trial, at_this_arena: true, wins: 2 };
+    return trial;
+  });
+  expect(suggestedFight(trials)?.challenge_id).toBe('two_on_one');
+});
+
 test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or zero optionals', () => {
   expect(formatRuleDigest({ max_side_size: 0 })).toBe('full fleet (every eligible member)');
   expect(formatRuleDigest({ max_side_size: 1 })).toBe('solo duel');
@@ -550,6 +585,12 @@ test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or ze
 
 test('a positive max crew cap prints solo duel and max crew', () => {
   expect(formatRuleDigest({ max_side_size: 1, max_crew: 4 })).toBe('solo duel · max crew 4');
+});
+
+test('formatRuleDigest drops an allowed damage type list that filters to no strings', () => {
+  const digest = formatRuleDigest({ max_side_size: 1, allowed_damage_types: [''] });
+  expect(digest).toBe('solo duel');
+  expect(digest).not.toContain('only');
 });
 
 test('formatEnemyDigest marks a singleton boss and otherwise prints count × name', () => {
@@ -746,6 +787,17 @@ test('renders a fight start with enemy digest and enemy team label', () => {
   expect(stdout).not.toContain('opponent');
   expect(stdout).not.toContain('Trial started: Two on One\n');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('an arena fight with an empty enemies array prints the trial heading and omits Enemies', () => {
+  const stdout = output('arena_fight', {
+    details: {
+      ...arenaFightDetails,
+      enemies: [],
+    },
+  });
+  expect(stdout).toContain('=== Trial started: Two on One ===');
+  expect(stdout).not.toContain('Enemies:');
 });
 
 test('a distinct trial-start message prints that message and the heading', () => {

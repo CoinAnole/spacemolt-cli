@@ -152,6 +152,21 @@ test('failed jettison result prints Success: no', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('non-boolean jettison success declines to the raw response', () => {
+  const { stdout } = renderJettison('storage jettison', {
+    details: {
+      action: 'create_sell_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      note: { hidden: true },
+      results: [{ success: 'yes' }],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Success:');
+});
+
 test('jettison result-row scalar outside known keys prints Pilot Id', () => {
   const { stdout, stderr } = renderJettison('storage jettison', {
     details: {
@@ -186,6 +201,24 @@ test('failed jettison result prints Error', () => {
 
   expect(stderr).toBe('');
   expect(stdout).toContain('Error: cargo locked');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('whitespace jettison result message omits Message', () => {
+  const { stdout } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          message: '   ',
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Message:');
   expect(stdout).not.toContain('=== Response ===');
 });
 

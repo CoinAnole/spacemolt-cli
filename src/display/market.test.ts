@@ -675,6 +675,17 @@ test('faction_query_intel prints the trimmed message and an unverified read', ()
   expect(spaced).toContain('    Read at tick: unverified');
 });
 
+test('faction_query_intel prints an intel tick with neither submitter_name nor submitted_by', () => {
+  const fixture = cloneIntelFixture();
+  const entry = firstIntelEntry(fixture);
+  delete entry.submitter_name;
+  delete (entry as { submitted_by?: string }).submitted_by;
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('Intel tick: 900685, age 5 ticks');
+  expect(stdout).not.toContain(' by ');
+});
+
 test('faction_query_intel prints a trimmed message and skips blank or non-string messages', () => {
   const padded = cloneIntelFixture();
   padded.message = '  Showing intel for 1 system  ';
@@ -803,6 +814,17 @@ test('faction_query_intel prints depleted when remaining_display is depleted and
   expect(stdout).not.toContain('10/40');
 });
 
+test('faction_query_intel prints remaining_display for an omitted max_remaining', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [
+    { resource_id: 'iron_ore', richness: 3, remaining: 120, remaining_display: '120 units' },
+  ];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('iron_ore: richness 3, 120 units');
+  expect(stdout).not.toContain('120/');
+});
+
 test('faction_query_intel prints read_at_tick when resources are missing or empty', () => {
   const fixture = cloneIntelFixture();
   firstIntelEntry(fixture).pois = [
@@ -817,6 +839,15 @@ test('faction_query_intel prints read_at_tick when resources are missing or empt
   expect(stdout).toContain('    Read at tick: unverified');
   expect(stdout).not.toContain('hydrogen_gas');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel prints a faction-intel POI with no type', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelEntry(fixture).pois = [{ name: 'Bare Rock', resources: [] }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('  Bare Rock');
+  expect(stdout).not.toContain('Bare Rock (');
 });
 
 test('faction_query_intel prints age 0 snapshot when the tick matches but the system is not listed', () => {
@@ -1400,6 +1431,27 @@ test('ship buy order with being_built false prints Building: no', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Building: no');
+});
+
+test('ship buy order at a different station prints Station: Luna Station', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      base_name: 'Earth Station',
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Luna Station',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('  Station: Luna Station');
 });
 
 test('commission_status count mismatch prints count 0 when the array is non-empty', () => {

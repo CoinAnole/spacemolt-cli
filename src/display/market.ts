@@ -460,7 +460,8 @@ function bulkOrderOrError(result: Record<string, unknown>): string {
 
 function formatSmugglingXp(value: unknown): string | undefined {
   if (typeof value === 'bigint') return formatIntegerText(value);
-  if (typeof value === 'number' && Number.isInteger(value)) return value.toLocaleString();
+  const xp = bulkInteger(value);
+  if (xp !== undefined) return xp.toLocaleString();
   return undefined;
 }
 

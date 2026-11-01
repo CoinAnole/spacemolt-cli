@@ -184,6 +184,11 @@ test('formatProducedByFacilityIds comma-joins present string ids', () => {
   expect(formatProducedByFacilityIds('ore_refinery')).toBeUndefined();
 });
 
+test('formatProducedByFacilityIds drops non-string ids', () => {
+  expect(formatProducedByFacilityIds([1, 'nano_fab'])).toBe('nano_fab');
+  expect(formatProducedByFacilityIds([1])).toBeUndefined();
+});
+
 test('formatCatalogYesNo maps booleans only', () => {
   expect(formatCatalogYesNo(true)).toBe('yes');
   expect(formatCatalogYesNo(false)).toBe('no');
@@ -192,6 +197,10 @@ test('formatCatalogYesNo maps booleans only', () => {
 
 test('summarizeBonusPerLevel joins finite numeric entries as key n parts', () => {
   expect(summarizeBonusPerLevel({ miningYield: 1, accuracy: 2 })).toBe('miningYield 1, accuracy 2');
+});
+
+test('bonus per level 0 prints miningYield 0', () => {
+  expect(summarizeBonusPerLevel({ miningYield: 0 })).toBe('miningYield 0');
 });
 
 test('summarizeBonusPerLevel returns undefined for empty objects, arrays, and strings', () => {
@@ -297,6 +306,16 @@ test('shield without recharge prints the exact line Shield: 700 and not a tick s
   expect(buffer.stdout.join('\n')).not.toContain('/tick');
 });
 
+test('whitespace description is omitted', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ description: '   ', class: 'Shuttle' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Class: Shuttle');
+  expect(stdout).not.toContain('   ');
+});
+
 test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ defense_slots: 4 }, {}), { plain: true });
@@ -335,12 +354,26 @@ test('module class_name prints Class: Shield', () => {
   expect(buffer.stdout.join('\n')).toContain('Class: Shield');
 });
 
+test('module category prints Category and does not fall back to type', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ category: 'defense', type: 'weapon' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Category: defense');
+  expect(stdout).not.toContain('Category: weapon');
+});
+
 test('quantity 0 prints 0x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: 0 }])).toBe('0x Steel Plate');
 });
 
 test('missing quantity prints ?x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate' }])).toBe('?x Steel Plate');
+});
+
+test('missing name prints 2x item', () => {
+  expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
 });
 
 test('item_id name fallback prints 2x steel_plate', () => {
@@ -448,6 +481,16 @@ test('item category falls back to type when category is absent', () => {
   expect(buffer.stdout.join('\n')).toContain('Category: ore');
 });
 
+test('item category is preferred over type', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: 'mineral', type: 'ore' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Category: mineral');
+  expect(stdout).not.toContain('Category: ore');
+});
+
 test('empty category does not print Category:', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: '', type: 'ore' }, {}), { plain: true });
@@ -458,6 +501,12 @@ test('item tier prints Tier: 2', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ tier: 2 }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).toContain('Tier: 2');
+});
+
+test('numeric description 0 prints the line 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ description: 0 }, {}), { plain: true });
+  expect(buffer.stdout.find((line) => line === '0')).toBe('0');
 });
 
 test('empty-string empire does not fall back to faction', () => {

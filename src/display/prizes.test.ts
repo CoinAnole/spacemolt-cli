@@ -373,3 +373,13 @@ test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and retur
   expect(stdout).toContain('prize-1');
   expect(printed).toBe(true);
 });
+
+test('non-finite prizeCount falls back to the row count', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }], prizeCount: Infinity }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (1):');
+  expect(stdout).not.toContain('Infinity');
+});

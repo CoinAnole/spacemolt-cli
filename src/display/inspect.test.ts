@@ -422,6 +422,37 @@ test('prints a base-id-only shipment destination without a slash or parenthesis'
   expect(line).not.toContain(')');
 });
 
+test('prints a system and base id destination without a name or a slash', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_system_base',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_system_base',
+        label: 'System and base',
+        size: 1,
+        created_at: '2026-07-26T12:00:00Z',
+        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+        shipment: {
+          destination_system: 'Sirius',
+          destination_base_id: 'sirius_observatory',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
+  expect(line).toBe('Destination: Sirius (sirius_observatory)');
+  expect(line).not.toContain('/');
+});
+
 test('prints a name-and-system destination without destination_base_id or parenthesis', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -483,6 +514,38 @@ test('prints Destination name and base id without destination_system or a slash'
   const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
   expect(line).toBe('Destination: Sirius Observatory (sirius_observatory)');
   expect(line).not.toContain('/');
+});
+
+test('prints a system-only shipment destination without a slash or parenthesis', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_system_only',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_system_only',
+        label: 'System only',
+        size: 1,
+        created_at: '2026-07-26T12:00:00Z',
+        owner: { type: 'player', id: 'p1', name: 'PilotOne' },
+        creator: { player_id: 'p1', username: 'PilotOne' },
+        contents: [],
+        shipment: {
+          destination_system: 'Sirius',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Destination:'));
+  expect(line).toBe('Destination: Sirius');
+  expect(line).not.toContain('/');
+  expect(line).not.toContain('(');
+  expect(line).not.toContain(')');
 });
 
 test('suppresses bare Shipment heading when shipment record has no formattable fields', () => {
@@ -882,6 +945,23 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Catalog (catalog) when the catalog type is missing', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'typeless_catalog',
+      kind: 'catalog',
+      catalog: {},
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Catalog (catalog)');
+});
+
 test('prints Page ?/1 (? total) for a partial catalog page when only total_pages is set', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1007,6 +1087,28 @@ test('prints Estimated material cost: 0 without an analysis record', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Estimated material cost: 0');
   expect(stdout).not.toContain('Analysis');
+});
+
+test('prints Estimated material cost: 0 inside an analysis record', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_cost_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {},
+        estimated_material_cost: 0,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Analysis');
+  expect(stdout).toContain('Estimated material cost: 0');
 });
 
 test('prints Analysis and the raw materials quantity line for a catalog analysis record', () => {
@@ -1138,6 +1240,33 @@ test('prints 0× Cargo Container for a zero recipe input', () => {
   const stdout = rendered.stdout.join('\n');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
   expect(line).toContain('0× Cargo Container');
+});
+
+test('prints Inputs: ?× Cargo Container for a recipe input with no quantity', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'pack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'pack_package',
+            name: 'Pack Package',
+            inputs: [{ item_id: 'cargo_container', name: 'Cargo Container' }],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
+  expect(line).toBe('Inputs: ?× Cargo Container');
 });
 
 test('prints the Recipes table and omits Details and Inputs for two catalog recipes', () => {
@@ -1485,6 +1614,26 @@ test('inspect catalog recipe prints Crafting time 0', () => {
   );
 
   expect(stdout).toContain('Crafting time: 0');
+});
+
+test('prints Details and omits Crafting time for an empty-string crafting time', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'blank_time_recipe',
+          name: 'Blank Time Recipe',
+          category: 'refining',
+          crafting_time: '',
+        },
+      ],
+    },
+    'blank_time_recipe',
+  );
+
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Crafting time');
 });
 
 test('inspect no-venue recipe does not print Produced by', () => {
@@ -2265,6 +2414,34 @@ test('prints Class: ice_field for faction-intel class without a summary class or
   expect(stdout.split('\n')).toContain('Class: ice_field');
 });
 
+test('prints the trimmed faction-intel POI description without the untrimmed source', () => {
+  const description = '  Frozen survey note.  ';
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+      },
+      faction_poi_intel: {
+        description,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes('Frozen survey note.'));
+  expect(line).toBe(description.trim());
+  expect(stdout).not.toContain(description);
+});
+
 test('prints Base: Intel Outpost for a faction-intel base', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2491,6 +2668,27 @@ test('prints Facilities: 0 for an empty facilities array', () => {
   const facilitiesLine = lines.indexOf('Facilities: 0');
   expect(lines).toContain('Facilities: 0');
   expect(lines[facilitiesLine + 1]?.startsWith('  ')).not.toBe(true);
+});
+
+test('prints Empire: None for a station with no empire', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
+  expect(line).toBe('Empire: None');
 });
 
 test('prints a facilities suffix when a station has more than 12 facilities', () => {

@@ -86,7 +86,16 @@ export function battleLogAttackRows(entries: unknown): BattleLogAttackRow[] {
         const components = recordComponents(attack.defense_components);
         if (components.length > 0) {
           for (const component of components) {
-            rows.push(attackRowFromComponent(tick, attack, component, snapshots));
+            rows.push(
+              combatantRow(
+                tick,
+                attack,
+                snapshots,
+                hitCell(attack.hit_success),
+                formatShieldHull(component.shield_damage, component.hull_damage),
+                formatBattleDefenseLine(component, 'component'),
+              ),
+            );
           }
           continue;
         }
@@ -198,22 +207,6 @@ function weaponMissDefense(weapon: Record<string, unknown>, attack: Record<strin
   const roll = formatBattleHitScale(weapon.hit_roll); // never attack.hit_roll
   if (roll !== undefined) parts.push(`roll ${roll}`);
   return parts.join(' ');
-}
-
-function attackRowFromComponent(
-  tick: unknown,
-  attack: Record<string, unknown>,
-  component: Record<string, unknown>,
-  snapshots: unknown,
-): BattleLogAttackRow {
-  return combatantRow(
-    tick,
-    attack,
-    snapshots,
-    hitCell(attack.hit_success),
-    formatShieldHull(component.shield_damage, component.hull_damage),
-    formatBattleDefenseLine(component, 'component'),
-  );
 }
 
 function combatantRow(
