@@ -302,6 +302,18 @@ test('survey_system no-hits prints empty newly-revealed and wildlife copy', () =
   expect(stdout).not.toContain('=== Wildlife ===');
 });
 
+test('survey_system prints Wildlife (none) for non-record wildlife rows', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = ['RAW_WILDLIFE'];
+    }),
+  );
+
+  expect(stdout).toContain('Wildlife:\n  (none)');
+  expect(stdout).not.toContain('=== Wildlife ===');
+  expect(stdout).not.toContain('RAW_WILDLIFE');
+});
+
 test('survey_system empty deposits at survey power 0 print the no-ore sentence', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -961,6 +973,17 @@ test('survey_system prints signature for a faint row that omits type', () => {
   );
 
   expect(stdout.split('\n')).toContain('  - signature');
+});
+
+test('survey_system omits Faint Signatures for non-record faint rows', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.faint_signatures = ['RAW_FAINT', null];
+    }),
+  );
+
+  expect(stdout).not.toContain('Faint Signatures');
+  expect(stdout).not.toContain('RAW_FAINT');
 });
 
 function stdoutOfGetPoi(): string {

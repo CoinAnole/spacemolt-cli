@@ -110,6 +110,27 @@ test('prints === Inspect: 0 === for a package inspect id of 0', () => {
   expect(stdout).not.toContain('unknown');
 });
 
+test('prints === Inspect: false === for a boolean inspect id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: false,
+      kind: 'package',
+      package: {
+        package_id: 'pkg_false_id',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Inspect: false ===');
+  expect(stdout).not.toContain('unknown');
+});
+
 test('prints === Inspect: unknown === when a package inspect has no id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -504,6 +525,31 @@ test('omits gated shipment fields when optional late fee is absent and late is f
   // Optional late fee gated — omit line entirely when absent
   expect(stdout).not.toContain('Late fee if delivered now');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits Late when shipment late is absent', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_late',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_no_late',
+        label: 'No late field',
+        contents: [],
+        shipment: {
+          shipment_id: 'shipment-no-late',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contract: shipment-no-late');
+  expect(stdout).not.toContain('Late:');
 });
 
 test('prints a base-id-only shipment destination without a slash or parenthesis', () => {
@@ -1099,6 +1145,29 @@ test('prints Empire: kepler from faction system intel when the system has no emp
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Empire: kepler');
+});
+
+test('prints Empire: None for an empty faction-intel empire', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        empire: '',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Empire: None');
 });
 
 test('prints Known POIs: 2 when faction system POI records have no usable name or id', () => {
@@ -2220,6 +2289,26 @@ test('inspect catalog recipe prints Crafting time 0', () => {
   expect(stdout).toContain('Crafting time: 0');
 });
 
+test('omits Package operation when a catalog recipe has no package_operation', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'plain_recipe',
+          name: 'Plain Recipe',
+          category: 'refining',
+          crafting_time: 1,
+        },
+      ],
+    },
+    'plain_recipe',
+  );
+
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Package operation:');
+});
+
 test('prints Details and omits Crafting time for an empty-string crafting time', () => {
   const stdout = renderCatalogInspect(
     {
@@ -2743,6 +2832,32 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('Lock');
   expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits Services when a POI services array is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          services: [],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Services:');
 });
 
 test('prints Position: (4, 9) from detail.poi.position when summary has no position', () => {
@@ -4279,6 +4394,31 @@ test('renders nested base tourism from GetBaseResponse, including 0', () => {
   expect(nestedOnly).not.toContain('Dining:');
   expect(nestedOnly).not.toContain('Leisure:');
   expect(nestedOnly).not.toContain('Tourism revenue');
+});
+
+test('omits Services when a station services array is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          empire: 'solarian',
+        },
+        services: [],
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('Services:');
 });
 
 test('renders base inspect identity without POI when poi_id is absent', () => {
