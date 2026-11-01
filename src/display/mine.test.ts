@@ -137,6 +137,18 @@ test('mine prints resource_id only when resource_name equals the id', () => {
   expect(stdout).not.toContain('ore_iron (ore_iron)');
 });
 
+test('mine prints resource_id only when resource_name is empty', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.resource_name = '';
+    }),
+  );
+
+  expect(stdout).toContain('Mined 42 ore_iron');
+  expect(stdout).not.toContain('Iron Ore');
+  expect(stdout).not.toContain('ore_iron (ore_iron)');
+});
+
 test('mine skips Skill XP for empty, zero, and non-record maps', () => {
   const empty = stdoutOf(
     clonePresent((details) => {

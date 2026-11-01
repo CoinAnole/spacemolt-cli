@@ -1024,6 +1024,33 @@ test('prints Page 0/2 (0 total) for a zero catalog page', () => {
   expect(stdout.split('\n')).toContain('Page 0/2 (0 total)');
 });
 
+test('omits the Page line for a catalog with no page, total_pages, or total', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'unpaged_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [
+          {
+            id: 'iron_ore',
+            name: 'Iron Ore',
+            category: 'ore',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Catalog (items)');
+  expect(stdout).not.toContain('Page ');
+});
+
 test('inspect catalog prints Entries and omits Details when more than one item is returned', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1636,6 +1663,26 @@ test('prints Details and omits Crafting time for an empty-string crafting time',
   expect(stdout).not.toContain('Crafting time');
 });
 
+test('prints Details and omits Crafting time for a null crafting time', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'null_time_recipe',
+          name: 'Null Time Recipe',
+          category: 'refining',
+          crafting_time: null,
+        },
+      ],
+    },
+    'null_time_recipe',
+  );
+
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Crafting time');
+});
+
 test('inspect no-venue recipe does not print Produced by', () => {
   const stdout = renderCatalogInspect(
     {
@@ -2231,6 +2278,32 @@ test('prints Active battle when detail.active_battle.battle_id is set', () => {
   expect(stdout.split('\n')).toContain('Active battle: battle-9');
 });
 
+test('omits Active battle for an active_battle record without a battle_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          active_battle: {},
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Active battle');
+});
+
 test('renders a POI wormhole that expires in 0', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2283,6 +2356,31 @@ test('renders a wormhole with no wormhole_expires_in as Wormhole: Alpha', () => 
   expect(stdout).not.toContain('expires');
 });
 
+test('renders a non-text wormhole destination as Wormhole: unknown', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: { name: 'Alpha' },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: unknown');
+});
+
 test('renders a wormhole from wormhole_destination_id when the destination name is absent', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2333,6 +2431,37 @@ test('renders poi inspect workability columns when ship-relative fields are pres
 
   const copperCells = copperLine?.split('|').map((cell) => cell.trim()) ?? [];
   expect(copperCells[3]).toBe('');
+});
+
+test('prints the resource Power cell 0 for supported_power 0', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          resources: [
+            {
+              resource_id: 'ore_iron',
+              supported_power: 0,
+            },
+          ],
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const ironLine = stdout.split('\n').find((line) => line.includes('ore_iron'));
+  expect(ironLine).toBeDefined();
+  const cells = ironLine?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(cells[3]).toBe('0');
 });
 
 const DEEP_CORE_LINE = 'Deep core: yes (too-sparse cutoff never applies; needs deep_core_access)';
@@ -2412,6 +2541,30 @@ test('prints Class: ice_field for faction-intel class without a summary class or
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Class: ice_field');
+});
+
+test('prints Class: nav_buoy for a summary type without class and does not set faction intel', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nav_buoy',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'nav_buoy',
+          name: 'Nav Buoy',
+          type: 'nav_buoy',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: nav_buoy');
+  expect(stdout).not.toContain('Faction intel');
 });
 
 test('prints the trimmed faction-intel POI description without the untrimmed source', () => {
@@ -2798,6 +2951,30 @@ test('prints Condition: unknown (0% satisfaction) when satisfaction is 0 and the
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Condition: unknown (0% satisfaction)');
+});
+
+test('prints Condition: good (88% satisfaction) for a condition string without condition_text', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+        condition: {
+          condition: 'good',
+          satisfaction_pct: 88,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Condition: good (88% satisfaction)');
 });
 
 test('renders nested base repairs without a second wrecked line', () => {

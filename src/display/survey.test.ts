@@ -143,6 +143,24 @@ test('survey_system prints present-field sections and 4-space ResourceInfo bulle
   expect(stdout).not.toContain('=== Your Skills ===');
 });
 
+test('survey_system skips an empty or non-string survey message', () => {
+  const empty = stdoutOf(
+    clonePresent((details) => {
+      details.message = '';
+    }),
+  );
+  expect(empty).toContain('Bloom: active (intensity 0.8)\nA faint resonance west of the belt.');
+  expect(empty).not.toContain('Survey complete. Hidden deposits resolved.');
+
+  const objectMessage = stdoutOf(
+    clonePresent((details) => {
+      details.message = { note: 'MESSAGE_OBJECT' };
+    }),
+  );
+  expect(objectMessage).not.toContain('MESSAGE_OBJECT');
+  expect(objectMessage).toContain('Bloom: active (intensity 0.8)\nA faint resonance west of the belt.');
+});
+
 test('survey_system prints a system-id-only headline without (sol)', () => {
   const stdout = stdoutOf({
     system_id: 'sol',

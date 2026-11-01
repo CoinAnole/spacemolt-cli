@@ -89,6 +89,22 @@ test('null conversion output quantity keeps the item id and omits Output Quantit
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('whitespace conversion output_item_id omits Output Item Id and prints Output Quantity', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      conversion: {
+        output_item_id: '   ',
+        output_quantity: 3,
+      },
+    },
+  });
+
+  expect(stdout).not.toContain('Output Item Id');
+  expect(stdout).toContain('Output Quantity: 3');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('omitted conversion prints no output lines', () => {
   const { stdout, stderr } = renderJettison('jettison', {
     details: {

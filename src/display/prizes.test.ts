@@ -157,6 +157,11 @@ test('empty-string status omits Status:', () => {
   expect(stdout).not.toContain('Status:');
 });
 
+test('numeric status 0 omits Status:', () => {
+  const stdout = renderClaim(claimDetails({ status: 0 }));
+  expect(stdout).not.toContain('Status:');
+});
+
 test('prints unknown status tokens as-is', () => {
   const stdout = renderClaim(claimDetails({ status: 'mysterious' }));
   expect(stdout).toContain('Status: mysterious');

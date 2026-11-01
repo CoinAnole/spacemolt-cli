@@ -174,6 +174,22 @@ test('one-sided freight quote omits Route when destination_base_id is omitted', 
   expect(stdout).not.toContain('Route:');
 });
 
+test('freight quote with a whitespace destination_base_id omits Route and still prints the quote', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      origin_base_id: 'earth_station',
+      destination_base_id: '   ',
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-1');
+  expect(stdout).not.toContain('Route:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('freight quote prints uninsurable reason', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -211,6 +227,21 @@ test('renders an explicit empty appraisal message', () => {
     },
   });
   expect(stdout).toContain('No appraisal lines.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('appraisal_lines containing only a string prints No appraisal lines.', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-empty-1',
+      origin_base_id: 'earth_station',
+      destination_base_id: 'nova_central',
+      appraisal_lines: ['not-a-line'],
+    },
+  });
+  expect(stdout).toContain('No appraisal lines.');
+  expect(stdout).not.toContain('not-a-line');
   expect(stdout).not.toContain('=== Response ===');
 });
 

@@ -296,6 +296,27 @@ test('sell prints smuggling XP without a level-up line', () => {
   expect(stdout).not.toContain('From storage');
 });
 
+test('sell fills Mara, Mara, a blank, a non-record, and Ibis print from Mara, Ibis', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      ...directSellBody,
+      fills: [
+        { quantity: 8, price_each: 500, subtotal: 4000, counterparty: 'Mara' },
+        { quantity: 1, price_each: 500, subtotal: 500, counterparty: 'Mara' },
+        { quantity: 1, price_each: 500, subtotal: 500, counterparty: '   ' },
+        'not-a-record',
+        { quantity: 1, price_each: 500, subtotal: 500, counterparty: 'Ibis' },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Instant fills: 8 (earned: 4,000 cr) from Mara, Ibis');
+  expect(stdout).not.toContain('from Mara, Mara');
+});
+
 test('sell quantity-only auto-listed prints Auto-listed: 4 without an @ price', () => {
   const stdout = renderStructuredResult(
     'sell',
@@ -1327,6 +1348,42 @@ test('one-item view_market book with no buy or sell orders prints (no orders)', 
   ).stdout.join('\n');
 
   expect(stdout).toContain('(no orders)');
+});
+
+test('two-item view_market summary blanks Best Buy and Buy Depth when best buy quantity is a bigint', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 15, quantity: 500n }],
+          sell_orders: [],
+        },
+        {
+          item_id: 'fuel_cell',
+          item_name: 'Fuel Cell',
+          buy_orders: [{ price_each: 22, quantity: 7 }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const iron = stdout.split('\n').find((line) => line.includes('ore_iron'));
+  const fuel = stdout.split('\n').find((line) => line.includes('fuel_cell'));
+
+  expect(iron).toMatch(/ore_iron\s+\|\s+\|\s+\|/);
+  expect(fuel).toContain('22 cr');
+  expect(fuel).toContain('7 / 1');
+  expect(stdout).not.toContain('15 cr');
+  expect(stdout).not.toContain('500');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('view_market with action, base_id, and items [] prints (empty)', () => {

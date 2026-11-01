@@ -372,8 +372,21 @@ test('missing quantity prints ?x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate' }])).toBe('?x Steel Plate');
 });
 
+test('missing ship build quantity prints ?x station_core', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ build_materials: [{ item_id: 'station_core' }] }, {}), {
+    plain: true,
+  });
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: ?x station_core');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
+});
+
+test('non-record rows print 2x Steel Plate', () => {
+  expect(summarizeNamedItemQuantities([null, { name: 'Steel Plate', quantity: 2 }, 'skip'])).toBe('2x Steel Plate');
 });
 
 test('item_id name fallback prints 2x steel_plate', () => {
@@ -396,6 +409,10 @@ test('joinStringIds drops empty strings', () => {
   expect(joinStringIds(['', 'laser'])).toBe('laser');
 });
 
+test('empty id array returns empty from joinStringIds', () => {
+  expect(joinStringIds([])).toBe('');
+});
+
 test('non-string passive recipes are dropped', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ passive_recipes: ['refine_steel', 1, 'smelt'] }, {}), {
@@ -404,6 +421,14 @@ test('non-string passive recipes are dropped', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Passive recipes: refine_steel, smelt');
   expect(stdout).not.toContain('refine_steel, 1');
+});
+
+test('empty passive recipes omit Passive recipes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ passive_recipes: [] }, {}), {
+    plain: true,
+  });
+  expect(buffer.stdout.join('\n')).not.toContain('Passive recipes');
 });
 
 test('ship capability flag prints Capabilities: cloak passive 2', () => {
@@ -509,6 +534,12 @@ test('numeric description 0 prints the line 0', () => {
   expect(buffer.stdout.find((line) => line === '0')).toBe('0');
 });
 
+test('boolean false description prints the line false', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ description: false }, {}), { plain: true });
+  expect(buffer.stdout.find((line) => line === 'false')).toBe('false');
+});
+
 test('empty-string empire does not fall back to faction', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: '', faction: 'outerrim' }, {}), {
@@ -536,4 +567,16 @@ test('empty-string capability value prints Capabilities: cloak', () => {
   );
   const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
   expect(line).toBe('Capabilities: cloak');
+});
+
+test('null capability value prints Capabilities: cloak', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: null }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+  expect(buffer.stdout.join('\n')).not.toContain('null');
 });
