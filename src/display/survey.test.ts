@@ -594,6 +594,27 @@ test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () =>
   expect(stdout).not.toContain('Ranched By');
 });
 
+test('survey_system prints the Ranched column when only ranched_by is set', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched_by: ['[RNC] Ranchers Co-op'],
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).toContain('Ranched');
+  expect(header).toContain('Ranched By');
+});
+
 test('survey_system shows Ranched By in server order and a blank cell for an omitted count', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

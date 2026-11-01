@@ -586,6 +586,17 @@ test('missing active-freight tick prints tick ? for an empty shipment list', () 
   expect(stdout).toContain('tick ? · 0 contracts');
 });
 
+test('shipping_active tick 0 prints tick 0 · 0 contracts', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 0,
+    shipments: [],
+  });
+
+  expect(stdout).toContain('tick 0 · 0 contracts');
+  expect(stdout).not.toContain('tick ?');
+});
+
 test('declines malformed active freight payloads and preserves the raw fallback', () => {
   expect(rawFallbackJson(output('shipping_active', { action: 'active', tick: 1, shipments: 'invalid' }))).toEqual({
     action: 'active',
@@ -676,6 +687,27 @@ test('formats active destination as name-only or contract base id when system is
   expect(stdout).toContain('nova_central');
   expect(stdout).not.toContain('Name Only Station (');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('shipping_active ticks_to_deadline 0 prints 0 ticks', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 900,
+    shipments: [
+      {
+        contract: { id: 'shipment-zero-deadline-1', package_id: 'package-zero-deadline-1' },
+        role: 'carrier',
+        ticks_to_deadline: 0,
+        late: false,
+        payout_if_delivered_now: 1000,
+        package_in_your_cargo: true,
+        next_step: 'Deliver while docked.',
+        destination_name: 'Name Only Station',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('0 ticks');
 });
 
 test('renders tracking events in server order with returned location components only', () => {

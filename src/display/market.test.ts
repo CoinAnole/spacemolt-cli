@@ -1755,3 +1755,83 @@ test('faction storage prints a bigint credit balance without grouping', () => {
   expect(stdout).toContain('Faction credits: 9007199254740993');
   expect(stdout).not.toContain('9,007,199,254,740,993');
 });
+
+test('browse_ships listing with no seller fields prints Seller: Unknown', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: Unknown');
+});
+
+test('browse_ships listing with ship_id and a numeric price but no class_id prints (Unknown)', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          price: 125000,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('(Unknown)');
+});
+
+test('view_ship_buy_orders price of 0 prints Price: 0 credits', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Earth Station',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          price: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Price: 0 credits');
+});
+
+test('faction storage credits 0 prints Faction credits: 0', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      credits: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Faction credits: 0');
+});

@@ -313,3 +313,37 @@ test('more than 16 jettison scalar fields decline to the raw response', () => {
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Jettison ===');
 });
+
+test('jettison results row with quantity 0 prints Quantity: 0', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          quantity: 0,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Quantity: 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('non-record jettison result row declines to the raw response', () => {
+  const { stdout } = renderJettison('storage jettison', {
+    details: {
+      action: 'create_sell_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      note: { hidden: true },
+      results: [null],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Create Sell Order ===');
+  expect(stdout).not.toContain('=== Intel ===');
+});

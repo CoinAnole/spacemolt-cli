@@ -510,7 +510,7 @@ export const shippingFormatters = [
     commands: ['shipping_profile'],
     suppressShapeFallbackOnDecline: true,
   }),
-  formatter((result) => renderDebtPayment(result), {
+  formatter(renderDebtPayment, {
     commands: ['shipping_pay_debt'],
     suppressShapeFallbackOnDecline: true,
   }),

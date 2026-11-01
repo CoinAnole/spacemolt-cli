@@ -89,6 +89,46 @@ test('renders package inspect results with contents table', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints === Inspect: 0 === for a package inspect id of 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 0,
+      kind: 'package',
+      package: {
+        package_id: 'pkg_zero_id',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Inspect: 0 ===');
+  expect(stdout).not.toContain('unknown');
+});
+
+test('prints === Inspect: unknown === when a package inspect has no id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'package',
+      package: {
+        package_id: 'pkg_missing_id',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Inspect: unknown ===');
+});
+
 test('prints Creator: PilotOne when the package creator has a username and no faction', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -343,6 +383,32 @@ test('prints Ticks to deadline: 0 ticks for a zero deadline', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Ticks to deadline: 0 ticks');
+});
+
+test('prints Contract and omits Ticks to deadline when ticks_to_deadline is NaN', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_nan_deadline',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_nan_deadline',
+        label: 'NaN deadline',
+        contents: [],
+        shipment: {
+          shipment_id: 'shipment-nan-1',
+          ticks_to_deadline: Number.NaN,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contract: shipment-nan-1');
+  expect(stdout).not.toContain('Ticks to deadline');
 });
 
 test('omits gated shipment fields when optional late fee is absent and late is false', () => {
@@ -778,6 +844,25 @@ test('prints System: unknown when a system has no name and no system_id', () => 
   expect(stdout.split('\n')).toContain('System: unknown');
 });
 
+test('prints System: sol when a system has a system_id and no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: sol');
+});
+
 test('prints Name: Sol for the system faction-intel name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -857,6 +942,29 @@ test('prints Empire: None for an empty system empire and omits the Empire line w
   const absentStdout = absent.stdout.join('\n');
   expect(emptyStdout.split('\n')).toContain('Empire: None');
   expect(absentStdout).not.toContain('Empire:');
+});
+
+test('prints Empire: kepler from faction system intel when the system has no empire', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        empire: 'kepler',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Empire: kepler');
 });
 
 test('prints Known POIs: 2 when faction system POI records have no usable name or id', () => {
@@ -2270,6 +2378,42 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('Lock');
   expect(stdout).not.toContain('Sparse');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints POI: ice_poi when a POI summary has only an id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: ice_poi');
+});
+
+test('prints POI: POI for an empty POI object', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {},
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: POI');
 });
 
 test('prints a Services line for more than 12 POI services', () => {

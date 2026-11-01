@@ -1472,7 +1472,6 @@ export const marketFormatters = [
     commands: ['supply_commission'],
   }),
 
-  // Insurance quote
   formatter(
     (r) => {
       const quote = isRecord(r.quote) ? r.quote : undefined;
