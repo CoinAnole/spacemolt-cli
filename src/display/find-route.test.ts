@@ -673,6 +673,14 @@ describe('find_route formatter', () => {
     expect(stdout).not.toContain('NOT_A_RECORD');
   });
 
+  test('prints the invalid row without the first-step wormhole warning for a non-record route element', () => {
+    const rendered = render(foundBody({ route: ['NOT_A_RECORD'] }));
+    const stdout = rendered.stdout.join('\n');
+    expect(rendered.success).toBe(true);
+    expect(cells(rowByText(stdout, 'Route', '(invalid)'))[0]).toBe('(invalid)');
+    expect(stdout).not.toContain(FIRST_STEP_WARNING);
+  });
+
   test('prints (invalid) in the Fleet Fuel player cell for a non-record fleet member', () => {
     const stdout = stdoutOf(foundBody({ fleet_fuel: ['nope'] }));
     expect(cells(rowByText(stdout, 'Fleet Fuel', '(invalid)'))[0]).toBe('(invalid)');

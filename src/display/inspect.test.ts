@@ -361,6 +361,33 @@ test('renders package inspect freight shipment summary when nested shipment is p
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('omits the Base reward line when shipment base_reward is the string 22000', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_string_reward',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_string_reward',
+        label: 'String reward',
+        contents: [],
+        shipment: {
+          shipment_id: 'shipment-string-reward',
+          base_reward: '22000',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contract: shipment-string-reward');
+  expect(stdout).not.toContain('Base reward');
+  expect(stdout).not.toContain('22000');
+});
+
 test('prints Ticks to deadline: 0 ticks for a zero deadline', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1155,6 +1182,36 @@ test('renders catalog inspect results for an item lookup with details', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('omits Slot from the entry header for a single catalog item without a slot string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'iron_ore',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [
+          {
+            id: 'iron_ore',
+            name: 'Iron Ore',
+            category: 'ore',
+            size: 1,
+            base_value: 2,
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const entryHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Category'));
+  expect(entryHeader).toBeDefined();
+  expect(entryHeader).not.toContain('Slot');
+});
+
 test('prints Catalog (catalog) when the catalog type is missing', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1413,6 +1470,28 @@ test('prints Analysis and the raw materials quantity line for a catalog analysis
   expect(stdout.split('\n')).toContain('Raw materials: 20× Iron Ore');
 });
 
+test('prints Raw materials: 0× Iron Ore for a raw-material quantity of 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 0, category: 'ore' }],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Raw materials: 0× Iron Ore');
+});
+
 test('prints Raw materials: 20× iron_ore for a raw-material row with no name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1433,6 +1512,28 @@ test('prints Raw materials: 20× iron_ore for a raw-material row with no name', 
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Raw materials: 20× iron_ore');
+});
+
+test('prints Raw materials: 20× ? for a raw-material row with no name or item_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: [{ quantity: 20, category: 'ore' }],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Raw materials: 20× ?');
 });
 
 test('prints Raw materials: ?× Iron Ore for a raw-material row with no quantity', () => {
@@ -1617,6 +1718,33 @@ test('prints Inputs: 2× cargo_container for a recipe input with no name', () =>
   const stdout = rendered.stdout.join('\n');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
   expect(line).toBe('Inputs: 2× cargo_container');
+});
+
+test('prints Inputs: 2× sealed_crate for a recipe input that has only id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'pack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'pack_package',
+            name: 'Pack Package',
+            inputs: [{ id: 'sealed_crate', quantity: 2 }],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
+  expect(line).toBe('Inputs: 2× sealed_crate');
 });
 
 test('prints the Recipes table and omits Details and Inputs for two catalog recipes', () => {
@@ -3538,6 +3666,43 @@ test('prints Empire: None for a station with no empire', () => {
 
   const line = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
   expect(line).toBe('Empire: None');
+});
+
+test('omits Facilities when a station facilities value is omitted or not an array', () => {
+  const omitted = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const notArray = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          facilities: 'dock',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(omitted.split('\n').some((entry) => entry.startsWith('Facilities'))).toBe(false);
+  expect(notArray.split('\n').some((entry) => entry.startsWith('Facilities'))).toBe(false);
 });
 
 test('prints a facilities suffix when a station has more than 12 facilities', () => {

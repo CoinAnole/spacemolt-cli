@@ -448,6 +448,22 @@ test('survey_system prints a whitespace POI class as the exact headline and no c
   expect(headline).not.toContain('[');
 });
 
+test('survey_system prints a padded deposit class as [common] and not [ common ]', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      const deposits = details.deposits;
+      if (!Array.isArray(deposits) || !deposits[0] || typeof deposits[0] !== 'object') {
+        throw new Error('expected deposit row');
+      }
+      (deposits[0] as Record<string, unknown>).class = ' common ';
+    }),
+  );
+
+  const headline = stdout.split('\n').find((entry) => entry.includes('sol_inner_belt'));
+  expect(headline).toBe('  - Sol Inner Belt (sol_inner_belt)  asteroid_belt [common]');
+  expect(headline).not.toContain('[ common ]');
+});
+
 test('survey_system empty resources on a hit omit resource lines', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
