@@ -297,6 +297,29 @@ test('prints Package for a package without a label', () => {
   expect(stdout).not.toContain('Package:');
 });
 
+test('prints Package for a package label of only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_spaces',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_spaces',
+        label: '   ',
+        size: 10,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Package');
+  expect(stdout).not.toContain('Package:');
+});
+
 test('renders package inspect freight shipment summary when nested shipment is present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -832,6 +855,28 @@ test('omits Connections when a system connections array is empty', () => {
   expect(stdout).not.toContain('Connections:');
 });
 
+test('omits Connections when system connections is not an array', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        connections: 'alpha_centauri',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('System: Sol');
+  expect(stdout).not.toContain('Connections:');
+});
+
 test('omits a system description that is only spaces', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -973,6 +1018,27 @@ test('omits the Position line for a partial position with x 0 and no y', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout).not.toContain('Position');
+});
+
+test('omits the Position line when system position is null', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        position: null,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('Position:');
 });
 
 test('prints Empire: None for an empty system empire and omits the Empire line when the key is absent', () => {
@@ -1845,6 +1911,36 @@ test('omits Outputs when a single catalog recipe has no outputs', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Details');
   expect(stdout).not.toContain('Outputs:');
+});
+
+test('omits Inputs when a single catalog recipe has no inputs', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'unpack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'unpack_package',
+            name: 'Unpack Package',
+            category: 'logistics',
+            crafting_time: 5,
+            package_operation: 'unpack',
+            description: 'Open a cargo package.',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Inputs:');
 });
 
 test('packageOperationLabel trims strings and maps booleans', () => {
@@ -3239,6 +3335,31 @@ test('inspect POI prints Deep core in faction intel when the header omitted it',
   expect(stdout.indexOf('Faction intel')).toBeLessThan(stdout.indexOf(DEEP_CORE_LINE));
 });
 
+test('prints Name: Main Belt for the POI faction-intel name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+      faction_poi_intel: {
+        name: 'Main Belt',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Name: Main Belt');
+});
+
 test('prints Class: ice_field for faction-intel class without a summary class or type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3418,6 +3539,32 @@ test('prints Base: Intel Outpost for a faction-intel base', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Base: Intel Outpost');
+});
+
+test('prints Base: intel_outpost for faction POI intel with only base_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+      faction_poi_intel: {
+        base_id: 'intel_outpost',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Base: intel_outpost');
+  expect(stdout.split('\n')).not.toContain('Base: yes');
 });
 
 test('inspect POI omits Deep core when false, missing, or non-boolean', () => {

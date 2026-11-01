@@ -155,6 +155,16 @@ describe('find_route formatter', () => {
     expect(stdout).toContain('Then travel: (empty)');
   });
 
+  test('prints Then travel: (empty) when target poi name and id are numbers', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        target_poi_name: 1,
+        target_poi: 2,
+      }),
+    );
+    expect(stdout).toContain('Then travel: (empty)');
+  });
+
   test('prints a name-only travel target without a parenthesized poi', () => {
     const stdout = stdoutOf(
       foundBody({
