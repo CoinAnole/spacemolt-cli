@@ -431,6 +431,31 @@ test('prints Package for a package label of only spaces', () => {
   expect(stdout).not.toContain('Package:');
 });
 
+test('omits Created when created_at is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_spaces',
+      kind: 'package',
+      source: 'cargo',
+      package: {
+        package_id: 'pkg_spaces',
+        label: 'Sealed crate',
+        size: 10,
+        created_at: '   ',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Package: Sealed crate');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Created:'));
+  expect(line).toBeUndefined();
+});
+
 test('renders package inspect freight shipment summary when nested shipment is present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -922,6 +947,29 @@ test('inspect package prints Size: 0 when package size is zero', () => {
   expect(stdout.split('\n')).toContain('Size: 0');
 });
 
+test('omits Size when a package omits size', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_zero',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_zero',
+        label: 'Zero crate',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Package: Zero crate');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Size:'));
+  expect(line).toBeUndefined();
+});
+
 test('omits ID when a package has no package_id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -993,6 +1041,29 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('omits Visited at when visited_at is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        visited_at: '   ',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Visited at:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Visited: false when system visited is false', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1034,6 +1105,27 @@ test('omits Visited when a system omits visited', () => {
   expect(stdout.split('\n')).toContain('System: Sol');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Visited:'));
   expect(line).toBeUndefined();
+});
+
+test('omits Faction intel when a system has no faction_system_intel', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  expect(stdout).not.toContain('Faction intel');
 });
 
 test('omits Connections when a system connections array is empty', () => {
@@ -1637,6 +1729,35 @@ test('prints Catalog (catalog) when the catalog type is missing', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Catalog (catalog)');
+});
+
+test('omits a blank catalog message', () => {
+  const blank = renderStructuredResult(
+    'inspect',
+    {
+      id: 'typeless_catalog',
+      kind: 'catalog',
+      catalog: {
+        message: '',
+      },
+    },
+    options,
+    context,
+  );
+  const omitted = renderStructuredResult(
+    'inspect',
+    {
+      id: 'typeless_catalog',
+      kind: 'catalog',
+      catalog: {},
+    },
+    options,
+    context,
+  );
+
+  expect(blank.success).toBe(true);
+  expect(omitted.success).toBe(true);
+  expect(blank.stdout.join('\n')).toEqual(omitted.stdout.join('\n'));
 });
 
 test('prints Page ?/1 (? total) for a partial catalog page when only total_pages is set', () => {
@@ -3267,6 +3388,27 @@ test('prints POI: ice_poi when a POI summary has only an id', () => {
   expect(stdout.split('\n')).toContain('POI: ice_poi');
 });
 
+test('prints ID: 0 when a POI summary id is 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 0,
+          name: 'Frozen Reach',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: 0');
+});
+
 test('prints POI: Frozen Reach from detail.poi.name when the summary has no name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3331,6 +3473,24 @@ test('prints POI: POI for an empty POI object', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('POI: POI');
+});
+
+test('omits ID for an empty POI', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {},
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: POI');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('ID:'));
+  expect(line).toBeUndefined();
 });
 
 test('omits Class for an empty POI', () => {
@@ -3403,6 +3563,30 @@ test('prints POI Online: 0 when summary online is zero', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Online: 0');
+});
+
+test('omits Online when a POI summary omits online', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: Main Belt');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Online:'));
+  expect(line).toBeUndefined();
 });
 
 test('prints POI resources from summary when detail resources are absent', () => {
