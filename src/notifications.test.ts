@@ -9197,6 +9197,15 @@ describe('notification formatting', () => {
       expect(preview.details).toContain('Cloaked: true');
     });
 
+    test('scan_result prints hull 0, shield 0, and cloaked false', () => {
+      const preview = formatNotificationPreview({
+        type: 'scan',
+        msg_type: 'scan_result',
+        data: { success: true, hull: 0, shield: 0, cloaked: false },
+      });
+      expect(preview.details).toEqual(['Hull: 0', 'Shield: 0', 'Cloaked: false']);
+    });
+
     test('inline pure registry: social types go through pure preview path', () => {
       const output = stripAnsi(
         formatNotification({
@@ -9208,6 +9217,16 @@ describe('notification formatting', () => {
       );
       expect(output).toContain('[CHAT:faction]');
       expect(output).toContain('Marlowe: Rally at Sol.');
+    });
+
+    test('base_destroyed without a name or wreck id', () => {
+      const preview = formatNotificationPreview({
+        type: 'base',
+        msg_type: 'base_destroyed',
+        data: {},
+      });
+      expect(preview.headline).toBe('base has been destroyed!');
+      expect(preview.details).toEqual([]);
     });
 
     test('base_raid_update pure preview is compact HP line', () => {
@@ -9902,6 +9921,15 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
     });
 
+    test('mining_yield prints remaining 0', () => {
+      const preview = formatNotificationPreview({
+        type: 'mining',
+        msg_type: 'mining_yield',
+        data: { quantity: 5, resource_id: 'ore_iron', remaining: 0 },
+      });
+      expect(preview.headline).toBe('+5x ore_iron (0 remaining at POI)');
+    });
+
     test('skill_level_up and skill_xp_gain pure previews', () => {
       const levelUp = formatNotificationPreview({
         msg_type: 'skill_level_up',
@@ -9933,6 +9961,14 @@ describe('notification formatting', () => {
         data: { skill_id: 'mining', xp_gained: 5 },
       });
       expect(xp.headline).toBe('+5 XP in mining (?/?)');
+    });
+
+    test('skill_xp_gain prints explicit 0 current and next XP', () => {
+      const xp = formatNotificationPreview({
+        msg_type: 'skill_xp_gain',
+        data: { skill_id: 'mining', xp_gained: 5, current_xp: 0, next_level_xp: 0 },
+      });
+      expect(xp.headline).toBe('+5 XP in mining (0/0)');
     });
 
     test('drone_update / drone_destroyed pure previews', () => {
@@ -11926,6 +11962,20 @@ describe('notification formatting', () => {
       const message = formatNotificationMessage(notification);
       expect(message).toBe('4 action results summarized; jump×4');
       expect(message).not.toContain('×9');
+    });
+
+    test('count map omits a zero command count', () => {
+      const notification = {
+        type: 'action',
+        msg_type: 'action_result_summary',
+        data: {
+          count: 2,
+          commands: { jump: 0, dock: 2 },
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('2 action results summarized; dock×2');
+      expect(message).not.toContain('jump×0');
     });
 
     test('commission base id without a base name', () => {

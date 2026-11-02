@@ -2340,6 +2340,27 @@ test('get_nearby prints a question mark for a missing arena NPC hull', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_nearby ship_class fallback prints the class when ship_class_name is omitted', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      arena_npcs: [
+        {
+          npc_id: 'arena-cleaver-1',
+          name: 'Ring Cleaver',
+          ship_class: 'fighter',
+          max_hull: 40,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('(fighter)');
+});
+
 test('get_nearby colors boss arena NPC names after an uncolored Boss prefix', () => {
   const stdout = renderStructuredResult(
     'get_nearby',
@@ -6715,4 +6736,44 @@ test('view_completed_mission string dialog prints the dialog line', () => {
     dialog: 'Come back anytime.',
   });
   expect(stdout).toContain('Dialog: Come back anytime.');
+});
+
+test('view_completed_mission objective system_id fallback prints the system id', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Visit', system_id: 'sol' }],
+  });
+  expect(stdout).toContain('Visit (system sol)');
+});
+
+test('view_completed_mission objective target_base_id fallback prints the station id', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Deliver', target_base_id: 'earth_station' }],
+  });
+  expect(stdout).toContain('Deliver (station earth_station)');
+});
+
+test('view_completed_mission blank complete dialog key prints content', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    dialog: { complete: '', content: 'Later.' },
+  });
+  expect(stdout).toContain('Dialog: Later.');
+});
+
+test('view_completed_mission string objective prints the objective text', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: ['Scout the belt'],
+  });
+  expect(stdout).toContain('Scout the belt');
+});
+
+test('get_commands legacy commands array prints the Category column', () => {
+  const stdout = renderStatusTable('get_commands', {
+    commands: [{ name: 'get_status', category: 'Query', description: 'Read state.' }],
+  });
+  expect(stdout).toContain('=== Commands ===');
+  expect(stdout).toContain('Query');
 });

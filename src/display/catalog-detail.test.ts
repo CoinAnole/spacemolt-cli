@@ -462,6 +462,18 @@ test('empty-string build material name does not fall through to item_id', () => 
   expect(buffer.stdout.join('\n')).not.toContain('steel_plate');
 });
 
+test('non-record ship build materials print 1x station_core and not skip', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [null, 'skip', { item_id: 'station_core', quantity: 1 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 1x station_core');
+  expect(buffer.stdout.join('\n')).not.toContain('skip');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
 });
@@ -625,6 +637,20 @@ test('legacy-only ship prints Availability: legacy', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Availability: legacy');
   expect(stdout).not.toContain('hidden');
+});
+
+test('string mobile_base services print Mobile base and Ship modules: yes without Services or market', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ mobile_base: { services: 'market', ship_modules: true } }, {}),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Mobile base');
+  expect(stdout).toContain('Ship modules: yes');
+  expect(stdout).not.toContain('Services:');
+  expect(stdout).not.toContain('market');
 });
 
 test('empire is preferred when it differs from faction', () => {

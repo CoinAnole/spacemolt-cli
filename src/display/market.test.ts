@@ -1570,6 +1570,29 @@ test('browse_ships listing with ship_id, a numeric price, hull, and shield 0 pri
   expect(stdout).not.toContain('Shield');
 });
 
+test('browse_ships listing with price 0 prints Price: 0 credits', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 0,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Price: 0 credits');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('browse_ships listing with scale 0 prints the ship name and omits (Scale', () => {
   const stdout = renderStructuredResult(
     'browse_ships',
@@ -1924,6 +1947,27 @@ test('view_ship_buy_orders price of 0 prints Price: 0 credits', () => {
   expect(stdout).toContain('Price: 0 credits');
 });
 
+test('view_ship_buy_orders tax escrow 0 prints Tax escrow: 0 credits', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Earth Station',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+          tax_escrow: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Tax escrow: 0 credits');
+});
+
 test('view_ship_buy_orders row with class_id and no class_name prints prospector (prospector)', () => {
   const stdout = renderStructuredResult(
     'view_ship_buy_orders',
@@ -2113,6 +2157,30 @@ test('browse_ships listing with tier and no category prints T2', () => {
 
   expect(stdout).toContain('T2');
   expect(stdout).not.toContain(' - ');
+});
+
+test('browse_ships listing with tier 0 prints the ship name and omits T0', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          tier: 0,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Lucky Strike');
+  expect(stdout).not.toContain('T0');
 });
 
 test('two-item view_market summary blanks Best Buy when price_each is an unsafe bigint', () => {
@@ -2310,4 +2378,32 @@ test('faction bulk buy prints Sales when the bucket is Sales and consolidated is
   expect(stdout).toContain('Sales');
   expect(stdout).not.toContain('(consolidated)');
   expect(stdout).not.toContain('(separate)');
+});
+
+test('faction bulk buy bigint price_each prints the exact locale digits', () => {
+  const priceEach = 9007199254740993n;
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          price_each: priceEach,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(`${priceEach.toLocaleString()} cr`);
+  expect(stdout).not.toContain('9007199254740992');
 });

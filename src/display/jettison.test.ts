@@ -105,6 +105,23 @@ test('whitespace conversion output_item_id omits Output Item Id and prints Outpu
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('numeric conversion output_item_id declines to the raw response', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'purified_water',
+      quantity: 3,
+      conversion: {
+        output_item_id: 7,
+        output_quantity: 3,
+      },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Output Item Id');
+});
+
 test('omitted conversion prints no output lines', () => {
   const { stdout, stderr } = renderJettison('jettison', {
     details: {

@@ -746,6 +746,33 @@ test('formats active destination as name-only or contract base id when system is
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('formats active freight with destination_system and no destination_name as the contract base id', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 900,
+    shipments: [
+      {
+        contract: {
+          id: 'shipment-system-only-1',
+          package_id: 'package-system-only-1',
+          destination_base_id: 'nova_central',
+        },
+        role: 'carrier',
+        ticks_to_deadline: 10,
+        ticks_to_recovery_deadline: 100,
+        late: false,
+        payout_if_delivered_now: 1000,
+        package_in_your_cargo: true,
+        next_step: 'Deliver while docked.',
+        destination_system: 'Polaris',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('nova_central');
+  expect(stdout).not.toContain('Polaris');
+});
+
 test('shipping_active ticks_to_deadline 0 prints 0 ticks', () => {
   const stdout = output('shipping_active', {
     action: 'active',
@@ -1336,4 +1363,22 @@ test('freight quote appraisal line with confidence and no basis prints high with
 
   expect(stdout).toContain('high');
   expect(stdout).not.toContain('high /');
+});
+
+test('freight quote appraisal line with basis and no confidence prints the basis without a slash', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      appraisal_lines: [
+        {
+          item_id: 'iron_ore',
+          basis: 'completed-fill VWAP',
+        },
+      ],
+    },
+  });
+
+  const basisLine = stdout.split('\n').find((line) => line.includes('completed-fill VWAP'));
+  expect(basisLine).toContain('completed-fill VWAP');
+  expect(basisLine).not.toContain('/');
 });

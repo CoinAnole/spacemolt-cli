@@ -539,10 +539,7 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
 
 function isMapSystemInfo(result: Record<string, unknown>): boolean {
   return (
-    typeof result.system_id === 'string' &&
-    result.system_id.length > 0 &&
-    typeof result.name === 'string' &&
-    !Array.isArray(result.systems)
+    usableLabel(result.system_id) !== undefined && typeof result.name === 'string' && !Array.isArray(result.systems)
   );
 }
 
@@ -712,7 +709,9 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
     }
   } else {
     const primary =
-      typeof record.primary_color === 'string' && record.primary_color.trim() !== '' ? record.primary_color : undefined;
+      typeof record.primary_color === 'string' && chartDescription(record.primary_color)
+        ? record.primary_color
+        : undefined;
     const secondary =
       typeof record.secondary_color === 'string' && record.secondary_color.trim() !== ''
         ? record.secondary_color

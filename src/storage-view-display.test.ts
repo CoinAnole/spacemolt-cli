@@ -20,6 +20,14 @@ describe('parseStorageInventoryHint', () => {
     });
   });
 
+  test('parseStorageInventoryHint returns undefined when station tokens are blank', () => {
+    expect(parseStorageInventoryHint('5 items in storage at ,')).toBeUndefined();
+  });
+
+  test('parseStorageInventoryHint returns undefined for a non-finite quantity', () => {
+    expect(parseStorageInventoryHint(`${'1'.repeat(400)} items in storage at earth_station`)).toBeUndefined();
+  });
+
   test('parses faction storage hints and preserves bunker suffix', () => {
     expect(
       parseStorageInventoryHint(

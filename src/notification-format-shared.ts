@@ -72,7 +72,7 @@ export function formatOfflineCollapsedText(value: unknown): string | undefined {
 export function formatShipCountsLine(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const keys = Object.keys(value)
-    .filter((key) => key.trim() !== '')
+    .filter((key) => nonEmptyString(key) !== undefined)
     .sort((a, b) => a.localeCompare(b));
   const pairs: string[] = [];
   for (const key of keys) {
@@ -2836,7 +2836,8 @@ const OK_ARRIVAL_LABELS: Readonly<Record<string, string>> = {
 
 /** Finite numbers and bigints, including 0. No string coercion. */
 function arrivalCountText(value: unknown): string | undefined {
-  if (typeof value === 'bigint') return value.toString();
+  const digits = exactIntegerDigits(value);
+  if (digits !== undefined) return digits;
   if (finiteNumber(value) !== undefined) return String(value);
   return undefined;
 }
@@ -3840,10 +3841,6 @@ export function normalizeNotification(notification: unknown): NormalizedNotifica
   };
 }
 
-/**
- * Try a typed PREVIEW_HANDLERS entry only.
- * Returns null when no handler is registered, the handler returns null, or the handler throws.
- */
 export function tryTypedNotificationPreview(
   notification: unknown,
   options?: NotificationPreviewOptions,
