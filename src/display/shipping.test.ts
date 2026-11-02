@@ -1240,3 +1240,20 @@ test('surfaces late flag on overdue return settlement', () => {
   expect(stdout).toContain('Late delivery: yes');
   expect(stdout).not.toContain('=== Response ===');
 });
+
+test('freight quote appraisal line with confidence and no basis prints high without a slash', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      appraisal_lines: [
+        {
+          item_id: 'iron_ore',
+          confidence: 'high',
+        },
+      ],
+    },
+  });
+
+  expect(stdout).toContain('high');
+  expect(stdout).not.toContain('high /');
+});

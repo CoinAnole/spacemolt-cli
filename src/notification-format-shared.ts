@@ -607,7 +607,6 @@ function previewActionResult(
   const tick = safeScalar(data.tick);
   const result = isRecord(data.result) ? data.result : undefined;
 
-  // Event commands never get the "{command} completed" form.
   let headline =
     command !== undefined && NON_COMPLETION_ACTION_RESULT_COMMANDS.has(command)
       ? actionResultEventHeadline(command, tick, data)

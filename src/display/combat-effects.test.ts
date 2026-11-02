@@ -263,6 +263,10 @@ test('summarizeCombatSpecialEffects formats booleans, durations, and split dot t
   expect(summarizeCombatSpecialEffects({ mine_duration: 4 })).toBe('mine duration 4 ticks');
 });
 
+test('a negative duration combat effect is omitted', () => {
+  expect(summarizeCombatSpecialEffects({ duration_ticks: -1 })).toBe('');
+});
+
 test('summarizeCombatSpecialEffects walks label map before unmapped own keys', () => {
   expect(
     summarizeCombatSpecialEffects({
@@ -415,6 +419,12 @@ test('armor melt without ticks prints the percent alone', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2 } } })).toBe('armor melt 20%');
 });
 
+test('armor melt with zero ticks prints the percent alone', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2, armor_melt_ticks: 0 } } });
+  expect(summary).toBe('armor melt 20%');
+  expect(summary).not.toContain('/0t');
+});
+
 test('a burn with ticks prints the percent and duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2, dot_ticks: 4 } } })).toBe('burn 20%/4t');
 });
@@ -445,6 +455,10 @@ test('anti_drone_mod 0.1 prints drone +10%', () => {
 
 test('disrupt ticks prints the duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 2 } } })).toBe('disrupt 2 ticks');
+});
+
+test('disrupt ticks of 0 prints no disrupt duration', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 0 } } })).toBe('');
 });
 
 test('bonus disrupt ticks prints bonus disrupt 2 ticks', () => {
@@ -502,6 +516,16 @@ test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ stat: 'hull_regen', amount: 5 }] }), {
     plain: true,
   });
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
+test('a non-record active buff is skipped', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitShipCombatEffects({ active_buffs: [null, { stat: 'hull_regen', amount: 5 }] }),
+    { plain: true },
+  );
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
 });
 

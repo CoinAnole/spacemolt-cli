@@ -688,6 +688,19 @@ test('get_ship and get_state module tables print magazine fields when present', 
   expect(bareRow).not.toContain('[object Object]');
 });
 
+test('get_ship module table prints a bigint current_ammo as the full digit string', () => {
+  const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+  const gun = fixture.modules[0];
+  if (!gun) throw new Error('ship fixture is missing its first module');
+  const digits = '9007199254740993';
+  gun.current_ammo = BigInt(digits);
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  const header = modulesHalf.split('\n').find((line) => line.includes('Slot') && line.includes('ID')) ?? '';
+  const gunRow = tableRow(modulesHalf, 'Cargo Expander III');
+  expect(moduleCell(gunRow, header, 'Current ammo')).toBe(digits);
+});
+
 test('get_ship does not flag per-module CPU or Power', () => {
   const stdout = renderShip(shipOverCapacityFixture).stdout.join('\n');
   const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';

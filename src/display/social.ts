@@ -1174,10 +1174,6 @@ function ranchPercent(value: number): string {
   return `${Number((value * 100).toFixed(1)).toLocaleString()}%`;
 }
 
-function ranchRate(value: number): string {
-  return Number(value.toFixed(2)).toLocaleString();
-}
-
 function ranchCullTarget(value: number): string {
   return value === 0 ? 'disabled (0)' : value.toLocaleString();
 }
@@ -1257,7 +1253,7 @@ function renderRanchStatus(result: Record<string, unknown>): boolean {
     `Range health: ${ranchPercent(result.range_health as number)} | Fed: ${ranchPercent(result.fed_fraction as number)} | Supplies: ${result.supplies_ok ? 'yes' : 'no'}`,
   );
   emitLine(
-    `Growth: ${ranchRate(result.growth_per_cycle as number)}/cycle | Cull target: ${ranchCullTarget(result.cull_target as number)} | Cull cap: ${(result.max_cull_per_cycle as number).toLocaleString()}/cycle`,
+    `Growth: ${Number((result.growth_per_cycle as number).toFixed(2)).toLocaleString()}/cycle | Cull target: ${ranchCullTarget(result.cull_target as number)} | Cull cap: ${(result.max_cull_per_cycle as number).toLocaleString()}/cycle`,
   );
   emitLine(`Wild population: ${(result.wild_population as number).toLocaleString()}`);
   emitLine(

@@ -155,6 +155,17 @@ describe('find_route formatter', () => {
     expect(stdout).toContain('Then travel: (empty)');
   });
 
+  test('prints Then travel: (empty) when target poi name and id are whitespace', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        target_poi_name: '   ',
+        target_poi: '\t',
+      }),
+    );
+    const line = stdout.split('\n').find((entry) => entry.startsWith('Then travel:'));
+    expect(line).toBe('Then travel: (empty)');
+  });
+
   test('prints Then travel: (empty) when target poi name and id are numbers', () => {
     const stdout = stdoutOf(
       foundBody({

@@ -411,6 +411,17 @@ test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and retur
   expect(printed).toBe(true);
 });
 
+test('null prize row is dropped and prints Prizes (1) and returns true', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [null, { prize_id: 'prize-1' }] }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (1):');
+  expect(stdout).toContain('prize-1');
+  expect(printed).toBe(true);
+});
+
 test('positive prizeCount with an empty prize array prints Prizes (4) and returns true', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   const printed = withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [], prizeCount: 4 }), {

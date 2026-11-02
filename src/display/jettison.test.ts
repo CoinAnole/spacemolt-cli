@@ -365,3 +365,20 @@ test('non-record jettison result row declines to the raw response', () => {
   expect(stdout).not.toContain('=== Create Sell Order ===');
   expect(stdout).not.toContain('=== Intel ===');
 });
+
+test('string conversion output_quantity declines to the raw response', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'purified_water',
+      quantity: 3,
+      conversion: {
+        output_item_id: 'water_ice',
+        output_quantity: '3',
+      },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Output Quantity:');
+});

@@ -1943,3 +1943,145 @@ test('browse_ships listing with hull 0 omits Hull', () => {
   expect(stdout).not.toContain('Hull');
   expect(stdout).toContain('Shield: 20');
 });
+
+test('two-item view_market summary blanks Best Buy when price_each is an unsafe bigint', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 9007199254740993n, quantity: 1 }],
+          sell_orders: [],
+        },
+        {
+          item_id: 'fuel_cell',
+          item_name: 'Fuel Cell',
+          buy_orders: [{ price_each: 22, quantity: 7 }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const iron = stdout.split('\n').find((line) => line.includes('ore_iron'));
+
+  expect(iron).toMatch(/ore_iron\s+\|\s+\|\s+\|/);
+  expect(stdout).not.toContain('9007199254740992');
+});
+
+test('two-item view_market summary treats a non-finite buy quantity string as depth 0', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 15, quantity: 'bad' }],
+          sell_orders: [],
+        },
+        {
+          item_id: 'fuel_cell',
+          item_name: 'Fuel Cell',
+          buy_orders: [{ price_each: 22, quantity: 7 }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('15 cr');
+  expect(stdout).toContain('0 / 1');
+  expect(stdout).not.toContain('NaN');
+});
+
+test('faction bulk buy prints filled 0 when quantity_listed is absent', () => {
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          quantity_filled: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('filled 0');
+  expect(stdout).not.toContain('0/');
+});
+
+test('faction bulk buy prints listed 0 when quantity_filled is absent', () => {
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          quantity_listed: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('listed 0');
+  expect(stdout).not.toContain('/0');
+});
+
+test('faction bulk buy prints separate when consolidated is false and bucket is absent', () => {
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          consolidated: false,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('separate');
+  expect(stdout).not.toContain('(separate)');
+});

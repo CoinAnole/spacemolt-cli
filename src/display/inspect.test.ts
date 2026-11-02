@@ -947,6 +947,28 @@ test('inspect package prints Size: 0 when package size is zero', () => {
   expect(stdout.split('\n')).toContain('Size: 0');
 });
 
+test('inspect package prints Size: null when package size is null', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_null',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_null',
+        label: 'Null crate',
+        size: null,
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Size: null');
+});
+
 test('omits Size when a package omits size', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2010,6 +2032,26 @@ test('omits the Page line for a catalog with no page, total_pages, or total', ()
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Catalog (items)');
   expect(stdout).not.toContain('Page ');
+});
+
+test('prints Page ?/? (? total) when only the catalog page is null', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'null_page_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        page: null,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Page ?/? (? total)');
 });
 
 test('inspect catalog prints Entries and omits Details when more than one item is returned', () => {
@@ -3981,6 +4023,39 @@ test('omits Resources when detail.resources is empty and summary has a resource 
   expect(stdout).not.toContain('Resources');
 });
 
+test('omits Resources when detail.resources strings are not records and does not print a summary resource id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          resources: [{ resource_id: 'iron_ore', remaining: 5000, richness: 3 }],
+        },
+        detail: {
+          resources: ['RAW_DETAIL_RESOURCE', 'RAW_DETAIL_NEXT'],
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('Resources');
+  expect(stdout).not.toContain('RAW_DETAIL_RESOURCE');
+  expect(stdout).not.toContain('RAW_DETAIL_NEXT');
+  expect(stdout).not.toContain('iron_ore');
+});
+
 test('prints Active battle when detail.active_battle.battle_id is set', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4008,6 +4083,33 @@ test('prints Active battle when detail.active_battle.battle_id is set', () => {
   expect(stdout.split('\n')).toContain('Active battle: battle-9');
 });
 
+test('prints Active battle: 0 when a POI active_battle battle_id is 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          active_battle: {
+            battle_id: 0,
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Active battle: 0');
+});
+
 test('omits Active battle for an active_battle record without a battle_id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4032,6 +4134,33 @@ test('omits Active battle for an active_battle record without a battle_id', () =
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('POI: Main Belt');
   expect(stdout).not.toContain('Active battle');
+});
+
+test('omits Active battle when active_battle is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          active_battle: 'BATTLE_RAW',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Active battle');
+  expect(stdout).not.toContain('BATTLE_RAW');
 });
 
 test('renders a POI wormhole that expires in 0', () => {
@@ -4648,6 +4777,29 @@ test('prints Base: yes when has_base is true without base_name or base_id', () =
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Base: yes');
+});
+
+test('prints Base: yes when base_name is only spaces and base_id is absent', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          base_name: '   ',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Base:'));
+  expect(line).toBe('Base: yes');
+  expect(stdout).not.toContain('   ');
 });
 
 test('prints Base: Earth Station when base_name is set and has_base is not true', () => {
@@ -5309,6 +5461,32 @@ test('omits Services when a station services array is empty', () => {
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Station: Earth Station');
   expect(stdout).not.toContain('Services:');
+});
+
+test('omits Services when a station services value is a non-array string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          empire: 'solarian',
+        },
+        services: 'SERVICE_RAW',
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('Services:');
+  expect(stdout).not.toContain('SERVICE_RAW');
 });
 
 test('renders base inspect identity without POI when poi_id is absent', () => {

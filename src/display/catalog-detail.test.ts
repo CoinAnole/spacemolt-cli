@@ -365,6 +365,12 @@ test('hidden module prints Hidden: yes', () => {
   expect(buffer.stdout.join('\n')).toContain('Hidden: yes');
 });
 
+test('truthy non-boolean hidden omits Hidden', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ hidden: 1 }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).not.toContain('Hidden');
+});
+
 test('module class_name prints Class: Shield', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ class_name: 'Shield' }, {}), { plain: true });
@@ -409,8 +415,25 @@ test('build material quantity 0 prints 0x station_core', () => {
   expect(line).toBe('Build materials: 0x station_core');
 });
 
+test('ship build materials prefer name over item_id', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () =>
+      emitCatalogShipDetail({ build_materials: [{ name: 'Steel Plate', item_id: 'steel_plate', quantity: 2 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 2x Steel Plate');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
+});
+
+test('non-array summarizeNamedItemQuantities returns empty', () => {
+  expect(summarizeNamedItemQuantities(undefined)).toBe('');
+  expect(summarizeNamedItemQuantities('steel')).toBe('');
 });
 
 test('non-record rows print 2x Steel Plate', () => {
@@ -429,6 +452,12 @@ test('item_name is preferred over item_id', () => {
   expect(summarizeNamedItemQuantities([{ item_name: 'Plate', item_id: 'plate', quantity: 1 }])).toBe('1x Plate');
 });
 
+test('name is preferred over item_name', () => {
+  expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', item_name: 'Plate', quantity: 1 }])).toBe(
+    '1x Steel Plate',
+  );
+});
+
 test('non-string id returns empty from joinStringIds', () => {
   expect(joinStringIds(['laser', 1])).toBe('');
 });
@@ -439,6 +468,11 @@ test('joinStringIds drops empty strings', () => {
 
 test('empty id array returns empty from joinStringIds', () => {
   expect(joinStringIds([])).toBe('');
+});
+
+test('non-array joinStringIds returns empty', () => {
+  expect(joinStringIds(undefined)).toBe('');
+  expect(joinStringIds('laser')).toBe('');
 });
 
 test('non-string passive recipes are dropped', () => {
@@ -483,6 +517,16 @@ test('empty capability array omits Capabilities', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [] }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).not.toContain('Capabilities');
+});
+
+test('blank capability record prints Capabilities: cloak without a leading comma', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [{}, { type: 'cloak' }] }, {}), {
+    plain: true,
+  });
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+  expect(line).not.toContain(',');
 });
 
 test('whitespace capability flag prints Capabilities: cloak', () => {

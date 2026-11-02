@@ -522,3 +522,54 @@ test('renders an empty sales-tax reason without a parenthetical', () => {
   const ratesLine = stdout.split('\n').find((line) => line.startsWith('Sales tax rates:'));
   expect(ratesLine).toBe('Sales tax rates: solarian 1%');
 });
+
+test('prints the Tax Estimate header and omits Income tax when income_tax is empty', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: '',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Tax Estimate ===');
+  expect(stdout).not.toContain('Income tax');
+});
+
+test('omits Foreign Overrides when foreign_sales_tax_bps is an empty map', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          foreign_sales_tax_bps: {},
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Empire Policy ===');
+  expect(stdout).not.toContain('Foreign Overrides');
+});
+
+test('prints property tax brackets when a bracket has lower and upper bounds', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      property_tax: [
+        {
+          brackets: [{ lower_bound: 10, upper_bound: 250 }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const propertyLine = stdout.split('\n').find((line) => line.startsWith('Property tax:'));
+  expect(propertyLine).toContain('brackets 10-250');
+});

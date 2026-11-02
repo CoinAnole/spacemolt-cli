@@ -11903,6 +11903,74 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
       expect(formatNotificationMessage(notification)).toBe(preview.headline);
     });
+
+    test('completed crafting job includes 2 runs left, completed', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          jobs: [{ recipe: 'Power Cell', runs_remaining: 2, completed: true }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('2 runs left, completed');
+    });
+
+    test('market update with tick 0', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: { base_name: 'Empty Dock', tick: 0, items: [] },
+      };
+      expect(formatNotificationMessage(notification)).toContain('tick 0');
+    });
+
+    test('market update with no station name or id', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: { items: [] },
+      };
+      expect(formatNotificationMessage(notification)).toContain('current station');
+    });
+
+    test('market item with no name or id', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: {
+          base_name: 'Haven Exchange',
+          items: [{ sell_orders: [], buy_orders: [] }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('unknown item');
+    });
+
+    test('crafting summary with one active job', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_summary',
+        data: { count: 1, jobs: 1 },
+      };
+      expect(formatNotificationMessage(notification)).toContain('1 active job');
+    });
+
+    test('crafting summary with two rental jobs', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_summary',
+        data: { count: 2, rental_jobs: 2 },
+      };
+      expect(formatNotificationMessage(notification)).toContain('2 on rented facilities');
+    });
+
+    test('crafting summary with escrowed_credits 0', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_summary',
+        data: { count: 1, escrowed_credits: 0 },
+      };
+      expect(formatNotificationMessage(notification)).toContain('0cr still escrowed');
+    });
   });
 
   describe('gift_received pure preview', () => {

@@ -350,6 +350,16 @@ test('arena status without an xp cap prints Arena XP today', () => {
   expect(stdout).not.toContain('(cap ');
 });
 
+test('arena XP skills without a cap leave Remaining blank', () => {
+  const incoming = { ...arenaStatusIncomingFixture };
+  delete incoming.xp_cap_per_skill;
+  const stdout = output('arena_status', incoming);
+  const gunnery = stdout.split('\n').find((line) => line.includes('gunnery')) ?? '';
+  expect(gunnery).toContain('120');
+  expect(gunnery).not.toContain('380');
+  expect(gunnery).not.toContain('(cap ');
+});
+
 test('renders incoming challenge and XP remaining with deterministic skill sort', () => {
   const stdout = output('arena_status', arenaStatusIncomingFixture);
   expect(stdout).toContain('Incoming challenge from Kestrel (player-77)');
@@ -450,6 +460,12 @@ test('declines malformed arena shapes and keeps the raw fallback', () => {
   expect(output('arena_status', { at_arena: 'yes', arena_wins: 3 })).toContain('=== Response ===');
   expect(output('arena_accept', { details: { action: 'accept', battle_id: 'btl-5c3' } })).toContain('=== Response ===');
   expect(output('arena_decline', { details: { action: 'decline' } })).toContain('=== Response ===');
+});
+
+test('arena status declines when the win record is incomplete', () => {
+  const stdout = output('arena_status', { at_arena: true, arena_wins: 3, arena_losses: 1 });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Arena ===');
 });
 
 test('trialReadiness keeps wins as a badge and carries travel/locked payloads', () => {

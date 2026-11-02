@@ -580,7 +580,7 @@ function emitMapSystemInfo(result: Record<string, unknown>): void {
   const position = formatGalacticPosition(result.position);
   if (position) emitLine(`Position: ${position}`);
   if (result.visited !== undefined) emitLine(`Visited: ${result.visited}`);
-  if (typeof result.visited_at === 'string' && result.visited_at) {
+  if (usableLabel(result.visited_at)) {
     emitLine(`Visited at: ${result.visited_at}`);
   }
   const description = chartDescription(result.description);

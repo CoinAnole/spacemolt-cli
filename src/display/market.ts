@@ -234,20 +234,6 @@ function formatOrderPage(result: Record<string, unknown>): string {
   return `page ${page}/${totalPages}`;
 }
 
-function marketOrderRows(orders: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  return orders.map((order) => ({
-    ...order,
-    item_display: rowValue(order, ['item_name', 'item_id']),
-    side_display: rowValue(order, ['side', 'type']),
-    open_quantity_display: formatOpenQuantity(order),
-    filled_display: formatDisplayNumber(order.filled_quantity),
-    price_display: formatCreditCell(firstDisplayValue(order, ['price_each', 'price'])),
-    fee_display: formatCreditCell(order.listing_fee),
-    created_preview: formatTimestampPreview(order.created_at),
-    id_display: rowValue(order, ['order_id', 'listing_id', 'id']),
-  }));
-}
-
 function printMarketOrders(result: Record<string, unknown>, orders: Array<Record<string, unknown>>): void {
   emitLine(`\n${c.bright}=== Orders ===${c.reset}`);
   const context = [result.base, result.scope, result.sort_by, formatOrderCount(result.total), formatOrderPage(result)]
@@ -256,16 +242,30 @@ function printMarketOrders(result: Record<string, unknown>, orders: Array<Record
   if (context) emitLine(context);
   if (!isMissingDisplayValue(result.hint)) emitLine(String(result.hint));
 
-  const lines = formatCompactTable('Orders', marketOrderRows(orders), [
-    ['Item', ['item_display']],
-    ['Side', ['side_display']],
-    ['Open/Qty', ['open_quantity_display']],
-    ['Filled', ['filled_display']],
-    ['Price', ['price_display']],
-    ['Fee', ['fee_display']],
-    ['Created', ['created_preview']],
-    ['ID', ['id_display']],
-  ]);
+  const lines = formatCompactTable(
+    'Orders',
+    orders.map((order) => ({
+      ...order,
+      item_display: rowValue(order, ['item_name', 'item_id']),
+      side_display: rowValue(order, ['side', 'type']),
+      open_quantity_display: formatOpenQuantity(order),
+      filled_display: formatDisplayNumber(order.filled_quantity),
+      price_display: formatCreditCell(firstDisplayValue(order, ['price_each', 'price'])),
+      fee_display: formatCreditCell(order.listing_fee),
+      created_preview: formatTimestampPreview(order.created_at),
+      id_display: rowValue(order, ['order_id', 'listing_id', 'id']),
+    })),
+    [
+      ['Item', ['item_display']],
+      ['Side', ['side_display']],
+      ['Open/Qty', ['open_quantity_display']],
+      ['Filled', ['filled_display']],
+      ['Price', ['price_display']],
+      ['Fee', ['fee_display']],
+      ['Created', ['created_preview']],
+      ['ID', ['id_display']],
+    ],
+  );
 
   for (const line of lines.slice(1)) emitLine(line);
 }

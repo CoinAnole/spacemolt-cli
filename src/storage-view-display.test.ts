@@ -123,6 +123,19 @@ describe('rewriteStorageViewHint', () => {
 
     expect(rewritten.hint).toBe('0 items in storage at alpha (100 total across 2 stations)');
   });
+
+  test('rewrites a multi-station hint whose parsed total is not greater than the local quantity', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        hint: '0 items in storage at alpha, beta',
+        items: [{ item_id: 'ore', quantity: 40 }],
+      },
+      { requestedStationId: 'alpha' },
+    );
+
+    expect(rewritten.hint).toBe('40 items in storage at alpha');
+    expect(rewritten.hint).not.toContain('total across');
+  });
 });
 
 describe('enrichStorageViewStructuredContent', () => {

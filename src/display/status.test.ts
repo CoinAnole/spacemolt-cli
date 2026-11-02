@@ -246,6 +246,37 @@ test('remote poi scan prints cloaked no', () => {
   expect(players).not.toContain('yes');
 });
 
+test('remote poi scan omits a whitespace pirate role', () => {
+  const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  const pirates = fixture.pirates as Array<Record<string, unknown>>;
+  const pirate = pirates[0];
+  if (!pirate) throw new Error('expected scan pirate');
+  delete pirate.faction_name;
+  delete pirate.faction;
+  pirate.role = '   ';
+  const stdout = renderScan(fixture);
+  const line = stdout.split('\n').find((entry) => entry.includes('Raider'));
+  expect(line).toBe('  Raider (skiff)');
+});
+
+test('remote poi scan drops blank revealed_info entries', () => {
+  const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  const contacts = fixture.contacts as Array<Record<string, unknown>>;
+  const contact = contacts[0];
+  if (!contact) throw new Error('expected scan contact');
+  contact.revealed_info = ['', 'hull', null, 1, false];
+  const stdout = renderScan(fixture);
+  const playersStart = stdout.indexOf('=== Players ===');
+  const playersEnd = stdout.indexOf('=== Empire NPCs ===');
+  const players = stdout.slice(playersStart, playersEnd);
+  const lines = players.split('\n');
+  const header = lines.find((line) => line.includes('|') && line.includes('Revealed'));
+  const row = lines.find((line) => line.includes('|') && line.includes('Wisp') && !line.includes('---'));
+  const headers = (header ?? '').split('|').map((part) => part.trim());
+  const cells = (row ?? '').split('|').map((part) => part.trim());
+  expect(cells[headers.indexOf('Revealed')]).toBe('hull');
+});
+
 test('remote poi scan with omitted lists prints only the header', () => {
   const stdout = renderScan(scanPoiEmptyFixture);
 
@@ -4686,6 +4717,24 @@ test('get_nearby prints a question mark for a missing creature hull side', () =>
   expect(stdout).toContain('hull ?/40');
 });
 
+test('get_nearby prints a question mark when hull is set and max_hull is omitted', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [
+      {
+        creature_id: 'creature-wild-1',
+        name: 'Belt-Grazer',
+        species: 'belt_grazer',
+        role: 'grazer',
+        hull: 40,
+      },
+    ],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('hull 40/?');
+});
+
 test('get_nearby prints creature hull 0', () => {
   const stdout = renderNearbyTable('get_nearby', {
     nearby: [],
@@ -5435,6 +5484,20 @@ test('get_state prints empire NPC rows and combat only for the fighting contact'
   expect(clerk).not.toContain('in combat');
 });
 
+test('get_state prints one ship token when empire NPC ship name and class match', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as {
+    location: { nearby_empire_npcs: Array<Record<string, unknown>> };
+  };
+  const npc = fixture.location.nearby_empire_npcs[0];
+  if (!npc) throw new Error('expected empire npc');
+  npc.ship_name = 'Aegis';
+  npc.ship_class = 'Aegis';
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('(Aegis)');
+  expect(stdout).not.toContain('(Aegis / Aegis)');
+});
+
 test('get_state with empty details still prints the envelope player', () => {
   const stdout = renderStructuredResult(
     'get_state',
@@ -5753,6 +5816,32 @@ test('get_state boolean false module stats print active no', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('active no');
+});
+
+test('get_state array module stats print the JSON array text', () => {
+  const tags = ['alpha', 'beta'];
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'array-1',
+          name: 'Mode Shield',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 5,
+          power_usage: 10,
+          stats: { tags },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  const row = modulesHalf.split('\n').find((line) => line.includes('Mode Shield')) ?? '';
+  expect(row).toContain(JSON.stringify(tags));
 });
 
 const SHORT_DOCKED_NO = '  Docked: No';

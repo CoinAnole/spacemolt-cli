@@ -342,3 +342,13 @@ test('citizenship list omits Reason when empires have no ineligible_reason', () 
   expect(stdout).toContain('=== Empires ===');
   expect(stdout).not.toContain('Reason');
 });
+
+test('citizenship apply omits Status when status is an empty string', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    empire_id: 'solarian',
+    status: '',
+  });
+
+  expect(stdout).toContain('=== Citizenship Application ===');
+  expect(stdout).not.toContain('Status:');
+});

@@ -347,3 +347,59 @@ test('prints data.type in the Type cell when msg_type and type are omitted', () 
   const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
   expect(typeCell).toBe('gameplay_tip');
 });
+
+test('prints count 0 and not count 1 when one notification is present', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 0,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('count 0');
+  expect(stdout).not.toContain('count 1');
+});
+
+test('prints a non-ISO notification timestamp string unchanged in the Timestamp cell', () => {
+  const timestamp = 'not-a-date';
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Timestamp'));
+  const timestampCell = dataRow?.split('|').map((cell) => cell.trim())[0];
+  expect(timestampCell).toBe(timestamp);
+});
+
+test('ignores a string count and prints the notification array length', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: '9',
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('count 1');
+  expect(stdout).not.toContain('count 9');
+});

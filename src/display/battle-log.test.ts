@@ -1181,4 +1181,22 @@ describe('battleLogAttackRows', () => {
       ])[0]?.defense,
     ).toBe('');
   });
+
+  test('a weapon with only hit_success true prints a hit row', () => {
+    const rows = battleLogAttackRows([
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            weapons: [{ instance_id: 'w-pulse', hit_success: true }],
+            defense_components: [pulseLaserComponent()],
+          },
+        ],
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.hit).toBe('hit');
+  });
 });
