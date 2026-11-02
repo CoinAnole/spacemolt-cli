@@ -1041,6 +1041,33 @@ test('renders system inspect results with faction intel', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints exactly Known POIs (2): Earth Station, Main Belt for two named POIs', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        pois: [
+          { id: 'earth_station', name: 'Earth Station' },
+          { id: 'main_belt', name: 'Main Belt' },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Known POIs'));
+  expect(line).toBe('Known POIs (2): Earth Station, Main Belt');
+});
+
 test('omits Visited at when visited_at is only spaces', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1269,6 +1296,25 @@ test('prints Station: earth_station when a base has an id and no name', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Station: earth_station');
+});
+
+test('prints Station: undefined when a base has neither name nor id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {},
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Station: undefined');
 });
 
 test('prints Name: Sol for the system faction-intel name', () => {
@@ -1800,6 +1846,26 @@ test('prints Page 1/? (? total) when only the catalog page is set', () => {
   expect(stdout.split('\n')).toContain('Page 1/? (? total)');
 });
 
+test('prints Page ?/? (0 total) when only the catalog total is 0', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'total_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        total: 0,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Page ?/? (0 total)');
+});
+
 test('prints Page 0/2 (0 total) for a zero catalog page', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1870,6 +1936,48 @@ test('inspect catalog prints Entries and omits Details when more than one item i
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('=== Entries ===');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('=== Entry ===');
+});
+
+test('omits Slot from the entry header and omits Details for two slotted item rows', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'modules',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [
+          {
+            id: 'warp_scrambler',
+            name: 'Warp Scrambler',
+            category: 'utility',
+            size: 10,
+            base_value: 4500,
+            slot: 'utility',
+          },
+          {
+            id: 'adaptive_shield',
+            name: 'Adaptive Shield',
+            category: 'defense',
+            size: 10,
+            base_value: 21000,
+            slot: 'defense',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const entryHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Category'));
+  expect(stdout.split('\n')).toContain('=== Entries ===');
+  expect(entryHeader).toBeDefined();
+  expect(entryHeader).not.toContain('Slot');
   expect(stdout).not.toContain('Details');
   expect(stdout).not.toContain('=== Entry ===');
 });
@@ -1976,6 +2084,31 @@ test('omits Raw materials when catalog analysis has no raw_materials', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Analysis');
   expect(stdout).not.toContain('Raw materials:');
+});
+
+test('prints Analysis and omits Raw materials when raw_materials are non-records', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {
+          raw_materials: ['RAW_MATERIAL_ENTRY', 'RAW_MATERIAL_NEXT'],
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Analysis');
+  expect(stdout).not.toContain('Raw materials:');
+  expect(stdout).not.toContain('RAW_MATERIAL_ENTRY');
+  expect(stdout).not.toContain('RAW_MATERIAL_NEXT');
 });
 
 test('prints Analysis and the raw materials quantity line for a catalog analysis record', () => {
@@ -2406,6 +2539,37 @@ test('omits Inputs when a single catalog recipe has no inputs', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Details');
   expect(stdout).not.toContain('Inputs:');
+});
+
+test('omits Inputs when a single catalog recipe has non-record inputs and does not print the raw entries', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'unpack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'unpack_package',
+            name: 'Unpack Package',
+            category: 'logistics',
+            crafting_time: 5,
+            inputs: ['RAW_INPUT_ENTRY', 'RAW_INPUT_NEXT'],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Inputs:');
+  expect(stdout).not.toContain('RAW_INPUT_ENTRY');
+  expect(stdout).not.toContain('RAW_INPUT_NEXT');
 });
 
 test('packageOperationLabel trims strings and maps booleans', () => {
@@ -4160,6 +4324,33 @@ test('prints the trimmed faction-intel POI description without the untrimmed sou
   const line = stdout.split('\n').find((entry) => entry.includes('Frozen survey note.'));
   expect(line).toBe(description.trim());
   expect(stdout).not.toContain(description);
+});
+
+test('omits a faction-intel POI description that is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+      },
+      faction_poi_intel: {
+        description: '   ',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).toContain('POI: Frozen Reach');
+  expect(stdout.split('\n')).not.toContain('   ');
 });
 
 test('prints Base: Intel Outpost for a faction-intel base', () => {
