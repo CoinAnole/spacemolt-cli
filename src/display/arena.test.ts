@@ -371,6 +371,15 @@ test('a non-finite arena XP skill lists gunnery and does not print NaN', () => {
   expect(gunnery).not.toContain('NaN');
 });
 
+test('arena status with xp_cap_per_skill 500 and xp_used_today gunnery 0 contains gunnery | 0', () => {
+  const stdout = output('arena_status', {
+    ...arenaStatusIdleFixture,
+    xp_cap_per_skill: 500,
+    xp_used_today: { gunnery: 0 },
+  });
+  expect(stdout).toContain('gunnery | 0');
+});
+
 test('null xp_used_today prints none today and does not list gunnery', () => {
   const stdout = output('arena_status', {
     ...arenaStatusIdleFixture,
@@ -470,6 +479,15 @@ test('an arena challenge with expires_tick NaN ends Expires with a newline and n
   const stdout = output('arena_challenge', { ...arenaChallengeFixture, details });
   expect(stdout).toContain('Expires: tick \n');
   expect(stdout).not.toMatch(/Expires: tick \d/);
+});
+
+test('an arena challenge with expires_tick 0 prints Expires: tick 0', () => {
+  const details = {
+    ...(arenaChallengeFixture.details as Record<string, unknown>),
+    expires_tick: 0,
+  };
+  const stdout = output('arena_challenge', { ...arenaChallengeFixture, details });
+  expect(stdout).toContain('Expires: tick 0');
 });
 
 test('renders challenge, decline, and cancel mutation copy', () => {

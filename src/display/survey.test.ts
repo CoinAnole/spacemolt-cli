@@ -682,6 +682,16 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
   expect(zero).not.toContain('Skill XP:');
 });
 
+test('survey_system prints Skill XP for a bigint zero gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: 0n };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning +0');
+});
+
 test('survey_system skips Skill XP when xp_gained is not a record', () => {
   const number = stdoutOf(
     clonePresent((details) => {
@@ -1006,6 +1016,40 @@ test('survey_system recognition declines when revealed lists are not arrays', ()
     survey_power: 1,
     newly_revealed: 'not-an-array',
     already_revealed: { nested: true },
+    extra: { nested: 'object' },
+  };
+
+  expect(surveyFormatters[0]?.(payload, 'survey_system')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Survey:');
+  expect(stdout).not.toContain('=== Location ===');
+  expect(stdout).not.toContain('=== Your Skills ===');
+});
+
+test('survey_system recognition declines when already_revealed is not an array', () => {
+  const payload = {
+    survey_power: 1,
+    newly_revealed: [],
+    already_revealed: { nested: true },
+    extra: { nested: 'object' },
+  };
+
+  expect(surveyFormatters[0]?.(payload, 'survey_system')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Survey:');
+  expect(stdout).not.toContain('=== Location ===');
+  expect(stdout).not.toContain('=== Your Skills ===');
+});
+
+test('survey_system recognition declines when newly_revealed is not an array', () => {
+  const payload = {
+    survey_power: 1,
+    newly_revealed: 'not-an-array',
+    already_revealed: [],
     extra: { nested: 'object' },
   };
 

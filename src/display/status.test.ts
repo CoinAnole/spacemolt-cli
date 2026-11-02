@@ -3505,6 +3505,19 @@ test('get_map system detail prints a zero galactic x', () => {
   expect(stdout).toContain('Position: (0, 4)');
 });
 
+test('get_map system detail omits Position when galactic y is missing', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, position: { x: 0 } },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== System: Veiled Reach ===');
+  expect(stdout).not.toContain('Position:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_map system detail omits Description when missing or whitespace-only', () => {
   const withoutDescription = structuredClone(getMapSystemFixture) as { description?: string };
   delete withoutDescription.description;
@@ -4901,6 +4914,17 @@ test('get_nearby prints every empire NPC row when the header is the array length
   expect(stdout).toContain('Empire NPCs (11):');
   expect(stdout.split('\n').some((line) => line.trim() === 'Patrol 11')).toBe(true);
   expect(stdout).not.toContain('... and');
+});
+
+test('get_nearby prints an empire-NPC remainder when empire_npc_count exceeds the rows', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    empire_npcs: [{ name: 'Patrol 1' }],
+    empire_npc_count: 4,
+  });
+
+  expect(stdout).toContain('Empire NPCs (4):');
+  expect(stdout).toContain('... and 3 more');
 });
 
 test('get_nearby falls back an empire NPC name to npc_id or Unknown', () => {

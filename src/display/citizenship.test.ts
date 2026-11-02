@@ -329,6 +329,20 @@ test('citizenship list skips non-string rules', () => {
   expect(stdout).not.toContain('hidden-rule-token');
 });
 
+test('citizenship list skips an empty string rule', () => {
+  const withEmpty = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    rules: ['', 'Visible rule.'],
+  });
+  const visibleOnly = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    rules: ['Visible rule.'],
+  });
+
+  expect(withEmpty.split('\n')).toEqual(visibleOnly.split('\n'));
+  expect(withEmpty).toContain('Visible rule.');
+});
+
 test('citizenship list omits Reason when empires have no ineligible_reason', () => {
   const stdout = stdoutOf('citizenship_list', {
     empires: [

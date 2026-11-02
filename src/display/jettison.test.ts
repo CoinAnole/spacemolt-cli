@@ -293,6 +293,19 @@ test('an unknown conversion field still dumps the response', () => {
   expect(stdout).toContain('bonus');
 });
 
+test('a nested object field beside action declines to the raw response', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'ore_iron',
+      note: { hidden: true },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Jettison ===');
+});
+
 test('json output stays the envelope', () => {
   const { stdout, stderr } = renderJettison('jettison', jettisonFreezeFixture, { format: 'json' });
   expect(stderr).toBe('');
@@ -320,6 +333,18 @@ test('blank jettison action with item_id prints === Result ===', () => {
 
   expect(stderr).toBe('');
   expect(stdout).toContain('=== Result ===');
+});
+
+test('omitted jettison action with item_id prints === Jettison ===', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      item_id: 'ore_iron',
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('=== Jettison ===');
+  expect(stdout).not.toContain('=== Result ===');
 });
 
 test('more than 16 jettison scalar fields decline to the raw response', () => {

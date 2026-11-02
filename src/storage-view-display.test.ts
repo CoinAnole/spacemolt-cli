@@ -84,6 +84,12 @@ describe('rewriteStorageViewHint', () => {
     expect(rewriteStorageViewHint(content)).toEqual(content);
   });
 
+  test('returns the same content for a non-string hint', () => {
+    const content = { hint: 12 };
+
+    expect(rewriteStorageViewHint(content)).toEqual(content);
+  });
+
   test('returns the same content for an unparseable storage hint', () => {
     const content = {
       base_id: 'earth_station',
@@ -158,6 +164,15 @@ describe('enrichStorageViewStructuredContent', () => {
 
     expect(enriched.target).toBe('self');
     expect(enriched.hint).toBe('70,269 items in storage at nova_terra_central (181,708 total across 2 stations)');
+  });
+
+  test('keeps an existing storage target when payloadTarget is self', () => {
+    const enriched = enrichStorageViewStructuredContent(
+      { target: 'faction', hint: '12 items in storage at earth_station' },
+      { payloadTarget: 'self' },
+    );
+
+    expect(enriched.target).toBe('faction');
   });
 });
 

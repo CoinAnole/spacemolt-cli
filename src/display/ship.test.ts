@@ -483,6 +483,19 @@ test('get_ship prints passive recipe ids', () => {
   expect(stdout).toContain('Passive Recipes: passive_refine_iron_ore');
 });
 
+test('get_ship prints zero and omitted passive-recipe quantities', () => {
+  const fixture = structuredClone(shipFixture) as Record<string, unknown>;
+  fixture.passive_recipe_details = [
+    {
+      inputs: [{ item_id: 'iron_ore', quantity: 0 }],
+      outputs: [{ item_id: 'fuel_cell' }],
+    },
+  ];
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('0x iron_ore');
+  expect(stdout).toContain('?x fuel_cell');
+});
+
 test('get_ship prints last process tick 0', () => {
   const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
   fixture.ship.last_process_tick = 0;

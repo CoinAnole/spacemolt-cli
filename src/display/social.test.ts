@@ -2806,6 +2806,21 @@ test('omits Medical when the pool is not a record and the heading when every poo
   }
 });
 
+test('facility_upgrades prints faction_upgrade_hint when hint is omitted', () => {
+  const stdout = renderStructuredResult(
+    'facility_upgrades',
+    {
+      upgrades: [{ current_level: 1 }],
+      faction_upgrade_hint: 'Dock at the facility to start an upgrade.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Dock at the facility to start an upgrade.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 const facilityTypeRentQuote =
   'Your quote at the docked station, per cycle (100 ticks). ' +
   "0 at your own faction's player station or outpost, where members pay no rent. " +

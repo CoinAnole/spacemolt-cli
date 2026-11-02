@@ -401,7 +401,7 @@ function bulkNumber(value: unknown): number | undefined {
 }
 
 function bulkText(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value : undefined;
+  return typeof value === 'string' && trimmedIntelText(value) !== undefined ? value : undefined;
 }
 
 function bulkItem(result: Record<string, unknown>): string {

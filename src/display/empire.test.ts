@@ -397,6 +397,26 @@ test('prints the facility rent multiplier as a Fees rent percentage', () => {
   expect(stdout).toContain('Fees: rent 150%');
 });
 
+test('prints a near-integer sales tax bps as a whole percent', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          sales_tax_bps: 100.1,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Taxes: Sales 1%');
+  expect(stdout).not.toContain('1.00');
+  expect(stdout).not.toContain('1.');
+});
+
 test('prints an omitted tax-bracket lower_bound as brackets 0-100', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -482,6 +502,23 @@ test('renders numeric period_started_at 0 as Period started: none', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Period started: none');
+});
+
+test('prints statement tick 0', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        tick: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Tick: 0');
 });
 
 test('prints an income_tax record note flat instead of the raw response dump', () => {
@@ -571,6 +608,23 @@ test('omits Foreign Overrides when foreign_sales_tax_bps is an empty map', () =>
 
   expect(stdout).toContain('=== Empire Policy ===');
   expect(stdout).not.toContain('Foreign Overrides');
+});
+
+test('prints Contraband None when contraband_items is omitted', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Contraband: None');
 });
 
 test('prints property tax brackets when a bracket has lower and upper bounds', () => {

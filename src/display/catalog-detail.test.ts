@@ -6,6 +6,7 @@ import {
   emitCatalogItemDetail,
   emitCatalogModuleDetail,
   emitCatalogShipDetail,
+  emitCatalogSkillDetail,
   formatCatalogYesNo,
   formatProducedByFacilities,
   formatProducedByFacilityIds,
@@ -243,6 +244,13 @@ test('catalogSkillTableColumns adds Empire only when empire_restriction is a non
   ]);
 });
 
+test('emitCatalogSkillDetail prints a whitespace empire_restriction as Empire: followed by those three spaces', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogSkillDetail({ empire_restriction: '   ' }), { plain: true });
+  const line = buffer.stdout.find((row) => row.startsWith('Empire:'));
+  expect(line).toBe(`Empire: ${'   '}`);
+});
+
 test('zero module bonus omits a Reach line and prints Scramble: 2', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ reach: 0, scramble_power: 2 }, {}), { plain: true });
@@ -339,6 +347,13 @@ test('whitespace description is omitted', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Class: Shuttle');
   expect(stdout).not.toContain('   ');
+});
+
+test('item description with surrounding spaces prints the padded liner line and not a trimmed one', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ description: '  liner  ' }, {}), { plain: true });
+  expect(buffer.stdout).toContain('  liner  ');
+  expect(buffer.stdout).not.toContain('liner');
 });
 
 test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', () => {
@@ -543,6 +558,16 @@ test('empty capability array omits Capabilities', () => {
   expect(buffer.stdout.join('\n')).not.toContain('Capabilities');
 });
 
+test('non-array inherent_capabilities cloak omits Capabilities and does not print cloak', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: 'cloak' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Capabilities');
+  expect(stdout).not.toContain('cloak');
+});
+
 test('blank capability record prints Capabilities: cloak without a leading comma', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [{}, { type: 'cloak' }] }, {}), {
@@ -581,6 +606,17 @@ test('ship capability value 0 prints Capabilities: cloak 0', () => {
     { plain: true },
   );
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak 0');
+});
+
+test('ship capability value false prints the exact line Capabilities: cloak false', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: false }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak false');
 });
 
 test('legacy-only ship prints Availability: legacy', () => {
@@ -665,6 +701,14 @@ test('empty category does not print Category:', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: '', type: 'ore' }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).not.toContain('Category:');
+});
+
+test('null size omits Size and base_value 2 prints Base value: 2', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ size: null, base_value: 2 }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Size');
+  expect(stdout).toContain('Base value: 2');
 });
 
 test('item tier prints Tier: 2', () => {

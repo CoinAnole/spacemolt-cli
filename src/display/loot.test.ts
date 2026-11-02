@@ -206,6 +206,18 @@ test('empty-string loot skill is omitted from Skill XP', () => {
   expect(stdout).not.toContain('armor');
 });
 
+test('null loot skill is omitted from Skill XP', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllXpFixture, (details) => {
+      details.xp_gained = { armor: null, scanning: 2 };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: scanning +2');
+  expect(stdout).not.toContain('armor');
+});
+
 test('all-loot Skill XP keeps skill order and signs negative values', () => {
   const stdout = stdoutOf(
     'loot_wreck',
@@ -218,6 +230,18 @@ test('all-loot Skill XP keeps skill order and signs negative values', () => {
   expect(stdout).toContain('Skill XP: scanning +2, armor -1,200');
   expect(stdout).not.toContain('Message:');
   expect(stdout.indexOf('adamant_tooth')).toBeLessThan(stdout.indexOf('Skill XP:'));
+});
+
+test('all-loot string skill value prints Skill XP without grouping', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.xp_gained = { armor: '1200' };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: armor +1200');
+  expect(stdout).not.toContain('Skill XP: armor +1,200');
 });
 
 test('all-loot blanks missing or non-numeric quantity cells and keeps partial rows', () => {

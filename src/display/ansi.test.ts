@@ -99,6 +99,10 @@ describe('ANSI display helpers', () => {
     expect(formatPlayer({})).toBe('Unknown');
   });
 
+  test('formatPlayer anonymous suppresses a present username', () => {
+    expect(formatPlayer({ anonymous: true, username: 'Nova' }, colorCodes(true), true)).toBe('[Anonymous]');
+  });
+
   test('formatPlayer colorizes the name from primary_color and secondary_color', () => {
     expect(
       formatPlayer({

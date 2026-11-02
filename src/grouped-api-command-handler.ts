@@ -1,5 +1,5 @@
 import type { SpaceMoltClient } from './api.ts';
-import { type CommandParseError, parseArgs, validateRequiredArgs } from './args.ts';
+import { parseArgs, validateRequiredArgs } from './args.ts';
 import type { CliRuntimeContext } from './cli-context.ts';
 import { type CommandGroupAction, groupActionDisplayName, groupedCommandParts } from './command-groups.ts';
 import type { CommandHandler, CommandParseResult } from './command-types.ts';
@@ -47,13 +47,6 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
     return { [this.name]: this.displayConfig() };
   }
 
-  private translateParseErrors(errors: CommandParseError[]): CommandParseError[] {
-    return errors.map((error) => ({
-      ...error,
-      message: error.message.replaceAll(this.action.command, this.name),
-    }));
-  }
-
   private humanDryRunOptions(options: GlobalOptions): boolean {
     const format = options.format ?? 'table';
     return (
@@ -92,7 +85,15 @@ export class GroupedApiCommandHandler implements CommandHandler<Record<string, u
 
     const parsedArgs = parseArgs(flatArgv, { allowUnknown: options.allowUnknown, registry: actionRegistry });
     if (!parsedArgs.ok) {
-      return { ok: false, error: validationErrorFromParseErrors(this.translateParseErrors(parsedArgs.errors)) };
+      return {
+        ok: false,
+        error: validationErrorFromParseErrors(
+          parsedArgs.errors.map((error) => ({
+            ...error,
+            message: error.message.replaceAll(this.action.command, this.name),
+          })),
+        ),
+      };
     }
 
     if (parsedArgs.payload.help === 'true' || parsedArgs.payload.help === '1') {

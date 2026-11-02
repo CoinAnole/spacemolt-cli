@@ -1773,7 +1773,7 @@ export const statusFormatters = [
       if (chartDescription(r.brand_faction)) {
         emitLine(`Brand: ${r.brand_faction}`);
       }
-      if (typeof r.brand_ranch === 'string' && r.brand_ranch.trim() !== '') {
+      if (chartDescription(r.brand_ranch)) {
         emitLine(`Ranch: ${r.brand_ranch}`);
       }
       emitScanRevealedInfo(r);

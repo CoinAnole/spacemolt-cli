@@ -557,6 +557,10 @@ test('disrupt speed prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_speed: 0.1 } } })).toBe('disrupt speed +10%');
 });
 
+test('disrupt_speed 0 prints disrupt speed 0%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_speed: 0 } } })).toBe('disrupt speed 0%');
+});
+
 test('burn without per-tick damage prints Effects and Burn: 3 ticks', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ burn_ticks_remaining: 3 }), { plain: true });
@@ -596,6 +600,14 @@ test('armor melt percent without remaining ticks prints Armor melt: 20%', () => 
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_pct: 0.2 }), { plain: true });
   expect(buffer.stdout).toEqual(['Effects:', '  Armor melt: 20%']);
+});
+
+test('armor_melt_pct 0 prints Armor melt: 0% and does not print active', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ armor_melt_pct: 0 }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Armor melt: 0%');
+  expect(stdout).not.toContain('active');
 });
 
 test('hull_regen buff equals Effects lines for Buff: hull_regen +5', () => {

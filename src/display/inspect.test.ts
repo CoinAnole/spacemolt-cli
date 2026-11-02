@@ -643,6 +643,32 @@ test('prints Contract and omits Ticks to deadline when ticks_to_deadline is NaN'
   expect(stdout).not.toContain('Ticks to deadline');
 });
 
+test('omits Ticks to deadline when ticks_to_deadline is not a number', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_string_deadline',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_string_deadline',
+        label: 'String deadline',
+        contents: [],
+        shipment: {
+          shipment_id: 'shipment-string-deadline',
+          ticks_to_deadline: '15',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contract: shipment-string-deadline');
+  expect(stdout).not.toContain('Ticks to deadline');
+});
+
 test('omits gated shipment fields when optional late fee is absent and late is false', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1465,6 +1491,27 @@ test('omits the Position line for a partial position with x 0 and no y', () => {
         system_id: 'sol',
         name: 'Sol',
         position: { x: 0 },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('Position');
+});
+
+test('omits the Position line when system position has y and no x', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        position: { y: 0 },
       },
     },
     options,

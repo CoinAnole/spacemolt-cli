@@ -2577,6 +2577,17 @@ describe('notification formatting', () => {
         expect(preview.headline).not.toContain('XP:');
       });
 
+      test('non-finite skill_xp count is omitted beside a finite sibling', () => {
+        const preview = formatNotificationPreview(
+          note('complete_mission', {
+            mission_title: 'Mayday at Cloudbank',
+            rewards: { skill_xp: { mining: Number.NaN, piloting: 12 } },
+          }),
+        );
+        expect(preview.headline).toBe('Mission complete: Mayday at Cloudbank — XP: piloting×12');
+        expect(preview.headline).not.toContain('NaN');
+      });
+
       test('title without rewards is Mission complete: title', () => {
         const preview = formatNotificationPreview(
           note('complete_mission', { mission_id: 'distress-1', mission_title: 'Mayday at Cloudbank' }),
@@ -11901,6 +11912,20 @@ describe('notification formatting', () => {
       };
       const message = formatNotificationMessage(notification);
       expect(message).toBe('7 action results summarized; g×7, f×6, e×5, d×4, c×3, b×2, +1 more');
+    });
+
+    test('blank count-map key is omitted while the positive command count prints', () => {
+      const notification = {
+        type: 'action',
+        msg_type: 'action_result_summary',
+        data: {
+          count: 4,
+          commands: { '   ': 9, jump: 4 },
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('4 action results summarized; jump×4');
+      expect(message).not.toContain('×9');
     });
 
     test('commission base id without a base name', () => {

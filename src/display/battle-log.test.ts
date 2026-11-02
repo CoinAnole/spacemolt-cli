@@ -228,6 +228,10 @@ describe('formatBattleDefenseLine', () => {
     );
   });
 
+  test('a component without weapon_name and incoming_damage 10 prints kinetic 10', () => {
+    expect(formatBattleDefenseLine({ damage_type: 'kinetic', incoming_damage: 10 }, 'component')).toBe('kinetic 10');
+  });
+
   test('prints a zero stage hop in the arrow chain', () => {
     expect(formatBattleDefenseLine(pulseLaserComponent({ after_shield_resist: 0 }), 'component')).toBe(
       'Pulse Laser kinetic 500→0→455→440 (S6 T3 F3)',

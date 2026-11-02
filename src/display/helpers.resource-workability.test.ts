@@ -93,4 +93,15 @@ describe('emitResourceInfoLines', () => {
     withDisplayRenderBuffer(buffer, () => emitResourceInfoLines([{ resource_id: 'ore_iron' }]), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('ore_iron');
   });
+
+  test('max_remaining 0 uses the remaining display instead of a ratio', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitResourceInfoLines([{ remaining: 5, remaining_display: '5 left', max_remaining: 0 }]),
+      { plain: true },
+    );
+    expect(buffer.stdout.join('\n')).toContain('5 left');
+    expect(buffer.stdout.join('\n')).not.toContain('/0');
+  });
 });

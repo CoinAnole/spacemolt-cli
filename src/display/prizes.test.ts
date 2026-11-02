@@ -222,6 +222,13 @@ test('declines missing prize_id to scalar dump without a hero line', () => {
   expect(stdout).toContain('Ship Id:');
 });
 
+test('numeric prize_id 1 omits the claim hero and Prize ID: 1 and prints Ship Id:', () => {
+  const stdout = renderClaim(claimDetails({ prize_id: 1 }));
+  expect(stdout).not.toContain('Captured Lark (skiff) →');
+  expect(stdout).not.toContain('Prize ID: 1');
+  expect(stdout).toContain('Ship Id:');
+});
+
 test('declines missing ship identity even when ship_id is present', () => {
   const stdout = renderClaim(claimDetails({ ship_name: '', ship_class: '' }));
   expect(stdout).not.toContain(' → Earth Station');
@@ -435,6 +442,17 @@ test('positive prizeCount with an empty prize array prints Prizes (4) and return
   expect(printed).toBe(true);
 });
 
+test('non-array prizes prize-1 with prizeCount 4 prints Prizes (4):, omits Prize ID, and returns true', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  const printed = withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: 'prize-1', prizeCount: 4 }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (4):');
+  expect(stdout).not.toContain('Prize ID');
+  expect(printed).toBe(true);
+});
+
 test('non-finite prizeCount falls back to the row count', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }], prizeCount: Infinity }), {
@@ -443,4 +461,14 @@ test('non-finite prizeCount falls back to the row count', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Prizes (1):');
   expect(stdout).not.toContain('Infinity');
+});
+
+test('string prizeCount 4 with one prize row prints Prizes (1): and not Prizes (4):', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }], prizeCount: '4' }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Prizes (1):');
+  expect(stdout).not.toContain('Prizes (4):');
 });

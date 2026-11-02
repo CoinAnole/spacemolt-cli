@@ -205,6 +205,22 @@ test('freight quote with a whitespace destination_base_id omits Route and still 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote with a whitespace origin_base_id omits Route and still prints the quote', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      origin_base_id: '   ',
+      destination_base_id: 'earth_station',
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-1');
+  expect(stdout).not.toContain('Route:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('freight quote prints uninsurable reason', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -926,6 +942,19 @@ test('renders limited carrier contract capacity', () => {
   });
 
   expect(stdout).toContain('Active contracts: 2 / 4');
+});
+
+test('renders unlimited carrier contract capacity when a numeric limit is also set', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: { ...carrierCapacity, active_contracts_unlimited: true, active_contract_limit: 4 },
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+
+  expect(stdout).toContain('Active contracts: 2 (unlimited)');
+  expect(stdout).not.toContain('Active contracts: 2 / 4');
 });
 
 test('renders carrier capacity without a contract limit when profile active contracts differ', () => {

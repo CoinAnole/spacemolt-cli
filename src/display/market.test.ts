@@ -865,6 +865,17 @@ test('faction_query_intel prints remaining_display for an omitted max_remaining'
   expect(stdout).not.toContain('120/');
 });
 
+test('faction_query_intel prints remaining_display when max_remaining is 0', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [
+    { resource_id: 'iron_ore', richness: 3, remaining: 10, max_remaining: 0, remaining_display: '10 units' },
+  ];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('iron_ore: richness 3, 10 units');
+  expect(stdout).not.toContain('10/0');
+});
+
 test('faction_query_intel prints read_at_tick when resources are missing or empty', () => {
   const fixture = cloneIntelFixture();
   firstIntelEntry(fixture).pois = [

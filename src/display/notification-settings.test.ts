@@ -352,6 +352,25 @@ test('prints notification in the Type cell when msg_type, type, and data.type ar
   expect(typeCell).toBe('notification');
 });
 
+test('prints an explicit zero msg_type as 0', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        msg_type: 0,
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
+  const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
+  expect(typeCell).toBe('0');
+  expect(typeCell).not.toBe('notification');
+});
+
 test('prints data.type in the Type cell when msg_type and type are omitted', () => {
   const stdout = stdoutOf('get_notifications', {
     count: 1,

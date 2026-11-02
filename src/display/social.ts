@@ -445,7 +445,8 @@ function ungroupedInteger(value: unknown): string | undefined {
 function listBattlesFilterText(query: Record<string, unknown>): string | undefined {
   const parts: string[] = [];
   if (query.captured === true) parts.push('captured');
-  if (typeof query.category === 'string' && query.category !== '') parts.push(`category=${query.category}`);
+  if (typeof query.category === 'string' && hasAnyField([query], ['category']))
+    parts.push(`category=${query.category}`);
   if (typeof query.search === 'string' && hasAnyField([query], ['search'])) parts.push(`search=${query.search}`);
   return parts.length ? parts.join(', ') : undefined;
 }

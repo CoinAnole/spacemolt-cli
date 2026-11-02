@@ -91,6 +91,13 @@ test('player reply prints the message once and omits a missing warning', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('a player attack reply without target_type prints the Attack header and omits Type', () => {
+  const stdout = renderCombat('attack', playerReply);
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Type:');
+});
+
 test('your_side 0 still prints Side', () => {
   const stdout = renderCombat('attack', { ...playerReply, your_side: 0 });
 

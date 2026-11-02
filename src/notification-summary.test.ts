@@ -106,6 +106,20 @@ describe('notification presentation', () => {
     });
   });
 
+  test('string crafting tick is parsed into first_tick', () => {
+    const progress = {
+      type: 'crafting',
+      msg_type: 'crafting_progress',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: { tick: '901237', job_id: 'job-a', message: 'Crafting steel plate.' },
+    };
+
+    const presented = presentNotifications([progress]);
+    const summary = presented.notifications[0];
+
+    expect((summary?.data as { first_tick?: number } | undefined)?.first_tick).toBe(901237);
+  });
+
   test('summarizes OpenAPI-shaped incomplete crafting updates as routine progress', () => {
     const updateA = {
       type: 'crafting',
@@ -209,6 +223,23 @@ describe('notification presentation', () => {
         latest_tick: 901401,
       },
     });
+  });
+
+  test('anonymous external crafting job sets rental_jobs', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        tick: 901500,
+        jobs: [{ external: true }],
+      },
+    };
+
+    const presented = presentNotifications([update]);
+    const summary = presented.notifications[0];
+
+    expect((summary?.data as { rental_jobs?: number } | undefined)?.rental_jobs).toBe(1);
   });
 
   test('leaves value-level high-signal crafting updates visible', () => {
@@ -734,6 +765,69 @@ describe('notification presentation', () => {
         latest_message: 'jumped → Sol @ Earth Station',
       },
     });
+  });
+
+  test('action-only details action sets latest_message to the action', () => {
+    const jump = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434600,
+        result: { details: { action: 'jumped', system: 'Sol' } },
+      },
+    };
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434601,
+        result: { details: { action: 'undock' } },
+      },
+    };
+
+    const presented = presentNotifications([jump, undock]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('undock');
+  });
+
+  test('system_id-only action result uses the id in latest_message', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jump = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            system_id: 'lacaille_9352',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jump]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped → lacaille_9352');
   });
 
   test('system-only action result message is action → system', () => {

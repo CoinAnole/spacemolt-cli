@@ -49,7 +49,7 @@ export function formatItemTable(items: Array<Record<string, unknown>>, indent = 
     const name = String(item.name || item.item_name || item.item_id || '').padEnd(nameW);
     const id = String(item.item_id || '').padEnd(idW);
     const qty = rowValue(item, ['quantity']).padStart(qtyW);
-    const size = String(item.size ?? '').padStart(sizeW);
+    const size = rowValue(item, ['size']).padStart(sizeW);
     lines.push(`${indent}${name} | ${id} | ${qty} | ${size}`);
   }
   return lines;

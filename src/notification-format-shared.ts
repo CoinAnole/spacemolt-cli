@@ -49,7 +49,7 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
   const entries = Object.entries(record)
     .map(([key, count]) => {
       const n = finiteNumber(count);
-      if (!key.trim() || n === undefined || n <= 0) return undefined;
+      if (!nonEmptyString(key) || n === undefined || n <= 0) return undefined;
       return [key, n] as const;
     })
     .filter((entry): entry is readonly [string, number] => Boolean(entry))
