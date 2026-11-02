@@ -150,6 +150,28 @@ test('prints === Inspect: unknown === when a package inspect has no id', () => {
   expect(stdout.split('\n')).toContain('=== Inspect: unknown ===');
 });
 
+test('omits Kind when an inspect package has no kind', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_kind',
+      package: {
+        package_id: 'pkg_no_kind',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Inspect: package:pkg_no_kind ===');
+  expect(stdout.split('\n')).toContain('ID: pkg_no_kind');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Kind:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Creator: PilotOne when the package creator has a username and no faction', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -225,6 +247,28 @@ test('prints Creator from faction when the creator has no username or player id'
   expect(line).toBe('Creator: Survey Corps [SRV]');
 });
 
+test('omits Creator when a package has no creator', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_creator',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_no_creator',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: pkg_no_creator');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Creator:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Owner: PilotOne for an owner without type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -294,6 +338,28 @@ test('prints Owner: p1 for an id-only owner', () => {
   const stdout = rendered.stdout.join('\n');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Owner:'));
   expect(line).toBe('Owner: p1');
+});
+
+test('omits Owner when a package has no owner', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_owner',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_no_owner',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: pkg_no_owner');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Owner:'));
+  expect(line).toBeUndefined();
 });
 
 test('prints Package for a package without a label', () => {
@@ -832,6 +898,28 @@ test('inspect package prints Size: 0 when package size is zero', () => {
   expect(stdout.split('\n')).toContain('Size: 0');
 });
 
+test('omits ID when a package has no package_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_package_id',
+      kind: 'package',
+      package: {
+        label: 'Unidentified crate',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Contents: (empty)');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('ID:'));
+  expect(line).toBeUndefined();
+});
+
 test('renders system inspect results with faction intel', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1315,6 +1403,28 @@ test('prints Online: 0 and POIs: 0 for zero system counts', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Online: 0');
   expect(stdout.split('\n')).toContain('POIs: 0');
+});
+
+test('omits Online when a system omits online', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Online:'));
+  expect(line).toBeUndefined();
 });
 
 test('renders catalog inspect results for an item lookup with details', () => {
@@ -3103,6 +3213,24 @@ test('prints POI: POI for an empty POI object', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('POI: POI');
+});
+
+test('omits Class for an empty POI', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {},
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: POI');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Class:'));
+  expect(line).toBeUndefined();
 });
 
 test('prints a Services line for more than 12 POI services', () => {

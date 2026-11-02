@@ -314,6 +314,16 @@ test('survey_system prints Wildlife (none) for non-record wildlife rows', () => 
   expect(stdout).not.toContain('RAW_WILDLIFE');
 });
 
+test('survey_system prints Wildlife (none) when wildlife is not an array', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = null;
+    }),
+  );
+
+  expect(stdout).toContain('Wildlife:\n  (none)');
+});
+
 test('survey_system empty deposits at survey power 0 print the no-ore sentence', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -684,6 +694,18 @@ test('survey_system skips a null skill XP entry and prints the other gain', () =
   expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: piloting +4');
   expect(stdout).not.toContain('scanning');
   expect(stdout).not.toContain('+null');
+});
+
+test('survey_system skips an undefined skill XP entry and prints the other gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: undefined, piloting: 4 };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: piloting +4');
+  expect(stdout).not.toContain('scanning');
+  expect(stdout).not.toContain('undefined');
 });
 
 test('survey_system prints negative skill XP without a leading plus', () => {
