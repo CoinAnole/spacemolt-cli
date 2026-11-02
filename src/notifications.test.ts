@@ -11837,6 +11837,33 @@ describe('notification formatting', () => {
       expect(message).toBe('Commission commission-1 delivered prospector, ship ship-42');
     });
 
+    test('count-map truncation lists six command counts and +1 more', () => {
+      const notification = {
+        type: 'action',
+        msg_type: 'action_result_summary',
+        data: {
+          count: 7,
+          commands: { g: 7, f: 6, e: 5, d: 4, c: 3, b: 2, a: 1 },
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('7 action results summarized; g×7, f×6, e×5, d×4, c×3, b×2, +1 more');
+    });
+
+    test('commission base id without a base name', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          base_id: 'earth_station',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered ship ship-42, at earth_station');
+    });
+
     test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {
       const notification = {
         type: 'system',

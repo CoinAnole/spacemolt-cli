@@ -1346,9 +1346,7 @@ export const genericFormatters = [
     (r) => {
       if (typeof r.story !== 'string' || !r.story.trim()) return false;
       const hasEspionageMarkers =
-        r.action === 'espionage' ||
-        (r.outcome !== undefined && r.outcome !== null && r.outcome !== '') ||
-        (r.intel_type !== undefined && r.intel_type !== null && r.intel_type !== '');
+        r.action === 'espionage' || presentCount(r.outcome) !== undefined || presentCount(r.intel_type) !== undefined;
       if (!hasEspionageMarkers || r.action === 'dock') return false;
 
       emitLine(`\n${c.bright}=== Espionage ===${c.reset}`);

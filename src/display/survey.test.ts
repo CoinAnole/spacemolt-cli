@@ -1055,6 +1055,17 @@ test('survey_system omits Faint Signatures for non-record faint rows', () => {
   expect(stdout).not.toContain('RAW_FAINT');
 });
 
+test('survey_system omits Faint Signatures when faint_signatures is not an array', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.faint_signatures = { note: 'FAINT_OBJECT' };
+    }),
+  );
+
+  expect(stdout).not.toContain('Faint Signatures');
+  expect(stdout).not.toContain('FAINT_OBJECT');
+});
+
 function stdoutOfGetPoi(): string {
   return renderStructuredResult('get_poi', structuredClone(poiWorkabilityFixture), options, context).stdout.join('\n');
 }

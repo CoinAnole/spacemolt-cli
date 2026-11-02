@@ -416,6 +416,26 @@ test('prints reputation restore without a cap', () => {
   expect(stdout).not.toContain(' cap ');
 });
 
+test('omits trade fill when only the cap is set', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          rep_decay_amount: 1,
+          rep_trade_fill_cap: 2,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Reputation: decay 1');
+  expect(stdout).not.toContain('trade fill');
+});
+
 test('prints last_assessed_at 1779926400000 as Last assessed: 2026-05-28 00:00 UTC', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',

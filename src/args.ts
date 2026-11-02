@@ -542,14 +542,14 @@ export function validatePayloadAgainstSchema(
         if (fieldSchema.minimum !== undefined && (numericValue as number) < fieldSchema.minimum) {
           errors.push({
             field: key,
-            message: schemaMinimumErrorMessage(key, fieldSchema.minimum, val),
+            message: `Parameter "${key}" must be at least ${fieldSchema.minimum}, but received ${formatReceivedValue(val)}.`,
             code: 'below_minimum',
           });
         }
         if (fieldSchema.maximum !== undefined && (numericValue as number) > fieldSchema.maximum) {
           errors.push({
             field: key,
-            message: schemaMaximumErrorMessage(key, fieldSchema.maximum, val),
+            message: `Parameter "${key}" must be at most ${fieldSchema.maximum}, but received ${formatReceivedValue(val)}.`,
             code: 'above_maximum',
           });
         }
@@ -580,14 +580,6 @@ export function validatePayloadAgainstSchema(
 function schemaTypeErrorMessage(field: string, expectedType: string, received: unknown): string {
   const article = expectedType === 'integer' ? 'an' : 'a';
   return `Parameter "${field}" must be ${article} ${expectedType}, but received ${formatReceivedValue(received)}.`;
-}
-
-function schemaMinimumErrorMessage(field: string, minimum: number, received: unknown): string {
-  return `Parameter "${field}" must be at least ${minimum}, but received ${formatReceivedValue(received)}.`;
-}
-
-function schemaMaximumErrorMessage(field: string, maximum: number, received: unknown): string {
-  return `Parameter "${field}" must be at most ${maximum}, but received ${formatReceivedValue(received)}.`;
 }
 
 function formatReceivedValue(value: unknown): string {

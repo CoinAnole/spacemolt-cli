@@ -1223,7 +1223,7 @@ export const statusFormatters = [
 
   formatter(
     (r) => {
-      if (typeof r.empire !== 'string' || r.empire === '') return false;
+      if (!usableLabel(r.empire)) return false;
       if (typeof r.amount_paid !== 'number' || !Number.isFinite(r.amount_paid)) return false;
       if (!Array.isArray(r.outstanding_bounties)) return false;
 

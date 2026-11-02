@@ -221,6 +221,14 @@ test('summarizeAmmoEffects still scales damage_mod 1.0 to 100%', () => {
   expect(summarizeAmmoEffects(antimatterTorpedoes)).toBe('damage 100%, armor bypass 30%, shield bypass 30%');
 });
 
+test('explicit zero damage_mod prints damage 0%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { damage_mod: 0 } } })).toBe('damage 0%');
+});
+
+test('ammo summary is empty when effect has no ammo record', () => {
+  expect(summarizeAmmoEffects({ effect: { type: 'ammo' } })).toBe('');
+});
+
 test('a non-integer ammo percent keeps one decimal', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { damage_mod: 12.5 } } })).toBe('damage 12.5%');
 });

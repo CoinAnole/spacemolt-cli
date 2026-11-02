@@ -794,6 +794,19 @@ test('renders Fuel from faction_fuel when fuel is absent', () => {
   expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('80');
 });
 
+test('renders Fuel from ally_fuel when fuel and faction_fuel are absent', () => {
+  const fixture = structuredClone(actionLogFactionRefuelFixture);
+  for (const entry of fixture.entries) {
+    const data = entry.data as Record<string, unknown>;
+    delete data.fuel;
+    delete data.faction_fuel;
+    data.ally_fuel = 12;
+  }
+  const stdout = renderStructuredResult('get_action_log', fixture, options, context).stdout.join('\n');
+  expect(actionLogHeaderColumns(stdout)).toContain('Fuel');
+  expect(actionLogCell(stdout, 'Marlowe', 'Fuel')).toBe('12');
+});
+
 test('keeps Pilot and Fuel columns on mixed action-log pages', () => {
   const fixture = structuredClone(actionLogFactionRefuelFixture);
   const mixed = {
@@ -3276,14 +3289,24 @@ test('omits facility table Req. stock column when no maintenance fields are pres
 });
 
 test('renders facility dining and leisure scores when present', () => {
-  const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
+  const diner = stationFacilities.find((row) => row.facility_id === 'station-diner');
+  if (diner) diner.leisure_points = 0;
+
+  const rendered = renderStructuredResult('facility_list', facilityList, options, context);
   const stdout = rendered.stdout.join('\n');
+  const stationSection = stdout.split('=== Public Facilities ===')[0] ?? stdout;
+  const stationTableHeader = stationSection
+    .split('\n')
+    .find((line) => line.includes('Name') && line.includes('ID') && line.includes('Level'));
 
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Dining');
   expect(stdout).toContain('Tourism Upkeep');
   expect(stdout).toContain('Dockside Diner');
   expect(stdout).toContain('2');
+  expect(stationTableHeader).toContain('Leisure');
 });
 
 test('facilityBillingPaused is an allowlist, not status != active', () => {
@@ -5263,6 +5286,22 @@ test('chat confirmation formats documented numeric sent_at as UTC', () => {
   expect(rendered.stdout.join('\n')).toBe('[local] 15:04:05Z Clear skies.');
 });
 
+test('chat confirmation treats a millisecond sent_at as UTC', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      channel: 'local',
+      message: 'Clear skies.',
+      sent_at: 1748012645000,
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toBe('[local] 15:04:05Z Clear skies.');
+});
+
 test('chat confirmation ignores the undocumented timestamp alias', () => {
   const rendered = renderStructuredResult(
     'chat',
@@ -5294,6 +5333,37 @@ test('chat confirmation ignores string-valued sent_at', () => {
 
   expect(rendered.success).toBe(true);
   expect(rendered.stdout.join('\n')).toBe('[local] Clear skies.');
+});
+
+test('chat confirmation prints Chat sent when there is no message', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      action: 'chat',
+      channel: 'local',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toBe('Chat sent: local');
+});
+
+test('chat confirmation prints a warning', () => {
+  const rendered = renderStructuredResult(
+    'chat',
+    {
+      channel: 'local',
+      message: 'Clear skies.',
+      warning: 'Stay in local.',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout.join('\n')).toContain('Warning: Stay in local.');
 });
 
 test('renders get_guide server version', () => {

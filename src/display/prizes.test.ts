@@ -249,6 +249,14 @@ test('numeric in_combat prints Combat and not yes', () => {
   expect(stdout).not.toContain('yes');
 });
 
+test('in_combat 0 still prints Combat and not yes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ in_combat: 0 }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Combat');
+  expect(stdout).not.toContain('yes');
+});
+
 test('empty ship_name does not print a Name column', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ ship_name: '' }] }), { plain: true });
@@ -350,6 +358,14 @@ test('system-only parked recovery prints sol and not a slash', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('sol');
   expect(stdout).not.toContain('/');
+});
+
+test('arrival tick 0 prints Arrival and 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_arrival_tick: 0 }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Arrival');
+  expect(stdout).toContain('0');
 });
 
 test('travel with only system ids prints travel sol → alpha_centauri', () => {

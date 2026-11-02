@@ -42,9 +42,7 @@ export async function loadUpdateCache(cachePath = getUpdateCachePath()): Promise
   try {
     const file = Bun.file(cachePath);
     if (await file.exists()) return await file.json();
-  } catch {
-    /* no cache */
-  }
+  } catch {}
   return null;
 }
 

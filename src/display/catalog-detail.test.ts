@@ -106,6 +106,10 @@ for (const { name, recipe, options, expected } of classifyCases) {
   });
 }
 
+test('empty-string facility id is facility only', () => {
+  expect(classifyRecipeVenue({ hand_craftable: false, produced_by_facility_ids: [''] })).toBe('facility only');
+});
+
 test('recipe.ship_passive or recipe.passive true is ship passive over craftable or facility only', () => {
   expect(classifyRecipeVenue({ ship_passive: true, hand_craftable: true })).toBe('ship passive');
   expect(classifyRecipeVenue({ passive: true, hand_craftable: false, produced_by_facility_ids: ['nano_fab'] })).toBe(
@@ -306,6 +310,13 @@ test('shield without recharge prints the exact line Shield: 700 and not a tick s
   expect(buffer.stdout.join('\n')).not.toContain('/tick');
 });
 
+test('shield 0 prints Shield: 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 0 }, {}), { plain: true });
+  const line = buffer.stdout.find((row) => row.includes('Shield:'));
+  expect(line).toBe('Shield: 0');
+});
+
 test('base_shield_recharge alone does not print Shield', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield_recharge: 12 }, {}), { plain: true });
@@ -387,6 +398,17 @@ test('missing ship build quantity prints ?x station_core', () => {
   expect(line).toBe('Build materials: ?x station_core');
 });
 
+test('build material quantity 0 prints 0x station_core', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ item_id: 'station_core', quantity: 0 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 0x station_core');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
 });
@@ -437,6 +459,16 @@ test('empty passive recipes omit Passive recipes', () => {
   expect(buffer.stdout.join('\n')).not.toContain('Passive recipes');
 });
 
+test('non-array passive recipes omit Passive recipes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ passive_recipes: 'refine_steel' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Passive recipes');
+  expect(stdout).not.toContain('refine_steel');
+});
+
 test('ship capability flag prints Capabilities: cloak passive 2', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -445,6 +477,12 @@ test('ship capability flag prints Capabilities: cloak passive 2', () => {
     { plain: true },
   );
   expect(buffer.stdout.join('\n')).toContain('Capabilities: cloak passive 2');
+});
+
+test('empty capability array omits Capabilities', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ inherent_capabilities: [] }, {}), { plain: true });
+  expect(buffer.stdout.join('\n')).not.toContain('Capabilities');
 });
 
 test('whitespace capability flag prints Capabilities: cloak', () => {

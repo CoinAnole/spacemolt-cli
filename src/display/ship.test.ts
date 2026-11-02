@@ -232,6 +232,20 @@ test('list_ships listing columns appear only when listing fields are present', (
   expect(withoutListing).not.toContain('Price');
 });
 
+test('list_ships prints a zero listing price', () => {
+  const fixture = cloneListShips();
+  const ships = cloneShips(fixture);
+  const listed = ships[1];
+  if (!listed) throw new Error('expected listed ship');
+  listed.listing_price = 0;
+  fixture.ships = ships;
+
+  const stdout = renderListShips(fixture).stdout.join('\n');
+  const header = tableHeader(stdout);
+  expect(header).toContain('Price');
+  expect(tableRow(stdout, 'Dust Devil')).toContain('0 cr');
+});
+
 test('list_ships JSON mode keeps original field names', () => {
   const rendered = renderListShips(listShipsFixture, { json: true, format: 'json' });
   const stdout = rendered.stdout.join('\n');
@@ -764,6 +778,18 @@ test('get_wrecks prints carrion on an age-death body and omits it on a ship wrec
   expect(cloud).not.toContain('cr');
 });
 
+test('get_wrecks prints a zero cargo quantity', () => {
+  const fixture = cloneWrecksFixture();
+  const cargo = wreckAt(fixture, 0).cargo as Array<Record<string, unknown>>;
+  const item = cargo[0];
+  if (!item) throw new Error('expected cargo item');
+  item.quantity = 0;
+
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  expect(lucky).toContain('0x Iron Ore');
+  expect(lucky).not.toContain('?x');
+});
+
 test('get_wrecks omits the victim suffix when victim_name is omitted', () => {
   const fixture = cloneWrecksFixture();
   delete wreckAt(fixture, 0).victim_name;
@@ -900,6 +926,15 @@ test('sell_wreck labels a shortfall when paid is less than offer', () => {
   expect(stdout).not.toContain('=== Sell Complete ===');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('Modules Stored');
+});
+
+test('sell_wreck does not label a bigint shortfall', () => {
+  const fixture = structuredClone(sellWreckPartialPayFixture) as { details: Record<string, unknown> };
+  fixture.details.offer = 500n;
+  fixture.details.total_payout = 350n;
+  const stdout = renderSellWreck(fixture).stdout.join('\n');
+  expect(stdout).toContain('Paid: 350 cr');
+  expect(stdout).not.toContain('less than offer');
 });
 
 test('sell_wreck declines without an offer pair', () => {
@@ -1202,6 +1237,15 @@ test('repair kits print hull restored and kits used without fallback', () => {
   expect(stdout).not.toContain('item(s)');
   expect(stdout).not.toContain('?/?');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair prints an item name without an id', () => {
+  const fixture = structuredClone(repairFixture) as Record<string, unknown>;
+  delete fixture.item_id;
+  const stdout = renderRepair(fixture).stdout.join('\n');
+  expect(stdout).toContain('Item: Repair Kit');
+  expect(stdout).not.toContain('(repair_kit)');
+  expect(stdout).not.toContain('Item: Repair Kit (');
 });
 
 test('repair station prints restored hull not an overstated kits number', () => {

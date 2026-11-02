@@ -24,3 +24,7 @@ test('canonicalizes known tokens case-insensitively', () => {
 test('prints unknown tokens trimmed as-is', () => {
   expect(normalizeCaptorKind('herald')).toBe('herald');
 });
+
+test('unknown captor kind keeps mixed case', () => {
+  expect(normalizeCaptorKind(' Herald ')).toBe('Herald');
+});

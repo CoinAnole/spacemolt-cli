@@ -332,6 +332,24 @@ test('jettison results row with quantity 0 prints Quantity: 0', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('null jettison result quantity omits Quantity', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          quantity: null,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Quantity');
+});
+
 test('non-record jettison result row declines to the raw response', () => {
   const { stdout } = renderJettison('storage jettison', {
     details: {

@@ -1835,3 +1835,111 @@ test('faction storage credits 0 prints Faction credits: 0', () => {
 
   expect(stdout).toContain('Faction credits: 0');
 });
+
+test('one-item view_market buy price 0 prints 0 cr', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 0, quantity: 1 }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('0 cr x 1');
+});
+
+test('two-item view_market summary prints buy depth 0 when quantity is 0', () => {
+  const stdout = renderStructuredResult(
+    'view_market',
+    {
+      action: 'view_market',
+      base_id: 'earth_station',
+      items: [
+        {
+          item_id: 'ore_iron',
+          item_name: 'Iron Ore',
+          buy_orders: [{ price_each: 15, quantity: 0 }],
+          sell_orders: [],
+        },
+        {
+          item_id: 'fuel_cell',
+          item_name: 'Fuel Cell',
+          buy_orders: [{ price_each: 22, quantity: 7 }],
+          sell_orders: [],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('0 / 1');
+});
+
+test('view_orders created_at unix seconds prints the UTC minute', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [
+        {
+          created_at: 1716940800,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('2024-05-29 00:00');
+});
+
+test('view_orders page 0 prints page 0/1', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [],
+      page: 0,
+      total_pages: 1,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('page 0/1');
+});
+
+test('browse_ships listing with hull 0 omits Hull', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          hull: 0,
+          max_hull: 100,
+          shield: 20,
+          listing_id: 'listing-1',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Hull');
+  expect(stdout).toContain('Shield: 20');
+});

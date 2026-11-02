@@ -1221,6 +1221,53 @@ test('omits a system description that is only spaces', () => {
   expect(stdout.split('\n')).not.toContain('   ');
 });
 
+test('prints the trimmed system description without the untrimmed source', () => {
+  const description = '  Padded cradle note.  ';
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        description,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes('Padded cradle note.'));
+  expect(line).toBe('Padded cradle note.');
+  expect(stdout).not.toContain('  Padded cradle note.  ');
+});
+
+test('omits a non-string system description and does not print the object', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        description: { note: 'DESCRIPTION_OBJECT' },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('System: Sol');
+  expect(stdout).not.toContain('DESCRIPTION_OBJECT');
+  expect(stdout).not.toContain('[object Object]');
+});
+
 test('prints System: unknown when a system has no name and no system_id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1490,6 +1537,32 @@ test('prints Name: Sol and omits Empire when faction system intel has a name and
   expect(line).toBeUndefined();
 });
 
+test('omits Name when faction system intel has no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        empire: 'kepler',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const empire = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
+  expect(empire).toBe('Empire: kepler');
+  const name = stdout.split('\n').find((entry) => entry.startsWith('Name:'));
+  expect(name).toBeUndefined();
+});
+
 test('prints Known POIs: 2 when faction system POI records have no usable name or id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1512,6 +1585,30 @@ test('prints Known POIs: 2 when faction system POI records have no usable name o
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Known POIs: 2');
   expect(stdout).not.toContain('Known POIs (2)');
+});
+
+test('prints Known POIs from the poi id when the name is missing', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        pois: [{ id: 'earth_station' }],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Known POIs'));
+  expect(line).toBe('Known POIs (1): earth_station');
 });
 
 test('prints a Known POIs suffix when faction system intel has more than 12 POIs', () => {
@@ -2042,6 +2139,27 @@ test('prints Estimated material cost: 0 inside an analysis record', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Analysis');
   expect(stdout).toContain('Estimated material cost: 0');
+});
+
+test('omits Estimated material cost when analysis has no cost', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'analysis_only_catalog',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        analysis: {},
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Analysis');
+  expect(stdout).not.toContain('Estimated material cost');
 });
 
 test('prints Analysis and omits (No catalog entries in this response) for an analysis-only item catalog', () => {
@@ -2909,6 +3027,25 @@ test('prints Details and omits Crafting time for a null crafting time', () => {
   expect(stdout).not.toContain('Crafting time');
 });
 
+test('omits Crafting time when a catalog recipe omits crafting_time', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'omitted_time_recipe',
+          name: 'Omitted Time Recipe',
+          category: 'refining',
+        },
+      ],
+    },
+    'omitted_time_recipe',
+  );
+
+  expect(stdout).toContain('Details');
+  expect(stdout).not.toContain('Crafting time');
+});
+
 test('inspect no-venue recipe does not print Produced by', () => {
   const stdout = renderCatalogInspect(
     {
@@ -3501,6 +3638,37 @@ test('prints Summary only note. from summary.description when detail omits descr
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Summary only note.');
+});
+
+test('prints the summary POI description when detail description is only spaces', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          description: 'Summary after blank detail.',
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+            description: '   ',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Summary after blank detail.');
+  expect(stdout.split('\n')).not.toContain('   ');
 });
 
 test('prints a top-level poi description when summary and detail omit description', () => {

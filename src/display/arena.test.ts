@@ -144,6 +144,15 @@ test('an explicit zero arena XP skill stays on the Arena XP line', () => {
   ]);
 });
 
+test('arenaStatLines drops a non-finite arena XP skill', () => {
+  expect(
+    arenaStatLines(
+      { arena_wins: 0, arena_losses: 0, arena_knockouts: 0 },
+      { by_skill: { gunnery: Number.NaN, shields: 40 } },
+    ),
+  ).toEqual(['Arena XP today: shields 40']);
+});
+
 test('arenaStatLines ignores malformed arena_xp', () => {
   expect(arenaStatLines({ arena_wins: 1, arena_losses: 0, arena_knockouts: 0 }, 'today')).toEqual([
     'Arena: 1 wins / 0 losses / 0 knockouts',
@@ -271,6 +280,11 @@ test('battleRulesetFromLogEntries is hunt when battle_ended or recovered_summary
   expect(battleRulesetFromLogEntries([{ arena: false, battle_ended: { category: 'wildlife' } }])).toBe('hunt');
   expect(battleRulesetFromLogEntries([{ recovered_summary: { category: 'hunt' } }])).toBe('hunt');
   expect(battleRulesetFromLogEntries([])).toBe('standard');
+});
+
+test('battle log entries stay standard for a non-record or non-hunt category', () => {
+  expect(battleRulesetFromLogEntries([{ battle_ended: 'wildlife' }])).toBe('standard');
+  expect(battleRulesetFromLogEntries([{ battle_ended: { category: 'pvp' } }])).toBe('standard');
 });
 
 test('battleLabels substitutes knockout wording only for arena', () => {

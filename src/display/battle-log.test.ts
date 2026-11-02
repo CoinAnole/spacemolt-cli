@@ -189,6 +189,11 @@ describe('formatBattleHitScale / formatBattleHitChance', () => {
     expect(formatBattleHitScale(81)).toBe('81');
   });
 
+  test('explicit zero hit scale prints 0', () => {
+    expect(formatBattleHitScale(0)).toBe('0');
+    expect(formatBattleHitChance(0)).toBe('0%');
+  });
+
   test('formats one-decimal hit scale', () => {
     expect(formatBattleHitScale(0.125)).toBe('12.5');
   });
@@ -376,6 +381,16 @@ describe('resolveCombatantLabel', () => {
     expect(resolveCombatantLabel('pirate-1', snapshots)).toBe('pirate-1');
     expect(resolveCombatantLabel('player-1', undefined)).toBe('player-1');
     expect(resolveCombatantLabel(undefined, snapshots)).toBe('');
+  });
+
+  test('null combatant id resolves to an empty label', () => {
+    expect(resolveCombatantLabel(null, [])).toBe('');
+  });
+
+  test('non-record snapshot is skipped when resolving a combatant label', () => {
+    expect(resolveCombatantLabel('player-1', ['skip', { player_id: 'player-1', username: 'PilotOne' }])).toBe(
+      'PilotOne',
+    );
   });
 
   test('prefixes Boss only when is_boss is true', () => {

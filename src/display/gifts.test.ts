@@ -179,6 +179,11 @@ describe('emitGiftEntries', () => {
     expect(blankShip.stdout).not.toContain('Ships:');
   });
 
+  test('numeric message 0 omits Note', () => {
+    const { stdout } = renderGifts([{ sender: 'Ada', message: 0 }]);
+    expect(stdout).not.toContain('Note');
+  });
+
   test('items print above ships and the note is last', () => {
     const { stdout, stderr } = renderGifts([
       {

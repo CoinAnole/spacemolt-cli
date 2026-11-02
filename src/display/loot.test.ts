@@ -276,6 +276,18 @@ test('all-loot row with item_id 1500 prints 1500 in the item cell', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('all-loot row with item_id null blanks the item cell', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.looted = [{ item_id: null, quantity: 2 }];
+    }),
+  );
+
+  expect(stdout).toContain('=== Looted ===');
+  expect(stdout).not.toContain('null');
+});
+
 test('all-loot row with bigint item_id prints 9007199254740993 in the item cell', () => {
   const stdout = stdoutOf(
     'loot_wreck',

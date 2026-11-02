@@ -1159,7 +1159,6 @@ function radioClassLine(data: Record<string, unknown>): string | undefined {
   return bits.length ? bits.join('  ') : undefined;
 }
 
-// Must not return null.
 function previewPirateRadio(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3735,7 +3734,6 @@ function collectScalarBits(
 }
 
 function omittedBulkyHint(data: Record<string, unknown>, skip?: ReadonlySet<string>): string | undefined {
-  // Prefer known bulky key names first, then any remaining object/array keys.
   const known: string[] = [];
   const other: string[] = [];
   for (const [key, value] of Object.entries(data)) {

@@ -231,6 +231,21 @@ test('remote poi scan prints the contact layout under Scan Result', () => {
   expect(stdout).not.toContain('\x1b');
 });
 
+test('remote poi scan prints cloaked no', () => {
+  const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  const contacts = fixture.contacts as Array<Record<string, unknown>>;
+  const contact = contacts[0];
+  if (!contact) throw new Error('expected scan contact');
+  fixture.contacts = [{ ...contact, cloaked: false }];
+
+  const stdout = renderScan(fixture);
+  const playersStart = stdout.indexOf('=== Players ===');
+  const playersEnd = stdout.indexOf('=== Empire NPCs ===');
+  const players = stdout.slice(playersStart, playersEnd);
+  expect(players).toContain('no');
+  expect(players).not.toContain('yes');
+});
+
 test('remote poi scan with omitted lists prints only the header', () => {
   const stdout = renderScan(scanPoiEmptyFixture);
 
@@ -2270,6 +2285,28 @@ test('get_nearby prints Arena NPCs after Pirates and before Empire NPCs', () => 
   expect(stdout).toContain(
     '  Boss Trial Master [arena-master-1] (Dreadnought) - hull 900/900 - shield 300/300 - battle btl-first-blood - guarding',
   );
+});
+
+test('get_nearby prints a question mark for a missing arena NPC hull', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      arena_npcs: [
+        {
+          npc_id: 'arena-cleaver-1',
+          name: 'Ring Cleaver',
+          ship_class_name: 'Fighter',
+          max_hull: 40,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('hull ?/40');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('get_nearby colors boss arena NPC names after an uncolored Boss prefix', () => {
@@ -4678,6 +4715,29 @@ test('get_nearby prints Unknown for a creature with no identity', () => {
   expectNearbyFormatterEngaged(stdout);
   expect(stdout.split('\n')).toContain('  Unknown');
   expect(stdout).not.toContain('[');
+});
+
+test('get_nearby omits the creature id bracket when it equals the name', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [{ creature_id: 'belt-grazer', name: 'belt-grazer' }],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout.split('\n')).toContain('  belt-grazer');
+  expect(stdout).not.toContain('[belt-grazer]');
+});
+
+test('get_nearby falls back to the creature species', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    creatures: [{ species: 'belt_grazer' }],
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout.split('\n')).toContain('  belt_grazer (belt_grazer)');
+  expect(stdout).toContain('(belt_grazer)');
+  expect(stdout).not.toContain('Unknown');
 });
 
 test.each([

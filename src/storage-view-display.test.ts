@@ -84,6 +84,16 @@ describe('rewriteStorageViewHint', () => {
     expect(rewriteStorageViewHint(content)).toEqual(content);
   });
 
+  test('returns the same content for an unparseable storage hint', () => {
+    const content = {
+      base_id: 'earth_station',
+      hint: 'see storage',
+      items: [{ item_id: 'fuel_cell', quantity: 12 }],
+    };
+
+    expect(rewriteStorageViewHint(content, { requestedStationId: 'earth_station' })).toEqual(content);
+  });
+
   test('leaves a multi-station hint unchanged when no station id is available', () => {
     const content = { hint: '100 items in storage at alpha, beta' };
 

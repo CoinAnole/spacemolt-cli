@@ -348,7 +348,22 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
   const facility = isRecord(result.facility) ? result.facility : undefined;
   if (facility) pushFacility(push, facility);
   for (const facility of arrayRecords(result.facilities)) pushFacility(push, facility);
-  for (const listing of arrayRecords(result.listings)) pushListing(push, listing);
+  for (const listing of arrayRecords(result.listings)) {
+    push({
+      kind: 'listing',
+      id: stringValue(listing.listing_id || listing.id),
+      name: stringValue(
+        listing.name ||
+          listing.item_name ||
+          listing.ship_name ||
+          listing.class_name ||
+          listing.class_id ||
+          listing.facility_name ||
+          listing.facility_type,
+      ),
+      context: pick(listing, ['item_id', 'ship_id', 'facility_id', 'price', 'price_each', 'seller_name']),
+    });
+  }
 
   const location = isRecord(result.location) ? result.location : undefined;
   if (location) {
@@ -375,11 +390,25 @@ export function extractIdHints(command: string, result: Record<string, unknown>,
     pushItem(push, item, ['quantity']);
     pushPackageFromItem(push, item);
   }
-  for (const ship of arrayRecords(result.ships)) pushShip(push, ship);
+  for (const ship of arrayRecords(result.ships)) {
+    push({
+      kind: 'ship',
+      id: stringValue(ship.ship_id || ship.id),
+      name: stringValue(ship.custom_name || ship.ship_name || ship.class_id || ship.class_name || ship.name),
+      context: pick(ship, ['class_id', 'class_name', 'location', 'location_base_id', 'is_active']),
+    });
+  }
   const drone = isRecord(result.drone) ? result.drone : undefined;
   if (drone) pushDrone(push, drone);
   for (const drone of arrayRecords(result.drones)) pushDrone(push, drone);
-  for (const wreck of arrayRecords(result.wrecks)) pushWreck(push, wreck);
+  for (const wreck of arrayRecords(result.wrecks)) {
+    push({
+      kind: 'wreck',
+      id: stringValue(wreck.wreck_id || wreck.id),
+      name: stringValue(wreck.name || wreck.ship_class),
+      context: pick(wreck, ['ticks_remaining', 'poi_id', 'base_id']),
+    });
+  }
 
   const pkg = isRecord(result.package) ? result.package : undefined;
   if (pkg) {
@@ -751,15 +780,6 @@ function pushPlayer(
   });
 }
 
-function pushShip(push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void, ship: Record<string, unknown>): void {
-  push({
-    kind: 'ship',
-    id: stringValue(ship.ship_id || ship.id),
-    name: stringValue(ship.custom_name || ship.ship_name || ship.class_id || ship.class_name || ship.name),
-    context: pick(ship, ['class_id', 'class_name', 'location', 'location_base_id', 'is_active']),
-  });
-}
-
 function pushFaction(
   push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
   faction: Record<string, unknown>,
@@ -784,18 +804,6 @@ function pushDrone(
   });
 }
 
-function pushWreck(
-  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
-  wreck: Record<string, unknown>,
-): void {
-  push({
-    kind: 'wreck',
-    id: stringValue(wreck.wreck_id || wreck.id),
-    name: stringValue(wreck.name || wreck.ship_class),
-    context: pick(wreck, ['ticks_remaining', 'poi_id', 'base_id']),
-  });
-}
-
 function pushFacility(
   push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
   facility: Record<string, unknown>,
@@ -805,26 +813,6 @@ function pushFacility(
     id: stringValue(facility.facility_id || facility.id),
     name: stringValue(facility.name || facility.type_name || facility.facility_type),
     context: pick(facility, ['facility_type', 'type_name', 'base_id', 'owner_name', 'faction_id']),
-  });
-}
-
-function pushListing(
-  push: (hint: Omit<IdHint, 'sourceCommand' | 'seenAt'>) => void,
-  listing: Record<string, unknown>,
-): void {
-  push({
-    kind: 'listing',
-    id: stringValue(listing.listing_id || listing.id),
-    name: stringValue(
-      listing.name ||
-        listing.item_name ||
-        listing.ship_name ||
-        listing.class_name ||
-        listing.class_id ||
-        listing.facility_name ||
-        listing.facility_type,
-    ),
-    context: pick(listing, ['item_id', 'ship_id', 'facility_id', 'price', 'price_each', 'seller_name']),
   });
 }
 

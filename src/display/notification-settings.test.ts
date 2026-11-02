@@ -274,6 +274,25 @@ test('a numeric unix-second notification timestamp prints the UTC second preview
   expect(stdout).not.toContain(String(timestamp));
 });
 
+test('prints a created_at preview when the notification timestamp is omitted', () => {
+  const createdAt = '2026-05-23T18:59:39.049Z';
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        created_at: createdAt,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('2026-05-23 18:59:39');
+  expect(stdout).not.toContain('2026-05-23T18:59:39');
+});
+
 test('a numeric unix-millisecond notification timestamp prints the UTC second preview', () => {
   const timestamp = 1779562779000;
   const stdout = stdoutOf('get_notifications', {
@@ -310,4 +329,21 @@ test('prints notification in the Type cell when msg_type, type, and data.type ar
   const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
   const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
   expect(typeCell).toBe('notification');
+});
+
+test('prints data.type in the Type cell when msg_type and type are omitted', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { type: 'gameplay_tip', message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
+  const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
+  expect(typeCell).toBe('gameplay_tip');
 });

@@ -217,6 +217,16 @@ test('mine prints negative mining XP without a plus sign', () => {
   expect(stdout).toContain('Skill XP: mining -1,200');
 });
 
+test('mine prints non-finite mining XP with a plus sign', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { mining: Number.NaN };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: mining +NaN');
+});
+
 test('mine prints xp_gained mining string 1200 without grouping', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

@@ -316,10 +316,6 @@ function isWeakDescription(command: string, description: string | undefined): bo
   return description.trim().toLowerCase().replace(/\s+/g, '_') === command.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
-function executableGroupLabel(groupName: string): string {
-  return findCommandGroup(groupName)?.label ?? groupName;
-}
-
 type HelpOutputOptions = Partial<Pick<GlobalOptions, 'plain' | 'quiet'>>;
 
 export function showCommandGroups(writer?: CliWriter, commands?: CommandHelpSource, options?: HelpOutputOptions): void {
@@ -352,7 +348,7 @@ export function showCommandGroup(
 
   if (executableGroup) {
     const actions = Object.values(executableGroup.actions).sort((a, b) => a.action.localeCompare(b.action));
-    write(`\n${c.bright}${executableGroupLabel(executableGroup.name)} Commands${c.reset}`);
+    write(`\n${c.bright}${findCommandGroup(executableGroup.name)?.label ?? executableGroup.name} Commands${c.reset}`);
     write(`\n${c.cyan}Actions:${c.reset}`);
     for (const action of actions) {
       displayedCommands.add(action.displayName);

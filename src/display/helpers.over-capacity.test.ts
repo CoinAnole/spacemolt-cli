@@ -95,4 +95,16 @@ describe('emitStationFuelPricing', () => {
     withDisplayRenderBuffer(buffer, () => emitStationFuelPricing({ fuel_price: 0 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Fuel Price: 0 credits');
   });
+
+  test('fuel tax prints explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationFuelPricing({ fuel_tax_per_unit: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Fuel Tax: 0 credits/unit');
+  });
+
+  test('all-in refuel price prints explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationFuelPricing({ fuel_price_all_in: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('All-in Refuel Price: 0 credits/unit');
+  });
 });

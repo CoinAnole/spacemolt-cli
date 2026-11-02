@@ -736,6 +736,145 @@ describe('notification presentation', () => {
     });
   });
 
+  test('system-only action result message is action → system', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpSystemOnly = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            system: 'Sol',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpSystemOnly]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped → Sol');
+  });
+
+  test('poi-only action result message is action @ poi', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpPoiOnly = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            poi_name: 'Earth Station',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpPoiOnly]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped @ Earth Station');
+  });
+
+  test('result.message is latest_message before an arrow line is synthesized', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpWithResultMessage = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          message: 'Cleared the jump gate.',
+          details: {
+            action: 'jumped',
+            system: 'Sol',
+            poi_name: 'Earth Station',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpWithResultMessage]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('Cleared the jump gate.');
+  });
+
+  test('details.message is latest_message when result has no message', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpWithDetailsMessage = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            message: 'Holding at the station.',
+            action: 'jumped',
+            system: 'Sol',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpWithDetailsMessage]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('Holding at the station.');
+  });
+
   test('does not summarize system tips or non-travel system messages', () => {
     const tip = {
       type: 'system',

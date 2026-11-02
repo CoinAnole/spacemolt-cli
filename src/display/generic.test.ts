@@ -648,6 +648,29 @@ test('renders dismantle_outpost kit refund and details-only auto-undocked field 
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
 });
 
+test('renders dismantle_outpost kit_refunded false as no', () => {
+  const rendered = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'outpost_forward_cache',
+        name: 'Forward Cache',
+        kit_item: 'outpost_kit',
+        kit_refunded: false,
+        fee_refunded: 0,
+        hint: 'You are adrift at the former outpost point of interest.',
+        auto_undocked: true,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Kit refunded: no');
+});
+
 test('prints compact undock state after a details auto-undock receipt', () => {
   const stdout = renderStructuredResult(
     'dismantle_outpost',
@@ -4019,6 +4042,37 @@ test('renders craft queue bigint total_jobs without a showing suffix', () => {
   expect(stdout).not.toContain('(showing');
 });
 
+test('renders craft queue total_jobs 0 without a showing suffix', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      total_jobs: 0,
+      jobs: [
+        {
+          job_id: 'job-1',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 0,
+          runs_remaining: 1,
+          runs_total: 1,
+          venue: 'Station Workshop',
+          facility_id: 'workshop:player:station',
+          eta_ticks: 2,
+          status: 'queued',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Total jobs: 0');
+  expect(stdout).not.toContain('(showing');
+});
+
 test('renders queued craft destinations when present', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -5059,6 +5113,13 @@ test('catalog_dump omits missing array and hidden-count lines', () => {
   expect(stdout).not.toContain('hidden achievements:');
   expect(stdout).not.toContain('hidden faction achievements:');
   expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump prints hidden achievement count 0', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.hidden_achievement_count = 0;
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('hidden achievements: 0');
 });
 
 test('catalog_dump prints Recipe venues census for dump recipes with hand_craftable', () => {
