@@ -98,15 +98,6 @@ function getHintValue(command: string, arg: string): string | undefined {
   return HINT_VALUES[command]?.[arg];
 }
 
-function getArgDescription(
-  command: string,
-  arg: string,
-  registry: CompletionRegistry,
-  config?: CommandConfig | LocalCommandConfig,
-): string {
-  return getFieldSchema(command, arg, registry, config)?.description || getHintValue(command, arg) || arg;
-}
-
 function escapeSingleQuotedShell(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
@@ -221,7 +212,9 @@ function pushZshCommandArguments(
     if (!arg) continue;
     const enums = getEnumValues(command, arg, registry, config);
     const hint = getHintValue(command, arg);
-    const description = escapeZshCompletionText(getArgDescription(command, arg, registry, config));
+    const description = escapeZshCompletionText(
+      getFieldSchema(command, arg, registry, config)?.description || getHintValue(command, arg) || arg,
+    );
     const isLast = i === args.length - 1;
     const terminator = isLast ? '' : ' \\';
     const position = startPosition + i;

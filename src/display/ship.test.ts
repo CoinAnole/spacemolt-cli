@@ -483,6 +483,13 @@ test('get_ship prints passive recipe ids', () => {
   expect(stdout).toContain('Passive Recipes: passive_refine_iron_ore');
 });
 
+test('get_ship prints last process tick 0', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  fixture.ship.last_process_tick = 0;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Passive Processing: last tick 0');
+});
+
 test('get_ship omits personnel lines when personnel and scalars are absent', () => {
   const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
   delete fixture.ship.personnel;

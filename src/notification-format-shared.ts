@@ -1238,8 +1238,7 @@ function previewBattleJoined(
 
 function previewToken(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
-  const token = value.trim().toLowerCase();
-  return token || undefined;
+  return nonEmptyString(value) ? value.trim().toLowerCase() : undefined;
 }
 
 const BATTLE_LEFT_REASON_HEADLINES: Readonly<Record<string, (name: string) => string>> = {
@@ -3652,7 +3651,6 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   repaired_by: previewRepairedBy,
 };
 
-/** True when a native pure preview handler is registered for msgType. */
 export function hasPreviewHandler(msgType: string): boolean {
   return typeof PREVIEW_HANDLERS[msgType] === 'function';
 }

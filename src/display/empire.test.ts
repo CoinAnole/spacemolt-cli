@@ -268,6 +268,23 @@ test('prints the singular Empire Policy heading for one empire', () => {
   expect(stdout).not.toContain('=== Empire Policies ===');
 });
 
+test('prints unknown for a missing empire id under the singular Empire Policy heading', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [{}],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const lines = stdout.split('\n');
+  const headingIndex = lines.indexOf('=== Empire Policy ===');
+
+  expect(headingIndex).toBeGreaterThanOrEqual(0);
+  expect(lines.slice(headingIndex + 1)).toContain('unknown');
+  expect(stdout).not.toContain('=== Empire Policies ===');
+});
+
 test('prints Citizenship: Closed when citizenship is closed', () => {
   const stdout = renderStructuredResult(
     'get_empire_info',

@@ -4635,6 +4635,30 @@ test('renders packaged craft quote with gates, ready, and output package preview
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders numeric packaged-craft package ids', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        package_ids: [12],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const line = rendered.stdout
+    .join('\n')
+    .split('\n')
+    .find((entry) => entry.startsWith('Package IDs:'));
+  expect(line).toBe('Package IDs: 12');
+});
+
 test('renders a packaged craft quote with no output-package label as Output package: package', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4746,6 +4770,29 @@ test('renders a packaged-craft gate with no reason as the full line credits: FAI
   expect(rendered.stdout).toContain('  credits: FAIL');
 });
 
+test('renders a packaged-craft gate whose reason is only whitespace as credits: FAIL', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'packaged_quote',
+        dry_run: true,
+        recipe: 'Iron Plates',
+        gates: {
+          credits: { ok: false, reason: '   ' },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  expect(rendered.stdout).toContain('  credits: FAIL');
+  expect(rendered.stdout.join('\n')).not.toContain('—');
+});
+
 test('ordinary craft quote still surfaces have_* fields', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -4822,6 +4869,79 @@ test('renders output package on ordinary packaged craft job', () => {
   expect(stdout).toContain('Output package: Plate Pack (pkg-out-1)');
   expect(stdout).not.toContain('Package: pkg-out-1');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders an ordinary craft job with only output_package_id', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'job',
+        job_id: 'craft-pkg-id-only',
+        output_package_id: 'pkg-id-only',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Output package:'));
+  expect(line).toBe('Output package: pkg-id-only');
+  expect(stdout).not.toContain('(');
+});
+
+test('renders an ordinary craft job with equal output package label and id', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'job',
+        job_id: 'craft-pkg-job-1',
+        recipe: 'Iron Plates',
+        mode: 'craft',
+        runs: 10,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+        facility_id: 'workshop:player:station',
+        output_package_id: 'Plate Pack',
+        output_package_label: 'Plate Pack',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Output package:'));
+  expect(line).toBe('Output package: Plate Pack');
+  expect(stdout).not.toContain('Output package: Plate Pack (');
+});
+
+test('renders an ordinary craft job with only output_package_label', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        kind: 'job',
+        job_id: 'craft-pkg-label-only',
+        output_package_label: 'Plate Pack',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Output package:'));
+  expect(line).toBe('Output package: Plate Pack');
+  expect(stdout).not.toContain('(');
 });
 
 test('renders Package and Label columns on craft queue when present', () => {
@@ -5093,6 +5213,15 @@ test('catalog_dump omits mining keys that are not finite numbers', () => {
   expect(stdout).not.toContain('depletion_floor');
   expect(stdout).not.toContain('rare_ore_rarity_weight_per_level');
   expect(stdout).not.toContain('Recipe venues');
+});
+
+test('catalog_dump prints a mining constant explicit 0', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  const mining = fixture.mining as Record<string, unknown>;
+  mining.precision_k = 0;
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes('precision_k'));
+  expect(line).toBe('  precision_k: 0');
 });
 
 test('catalog_dump still claims when mining is missing and does not table items', () => {

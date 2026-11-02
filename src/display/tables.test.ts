@@ -41,6 +41,12 @@ describe('formatItemTable', () => {
     expect(row).toBe('  Fuel Cell | fuel_cell |   0 |         1');
   });
 
+  test('formatItemTable prints an empty quantity string', () => {
+    const lines = formatItemTable([{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: '', size: 1 }]);
+    const row = lines.find((line) => line.includes('fuel_cell'));
+    expect(row).toBe('  Fuel Cell | fuel_cell |     |         1');
+  });
+
   test('formatItemTable prints explicit size 0', () => {
     const lines = formatItemTable([{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 1, size: 0 }]);
     const row = lines.find((line) => line.includes('fuel_cell'));

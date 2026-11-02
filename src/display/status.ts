@@ -757,7 +757,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
 
   emitLifetimeStats(record.stats);
 
-  if (kind === 'v2' && typeof record.ranks_generated_at === 'string' && record.ranks_generated_at !== '') {
+  if (kind === 'v2' && usableLabel(record.ranks_generated_at)) {
     emitLine(
       `\nLeaderboard snapshot: ${formatTimestampPreview(record.ranks_generated_at) || record.ranks_generated_at}`,
     );
@@ -1168,7 +1168,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       emitLine(`\n${c.bright}=== Active Missions ===${c.reset}`);
       emitLine('none');
       const maxMissions = isRecord(missions) ? missions.max_missions : undefined;
-      if (typeof maxMissions === 'number' && Number.isFinite(maxMissions)) {
+      if (finiteShipNumber(maxMissions)) {
         emitLine(`${c.dim}missions 0/${maxMissions}${c.reset}`);
       }
     }
@@ -1425,7 +1425,6 @@ export const statusFormatters = [
     { commands: ['get_status'], shapeFallback: true },
   ),
 
-  // Registration
   formatter(
     (r) => {
       if (!r.password || !r.player_id) return false;

@@ -371,6 +371,15 @@ test('a non-finite arena XP skill lists gunnery and does not print NaN', () => {
   expect(gunnery).not.toContain('NaN');
 });
 
+test('null xp_used_today prints none today and does not list gunnery', () => {
+  const stdout = output('arena_status', {
+    ...arenaStatusIdleFixture,
+    xp_used_today: null,
+  });
+  expect(stdout).toContain('none today');
+  expect(stdout).not.toContain('gunnery');
+});
+
 test('renders incoming challenge and XP remaining with deterministic skill sort', () => {
   const stdout = output('arena_status', arenaStatusIncomingFixture);
   expect(stdout).toContain('Incoming challenge from Kestrel (player-77)');
@@ -950,6 +959,17 @@ test('fight start omits malformed waves without declining the battle', () => {
   expect(stdout).toContain('Enemies: 2× Ring Cleaver (Fighter)');
   expect(stdout).not.toContain('Waves:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('fight start omits a malformed survive_ticks objective without declining the battle', () => {
+  const stdout = output('arena_fight', {
+    details: {
+      ...arenaFightDetails,
+      objective: { survive_ticks: 'forty' },
+    },
+  });
+  expect(stdout).toContain('Battle: btl-7e1');
+  expect(stdout).not.toContain('Objective:');
 });
 
 test('asTrialStart copies well-typed objective and waves onto fight start', () => {

@@ -236,6 +236,19 @@ test('survey_system prints Unknown for a missing system name and id', () => {
   expect(stdout).toContain('=== Survey: Unknown ===');
 });
 
+test('survey_system prints Unknown for a system_id of 0 and does not print (0)', () => {
+  const stdout = stdoutOf({
+    system_id: 0,
+    survey_power: 18,
+    newly_revealed: [],
+    already_revealed: [],
+  });
+
+  const headline = lineContaining(stdout, '=== Survey:');
+  expect(headline).toBe('=== Survey: Unknown ===');
+  expect(headline).not.toContain('(0)');
+});
+
 test('survey_system prints Unknown for a newly revealed POI with no name or id', () => {
   const stdout = stdoutOf({
     survey_power: 18,
@@ -244,6 +257,17 @@ test('survey_system prints Unknown for a newly revealed POI with no name or id',
   });
 
   expect(stdout.split('\n')).toContain('  - Unknown');
+});
+
+test('survey_system prints Unknown for a newly revealed POI id of 0 and does not print (0)', () => {
+  const stdout = stdoutOf({
+    survey_power: 18,
+    newly_revealed: [{ id: 0 }],
+    already_revealed: [],
+  });
+
+  expect(stdout.split('\n')).toContain('  - Unknown');
+  expect(stdout).not.toContain('(0)');
 });
 
 test('survey_system prints Newly Revealed: (none) for non-record newly revealed entries', () => {

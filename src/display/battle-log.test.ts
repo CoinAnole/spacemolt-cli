@@ -427,6 +427,15 @@ describe('resolveCombatantLabel', () => {
       'Boss player-1',
     );
   });
+
+  test('the first matching snapshot username wins over a later one', () => {
+    expect(
+      resolveCombatantLabel('player-1', [
+        { player_id: 'player-1', username: 'First' },
+        { player_id: 'player-1', username: 'Second' },
+      ]),
+    ).toBe('First');
+  });
 });
 
 describe('battleLogCombatantRows', () => {
@@ -962,6 +971,42 @@ describe('battleLogAttackRows', () => {
       expect(rows[0]?.shieldHull).not.toBe('60/30');
       expect(rows[0]?.defense).not.toContain('90');
     }
+  });
+
+  test('a connected energy weapon with no name prints energy and blank S/H', () => {
+    const rows = battleLogAttackRows([
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            shield_damage: 60,
+            hull_damage: 30,
+            weapons: [
+              {
+                instance_id: 'w-ion',
+                damage_type: 'energy',
+                hit_chance: 0.7,
+                hit_roll: 0.2,
+                hit_success: true,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expectAttackRows(rows, [
+      {
+        tick: 0,
+        from: 'player-1',
+        to: 'pirate-1',
+        hit: 'hit',
+        shieldHull: '',
+        defense: 'energy',
+      },
+    ]);
   });
 
   test('duplicate defense component id keeps the first component', () => {

@@ -2464,6 +2464,57 @@ test('renders explicit empty ranch feed and production states', () => {
   expect(stdout).toContain('No expected ranch products.');
 });
 
+test('renders ranch supplies_ok true as Supplies: yes', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.supplies_ok = true;
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Supplies: yes');
+  expect(stdout).not.toContain('Supplies: no');
+});
+
+test('renders ranch domestication active', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.domestication_active = true;
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Domestication: active');
+});
+
+test('renders a numeric ranch cull target', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.cull_target = 12;
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Cull target: 12');
+  expect(stdout).not.toContain('disabled (0)');
+});
+
+test('omits ranch production when produces is omitted', () => {
+  const fixture = structuredClone(ranchStatusFixture) as Record<string, unknown>;
+  delete fixture.produces;
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Wildlife Ranch ===');
+  expect(stdout).not.toContain('=== Production ===');
+  expect(stdout).not.toContain('No expected ranch products.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders a ranch facility name equal to its id without a parenthetical', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.facility_name = fixture.facility_id;
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+  const facilityLine = stdout.split('\n').find((line) => line.startsWith('Facility:'));
+
+  expect(facilityLine).toBe('Facility: ranch-ember-1');
+});
+
 test('renders cull target zero as disabled while preserving zero herd', () => {
   const fixture = structuredClone(ranchSetCullFixture);
   fixture.details.herd = 0;
@@ -6686,6 +6737,52 @@ test('get_battle_log keeps Shield/Hull 0 on a full absorb with blank Damage', ()
 
   expect(stdout).toMatch(/\|\s*1\s*\|\s*1\s*\|\s+\|\s*0\s*\|\s*0\s*\|/);
   expect(stdout).toContain('0/0');
+});
+
+test('get_battle_log prints Has More: yes when has_more is true', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-more',
+    has_more: true,
+  });
+
+  expect(stdout).toContain('Has More: yes');
+  expect(stdout).not.toContain('Has More: no');
+});
+
+test('get_battle_log blanks tick Damage when bigint final_damage sits beside a finite final_damage', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-bigint-damage',
+    status: 'active',
+    total_ticks: 1,
+    has_more: false,
+    entries: [
+      {
+        tick: 0,
+        attacks: [
+          {
+            attacker_id: 'pirate-1',
+            target_id: 'player-1',
+            hit_success: true,
+            final_damage: 10n,
+            shield_damage: 0,
+            hull_damage: 0,
+          },
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            hit_success: true,
+            final_damage: 40,
+            shield_damage: 0,
+            hull_damage: 0,
+          },
+        ],
+      },
+    ],
+  });
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(ticks).toMatch(/\|\s*2\s*\|\s*2\s*\|\s+\|\s*0\s*\|\s*0\s*\|/);
+  expect(ticks).not.toContain('40');
 });
 
 test('get_battle_log omits Board Captures Casualties columns without those arrays', () => {

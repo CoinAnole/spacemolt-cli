@@ -2617,6 +2617,33 @@ test('prints Inputs: 2× sealed_crate for a recipe input that has only id', () =
   expect(line).toBe('Inputs: 2× sealed_crate');
 });
 
+test('prints Inputs: 2× ? for a recipe input with no name, item_id, or id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'pack_package',
+      kind: 'catalog',
+      catalog: {
+        type: 'recipes',
+        recipes: [
+          {
+            id: 'pack_package',
+            name: 'Pack Package',
+            inputs: [{ quantity: 2 }],
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Inputs:'));
+  expect(line).toBe('Inputs: 2× ?');
+});
+
 test('prints the Recipes table and omits Details and Inputs for two catalog recipes', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3874,6 +3901,32 @@ test('prints POI: Frozen Reach from detail.poi.name when the summary has no name
   expect(stdout.split('\n')).toContain('POI: Frozen Reach');
 });
 
+test('prints POI: Belt Mouth from the top-level poi name when summary and detail omit name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        name: 'Belt Mouth',
+        summary: {
+          id: 'belt_mouth',
+        },
+        detail: {
+          poi: {
+            id: 'belt_mouth',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: Belt Mouth');
+});
+
 test('prints ID: ice_poi from detail.poi.id when the summary has no id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3897,6 +3950,55 @@ test('prints ID: ice_poi from detail.poi.id when the summary has no id', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('ID: ice_poi');
+});
+
+test('prints POI: ice_poi from detail.poi.id when no name or summary id is present', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {},
+        detail: {
+          poi: {
+            id: 'ice_poi',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: ice_poi');
+});
+
+test('prints ID: belt_mouth from the top-level poi id when summary and detail omit id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        id: 'belt_mouth',
+        summary: {
+          name: 'Belt Mouth',
+        },
+        detail: {
+          poi: {
+            name: 'Belt Mouth',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: belt_mouth');
 });
 
 test('prints POI: POI for an empty POI object', () => {
@@ -4847,6 +4949,31 @@ test('prints Base: Intel Outpost for a faction-intel base', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Base: Intel Outpost');
+});
+
+test('prints Base: undefined for a whitespace faction-intel base name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+      faction_poi_intel: {
+        base_name: '   ',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Base: undefined');
 });
 
 test('prints Base: intel_outpost for faction POI intel with only base_id', () => {

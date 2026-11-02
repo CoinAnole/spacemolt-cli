@@ -6634,3 +6634,61 @@ test('get_skills prints the Other heading for a skill with no category', () => {
   const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Other:');
 });
+
+test('view_completed_mission participants objective branch prints joined names', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Meet', participants: ['Alice', 'Bob'] }],
+  });
+  expect(stdout).toContain('Meet (participants Alice, Bob)');
+});
+
+test('view_completed_mission eligible players objective branch prints joined names', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Rally', eligible_players: ['Ada', 'Bo'] }],
+  });
+  expect(stdout).toContain('Rally (eligible Ada, Bo)');
+});
+
+test('view_completed_mission objective progress branch prints explicit zero', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Haul', progress: { current: 0, required: 2 } }],
+  });
+  expect(stdout).toContain('Haul (0/2)');
+});
+
+test('view_completed_mission objective station branch prints target_base_name', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Deliver', target_base_name: 'Kepler Hub' }],
+  });
+  expect(stdout).toContain('Deliver (station Kepler Hub)');
+});
+
+test('view_completed_mission objective system branch prints system_name', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Visit', system_name: 'Sol' }],
+  });
+  expect(stdout).toContain('Visit (system Sol)');
+});
+
+test('scan object revealed_info prints 0 and skips nested records', () => {
+  const stdout = renderScan({
+    target_id: 'poi-1',
+    revealed_info: { hull: 0, note: 'visible', nested_skip: { a: 1 } },
+  });
+  expect(stdout).toContain('  hull: 0');
+  expect(stdout).toContain('  note: visible');
+  expect(stdout).not.toContain('nested_skip');
+});
+
+test('view_completed_mission string dialog prints the dialog line', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    dialog: 'Come back anytime.',
+  });
+  expect(stdout).toContain('Dialog: Come back anytime.');
+});

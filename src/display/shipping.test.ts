@@ -231,6 +231,22 @@ test('freight quote appraisal line prints its uninsurable reason', () => {
   expect(stdout).toContain('opened seal');
 });
 
+test('freight quote appraisal line with insurable false prints no', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      appraisal_lines: [
+        {
+          item_id: 'iron_ore',
+          insurable: false,
+        },
+      ],
+    },
+  });
+  expect(stdout).toContain('no');
+  expect(stdout).not.toContain('yes');
+});
+
 test('renders an explicit empty appraisal message', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',

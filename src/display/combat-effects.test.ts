@@ -421,6 +421,12 @@ test('an explicit zero effect scalar prints 0', () => {
   expect(summarizeEffect(0)).toBe('0');
 });
 
+test('a bigint effect scalar is an empty summary and does not contain 1', () => {
+  const summary = summarizeEffect(1n);
+  expect(summary).toBe('');
+  expect(summary).not.toContain('1');
+});
+
 test('summarizeEffect turns null, undefined, and an empty string into an empty summary', () => {
   expect(summarizeEffect(null)).toBe('');
   expect(summarizeEffect(undefined)).toBe('');
@@ -541,6 +547,10 @@ test('bonus disrupt speed prints the signed percent', () => {
 
 test('disrupt damage prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0.1 } } })).toBe('disrupt damage +10%');
+});
+
+test('disrupt_damage 0 prints disrupt damage 0%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0 } } })).toBe('disrupt damage 0%');
 });
 
 test('disrupt speed prints the signed percent', () => {
