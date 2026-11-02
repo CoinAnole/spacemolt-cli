@@ -467,6 +467,12 @@ describe('battleLogCombatantRows', () => {
     expect(rows).toEqual([{ player_id: 0 }]);
   });
 
+  test('drops a null player_id and keeps only the real snapshot beside it', () => {
+    const real = { player_id: 'player-1' };
+    const rows = battleLogCombatantRows([{ tick: 0, snapshots: [{ player_id: null }, real] }]);
+    expect(rows).toEqual([real]);
+  });
+
   test('is empty when snapshots are omitted or empty', () => {
     expect(battleLogCombatantRows(undefined)).toEqual([]);
     expect(battleLogCombatantRows([])).toEqual([]);
@@ -671,6 +677,19 @@ describe('battleLogAttackRows', () => {
   test('skips non-record entries and empty attacks', () => {
     expect(battleLogAttackRows(undefined)).toEqual([]);
     expect(battleLogAttackRows(['nope', { tick: 2, attacks: [] }, { tick: 3 }])).toEqual([]);
+  });
+
+  test('skips a non-record attack and keeps the remaining miss', () => {
+    expect(battleLogAttackRows([{ attacks: [null, { hit_success: false, hit_chance: 12 }] }])).toEqual([
+      {
+        tick: 0,
+        from: '',
+        to: '',
+        hit: 'miss',
+        shieldHull: '',
+        defense: 'chance 12%',
+      },
+    ]);
   });
 
   test('live partial volley prints shared hit N/M, missed-gun chance/roll, and ignores leftover Ghost Cannon', () => {

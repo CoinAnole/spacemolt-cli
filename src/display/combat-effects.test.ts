@@ -397,6 +397,12 @@ test('an explicit zero effect scalar prints 0', () => {
   expect(summarizeEffect(0)).toBe('0');
 });
 
+test('summarizeEffect turns null, undefined, and an empty string into an empty summary', () => {
+  expect(summarizeEffect(null)).toBe('');
+  expect(summarizeEffect(undefined)).toBe('');
+  expect(summarizeEffect('')).toBe('');
+});
+
 test('summarizeEffect drops an empty array', () => {
   const summary = summarizeEffect({ list: [] });
   expect(summary).toBe('');
@@ -463,6 +469,10 @@ test('anti_large_mod 0.1 prints large +10%', () => {
 
 test('negative accuracy prints accuracy -10%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: -0.1 } } })).toBe('accuracy -10%');
+});
+
+test('hit_chance_mod 0 prints accuracy 0%', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0 } } })).toBe('accuracy 0%');
 });
 
 test('anti_drone_mod 0.1 prints drone +10%', () => {

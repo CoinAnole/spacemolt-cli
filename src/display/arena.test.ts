@@ -467,6 +467,17 @@ test('renders challenge, decline, and cancel mutation copy', () => {
   expect(cancel).not.toContain('=== Response ===');
 });
 
+test('an arena challenge with message removed omits the answer deadline', () => {
+  const details = { ...(arenaChallengeFixture.details as Record<string, unknown>) };
+  delete details.message;
+  const challenge = output('arena_challenge', { ...arenaChallengeFixture, details });
+  expect(challenge).toContain('Challenge sent to Kestrel (player-77)');
+  expect(challenge).toContain('Side size: full fleet (every eligible member)');
+  expect(challenge).toContain('Next: arena status (wait for an answer) · arena cancel (withdraw)');
+  expect(challenge).not.toContain('Kestrel has until');
+  expect(challenge).not.toContain('=== Response ===');
+});
+
 test('declines malformed arena shapes and keeps the raw fallback', () => {
   expect(output('arena_status', { at_arena: 'yes', arena_wins: 3 })).toContain('=== Response ===');
   expect(output('arena_accept', { details: { action: 'accept', battle_id: 'btl-5c3' } })).toContain('=== Response ===');
@@ -700,6 +711,10 @@ test('formatObjectiveDigest prints survive and time limit as distinct jobs', () 
   expect(formatObjectiveDigest({ survive_ticks: 40, time_limit_ticks: 60 })).not.toContain('finish before');
 });
 
+test('formatObjectiveDigest keeps a negative survive cap', () => {
+  expect(formatObjectiveDigest({ survive_ticks: -3 })).toBe('survive -3 ticks');
+});
+
 const secondWindEnemies = [
   {
     name: 'Crimson Skirmisher',
@@ -729,6 +744,12 @@ test('formatWaveTrigger joins dual triggers with and and treats 0 remaining as r
   ).toBe('@ tick 20 and when 2 left');
   expect(formatWaveTrigger({ name: 'Now', enemies: secondWindEnemies })).toBe('');
   expect(formatWaveTrigger({ name: 'Immediate', after_ticks: 0, enemies: secondWindEnemies })).toBe('');
+});
+
+test('formatWaveTrigger omits a negative after_ticks', () => {
+  const trigger = formatWaveTrigger({ name: 'Immediate', after_ticks: -1, enemies: secondWindEnemies });
+  expect(trigger).toBe('');
+  expect(trigger).not.toContain('@ tick');
 });
 
 test('formatWaveDigest prefixes catalog waves and omits empty lists', () => {
