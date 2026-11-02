@@ -216,6 +216,10 @@ test('summarizeCombatSpecialEffects uses integer percents without scaling 1 to 1
   expect(summarizeCombatSpecialEffects({ lifesteal_pct: 20 })).toBe('lifesteal 20%');
 });
 
+test('a non-numeric percent combat effect is omitted', () => {
+  expect(summarizeCombatSpecialEffects({ lifesteal_pct: 'nope' })).toBe('');
+});
+
 test('summarizeAmmoEffects still scales damage_mod 1.0 to 100%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { damage_mod: 1.0 } } })).toBe('damage 100%');
   expect(summarizeAmmoEffects(antimatterTorpedoes)).toBe('damage 100%, armor bypass 30%, shield bypass 30%');
@@ -358,8 +362,16 @@ test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fracti
   );
 });
 
+test('a non-record resistance bonus is omitted', () => {
+  expect(summarizeModuleBonuses({ resistance_bonus: 10, reach: 2 })).toBe('reach 2');
+});
+
 test('summarizeModuleBonuses prints an unsigned flux_power suffix as flux 3', () => {
   expect(summarizeModuleBonuses({ flux_power: 3 })).toBe('flux 3');
+});
+
+test('a non-mechanical module key is omitted', () => {
+  expect(summarizeModuleBonuses({ reach: 3, custom_stat: 4 })).toBe('reach 3');
 });
 
 test('summarizeModuleEffects joins bonuses and combat special effects', () => {
@@ -435,6 +447,10 @@ test('armor melt without ticks prints the percent alone', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2 } } })).toBe('armor melt 20%');
 });
 
+test('armor melt ticks without a percent omit the armor melt token', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { armor_melt_ticks: 4 } } })).toBe('');
+});
+
 test('armor melt with zero ticks prints the percent alone', () => {
   const summary = summarizeAmmoEffects({ effect: { ammo: { armor_melt_pct: 0.2, armor_melt_ticks: 0 } } });
   expect(summary).toBe('armor melt 20%');
@@ -447,6 +463,10 @@ test('a burn with ticks prints the percent and duration', () => {
 
 test('burn without ticks prints the percent alone', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2 } } })).toBe('burn 20%');
+});
+
+test('burn ticks without a percent omit the burn token', () => {
+  expect(summarizeAmmoEffects({ effect: { ammo: { dot_ticks: 4 } } })).toBe('');
 });
 
 test('dot_ticks 0 prints burn 20% and does not print /0t', () => {

@@ -1217,6 +1217,13 @@ describe('battleLogAttackRows', () => {
     ).toBe('');
   });
 
+  test('a nameless per-weapon miss still prints chance', () => {
+    expect(
+      battleLogAttackRows([{ tick: 0, attacks: [{ weapons: [{ hit_chance: 0.12, hit_success: false }] }] }])[0]
+        ?.defense,
+    ).toBe('chance 12%');
+  });
+
   test('a weapon with only hit_success true prints a hit row', () => {
     const rows = battleLogAttackRows([
       {
