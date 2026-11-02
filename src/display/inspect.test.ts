@@ -293,6 +293,29 @@ test('omits Creator when a package has no creator', () => {
   expect(line).toBeUndefined();
 });
 
+test('omits Creator when a creator record is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_empty_creator',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_empty_creator',
+        creator: {},
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: pkg_empty_creator');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Creator:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Owner: PilotOne for an owner without type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -382,6 +405,29 @@ test('omits Owner when a package has no owner', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('ID: pkg_no_owner');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Owner:'));
+  expect(line).toBeUndefined();
+});
+
+test('omits Owner when an owner record has only a type', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_type_owner',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_type_owner',
+        owner: { type: 'player' },
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: pkg_type_owner');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Owner:'));
   expect(line).toBeUndefined();
 });
@@ -3009,6 +3055,26 @@ test('inspect catalog recipe prints Crafting time 0', () => {
   expect(stdout).toContain('Crafting time: 0');
 });
 
+test('omits a whitespace recipe description', () => {
+  const stdout = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [
+        {
+          id: 'spaced_recipe',
+          name: 'Spaced Recipe',
+          category: 'refining',
+          description: '   ',
+        },
+      ],
+    },
+    'spaced_recipe',
+  );
+
+  expect(stdout).toContain('Details');
+  expect(stdout.split('\n')).not.toContain('   ');
+});
+
 test('omits Package operation when a catalog recipe has no package_operation', () => {
   const stdout = renderCatalogInspect(
     {
@@ -4650,6 +4716,33 @@ test('omits a faction-intel POI description that is only spaces', () => {
   expect(stdout.split('\n')).not.toContain('   ');
 });
 
+test('omits a non-string faction-intel POI description and does not print the object', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+      },
+      faction_poi_intel: {
+        description: { note: 'DESCRIPTION_OBJECT' },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).not.toContain('DESCRIPTION_OBJECT');
+  expect(stdout).not.toContain('[object Object]');
+});
+
 test('prints Base: Intel Outpost for a faction-intel base', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4925,6 +5018,31 @@ test('omits a station description that is only spaces', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Station: Earth Station');
   expect(stdout).not.toContain('   ');
+});
+
+test('omits a non-string station description and does not print the object', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          description: { note: 'DESCRIPTION_OBJECT' },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('DESCRIPTION_OBJECT');
+  expect(stdout).not.toContain('[object Object]');
 });
 
 test('prints Facilities: 0 for an empty facilities array', () => {

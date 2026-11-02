@@ -360,6 +360,17 @@ test('arena XP skills without a cap leave Remaining blank', () => {
   expect(gunnery).not.toContain('(cap ');
 });
 
+test('a non-finite arena XP skill lists gunnery and does not print NaN', () => {
+  const stdout = output('arena_status', {
+    ...arenaStatusIdleFixture,
+    xp_cap_per_skill: 500,
+    xp_used_today: { gunnery: Number.NaN },
+  });
+  const gunnery = stdout.split('\n').find((line) => line.includes('gunnery')) ?? '';
+  expect(gunnery).toContain('gunnery');
+  expect(gunnery).not.toContain('NaN');
+});
+
 test('renders incoming challenge and XP remaining with deterministic skill sort', () => {
   const stdout = output('arena_status', arenaStatusIncomingFixture);
   expect(stdout).toContain('Incoming challenge from Kestrel (player-77)');

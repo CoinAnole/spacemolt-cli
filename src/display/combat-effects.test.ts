@@ -221,6 +221,12 @@ test('summarizeAmmoEffects still scales damage_mod 1.0 to 100%', () => {
   expect(summarizeAmmoEffects(antimatterTorpedoes)).toBe('damage 100%, armor bypass 30%, shield bypass 30%');
 });
 
+test('untraceable false prints damage 100% and omits untraceable', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { damage_mod: 1, untraceable: false } } });
+  expect(summary).toBe('damage 100%');
+  expect(summary).not.toContain('untraceable');
+});
+
 test('explicit zero damage_mod prints damage 0%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { damage_mod: 0 } } })).toBe('damage 0%');
 });
@@ -387,6 +393,10 @@ test('summarizeEffect prints boolean scalars', () => {
   expect(summarizeEffect(false)).toBe('false');
 });
 
+test('an explicit zero effect scalar prints 0', () => {
+  expect(summarizeEffect(0)).toBe('0');
+});
+
 test('summarizeEffect drops an empty array', () => {
   const summary = summarizeEffect({ list: [] });
   expect(summary).toBe('');
@@ -431,6 +441,12 @@ test('a burn with ticks prints the percent and duration', () => {
 
 test('burn without ticks prints the percent alone', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2 } } })).toBe('burn 20%');
+});
+
+test('dot_ticks 0 prints burn 20% and does not print /0t', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { dot_pct: 0.2, dot_ticks: 0 } } });
+  expect(summary).toBe('burn 20%');
+  expect(summary).not.toContain('/0t');
 });
 
 test('positive accuracy prints a leading plus', () => {
@@ -497,6 +513,13 @@ test('burn_ticks_remaining 0 leaves stdout empty and does not print Effects or B
   expect(buffer.stdout).toEqual([]);
   expect(buffer.stdout.join('\n')).not.toContain('Effects');
   expect(buffer.stdout.join('\n')).not.toContain('Burn');
+});
+
+test('disruption ticks 0 leaves stdout empty and does not print Disruption', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ disruption_ticks_remaining: 0 }), { plain: true });
+  expect(buffer.stdout).toEqual([]);
+  expect(buffer.stdout.join('\n')).not.toContain('Disruption');
 });
 
 test('active armor melt prints Armor melt: active for 2 ticks', () => {

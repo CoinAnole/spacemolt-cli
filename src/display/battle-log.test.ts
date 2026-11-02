@@ -291,6 +291,18 @@ describe('formatBattleDefenseLine', () => {
     ).toBe('Pulse Laser kinetic 400→350');
   });
 
+  test('a component with no finite stage hops omits the arrow chain', () => {
+    expect(
+      formatBattleDefenseLine(
+        {
+          weapon_name: 'Pulse Laser',
+          damage_type: 'kinetic',
+        },
+        'component',
+      ),
+    ).toBe('Pulse Laser kinetic');
+  });
+
   test('appends bypass flags only when truthy or non-zero', () => {
     expect(
       formatBattleDefenseLine(
@@ -385,6 +397,10 @@ describe('resolveCombatantLabel', () => {
 
   test('null combatant id resolves to an empty label', () => {
     expect(resolveCombatantLabel(null, [])).toBe('');
+  });
+
+  test('a zero combatant id resolves to 0', () => {
+    expect(resolveCombatantLabel(0, undefined)).toBe('0');
   });
 
   test('non-record snapshot is skipped when resolving a combatant label', () => {

@@ -170,4 +170,13 @@ describe('sumStorageItemQuantities', () => {
       ]),
     ).toBe(12);
   });
+
+  test('skips a non-finite quantity', () => {
+    expect(
+      sumStorageItemQuantities([
+        { item_id: 'iron_ore', quantity: 10 },
+        { item_id: 'bad', quantity: Number.NaN },
+      ]),
+    ).toBe(10);
+  });
 });

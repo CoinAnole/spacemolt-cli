@@ -3721,7 +3721,6 @@ function collectScalarBits(
     if (key in data) push(key, data[key]);
   }
 
-  // Prefer listed keys first; fill remaining slots from other top-level scalars.
   if (bits.length < options.maxKeys) {
     for (const [key, value] of Object.entries(data)) {
       if (bits.length >= options.maxKeys) break;

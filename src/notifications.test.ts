@@ -11971,6 +11971,64 @@ describe('notification formatting', () => {
       };
       expect(formatNotificationMessage(notification)).toContain('0cr still escrowed');
     });
+
+    test('missing market depth quantity or price', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: {
+          base_name: 'Haven Exchange',
+          items: [
+            {
+              item_name: 'Iron Ore',
+              sell_orders: [{ price_each: 12 }, { quantity: 40 }],
+            },
+          ],
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toContain('sell ? @ 12');
+      expect(message).toContain('40 @ ?');
+    });
+
+    test('zero market depth', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: {
+          base_name: 'Haven Exchange',
+          items: [
+            {
+              item_name: 'Iron Ore',
+              sell_orders: [{ price_each: 0, quantity: 0 }],
+            },
+          ],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('0 @ 0');
+    });
+
+    test('zero runs remaining', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          jobs: [{ recipe: 'Power Cell', runs_remaining: 0 }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('0 runs left');
+    });
+
+    test('bigint single run', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          jobs: [{ recipe: 'A', runs_remaining: 1n }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('1 run left');
+    });
   });
 
   describe('gift_received pure preview', () => {
