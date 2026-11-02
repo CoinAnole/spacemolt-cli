@@ -5718,6 +5718,73 @@ test('get_state home place lines print Home POI and Home System', () => {
   expect(stdout).toContain('Home System: sol');
 });
 
+test('get_state prints finite ship speed', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Speed: 12');
+});
+
+test('get_state prints ship location when the string is non-empty', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as { ship: Record<string, unknown> };
+  fixture.ship.location = 'outer-ring';
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Ship location: outer-ring');
+});
+
+test('get_state prints a trimmed player status message', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Status: hauling ore');
+});
+
+test('get_state prints faction id, clan tag, and rank', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Faction: smc [SMC] (captain)');
+});
+
+test('get_state prints both player color strings', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Colors: #FFFFFF / #000000');
+});
+
+test('get_state prints each hint line', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('  - Dock before the market closes');
+});
+
+test('get_state prints a non-empty player id', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('ID: player-1');
+});
+
 test('get_state lists each module once and keeps stats on that row', () => {
   const stdout = renderStructuredResult(
     'get_state',

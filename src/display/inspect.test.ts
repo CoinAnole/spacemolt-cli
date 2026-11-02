@@ -4533,6 +4533,33 @@ test('prints Name: Main Belt for the POI faction-intel name', () => {
   expect(stdout.split('\n')).toContain('Name: Main Belt');
 });
 
+test('omits Class when POI faction intel has no class', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+      faction_poi_intel: {
+        name: 'Main Belt',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Name: Main Belt');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Class:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Class: ice_field for faction-intel class without a summary class or type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4556,6 +4583,60 @@ test('prints Class: ice_field for faction-intel class without a summary class or
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Class: ice_field');
+});
+
+test('omits Name when POI faction intel has no name', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+      },
+      faction_poi_intel: {
+        class: 'ice_field',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: ice_field');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Name:'));
+  expect(line).toBeUndefined();
+});
+
+test('omits Base when POI faction intel has no base name or id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ice_poi',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'ice_poi',
+          name: 'Frozen Reach',
+        },
+      },
+      faction_poi_intel: {
+        class: 'ice_field',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: ice_field');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Base:'));
+  expect(line).toBeUndefined();
 });
 
 test('prints Class: ice_field from detail.poi.class when summary has no class or type', () => {
@@ -5088,6 +5169,28 @@ test('prints Empire: None for a station with no empire', () => {
 
   const line = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
   expect(line).toBe('Empire: None');
+});
+
+test('omits Condition when a station has no condition record', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n').find((entry) => entry.startsWith('Empire:'))).toBe('Empire: None');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Condition:'));
+  expect(line).toBeUndefined();
 });
 
 test('omits Facilities when a station facilities value is omitted or not an array', () => {

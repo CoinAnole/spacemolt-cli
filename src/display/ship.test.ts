@@ -2327,3 +2327,10 @@ test('get_base facilities overflow prints the remainder for 13 facility ids', ()
   const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain(', ... and 1 more');
 });
+
+test('get_base empty facilities array prints Facilities: 0', () => {
+  const fixture = structuredClone(baseFixture);
+  fixture.base.facilities = [];
+  const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Facilities: 0');
+});

@@ -333,6 +333,12 @@ test('summarizeModuleBonuses drops a non-flag true shield_bonus and keeps reach 
   expect(summarizeModuleBonuses({ reach: 3, shield_bonus: true })).toBe('reach 3');
 });
 
+test('a non-finite shield_bonus is omitted and the summary does not contain NaN', () => {
+  const summary = summarizeModuleBonuses({ reach: 3, shield_bonus: Number.NaN });
+  expect(summary).toBe('reach 3');
+  expect(summary).not.toContain('NaN');
+});
+
 test('omitted passenger fields leave only reach', () => {
   expect(summarizeModuleBonuses({ passenger_bonus: 4, dining_rate: 2, leisure_power: 1, reach: 3 })).toBe('reach 3');
 });
@@ -364,6 +370,12 @@ test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fracti
 
 test('a non-record resistance bonus is omitted', () => {
   expect(summarizeModuleBonuses({ resistance_bonus: 10, reach: 2 })).toBe('reach 2');
+});
+
+test('a zero resistance map entry is omitted', () => {
+  const summary = summarizeModuleBonuses({ resistance_bonus: { em: 0, thermal: 10 } });
+  expect(summary).toBe('thermal +10');
+  expect(summary).not.toContain('em');
 });
 
 test('summarizeModuleBonuses prints an unsigned flux_power suffix as flux 3', () => {
@@ -431,6 +443,12 @@ test('a boolean ammo effect type is printed', () => {
 
 test('a whitespace effect type skips the type prefix and prints damage 100%', () => {
   expect(summarizeEffect({ type: '   ', ammo: { damage_mod: 1 } })).toBe('damage 100%');
+});
+
+test('an object ammo effect type is omitted and does not stringify', () => {
+  const summary = summarizeEffect({ type: { kind: 'ammo' }, ammo: { damage_mod: 1 } });
+  expect(summary).toBe('damage 100%');
+  expect(summary).not.toContain('object Object');
 });
 
 test('summarizeEffect drops an empty nested record', () => {
@@ -511,6 +529,12 @@ test('bonus disrupt ticks prints bonus disrupt 2 ticks', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_ticks: 2 } } })).toBe('bonus disrupt 2 ticks');
 });
 
+test('disrupt_bonus_ticks 0 is an empty string and does not contain bonus disrupt', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_ticks: 0 } } });
+  expect(summary).toBe('');
+  expect(summary).not.toContain('bonus disrupt');
+});
+
 test('bonus disrupt speed prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_speed: 0.1 } } })).toBe('bonus disrupt speed +10%');
 });
@@ -580,6 +604,15 @@ test('a non-record active buff is skipped', () => {
     { plain: true },
   );
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: hull_regen +5']);
+});
+
+test('a non-array active_buffs leaves stdout empty and does not print Buff', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: { stat: 'hull_regen', amount: 5 } }), {
+    plain: true,
+  });
+  expect(buffer.stdout).toEqual([]);
+  expect(buffer.stdout.join('\n')).not.toContain('Buff');
 });
 
 test('an empty item_id omits the from clause', () => {

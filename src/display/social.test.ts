@@ -2787,6 +2787,17 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).not.toContain('=== Categories ===');
 });
 
+test('facility_types detail prints the supply item when service pool units are omitted', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete fixture.service_pool_units_per_item;
+  const lines = facilityTypeDetailLines(fixture);
+  const stdout = lines.join('\n');
+  const poolLine = lines.find((line) => line.startsWith('Service pool:'));
+  expect(poolLine).toBe('Service pool: 20 cap, +4/cycle, crew_rations');
+  expect(poolLine).not.toContain('1x');
+  expect(stdout).not.toContain('1x');
+});
+
 test('facility_types detail prints an explicit false buildable and skips an omitted key', () => {
   const denied = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
   denied.buildable = false;
@@ -2805,6 +2816,14 @@ test('facility_types detail prints an explicit false buildable and skips an omit
   expect(omittedOut).not.toContain('Buildable');
   expect(omittedOut).not.toContain('Unique');
   expect(omittedOut).not.toMatch(/\bunique\b/i);
+});
+
+test('facility_types detail falls back to type_id when the name is whitespace', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.name = '   ';
+  const stdout = facilityTypeDetailLines(fixture).join('\n');
+  expect(stdout).toContain('=== Facility type: crew_office ===');
+  expect(stdout).toContain('ID: crew_office');
 });
 
 test('facility_types detail keeps an explicit 0 rent quote and the same gloss', () => {
@@ -2885,6 +2904,14 @@ test('facility_types omits Service pool when definition pool fields are absent',
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('facility_types detail prints service pool units when the supply item is omitted', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete fixture.service_pool_supply_item;
+  fixture.service_pool_units_per_item = 1;
+  const poolLine = facilityTypeDetailLines(fixture).find((line) => line.startsWith('Service pool:'));
+  expect(poolLine).toBe('Service pool: 20 cap, +4/cycle, 1x');
+});
+
 test('facility_types shapeFallback does not claim catalog-shaped type_id objects', () => {
   const stdout = renderStructuredResult(
     'inspect',
@@ -2905,6 +2932,14 @@ test('facility_types declines detail payloads with a non-types action', () => {
   ).stdout.join('\n');
   expect(stdout).not.toContain('=== Facility type:');
   expect(stdout).not.toContain('Service pool: 20 cap');
+});
+
+test('facility_types detail declines a whitespace type_id', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.type_id = '   ';
+  const stdout = facilityTypeDetailLines(fixture).join('\n');
+  expect(stdout).not.toContain('=== Facility type:');
+  expect(stdout).not.toContain('Service pool:');
 });
 
 function facilityTypeListFixture(
@@ -2975,6 +3010,27 @@ test('facility_types list prints buildable yes and no instead of the generic tab
   expect(stdout).not.toContain('false');
 });
 
+test('facility_types list omits the page line when total_pages is omitted', () => {
+  const fixture = facilityTypeListFixture(
+    [
+      {
+        id: 'crew_office',
+        name: 'Crew Office',
+        category: 'service',
+        level: 1,
+        build_cost: 12000,
+        buildable: true,
+      },
+    ],
+    { page: 1 },
+  );
+  delete fixture.total_pages;
+  const stdout = renderFacilityTypes(fixture);
+  expect(stdout).toContain('=== Facility types ===');
+  expect(tableCell(sectionAfter(stdout, 'Facility types'), 'Crew Office', 'Name')).toBe('Crew Office');
+  expect(stdout).not.toContain('page 1/');
+});
+
 test('facility_types list keeps Buildable when every sent value is false and ignores unique', () => {
   const stdout = renderFacilityTypes(
     facilityTypeListFixture([
@@ -3036,6 +3092,24 @@ test('facility_types list prints none for an empty types array and keeps an expl
   expect(stdout).toContain('No matches.');
   expect(stdout).not.toContain('Buildable');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_types list prints total 0 from total_count when total is omitted', () => {
+  const fixture = facilityTypeListFixture(
+    [
+      {
+        id: 'crew_office',
+        name: 'Crew Office',
+        category: 'service',
+        level: 1,
+        build_cost: 12000,
+      },
+    ],
+    { total_count: 0 },
+  );
+  delete fixture.total;
+  const stdout = renderFacilityTypes(fixture);
+  expect(stdout).toContain('total 0');
 });
 
 test('facility_types list skips a non-string hint and still prints the table', () => {

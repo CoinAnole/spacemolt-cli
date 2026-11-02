@@ -108,6 +108,8 @@ test('prints Idempotent: yes only when true', () => {
   expect(retry).toContain('Idempotent: yes');
   const firstClaim = renderClaim(claimDetails({ idempotent: false }));
   expect(firstClaim).not.toContain('Idempotent');
+  const numeric = renderClaim(claimDetails({ idempotent: 1 }));
+  expect(numeric).not.toContain('Idempotent');
 });
 
 test('prints faction_reserve crew with assigned count', () => {

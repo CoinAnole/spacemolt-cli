@@ -117,6 +117,14 @@ test('recipe.ship_passive or recipe.passive true is ship passive over craftable 
   );
 });
 
+test('numeric ship_passive 1 with hand_craftable true is craftable', () => {
+  expect(classifyRecipeVenue({ ship_passive: 1, hand_craftable: true })).toBe('craftable');
+});
+
+test('numeric facility_only 1 is craftable', () => {
+  expect(classifyRecipeVenue({ facility_only: 1 })).toBe('craftable');
+});
+
 test('countRecipeVenues returns undefined when zero records were counted', () => {
   expect(countRecipeVenues([])).toBeUndefined();
   expect(countRecipeVenues(undefined)).toBeUndefined();
@@ -427,6 +435,18 @@ test('ship build materials prefer name over item_id', () => {
   expect(line).toBe('Build materials: 2x Steel Plate');
 });
 
+test('empty-string build material name does not fall through to item_id', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ name: '', item_id: 'steel_plate', quantity: 2 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 2x ');
+  expect(buffer.stdout.join('\n')).not.toContain('steel_plate');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
 });
@@ -456,6 +476,10 @@ test('name is preferred over item_name', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', item_name: 'Plate', quantity: 1 }])).toBe(
     '1x Steel Plate',
   );
+});
+
+test('empty-string name does not fall through to item_id', () => {
+  expect(summarizeNamedItemQuantities([{ name: '', item_id: 'steel_plate', quantity: 2 }])).toBe('2x ');
 });
 
 test('non-string id returns empty from joinStringIds', () => {
@@ -583,6 +607,14 @@ test('hidden-only ship prints Availability: hidden', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Availability: hidden');
   expect(stdout).not.toContain('legacy');
+});
+
+test('numeric hidden 1 with legacy prints Availability: legacy', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ hidden: 1, legacy: true }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Availability: legacy');
+  expect(stdout).not.toContain('hidden');
 });
 
 test('module package operation falls back to catalog.package_operation', () => {

@@ -970,7 +970,6 @@ export const shipFormatters = [
     { commands: ['treat_personnel'] },
   ),
 
-  // Wrecks
   formatter(
     (r) => {
       if (!Array.isArray(r.wrecks)) return false;
@@ -1069,7 +1068,6 @@ export const shipFormatters = [
     { commands: ['scrap_wreck'], shapeFallback: true },
   ),
 
-  // Drones
   namedFormatter(
     'drones',
     ['drones'],

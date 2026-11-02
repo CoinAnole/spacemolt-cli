@@ -2085,3 +2085,58 @@ test('faction bulk buy prints separate when consolidated is false and bucket is 
   expect(stdout).toContain('separate');
   expect(stdout).not.toContain('(separate)');
 });
+
+test('faction bulk buy prints consolidated when consolidated is true and bucket is absent', () => {
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          consolidated: true,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('consolidated');
+  expect(stdout).not.toContain('(consolidated)');
+});
+
+test('faction bulk buy prints Sales when the bucket is Sales and consolidated is absent', () => {
+  const stdout = renderStructuredResult(
+    'faction_create_buy_order',
+    {
+      action: 'faction_create_buy_order',
+      kind: 'bulk',
+      mode: 'bulk',
+      summary: { total: 1, succeeded: 1, failed: 0 },
+      results: [
+        {
+          index: 0,
+          success: true,
+          item: 'Nickel Ore',
+          item_id: 'nickel_ore',
+          quantity: 25,
+          bucket: 'Sales',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Sales');
+  expect(stdout).not.toContain('(consolidated)');
+  expect(stdout).not.toContain('(separate)');
+});

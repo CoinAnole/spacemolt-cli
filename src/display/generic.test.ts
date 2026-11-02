@@ -125,6 +125,25 @@ test('renders dock facility_note and your_facilities with paused vs billable ren
   expect(facilitiesTable).not.toMatch(/\bETA\b/);
 });
 
+test('renders dock satisfaction without condition text', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const stationCondition = fixture.station_condition as Record<string, unknown>;
+  delete stationCondition.condition_text;
+  delete stationCondition.condition;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Station condition: unknown (82%)');
+});
+
+test('renders a missing dock base as station', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.action = 'dock';
+  fixture.story = dockFixture.story;
+  delete fixture.base;
+  delete fixture.base_name;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Docked: station ===');
+});
+
 test('dock your_facilities grows an ETA column when ticks_until_complete is present', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   const facilities = fixture.your_facilities as Array<Record<string, unknown>>;

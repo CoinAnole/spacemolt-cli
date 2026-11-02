@@ -343,6 +343,28 @@ test('citizenship list omits Reason when empires have no ineligible_reason', () 
   expect(stdout).not.toContain('Reason');
 });
 
+test('citizenship list prints an explicit zero citizen flag as 0', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    empires: [
+      {
+        empire_name: 'Solarian',
+        empire_id: 'solarian',
+        is_citizen: 0,
+      },
+    ],
+  });
+
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Citizen'));
+  const row = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Solarian') && !line.includes('Citizen'));
+  const headers = header?.split('|').map((cell) => cell.trim()) ?? [];
+  const cells = row?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(cells[headers.indexOf('Citizen')]).toBe('0');
+  expect(row).not.toContain('yes');
+  expect(row).not.toContain('no');
+});
+
 test('citizenship apply omits Status when status is an empty string', () => {
   const stdout = stdoutOf('citizenship_apply', {
     empire_id: 'solarian',

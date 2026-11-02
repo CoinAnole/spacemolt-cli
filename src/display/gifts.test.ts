@@ -366,4 +366,10 @@ describe('emitGiftEntries', () => {
     expect(stdout).toContain('Credits: 1 cr');
     expect(stdout).not.toContain('From:');
   });
+
+  test('numeric sender 1 renders the sender id on the From line', () => {
+    const { stdout } = renderGifts([{ sender: 1, sender_id: 'player-ada' }]);
+    const line = stdout.split('\n').find((row) => row.includes('From:'));
+    expect(line).toBe('  From: player-ada');
+  });
 });

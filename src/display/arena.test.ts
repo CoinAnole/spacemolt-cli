@@ -425,6 +425,20 @@ test('renders accept participants with Team from your_side and a unique (you) ma
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('your_side 0 renders arena accept with one side-0 participant as yours with (you)', () => {
+  const stdout = output('arena_accept', {
+    details: {
+      ...arenaAcceptDetails,
+      your_side: 0,
+      opponent_side: 1,
+      participants: [{ player_id: 'player-77', username: 'Kestrel', side_id: 0 }],
+    },
+  });
+  expect(stdout).toContain('Your side: 0');
+  expect(stdout).toContain('yours');
+  expect(stdout).toContain('Kestrel (you)');
+});
+
 test('omits (you) when more than one pilot shares your_side', () => {
   const stdout = output('arena_accept', {
     details: {

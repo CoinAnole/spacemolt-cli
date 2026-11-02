@@ -293,6 +293,27 @@ test('prints a created_at preview when the notification timestamp is omitted', (
   expect(stdout).not.toContain('2026-05-23T18:59:39');
 });
 
+test('prints the response timestamp when a notification omits timestamp and created_at', () => {
+  const timestamp = 1779562779;
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    timestamp,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Timestamp'));
+  const timestampCell = dataRow?.split('|').map((cell) => cell.trim())[0];
+  expect(timestampCell).toBe('2026-05-23 18:59:39');
+  expect(stdout).not.toContain('1779562779');
+});
+
 test('a numeric unix-millisecond notification timestamp prints the UTC second preview', () => {
   const timestamp = 1779562779000;
   const stdout = stdoutOf('get_notifications', {

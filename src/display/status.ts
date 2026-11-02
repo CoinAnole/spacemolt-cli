@@ -1259,7 +1259,6 @@ export const statusFormatters = [
     { commands: ['pay_bounty'] },
   ),
 
-  // Player profile
   formatter(
     (r, command) => {
       if (!isRecord(r.player)) return false;
@@ -1319,7 +1318,6 @@ export const statusFormatters = [
     { commands: ['get_player_profile'] },
   ),
 
-  // Compact player status summary
   formatter(
     (r) => {
       const lines = formatStatusSummary(r);
@@ -1332,7 +1330,6 @@ export const statusFormatters = [
 
   formatter(formatGetState, { commands: ['get_state'] }),
 
-  // Player status
   formatter(
     (r, command) => {
       if (!r.player) return false;
@@ -1576,7 +1573,6 @@ export const statusFormatters = [
     { commands: ['get_system'], shapeFallback: true },
   ),
 
-  // POI info
   namedFormatter(
     'poi_info',
     ['poi'],
@@ -1765,7 +1761,7 @@ export const statusFormatters = [
       if (r.hull !== undefined) emitLine(`Hull: ${r.hull}`);
       if (r.shield !== undefined) emitLine(`Shield: ${r.shield}`);
       if (r.cloaked !== undefined) emitLine(`Cloaked: ${r.cloaked}`);
-      const description = typeof r.description === 'string' && r.description ? r.description : undefined;
+      const description = usableLabel(r.description) ? r.description : undefined;
       const descriptionAlreadyRevealed = description
         ? Array.isArray(r.revealed_info)
           ? r.revealed_info.some((value) => value === description)
@@ -1775,7 +1771,7 @@ export const statusFormatters = [
         : false;
       if (description && !descriptionAlreadyRevealed) emitLine(`Description: ${description}`);
       if (r.branded === true) emitLine('Branded: yes');
-      if (typeof r.brand_faction === 'string' && r.brand_faction.trim() !== '') {
+      if (chartDescription(r.brand_faction)) {
         emitLine(`Brand: ${r.brand_faction}`);
       }
       if (typeof r.brand_ranch === 'string' && r.brand_ranch.trim() !== '') {

@@ -161,6 +161,21 @@ test('freight quote shipper without an id still prints the quote', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote shipper id of only spaces omits Shipper and still prints the quote', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      shipper: { kind: 'player', id: '   ' },
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-1');
+  expect(stdout).not.toContain('Shipper:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('one-sided freight quote omits Route when destination_base_id is omitted', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -295,6 +310,16 @@ test('renders the shipping_get delivered_at branch', () => {
     contract: { ...contract, delivered_at: '2026-07-17T10:35:00Z' },
   });
   expect(stdout).toContain('Delivered: 2026-07-17T10:35:00Z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('renders the shipping_get terminal_reason branch', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, terminal_reason: 'seal broken' },
+  });
+  expect(stdout).toContain('=== Freight Contract ===');
+  expect(stdout).toContain('Terminal reason: seal broken');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -1182,6 +1207,16 @@ test('prints contract-level claim_paid on the full contract view, including zero
     contract: { ...contract, claim_paid: 0 },
   });
   expect(zero).toContain('Claim paid: 0 cr');
+});
+
+test('shipping_get prints contract carrier_payout 0 under the Freight Contract heading', () => {
+  const stdout = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, carrier_payout: 0 },
+  });
+  expect(stdout).toContain('=== Freight Contract ===');
+  expect(stdout).toContain('Carrier payout: 0 cr');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 function settlementEnvelope(

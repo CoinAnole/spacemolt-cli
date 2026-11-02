@@ -982,7 +982,6 @@ function missionLedgerDisplays(mission: Record<string, unknown>): {
   };
 }
 
-/** A line break would split the one-line station header. */
 function usableStationToken(value: unknown): string | undefined {
   if (typeof value !== 'string' || /[\r\n]/.test(value)) return undefined;
   const text = value.trim();

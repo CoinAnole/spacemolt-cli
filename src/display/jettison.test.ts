@@ -168,6 +168,25 @@ test('failed jettison result prints Success: no', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('empty-string jettison result success omits Success', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          success: '',
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('non-boolean jettison success declines to the raw response', () => {
   const { stdout } = renderJettison('storage jettison', {
     details: {
@@ -350,6 +369,25 @@ test('null jettison result quantity omits Quantity', () => {
   expect(stdout).not.toContain('Quantity');
 });
 
+test('empty-string jettison result quantity omits Quantity', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          quantity: '',
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Quantity');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('non-record jettison result row declines to the raw response', () => {
   const { stdout } = renderJettison('storage jettison', {
     details: {
@@ -381,4 +419,18 @@ test('string conversion output_quantity declines to the raw response', () => {
 
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('Output Quantity:');
+});
+
+test('null conversion declines to the raw response', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'purified_water',
+      quantity: 1n,
+      conversion: null,
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Output Item Id');
 });

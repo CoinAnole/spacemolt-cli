@@ -7100,6 +7100,22 @@ describe('notification formatting', () => {
       ).toBe('Battle ended! Victory');
     });
 
+    test('pirate_warning with no message', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'pirate_warning',
+        data: {},
+      });
+      expect(preview.headline).toBe('Pirates detected nearby!');
+    });
+
+    test('police_warning with no message', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'police_warning',
+        data: {},
+      });
+      expect(preview.headline).toBe('Police warning');
+    });
+
     test('battle_ended prefers raw reason, keeps message, and notes no winning side on -1', () => {
       const stalemate = formatNotificationPreview({
         msg_type: 'battle_ended',
@@ -9150,6 +9166,26 @@ describe('notification formatting', () => {
       expectNoNestedJsonDump(JSON.stringify(preview));
     });
 
+    test('unsuccessful scan_result', () => {
+      const preview = formatNotificationPreview({
+        type: 'scan',
+        msg_type: 'scan_result',
+        data: { username: 'Raider', success: false },
+      });
+      expect(preview.headline).toBe('Scan of Raider failed - insufficient scan power');
+    });
+
+    test('scan hull, shield, and cloaked fields', () => {
+      const preview = formatNotificationPreview({
+        type: 'scan',
+        msg_type: 'scan_result',
+        data: { success: true, hull: 40, shield: 12, cloaked: true },
+      });
+      expect(preview.details).toContain('Hull: 40');
+      expect(preview.details).toContain('Shield: 12');
+      expect(preview.details).toContain('Cloaked: true');
+    });
+
     test('inline pure registry: social types go through pure preview path', () => {
       const output = stripAnsi(
         formatNotification({
@@ -9880,6 +9916,14 @@ describe('notification formatting', () => {
       expect(xp.headline).toBe('+5 XP in mining (10/20)');
     });
 
+    test('skill_xp_gain without current or next XP', () => {
+      const xp = formatNotificationPreview({
+        msg_type: 'skill_xp_gain',
+        data: { skill_id: 'mining', xp_gained: 5 },
+      });
+      expect(xp.headline).toBe('+5 XP in mining (?/?)');
+    });
+
     test('drone_update / drone_destroyed pure previews', () => {
       expect(
         formatNotificationPreview({
@@ -9944,6 +9988,15 @@ describe('notification formatting', () => {
           data: { command: 'travel', tick: 77, message: 'drive offline' },
         }).headline,
       ).toBe('travel failed (tick 77): drive offline');
+    });
+
+    test('queue_cleared without a reason', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'queue_cleared',
+          data: {},
+        }).headline,
+      ).toBe('Action queue cleared');
     });
 
     test('inline layout-only: remainder types render via pure preview (no writeLine registry)', () => {

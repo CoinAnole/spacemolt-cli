@@ -498,6 +498,18 @@ describe('find_route formatter', () => {
     expect(emptyStdout.split('\n')).toContain('Steps: 0');
   });
 
+  test('omits the Found line when the found key is absent', () => {
+    const hop: Record<string, unknown> = {
+      ...documentedMissingRouteFixture,
+      route: [{ system_id: 'sol', name: 'Sol', jumps: 0 }],
+    };
+    delete hop.found;
+    const stdout = stdoutOf(hop);
+    expect(stdout).toContain('Route: found');
+    const line = stdout.split('\n').find((entry) => entry.startsWith('Found:'));
+    expect(line).toBeUndefined();
+  });
+
   test('claims a body that only has a message', () => {
     const rendered = render({ message: 'Only a message' });
     const stdout = rendered.stdout.join('\n');
