@@ -172,6 +172,30 @@ test('omits Kind when an inspect package has no kind', () => {
   expect(line).toBeUndefined();
 });
 
+test('omits Source when a package inspect has no source', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_no_source',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_no_source',
+        contents: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('=== Inspect: package:pkg_no_source ===');
+  expect(stdout.split('\n')).toContain('Kind: package');
+  expect(stdout.split('\n')).toContain('ID: pkg_no_source');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Source:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Creator: PilotOne when the package creator has a username and no faction', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -990,6 +1014,28 @@ test('prints Visited: false when system visited is false', () => {
   expect(stdout.split('\n')).toContain('Visited: false');
 });
 
+test('omits Visited when a system omits visited', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Visited:'));
+  expect(line).toBeUndefined();
+});
+
 test('omits Connections when a system connections array is empty', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1281,6 +1327,31 @@ test('prints Empire: None for an empty faction-intel empire', () => {
   expect(stdout.split('\n')).toContain('Empire: None');
 });
 
+test('prints Name: Sol and omits Empire when faction system intel has a name and no empire key', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        name: 'Sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Name: Sol');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
+  expect(line).toBeUndefined();
+});
+
 test('prints Known POIs: 2 when faction system POI records have no usable name or id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1359,6 +1430,31 @@ test('omits Known POIs when a faction system pois array is empty', () => {
   expect(stdout).not.toContain('Known POIs');
 });
 
+test('omits Known POIs when a faction system pois value is not an array and does not print that raw value', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        pois: 'RAW_POIS_VALUE',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).not.toContain('Known POIs');
+  expect(stdout).not.toContain('RAW_POIS_VALUE');
+});
+
 test('inspect system prints Online and POIs when those counts are present', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1424,6 +1520,28 @@ test('omits Online when a system omits online', () => {
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('System: Sol');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Online:'));
+  expect(line).toBeUndefined();
+});
+
+test('omits POIs when a system omits poi_count', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('POIs:'));
   expect(line).toBeUndefined();
 });
 
