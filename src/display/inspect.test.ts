@@ -787,6 +787,29 @@ test('inspect package prints Contents: (empty) when contents is empty', () => {
   expect(stdout).toContain('Contents: (empty)');
 });
 
+test('inspect package prints Contents: (empty) for non-record contents and does not print the raw entries', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_raw',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_raw',
+        label: 'Raw crate',
+        contents: ['RAW_CONTENTS_ENTRY', 'RAW_CONTENTS_NEXT'],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Contents: (empty)');
+  expect(stdout).not.toContain('RAW_CONTENTS_ENTRY');
+  expect(stdout).not.toContain('RAW_CONTENTS_NEXT');
+});
+
 test('inspect package prints Size: 0 when package size is zero', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1222,6 +1245,30 @@ test('prints a Known POIs suffix when faction system intel has more than 12 POIs
   expect(stdout).toContain('Known POIs (13):');
   expect(stdout).toContain(', ... and 1 more');
   expect(stdout).not.toContain('omitted_thirteenth_poi');
+});
+
+test('omits Known POIs when a faction system pois array is empty', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: {
+        pois: [],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Faction intel');
+  expect(stdout).not.toContain('Known POIs');
 });
 
 test('inspect system prints Online and POIs when those counts are present', () => {
@@ -2860,6 +2907,33 @@ test('omits Services when a POI services array is empty', () => {
   expect(stdout).not.toContain('Services:');
 });
 
+test('omits Services when a POI services value is not an array', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          services: 'SERVICE_RAW',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Services:');
+  expect(stdout).not.toContain('SERVICE_RAW');
+});
+
 test('prints Position: (4, 9) from detail.poi.position when summary has no position', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3273,6 +3347,33 @@ test('renders a non-text wormhole destination as Wormhole: unknown', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Wormhole: unknown');
+});
+
+test('renders a non-text wormhole destination with wormhole_destination_id as that id and not Wormhole: unknown', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: { name: 'Alpha' },
+          wormhole_destination_id: 'alpha_centauri',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: alpha_centauri');
+  expect(stdout).not.toContain('Wormhole: unknown');
 });
 
 test('renders a wormhole from wormhole_destination_id when the destination name is absent', () => {

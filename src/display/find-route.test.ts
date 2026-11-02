@@ -369,6 +369,13 @@ describe('find_route formatter', () => {
     expect(stdout).not.toContain('(None)');
   });
 
+  test('prints Route: (invalid) and Steps: 0 for found yes with an empty route', () => {
+    const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: 'yes', route: [] });
+    expect(stdout).toContain('Route: (invalid)');
+    expect(stdout.split('\n')).toContain('Steps: 0');
+    expect(stdout).not.toContain('Steps: (none)');
+  });
+
   test('prints Found: yes for a non-boolean found with a null route and no Steps line', () => {
     const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: 'yes', route: null });
     expect(stdout).toContain('Route: (invalid)');

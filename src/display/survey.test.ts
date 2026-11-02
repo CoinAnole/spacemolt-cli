@@ -476,6 +476,23 @@ test('survey_system prints a padded deposit class as [common] and not [ common ]
   expect(headline).not.toContain('[ common ]');
 });
 
+test('survey_system omits class brackets for a numeric deposit class and does not print the number in brackets', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      const deposits = details.deposits;
+      if (!Array.isArray(deposits) || !deposits[0] || typeof deposits[0] !== 'object') {
+        throw new Error('expected deposit row');
+      }
+      (deposits[0] as Record<string, unknown>).class = 4041;
+    }),
+  );
+
+  const headline = stdout.split('\n').find((entry) => entry.includes('sol_inner_belt'));
+  expect(headline).toBe('  - Sol Inner Belt (sol_inner_belt)  asteroid_belt');
+  expect(headline).not.toContain('[');
+  expect(stdout).not.toContain('[4041]');
+});
+
 test('survey_system empty resources on a hit omit resource lines', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -542,6 +559,24 @@ test('survey_system omits an empty anomaly_hint with no hint text and no whitesp
   expect(stdout).toBe(omitted);
 });
 
+test('survey_system omits a non-string anomaly_hint and does not print the object', () => {
+  const omitted = stdoutOf(
+    clonePresent((details) => {
+      delete details.anomaly_hint;
+    }),
+  );
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.anomaly_hint = { note: 'HINT_OBJECT' };
+    }),
+  );
+
+  expect(stdout).not.toContain('A faint resonance west of the belt.');
+  expect(stdout).not.toContain('HINT_OBJECT');
+  expect(stdout).not.toContain('[object Object]');
+  expect(stdout).toBe(omitted);
+});
+
 test('survey_system omitted bloom does not interpolate undefined', () => {
   const rendered = renderSurvey(
     clonePresent((details) => {
@@ -577,6 +612,18 @@ test('survey_system omits Bloom for an empty bloom_status with intensity 0.8', (
   const stdout = stdoutOf(
     clonePresent((details) => {
       details.bloom_status = '';
+      details.bloom_intensity = 0.8;
+    }),
+  );
+
+  expect(stdout).not.toContain('Bloom:');
+  expect(stdout).toContain('Survey power: 18');
+});
+
+test('survey_system omits Bloom for a numeric bloom_status with intensity 0.8', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.bloom_status = 1;
       details.bloom_intensity = 0.8;
     }),
   );
