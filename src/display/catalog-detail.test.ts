@@ -384,6 +384,12 @@ test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', (
   expect(buffer.stdout).toContain('Slots: 0 weapon, 4 defense, 0 utility');
 });
 
+test('weapon_slots 0 with defense and utility omitted prints Slots: 0 weapon, 0 defense, 0 utility', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ weapon_slots: 0 }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Slots: 0 weapon, 0 defense, 0 utility');
+});
+
 test('omitted ship slots do not print Slots', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({}, {}), { plain: true });

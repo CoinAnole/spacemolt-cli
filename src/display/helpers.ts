@@ -214,7 +214,6 @@ export function emitResourceInfoLines(resources: unknown, options: { indent?: st
     const display = res.remaining_display || `${res.remaining} remaining`;
     const workability = formatResourceWorkabilitySuffix(res);
     if (display === 'depleted' || res.remaining === 0) {
-      // strikethrough must wrap the workability suffix
       emitLine(
         `${indent}  - \x1b[9m${c.dim}${res.name || res.resource_id}: richness ${res.richness}, depleted${workability}${c.reset}\x1b[29m`,
       );

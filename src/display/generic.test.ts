@@ -691,6 +691,26 @@ test('renders dismantle_outpost kit_refunded false as no', () => {
   expect(stdout).toContain('Kit refunded: no');
 });
 
+test('renders dismantle_outpost kit refund without kit returned when kit_item is absent', () => {
+  const rendered = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'outpost_forward_cache',
+        name: 'Forward Cache',
+        kit_refunded: true,
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Kit refunded: yes');
+  expect(stdout).not.toContain('Kit returned');
+});
+
 test('prints compact undock state after a details auto-undock receipt', () => {
   const stdout = renderStructuredResult(
     'dismantle_outpost',
@@ -717,6 +737,29 @@ test('prints compact undock state after a details auto-undock receipt', () => {
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
   expect(stdout).not.toContain('null');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('distress_signal prints location without a parenthetical when poi_name equals poi', () => {
+  const rendered = renderStructuredResult(
+    'distress_signal',
+    {
+      details: {
+        action: 'distress_signal',
+        distress_type: 'fuel',
+        system: 'sol',
+        system_name: 'Sol',
+        poi: 'earth_station',
+        poi_name: 'earth_station',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Location: earth_station @ Sol (sol)');
+  expect(stdout).not.toContain('earth_station (earth_station)');
 });
 
 test.each([

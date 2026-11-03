@@ -509,6 +509,16 @@ test('missing freight-list page prints page ? when total is omitted', () => {
   expect(stdout).toContain('page ?, 1 of 1');
 });
 
+test('shipping_list page 0 prints page 0', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    page: 0,
+    shipments: [{ contract: { ...contract, id: 'shipment-page-0' } }],
+  });
+
+  expect(stdout).toContain('page 0,');
+});
+
 test('renders an explicit empty listing message with pagination', () => {
   const stdout = output('shipping_list', {
     action: 'list',

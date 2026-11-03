@@ -3755,6 +3755,37 @@ test('renders poi inspect results with description', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints the detail POI description and omits a different summary description', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          description: 'Summary belt note.',
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+            description: 'A dense ring of iron-rich rock.',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('A dense ring of iron-rich rock.');
+  expect(stdout).not.toContain('Summary belt note.');
+});
+
 test('omits Services when a POI services array is empty', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3833,6 +3864,35 @@ test('prints Position: (4, 9) from detail.poi.position when summary has no posit
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('Position: (4, 9)');
+});
+
+test('prints Position: (1, 2) from the summary and not a different detail.poi.position', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          position: { x: 1, y: 2 },
+        },
+        detail: {
+          poi: {
+            position: { x: 4, y: 9 },
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Position: (1, 2)');
+  expect(stdout).not.toContain('(4, 9)');
 });
 
 test('prints Summary only note. from summary.description when detail omits description', () => {
@@ -3990,6 +4050,34 @@ test('prints POI: Frozen Reach from detail.poi.name when the summary has no name
   expect(stdout.split('\n')).toContain('POI: Frozen Reach');
 });
 
+test('prints POI: Main Belt from the summary name when detail.poi.name differs', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Frozen Reach',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Frozen Reach');
+});
+
 test('prints POI: Belt Mouth from the top-level poi name when summary and detail omit name', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4039,6 +4127,34 @@ test('prints ID: ice_poi from detail.poi.id when the summary has no id', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout.split('\n')).toContain('ID: ice_poi');
+});
+
+test('prints ID: main_belt from the summary id and not a different detail.poi.id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Frozen Reach',
+        },
+        detail: {
+          poi: {
+            id: 'ice_poi',
+            name: 'Frozen Reach',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('ID: main_belt');
+  expect(stdout.split('\n')).not.toContain('ID: ice_poi');
 });
 
 test('prints POI: ice_poi from detail.poi.id when no name or summary id is present', () => {
@@ -4550,6 +4666,33 @@ test('renders a wormhole from wormhole_destination_id when the destination name 
   expect(stdout).not.toContain('expires');
 });
 
+test('prints Wormhole: Alpha and not the destination id when both strings are set', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: 'Alpha',
+          wormhole_destination_id: 'alpha_centauri',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: Alpha');
+  expect(stdout).not.toContain('alpha_centauri');
+});
+
 test('renders poi inspect workability columns when ship-relative fields are present', () => {
   const rendered = renderStructuredResult('inspect', structuredClone(inspectPoiFixture), options, context);
   const stdout = rendered.stdout.join('\n');
@@ -4933,6 +5076,35 @@ test('prints Class: asteroid_belt for summary class over type', () => {
   expect(stdout).not.toContain('Class: nav_buoy');
 });
 
+test('prints Class: asteroid_belt from the summary class and not a different detail.poi.class', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nav_buoy',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'nav_buoy',
+          name: 'Nav Buoy',
+          class: 'asteroid_belt',
+        },
+        detail: {
+          poi: {
+            class: 'ice_field',
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Class: asteroid_belt');
+  expect(stdout.split('\n')).not.toContain('Class: ice_field');
+});
+
 test('prints the trimmed faction-intel POI description without the untrimmed source', () => {
   const description = '  Frozen survey note.  ';
   const rendered = renderStructuredResult(
@@ -5065,6 +5237,33 @@ test('prints Base: undefined for a whitespace faction-intel base name', () => {
   expect(stdout.split('\n')).toContain('Base: undefined');
 });
 
+test('prints Base: intel_outpost for a whitespace faction base_name with a base_id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+        },
+      },
+      faction_poi_intel: {
+        base_name: '   ',
+        base_id: 'intel_outpost',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Base: intel_outpost');
+  expect(stdout.split('\n')).not.toContain('Base: undefined');
+});
+
 test('prints Base: intel_outpost for faction POI intel with only base_id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5106,6 +5305,38 @@ test('inspect POI omits Deep core when false, missing, or non-boolean', () => {
     expect(stdout).not.toContain('Deep core');
     expect(stdout).not.toContain('[deep core]');
   }
+});
+
+test('omits the header Deep core line when summary deep_core is false and detail deep_core is true', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          deep_core: false,
+        },
+        detail: {
+          poi: {
+            id: 'main_belt',
+            name: 'Main Belt',
+            deep_core: true,
+          },
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('POI: Main Belt');
+  expect(stdout).not.toContain('Deep core');
+  expect(stdout).not.toContain('[deep core]');
 });
 
 test('poi inspect too_sparse false does not create a Sparse column', () => {

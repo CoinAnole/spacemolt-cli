@@ -257,6 +257,23 @@ describe('notification presentation', () => {
     expect((summary?.data as { escrowed_credits?: number } | undefined)?.escrowed_credits).toBe(0);
   });
 
+  test('crafting summary keeps explicit 0 escrow on a job', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        jobs: [{ escrowed_credits: 0 }],
+      },
+    };
+
+    const presented = presentNotifications([update]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('crafting_summary');
+    expect((summary?.data as { escrowed_credits?: number } | undefined)?.escrowed_credits).toBe(0);
+  });
+
   test('leaves value-level high-signal crafting updates visible', () => {
     const update = {
       type: 'crafting',
@@ -780,6 +797,44 @@ describe('notification presentation', () => {
         latest_message: 'jumped → Sol @ Earth Station',
       },
     });
+  });
+
+  test('empty poi falls through to poi_name', () => {
+    const jumpA = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434600,
+        result: { details: { action: 'jumped', system: 'Sol' } },
+      },
+    };
+    const jumpB = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            system: 'Sol',
+            poi: '',
+            poi_name: 'Earth Station',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([jumpA, jumpB]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe(
+      'jumped → Sol @ Earth Station',
+    );
   });
 
   test('action-only details action sets latest_message to the action', () => {

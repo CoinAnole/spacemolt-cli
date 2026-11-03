@@ -161,6 +161,16 @@ test('citizenship list prints a comma remaining line for defensive string ids', 
   expect(stdout).not.toContain('=== Citizenships ===');
 });
 
+test('citizenship list prints a citizenship grant identified only by name', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    citizenships: [{ name: 'only-name', granted_at: '2026-01-15T00:00:00Z' }],
+  });
+
+  expect(stdout).toContain('=== Citizenships ===');
+  expect(stdout).toContain('only-name');
+});
+
 test('citizenship list prints true map keys and skips false citizenships', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

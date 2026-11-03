@@ -761,6 +761,15 @@ test('faction_query_intel prints an intel tick with neither submitter_name nor s
   expect(stdout).not.toContain(' by ');
 });
 
+test('faction_query_intel prints submitted_by when submitter_name is absent', () => {
+  const fixture = cloneIntelFixture();
+  const entry = firstIntelEntry(fixture);
+  delete entry.submitter_name;
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('by p-123');
+});
+
 test('faction_query_intel prints a trimmed message and skips blank or non-string messages', () => {
   const padded = cloneIntelFixture();
   padded.message = '  Showing intel for 1 system  ';
@@ -872,6 +881,14 @@ test('faction_query_intel prints a depleted resource line when remaining is 0', 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('faction_query_intel prints richness ? when richness is omitted', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [{ resource_id: 'iron_ore', remaining: 120, remaining_display: '120 units' }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('richness ?');
+});
+
 test('faction_query_intel prints depleted when remaining_display is depleted and remaining is 10', () => {
   const fixture = cloneIntelFixture();
   firstIntelPoi(fixture).resources = [
@@ -900,6 +917,16 @@ test('faction_query_intel prints remaining_display for an omitted max_remaining'
   expect(stdout).not.toContain('120/');
 });
 
+test('faction_query_intel prints resource id when resource_id is absent', () => {
+  const fixture = cloneIntelFixture();
+  const id = 'iron_ore';
+  firstIntelPoi(fixture).resources = [{ id }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain(id);
+  expect(stdout).not.toContain('unknown:');
+});
+
 test('faction_query_intel prints remaining_display when max_remaining is 0', () => {
   const fixture = cloneIntelFixture();
   firstIntelPoi(fixture).resources = [
@@ -909,6 +936,14 @@ test('faction_query_intel prints remaining_display when max_remaining is 0', () 
 
   expect(stdout).toContain('iron_ore: richness 3, 10 units');
   expect(stdout).not.toContain('10/0');
+});
+
+test('faction_query_intel prints ?/max when remaining is omitted', () => {
+  const fixture = cloneIntelFixture();
+  firstIntelPoi(fixture).resources = [{ resource_id: 'iron_ore', richness: 3, max_remaining: 40 }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('?/40');
 });
 
 test('faction_query_intel prints read_at_tick when resources are missing or empty', () => {
@@ -934,6 +969,16 @@ test('faction_query_intel prints a faction-intel POI with no type', () => {
 
   expect(stdout).toContain('  Bare Rock');
   expect(stdout).not.toContain('Bare Rock (');
+});
+
+test('faction_query_intel prints the POI id when name is absent', () => {
+  const fixture = cloneIntelFixture();
+  const id = 'sol_bare';
+  firstIntelEntry(fixture).pois = [{ id }];
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain(id);
+  expect(stdout).not.toContain('unknown');
 });
 
 test('faction_query_intel prints age 0 snapshot when the tick matches but the system is not listed', () => {
@@ -1100,6 +1145,14 @@ test('faction_query_intel prints message and live systems when entries is empty'
   expect(stdout).toContain('Systems: 0\nShowing intel for 1 system\nLive systems: (none)');
   expect(stdout).not.toContain('Sol');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel omits Systems when count is absent', () => {
+  const fixture = cloneIntelFixture();
+  delete fixture.count;
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).not.toContain('Systems:');
 });
 
 test('faction_query_intel prints trimmed system and POI descriptions in field order', () => {

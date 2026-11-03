@@ -99,6 +99,14 @@ test('renders creature scan identity, hull, and revealed wildlife details in ord
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('scan prints Hull: 0', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.hull = 0;
+  const stdout = renderStructuredResult('scan', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Hull: 0');
+});
+
 test('scan branded creature prints Branded, Brand, and Ranch before Revealed', () => {
   const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
   fixture.branded = true;
@@ -1692,6 +1700,39 @@ test('pay_bounty prints zero faction credits', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Faction credits: 0');
+});
+
+test('pay_bounty prints zero credits', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, credits: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Credits: 0');
+});
+
+test('pay_bounty prints unknown for a missing bounty', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, outstanding_bounties: [{ empire: 'crimson' }] },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('  crimson: unknown');
+});
+
+test('pay_bounty omits Paid from when paid_from is empty', () => {
+  const stdout = renderStructuredResult(
+    'pay_bounty',
+    { ...payBountyFixture, paid_from: '' },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Paid from:');
 });
 
 test('get_poi nested station prints indented ID and POI and skips Station Base ID', () => {

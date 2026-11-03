@@ -3,6 +3,7 @@ import { rawColors } from './ansi.ts';
 import {
   emitStationDefences,
   emitStationFuelPricing,
+  emitStationIds,
   isOverCapacity,
   overCapacitySuffix,
   withDisplayRenderBuffer,
@@ -126,5 +127,27 @@ describe('emitStationDefences', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationDefences({ hull: 0, max_hull: 10 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Hull: 0/10');
+  });
+
+  test('emitStationDefences prints guns dps without a reach suffix', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ weapon_dps: 40 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toBe('Guns: 40 DPS');
+  });
+
+  test('emitStationDefences prints a hull question mark when hull is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ max_hull: 10 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Hull: ?/10');
+  });
+});
+
+describe('emitStationIds', () => {
+  test('prints unknown id and omits poi when ids are missing', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationIds({}), { plain: true });
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('ID: unknown');
+    expect(stdout).not.toContain('POI:');
   });
 });

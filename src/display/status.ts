@@ -1031,9 +1031,11 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       emitLine(`Faction: ${faction}${clan}${rank}`);
     }
     const primary =
-      typeof player.primary_color === 'string' && player.primary_color.trim() !== '' ? player.primary_color : undefined;
+      typeof player.primary_color === 'string' && chartDescription(player.primary_color)
+        ? player.primary_color
+        : undefined;
     const secondary =
-      typeof player.secondary_color === 'string' && player.secondary_color.trim() !== ''
+      typeof player.secondary_color === 'string' && chartDescription(player.secondary_color)
         ? player.secondary_color
         : undefined;
     if (primary !== undefined || secondary !== undefined) {
@@ -1603,7 +1605,7 @@ export const statusFormatters = [
       if (base) {
         emitLine(`\n${c.bright}Station: ${base.name}${c.reset}`);
         emitStationIds(base, '  ');
-        if (typeof base.type === 'string' && base.type) emitLine(`  Type: ${base.type}`);
+        if (usableLabel(base.type)) emitLine(`  Type: ${base.type}`);
         if (base.description) emitLine(`  ${base.description}`);
         emitLine(`  Empire: ${base.empire || 'None'}`);
         if (base.faction_id) emitLine(`  Faction: ${base.faction_id}`);

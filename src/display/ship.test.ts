@@ -1857,6 +1857,22 @@ test('single-weapon reload prints Previous ammo: 0', () => {
   expect(stdout).toContain('Previous ammo: 0');
 });
 
+test('single-weapon reload prints Current ammo: 0', () => {
+  const fixture = structuredClone(reloadFixture) as { details: Record<string, unknown> };
+  fixture.details.current_ammo = 0;
+  const rendered = renderReload(fixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Current ammo: 0');
+});
+
+test('single-weapon reload prints Magazine size: 0', () => {
+  const fixture = structuredClone(reloadFixture) as { details: Record<string, unknown> };
+  fixture.details.magazine_size = 0;
+  const rendered = renderReload(fixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Magazine size: 0');
+});
+
 test('all-success bulk reload prints summary, magazines, and discarded counts', () => {
   const rendered = renderReload(reloadBulkFixture);
   const stdout = rendered.stdout.join('\n');

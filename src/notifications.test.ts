@@ -5700,6 +5700,14 @@ describe('notification formatting', () => {
     expect(leftoverWear).not.toContain('wear_status=');
   });
 
+  test('formatActionResultDetails prints quantity 0', () => {
+    expect(formatActionResultDetails({ action: 'mine', item_name: 'Iron Ore', quantity: 0 })).toBe('mine 0× Iron Ore');
+  });
+
+  test('formatActionResultDetails prints cargo_remaining 0', () => {
+    expect(formatActionResultDetails({ cargo_remaining: 0 })).toBe('cargo_remaining=0');
+  });
+
   test.each([
     ['null entry', null],
     ['string entry', 'bad'],
@@ -11920,6 +11928,19 @@ describe('notification formatting', () => {
       const message = formatNotificationMessage(notification);
       expect(message).toBe('Commission commission-1 delivered ship ship-42');
       expect(message).not.toContain(', at ');
+    });
+
+    test('numeric 0 commission id and ship id print the receipt', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 0,
+          ship_id: 0,
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission 0 delivered ship 0');
     });
 
     test('ship commission receipt when ship name equals its class', () => {

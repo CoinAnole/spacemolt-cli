@@ -2857,7 +2857,7 @@ function arrivalXpText(data: Record<string, unknown>): string | undefined {
       parts.push({
         skill,
         text: `${skill}×${text}`,
-        sort: Number.isFinite(sort) ? sort : Number.NEGATIVE_INFINITY,
+        sort: finiteNumber(sort) ?? Number.NEGATIVE_INFINITY,
       });
       covered.add(skill);
     }
