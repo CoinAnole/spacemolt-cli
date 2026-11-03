@@ -292,6 +292,12 @@ describe('emitGiftEntries', () => {
     expect(when).not.toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
   });
 
+  test('timestamp 0 prints When: 1970-01-01 00:00', () => {
+    const { stdout } = renderGifts([{ sender: 'Ada', timestamp: 0 }]);
+    const when = stdout.split('\n').find((line) => line.includes('When:'));
+    expect(when).toBe('  When: 1970-01-01 00:00');
+  });
+
   test('object credits and quantities do not stringify', () => {
     const { stdout, stderr } = renderGifts([
       {

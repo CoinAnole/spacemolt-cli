@@ -6825,6 +6825,15 @@ test('get_skills prints xp for a below-max skill without next_level_xp', () => {
   expect(stdout).toContain('Mining: Level 3/10 (450 XP)');
 });
 
+test('get_skills prints xp for next_level_xp 0 and not XP to level', () => {
+  const fixture = structuredClone(skillsFixture);
+  const mining: { level: number; max_level: number; next_level_xp?: number } = fixture.skills.mining;
+  mining.next_level_xp = 0;
+  const stdout = renderStructuredResult('get_skills', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Mining: Level 3/10 (450 XP)');
+  expect(stdout).not.toContain('XP to level');
+});
+
 test('get_skills prints the Other heading for a skill with no category', () => {
   const fixture = structuredClone(skillsFixture);
   const mining: { category?: string } = fixture.skills.mining;
@@ -6929,4 +6938,14 @@ test('get_commands legacy commands array prints the Category column', () => {
   });
   expect(stdout).toContain('=== Commands ===');
   expect(stdout).toContain('Query');
+});
+
+test('get_commands actions without endpoint still prints Tool and omits Endpoint', () => {
+  const stdout = renderStatusTable('get_commands', {
+    actions: [{ tool: 'spacemolt', action: 'get_status', description: 'Read state.' }],
+  });
+  expect(stdout).toContain('Tool');
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Action')) ?? '';
+  expect(header).toContain('Tool');
+  expect(header).not.toContain('Endpoint');
 });

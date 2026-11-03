@@ -103,6 +103,21 @@ describe('ANSI display helpers', () => {
     expect(formatPlayer({ username: '' }, colorCodes(true), true)).toBe('Unknown');
   });
 
+  test('formatPlayer treats empty faction_tag, status_message, and ship_class as absent', () => {
+    expect(
+      formatPlayer(
+        {
+          username: 'coin',
+          faction_tag: '',
+          status_message: '',
+          ship_class: '',
+        },
+        colorCodes(true),
+        true,
+      ),
+    ).toBe('coin');
+  });
+
   test('formatPlayer anonymous suppresses a present username', () => {
     expect(formatPlayer({ anonymous: true, username: 'Nova' }, colorCodes(true), true)).toBe('[Anonymous]');
   });

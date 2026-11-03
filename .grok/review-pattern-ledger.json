@@ -1,1 +1,436 @@
-{"entries":[{"family":"comment","file":"src/display/dock-state.ts","line":21,"quote":"* `docked_at === null` or empty string → undocked."},{"family":"helper","file":"src/display/ship.ts","line":212,"quote":"function projectOwnedShipRow(ship: Record<string, unknown>): Record<string, unknown> {"},{"family":"test","file":"src/display/catalog-detail.test.ts","line":384,"quote":"withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ type: 'ore' }, {}), { plain: true });"},{"family":"test","file":"src/display/catalog-detail.test.ts","line":362,"quote":"expect(stdout).toContain('Empire: nebula');"},{"family":"comment","file":"src/display/helpers.ts","line":520,"quote":"// Returning false would let the scalar-action summary print the raw name or base_id with String(value)."},{"family":"helper","file":"src/display/ship.ts","line":221,"quote":"function projectFleetHullRow(row: Record<string, unknown>): Record<string, unknown> {"},{"family":"test","file":"src/display/inspect.test.ts","line":1422,"quote":"const stdout = renderStructuredResult('inspect', inspectCatalogModuleFixture, options, context).stdout.join('\\n');"},{"family":"test","file":"src/display/inspect.test.ts","line":2028,"quote":"has_base: false,"},{"family":"presence","file":"src/display/combat-effects.ts","line":32,"quote":"const stat = typeof buff.stat === 'string' && buff.stat ? buff.stat : 'buff';"},{"family":"presence","file":"src/display/combat-effects.ts","line":34,"quote":"const item = typeof buff.item_id === 'string' && buff.item_id ? ` from ${buff.item_id}` : '';"},{"family":"presence","file":"src/display/combat-effects.ts","line":401,"quote":"if (!cse && typeof module.special === 'string' && module.special) parts.push(module.special);"},{"family":"test","file":"src/display/social.test.ts","line":5284,"quote":"test('renders get_guide server version', () => {"},{"family":"test","file":"src/display/social.test.ts","line":44,"quote":"factionInfoFixture,"},{"family":"test","file":"src/display/citizenship.test.ts","line":261,"quote":"test('citizenship apply treats a singular citizenship grant as remaining', () => {"},{"family":"test","file":"src/display/notification-settings.test.ts","line":221,"quote":"test('prints one remaining notification in the singular', () => {"},{"family":"test","file":"src/display/market.test.ts","line":1321,"quote":"expect(stdout).not.toContain('[station]');"},{"family":"test","file":"src/display/shipping.test.ts","line":1047,"quote":"contract: { ...contract, contractor: {}, terminal_reason: [], carrier_payout: Number.NaN },"},{"family":"test","file":"src/display/loot.test.ts","line":160,"quote":"expect(xp).toMatch(/Looted 1 cargo stack.\\nSkill XP: armor \\+1,200/);"},{"family":"test","file":"src/display/prizes.test.ts","line":218,"quote":"const stdout = renderClaim(claimDetails({ prize_id: '' }));"},{"family":"test","file":"src/display/inspect.test.ts","line":3195,"quote":"expect(lines).toContain('Facilities: 0');"},{"family":"test","file":"src/display/inspect.test.ts","line":261,"quote":"owner: { id: 'p1' },"},{"family":"test","file":"src/display/inspect.test.ts","line":57,"quote":"created_at: '2026-07-16T12:00:00Z',"},{"family":"test","file":"src/display/inspect.test.ts","line":4064,"quote":"condition_text: 'Good',"},{"family":"test","file":"src/display/inspect.test.ts","line":4060,"quote":"facilities: ['market', 'shipyard', 'logistics'],"},{"family":"comment","file":"src/display/inspect.ts","line":99,"quote":"* visible for docking/commands when labels are present (design formatDestination)."},{"family":"comment","file":"src/display/dock-state.ts","line":89,"quote":"/** True when `key` is a location-alias dest that was flattened onto details, not a native details field. */"},{"family":"test","file":"src/display/helpers.over-capacity.test.ts","line":93,"quote":"test('fuel price prints explicit 0', () => {"},{"family":"test","file":"src/notifications.test.ts","line":11635,"quote":"commands: { dock: 2 },"},{"family":"comment","file":"src/session.ts","line":498,"quote":"/* no session */"},{"family":"comment","file":"src/display/ship.ts","line":738,"quote":"// Station info"},{"family":"test","file":"src/display/combat-effects.test.ts","line":346,"quote":"expect(summarizeModuleBonuses({ extra_flux_bonus: 7, odd_penalty: 4, reach: 2 })).toBe("},{"family":"test","file":"src/display/combat-effects.test.ts","line":438,"quote":"expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');"},{"family":"presence","file":"src/notification-format-shared.ts","line":1711,"quote":"if (typeof value === 'number' && !Number.isFinite(value)) return undefined;"},{"family":"test","file":"src/notifications.test.ts","line":11614,"quote":"commands: { jump: 12, undock: 1, storage: 1 },"},{"family":"test","file":"src/display/combat-effects.test.ts","line":352,"quote":"expect(summarizeModuleBonuses(expandedFuelTank)).toBe('hull -20, max fuel +100');"},{"family":"comment","file":"src/display/social.ts","line":1335,"quote":"// Chat history"},{"family":"test","file":"src/display/prizes.test.ts","line":217,"quote":"test('declines missing prize_id to scalar dump without a hero line', () => {"},{"family":"test","file":"src/display/generic.test.ts","line":163,"quote":"delete fixture.facility_note;"},{"family":"test","file":"src/display/tables.test.ts","line":44,"quote":"test('formatItemTable prints explicit size 0', () => {"},{"family":"comment","file":"src/notification-format-shared.ts","line":2645,"quote":"/** Only TYPED_MOVE_LOCATION_KEYS, in order, up to limit — loc may be the whole payload. */"},{"family":"presence","file":"src/notification-format-shared.ts","line":3672,"quote":"if (typeof value === 'string') return value.trim() ? value : undefined;"},{"family":"test","file":"src/display/combat-effects.test.ts","line":361,"quote":"test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fractions', () => {"},{"family":"test","file":"src/notification-summary.test.ts","line":221,"quote":"jobs: [{ id: 'job-a', status: 'completed', recipe_id: 'steel_plate' }],"},{"family":"test","file":"src/display/ship.test.ts","line":1744,"quote":"expect(stdout).toContain('Rounds discarded: 0');"},{"family":"test","file":"src/display/ship.test.ts","line":1745,"quote":"expect(stdout).not.toContain('total |');"},{"family":"test","file":"src/display/ship.test.ts","line":1743,"quote":"expect(stdout).toContain('Weapon: Pulse Laser (weapon-1)');"},{"family":"test","file":"src/display/status.test.ts","line":3968,"quote":"expect(stdout).toContain('Combat | Docked | Offline');"},{"family":"test","file":"src/display/status.test.ts","line":4034,"quote":"expect(header).not.toContain('Docked');"},{"family":"test","file":"src/display/shipping.test.ts","line":1295,"quote":"test('freight quote appraisal line with confidence and no basis prints high without a slash', () => {"},{"family":"comment","file":"src/display/social.ts","line":1523,"quote":"// Action log"},{"family":"comment","file":"src/display/generic.ts","line":1117,"quote":"// Always claim so a dump without mining cannot fall through to the generic item table."},{"family":"comment","file":"src/notification-format-shared.ts","line":959,"quote":"// Match legacy writeLine: truthy bounty only (0 / empty omitted)."},{"family":"comment","file":"src/display/dock-state.ts","line":72,"quote":"/** Dest-key set for skipping aliased location fields in scalar dumps. */"},{"family":"test","file":"src/display/status.test.ts","line":6682,"quote":"expect(stdout).toContain('Haul (0/2)');"},{"family":"test","file":"src/display/ship.test.ts","line":1892,"quote":"expect(single).toContain('Current ammo: 4');"},{"family":"test","file":"src/display/jettison.test.ts","line":361,"quote":"test('jettison results row with quantity 0 prints Quantity: 0', () => {"},{"family":"test","file":"src/display/jettison.test.ts","line":391,"quote":"expect(stdout).toContain('Quantity: 0');"},{"family":"test","file":"src/display/generic.test.ts","line":116,"quote":"expect(stdout).toContain('Rent is paused on damaged and dismantling facilities until they return to service.');"},{"family":"test","file":"src/display/ship.test.ts","line":1956,"quote":"expect(stdout).not.toContain('Weapon:');"},{"family":"test","file":"src/display/ship.test.ts","line":1855,"quote":"fixture.details.previous_ammo = 0;"},{"family":"test","file":"src/display/jettison.test.ts","line":486,"quote":"test('string conversion output_quantity declines to the raw response', () => {"},{"family":"test","file":"src/display/status.test.ts","line":5288,"quote":"expect(stdout).toContain('  ... and more');"},{"family":"comment","file":"src/display/social.ts","line":2017,"quote":"// Facilities"},{"family":"test","file":"src/display/helpers.over-capacity.test.ts","line":12,"quote":"function withBuffer<T>(fn: () => T, options: { plain?: boolean } = {}): T {"},{"family":"presence","file":"src/notification-format-shared.ts","line":1538,"quote":"const status = typeof statusScalar === 'string' ? statusScalar.trim() : undefined;"},{"family":"test","file":"src/storage-view-display.test.ts","line":59,"quote":"expect(rewritten.hint).toBe('6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)');"}]}
+{
+  "entries": [
+    {
+      "family": "comment",
+      "file": "src/display/dock-state.ts",
+      "line": 21,
+      "quote": "* `docked_at === null` or empty string → undocked."
+    },
+    {
+      "family": "helper",
+      "file": "src/display/ship.ts",
+      "line": 212,
+      "quote": "function projectOwnedShipRow(ship: Record<string, unknown>): Record<string, unknown> {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/catalog-detail.test.ts",
+      "line": 384,
+      "quote": "withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ type: 'ore' }, {}), { plain: true });"
+    },
+    {
+      "family": "test",
+      "file": "src/display/catalog-detail.test.ts",
+      "line": 362,
+      "quote": "expect(stdout).toContain('Empire: nebula');"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/helpers.ts",
+      "line": 520,
+      "quote": "// Returning false would let the scalar-action summary print the raw name or base_id with String(value)."
+    },
+    {
+      "family": "helper",
+      "file": "src/display/ship.ts",
+      "line": 221,
+      "quote": "function projectFleetHullRow(row: Record<string, unknown>): Record<string, unknown> {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 1422,
+      "quote": "const stdout = renderStructuredResult('inspect', inspectCatalogModuleFixture, options, context).stdout.join('\\n');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 2028,
+      "quote": "has_base: false,"
+    },
+    {
+      "family": "presence",
+      "file": "src/display/combat-effects.ts",
+      "line": 32,
+      "quote": "const stat = typeof buff.stat === 'string' && buff.stat ? buff.stat : 'buff';"
+    },
+    {
+      "family": "presence",
+      "file": "src/display/combat-effects.ts",
+      "line": 34,
+      "quote": "const item = typeof buff.item_id === 'string' && buff.item_id ? ` from ${buff.item_id}` : '';"
+    },
+    {
+      "family": "presence",
+      "file": "src/display/combat-effects.ts",
+      "line": 401,
+      "quote": "if (!cse && typeof module.special === 'string' && module.special) parts.push(module.special);"
+    },
+    {
+      "family": "test",
+      "file": "src/display/social.test.ts",
+      "line": 5284,
+      "quote": "test('renders get_guide server version', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/social.test.ts",
+      "line": 44,
+      "quote": "factionInfoFixture,"
+    },
+    {
+      "family": "test",
+      "file": "src/display/citizenship.test.ts",
+      "line": 261,
+      "quote": "test('citizenship apply treats a singular citizenship grant as remaining', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/notification-settings.test.ts",
+      "line": 221,
+      "quote": "test('prints one remaining notification in the singular', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/market.test.ts",
+      "line": 1321,
+      "quote": "expect(stdout).not.toContain('[station]');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/shipping.test.ts",
+      "line": 1047,
+      "quote": "contract: { ...contract, contractor: {}, terminal_reason: [], carrier_payout: Number.NaN },"
+    },
+    {
+      "family": "test",
+      "file": "src/display/loot.test.ts",
+      "line": 160,
+      "quote": "expect(xp).toMatch(/Looted 1 cargo stack.\\nSkill XP: armor \\+1,200/);"
+    },
+    {
+      "family": "test",
+      "file": "src/display/prizes.test.ts",
+      "line": 218,
+      "quote": "const stdout = renderClaim(claimDetails({ prize_id: '' }));"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 3195,
+      "quote": "expect(lines).toContain('Facilities: 0');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 261,
+      "quote": "owner: { id: 'p1' },"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 57,
+      "quote": "created_at: '2026-07-16T12:00:00Z',"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 4064,
+      "quote": "condition_text: 'Good',"
+    },
+    {
+      "family": "test",
+      "file": "src/display/inspect.test.ts",
+      "line": 4060,
+      "quote": "facilities: ['market', 'shipyard', 'logistics'],"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/inspect.ts",
+      "line": 99,
+      "quote": "* visible for docking/commands when labels are present (design formatDestination)."
+    },
+    {
+      "family": "comment",
+      "file": "src/display/dock-state.ts",
+      "line": 89,
+      "quote": "/** True when `key` is a location-alias dest that was flattened onto details, not a native details field. */"
+    },
+    {
+      "family": "test",
+      "file": "src/display/helpers.over-capacity.test.ts",
+      "line": 93,
+      "quote": "test('fuel price prints explicit 0', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/notifications.test.ts",
+      "line": 11635,
+      "quote": "commands: { dock: 2 },"
+    },
+    {
+      "family": "comment",
+      "file": "src/session.ts",
+      "line": 498,
+      "quote": "/* no session */"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/ship.ts",
+      "line": 738,
+      "quote": "// Station info"
+    },
+    {
+      "family": "test",
+      "file": "src/display/combat-effects.test.ts",
+      "line": 346,
+      "quote": "expect(summarizeModuleBonuses({ extra_flux_bonus: 7, odd_penalty: 4, reach: 2 })).toBe("
+    },
+    {
+      "family": "test",
+      "file": "src/display/combat-effects.test.ts",
+      "line": 438,
+      "quote": "expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0.1 } } })).toBe('accuracy +10%');"
+    },
+    {
+      "family": "presence",
+      "file": "src/notification-format-shared.ts",
+      "line": 1711,
+      "quote": "if (typeof value === 'number' && !Number.isFinite(value)) return undefined;"
+    },
+    {
+      "family": "test",
+      "file": "src/notifications.test.ts",
+      "line": 11614,
+      "quote": "commands: { jump: 12, undock: 1, storage: 1 },"
+    },
+    {
+      "family": "test",
+      "file": "src/display/combat-effects.test.ts",
+      "line": 352,
+      "quote": "expect(summarizeModuleBonuses(expandedFuelTank)).toBe('hull -20, max fuel +100');"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/social.ts",
+      "line": 1335,
+      "quote": "// Chat history"
+    },
+    {
+      "family": "test",
+      "file": "src/display/prizes.test.ts",
+      "line": 217,
+      "quote": "test('declines missing prize_id to scalar dump without a hero line', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/generic.test.ts",
+      "line": 163,
+      "quote": "delete fixture.facility_note;"
+    },
+    {
+      "family": "test",
+      "file": "src/display/tables.test.ts",
+      "line": 44,
+      "quote": "test('formatItemTable prints explicit size 0', () => {"
+    },
+    {
+      "family": "comment",
+      "file": "src/notification-format-shared.ts",
+      "line": 2645,
+      "quote": "/** Only TYPED_MOVE_LOCATION_KEYS, in order, up to limit — loc may be the whole payload. */"
+    },
+    {
+      "family": "presence",
+      "file": "src/notification-format-shared.ts",
+      "line": 3672,
+      "quote": "if (typeof value === 'string') return value.trim() ? value : undefined;"
+    },
+    {
+      "family": "test",
+      "file": "src/display/combat-effects.test.ts",
+      "line": 361,
+      "quote": "test('summarizeModuleBonuses signs penalties, resistance maps, and bypass fractions', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/notification-summary.test.ts",
+      "line": 221,
+      "quote": "jobs: [{ id: 'job-a', status: 'completed', recipe_id: 'steel_plate' }],"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1744,
+      "quote": "expect(stdout).toContain('Rounds discarded: 0');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1745,
+      "quote": "expect(stdout).not.toContain('total |');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1743,
+      "quote": "expect(stdout).toContain('Weapon: Pulse Laser (weapon-1)');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/status.test.ts",
+      "line": 3968,
+      "quote": "expect(stdout).toContain('Combat | Docked | Offline');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/status.test.ts",
+      "line": 4034,
+      "quote": "expect(header).not.toContain('Docked');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/shipping.test.ts",
+      "line": 1295,
+      "quote": "test('freight quote appraisal line with confidence and no basis prints high without a slash', () => {"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/social.ts",
+      "line": 1523,
+      "quote": "// Action log"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/generic.ts",
+      "line": 1117,
+      "quote": "// Always claim so a dump without mining cannot fall through to the generic item table."
+    },
+    {
+      "family": "comment",
+      "file": "src/notification-format-shared.ts",
+      "line": 959,
+      "quote": "// Match legacy writeLine: truthy bounty only (0 / empty omitted)."
+    },
+    {
+      "family": "comment",
+      "file": "src/display/dock-state.ts",
+      "line": 72,
+      "quote": "/** Dest-key set for skipping aliased location fields in scalar dumps. */"
+    },
+    {
+      "family": "test",
+      "file": "src/display/status.test.ts",
+      "line": 6682,
+      "quote": "expect(stdout).toContain('Haul (0/2)');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1892,
+      "quote": "expect(single).toContain('Current ammo: 4');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/jettison.test.ts",
+      "line": 361,
+      "quote": "test('jettison results row with quantity 0 prints Quantity: 0', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/jettison.test.ts",
+      "line": 391,
+      "quote": "expect(stdout).toContain('Quantity: 0');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/generic.test.ts",
+      "line": 116,
+      "quote": "expect(stdout).toContain('Rent is paused on damaged and dismantling facilities until they return to service.');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1956,
+      "quote": "expect(stdout).not.toContain('Weapon:');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/ship.test.ts",
+      "line": 1855,
+      "quote": "fixture.details.previous_ammo = 0;"
+    },
+    {
+      "family": "test",
+      "file": "src/display/jettison.test.ts",
+      "line": 486,
+      "quote": "test('string conversion output_quantity declines to the raw response', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/status.test.ts",
+      "line": 5288,
+      "quote": "expect(stdout).toContain('  ... and more');"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/social.ts",
+      "line": 2017,
+      "quote": "// Facilities"
+    },
+    {
+      "family": "test",
+      "file": "src/display/helpers.over-capacity.test.ts",
+      "line": 12,
+      "quote": "function withBuffer<T>(fn: () => T, options: { plain?: boolean } = {}): T {"
+    },
+    {
+      "family": "presence",
+      "file": "src/notification-format-shared.ts",
+      "line": 1538,
+      "quote": "const status = typeof statusScalar === 'string' ? statusScalar.trim() : undefined;"
+    },
+    {
+      "family": "test",
+      "file": "src/storage-view-display.test.ts",
+      "line": 59,
+      "quote": "expect(rewritten.hint).toBe('6,327 items in storage at crimson_war_citadel (181,708 total across 3 stations)');"
+    },
+    {
+      "family": "test",
+      "file": "src/display/jettison.test.ts",
+      "line": 484,
+      "quote": "test('empty-string jettison result quantity omits Quantity', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/market.test.ts",
+      "line": 1575,
+      "quote": "test('one-item view_market tags a non-player buy source', () => {"
+    },
+    {
+      "family": "comment",
+      "file": "src/display/social.ts",
+      "line": 2259,
+      "quote": "// Battle summary (any battle by ID)"
+    },
+    {
+      "family": "presence",
+      "file": "src/display/notifications.ts",
+      "line": 140,
+      "quote": "if (typeof r.message === 'string') {"
+    },
+    {
+      "family": "test",
+      "file": "src/display/tables.test.ts",
+      "line": 56,
+      "quote": "test('formatItemTable uses item_id when name and item_name are absent', () => {"
+    },
+    {
+      "family": "test",
+      "file": "src/notifications.test.ts",
+      "line": 12182,
+      "quote": "expect(message).toContain('sell ? @ 12');"
+    }
+  ]
+}

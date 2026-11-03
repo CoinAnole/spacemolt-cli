@@ -671,6 +671,16 @@ test('renders an explicit empty active freight message', () => {
   expect(defaultEmpty).not.toContain('=== Response ===');
 });
 
+test('empty active freight prints a non-default message', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    shipments: [],
+    message: 'Filters hid every contract.',
+  });
+
+  expect(stdout).toContain('Filters hid every contract.');
+});
+
 test('missing active-freight tick prints tick ? for an empty shipment list', () => {
   const stdout = output('shipping_active', {
     action: 'active',

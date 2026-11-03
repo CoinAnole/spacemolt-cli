@@ -12108,6 +12108,18 @@ describe('notification formatting', () => {
       expect(formatNotificationMessage(notification)).toContain('2 runs left, completed');
     });
 
+    test('crafting update with tick 0', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          tick: 0,
+          jobs: [{ recipe: 'Power Cell' }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('tick 0');
+    });
+
     test('market update with tick 0', () => {
       const notification = {
         type: 'market',
@@ -12117,6 +12129,15 @@ describe('notification formatting', () => {
       expect(formatNotificationMessage(notification)).toContain('tick 0');
     });
 
+    test('market update with null tick', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: { base_name: 'Haven Exchange', tick: null, items: [] },
+      };
+      expect(formatNotificationMessage(notification)).toBe('Haven Exchange: 0 item updates');
+    });
+
     test('market update with no station name or id', () => {
       const notification = {
         type: 'market',
@@ -12124,6 +12145,15 @@ describe('notification formatting', () => {
         data: { items: [] },
       };
       expect(formatNotificationMessage(notification)).toContain('current station');
+    });
+
+    test('market update with only base_id', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: { base_id: 'haven_exchange', items: [] },
+      };
+      expect(formatNotificationMessage(notification)).toBe('haven_exchange: 0 item updates');
     });
 
     test('market item with no name or id', () => {
@@ -12136,6 +12166,18 @@ describe('notification formatting', () => {
         },
       };
       expect(formatNotificationMessage(notification)).toContain('unknown item');
+    });
+
+    test('market item with only item_id', () => {
+      const notification = {
+        type: 'market',
+        msg_type: 'market_update',
+        data: {
+          base_name: 'Haven Exchange',
+          items: [{ item_id: 'ore_iron', sell_orders: [], buy_orders: [] }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('ore_iron book emptied');
     });
 
     test('crafting summary with one active job', () => {

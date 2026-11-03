@@ -6266,6 +6266,15 @@ test('get_battle_log Ticks Ended falls back to yes when battle_ended has no outc
   expect(ticks).toContain('yes');
 });
 
+test('get_battle_log Ticks Ended falls back to yes when battle_ended outcome is blank', () => {
+  const fixture = withBattleEnded(structuredClone(battleLogFixture) as Record<string, unknown>, {
+    outcome: '   ',
+  });
+  const ticks = battleLogTicksSection(renderBattleLog(fixture));
+
+  expect(ticks).toMatch(/\|\s*yes\s*$/m);
+});
+
 test('get_battle_log JSON passthrough keeps nested winning_side -1', () => {
   const fixture = withBattleEnded(structuredClone(battleLogFixture) as Record<string, unknown>, {
     outcome: 'stalemate',

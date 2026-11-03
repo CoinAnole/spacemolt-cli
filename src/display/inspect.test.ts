@@ -997,6 +997,28 @@ test('inspect package prints Contents: (empty) for non-record contents and does 
   expect(stdout).not.toContain('RAW_CONTENTS_NEXT');
 });
 
+test('inspect package prints Contents: (empty) for a non-array contents string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'package:pkg_raw_string',
+      kind: 'package',
+      package: {
+        package_id: 'pkg_raw_string',
+        label: 'Raw string crate',
+        contents: 'RAW_CONTENTS_STRING',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Contents: (empty)');
+  expect(stdout).not.toContain('RAW_CONTENTS_STRING');
+});
+
 test('inspect package prints Size: 0 when package size is zero', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2214,6 +2236,30 @@ test('inspect catalog prints Entries and omits Details when more than one item i
   expect(stdout).not.toContain('=== Entry ===');
 });
 
+test('omits Entries and Details for non-record catalog item strings', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'ores',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: ['RAW_CATALOG_ITEM', 'RAW_CATALOG_NEXT'],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Catalog (items)');
+  expect(stdout).not.toContain('Entries');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('RAW_CATALOG_ITEM');
+  expect(stdout).not.toContain('RAW_CATALOG_NEXT');
+});
+
 test('omits Slot from the entry header and omits Details for two slotted item rows', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -2768,6 +2814,19 @@ test('prints the Recipes table and omits Details and Inputs for two catalog reci
   expect(stdout.split('\n')).toContain('=== Recipes ===');
   expect(stdout).not.toContain('Details');
   expect(stdout).not.toContain('Inputs');
+});
+
+test('omits the Recipes table and Details for non-record recipe strings', () => {
+  const stdout = renderCatalogInspect({
+    type: 'recipes',
+    recipes: ['RAW_RECIPE_ENTRY', 'RAW_RECIPE_NEXT'],
+  });
+
+  expect(stdout).toContain('Catalog (recipes)');
+  expect(stdout).not.toContain('=== Recipes ===');
+  expect(stdout).not.toContain('Details');
+  expect(stdout).not.toContain('RAW_RECIPE_ENTRY');
+  expect(stdout).not.toContain('RAW_RECIPE_NEXT');
 });
 
 test('renders unpack recipe package_operation string', () => {
@@ -5852,6 +5911,15 @@ test('renders nested base repairs without a second wrecked line', () => {
   expect(stdout).toContain('Sell Steel Plate into this station market to unblock the next repair.');
   expect(stdout).not.toContain('  Sell Steel Plate into this station market to unblock the next repair.');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('inspect prints Wrecked: yes when repairs.wrecked is true and the station base is not wrecked', () => {
+  const fixture = structuredClone(inspectBaseRepairsFixture);
+  (fixture.base.base as Record<string, unknown>).wrecked = false;
+  const stdout = renderStructuredResult('inspect', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Wrecked: yes');
+  expect(stdout).not.toContain('Wrecked: facilities offline until repaired');
 });
 
 test('renders base inspect without a repairs section when repairs are absent', () => {

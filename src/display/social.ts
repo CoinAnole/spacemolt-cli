@@ -390,16 +390,6 @@ function formatTopDamageCell(value: unknown): string | undefined {
   return `${value.username ?? '?'} (${value.damage ?? '?'})`;
 }
 
-function listBattleRows(battles: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  return battles.map((row) => ({
-    ...row,
-    ended_display: formatTimestampPreview(row.ended_at),
-    winning_side_display: formatWinningSide(row.winning_side),
-    top_damage_display: formatTopDamageCell(row.top_damage),
-    station_display: formatYesNo(row.has_station),
-  }));
-}
-
 function listBattleColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
   const columns: Array<[string, string[]]> = [];
   const add = (label: string, keys: string[], present = hasAnyField(rows, keys)) => {
@@ -2334,7 +2324,13 @@ export const socialFormatters = [
 
       const battles = (result.battles as unknown[]).filter(isRecord);
       if (battles.length > 0) {
-        const rows = listBattleRows(battles);
+        const rows = battles.map((row) => ({
+          ...row,
+          ended_display: formatTimestampPreview(row.ended_at),
+          winning_side_display: formatWinningSide(row.winning_side),
+          top_damage_display: formatTopDamageCell(row.top_damage),
+          station_display: formatYesNo(row.has_station),
+        }));
         const columns = listBattleColumns(rows);
         if (columns.length > 0) {
           printCompactTable('Battles', rows, columns, { maxCellWidth: 64 });

@@ -490,6 +490,18 @@ test('empty-string build material name does not fall through to item_id', () => 
   expect(buffer.stdout.join('\n')).not.toContain('steel_plate');
 });
 
+test('numeric build material name 0 prints 2x 0 and not steel_plate', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ name: 0, item_id: 'steel_plate', quantity: 2 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 2x 0');
+  expect(buffer.stdout.join('\n')).not.toContain('steel_plate');
+});
+
 test('non-record ship build materials print 1x station_core and not skip', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -562,6 +574,15 @@ test('non-string passive recipes are dropped', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Passive recipes: refine_steel, smelt');
   expect(stdout).not.toContain('refine_steel, 1');
+});
+
+test('empty-string passive recipe is kept', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ passive_recipes: ['', 'refine_steel'] }, {}), {
+    plain: true,
+  });
+  const line = buffer.stdout.find((row) => row.includes('Passive recipes:'));
+  expect(line).toBe('Passive recipes: , refine_steel');
 });
 
 test('empty passive recipes omit Passive recipes', () => {
@@ -823,6 +844,17 @@ test('empty-string capability value prints Capabilities: cloak', () => {
   );
   const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
   expect(line).toBe('Capabilities: cloak');
+});
+
+test('empty-array capability value prints Capabilities: cloak with a trailing space', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: [] }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak ');
 });
 
 test('null capability value prints Capabilities: cloak', () => {

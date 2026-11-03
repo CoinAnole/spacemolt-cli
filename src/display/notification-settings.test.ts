@@ -197,6 +197,17 @@ test('a trimmed message prints after the table', () => {
   expect(stdout.indexOf('Ally refuel and repair.')).toBeLessThan(stdout.indexOf('Notification settings.'));
 });
 
+test('a numeric message does not print after the notification-settings table', () => {
+  const stdout = stdoutOf('get_notification_settings', {
+    ...getNotificationSettingsFixture,
+    message: 404,
+  });
+  const lines = stdout.split('\n').filter((line) => line.length > 0);
+
+  expect(stdout).not.toContain('404');
+  expect(lines.at(-1)).toContain('Ally refuel and repair.');
+});
+
 test('a non-record channel declines without a partial table', () => {
   const cases: unknown[] = [
     [{ channel: 'support', description: 'Ally', message_types: ['refueled_by'], muted: false }, 'nope'],
@@ -293,6 +304,27 @@ test('prints a created_at preview when the notification timestamp is omitted', (
   expect(stdout).not.toContain('2026-05-23T18:59:39');
 });
 
+test('leaves the raw created_at string in the Timestamp cell when timestamp is empty', () => {
+  const createdAt = '2026-05-23T18:59:39.049Z';
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '',
+        created_at: createdAt,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Timestamp'));
+  const timestampCell = dataRow?.split('|').map((cell) => cell.trim())[0];
+  expect(timestampCell).toBe(createdAt);
+});
+
 test('prints the response timestamp when a notification omits timestamp and created_at', () => {
   const timestamp = 1779562779;
   const stdout = stdoutOf('get_notifications', {
@@ -350,6 +382,26 @@ test('prints notification in the Type cell when msg_type, type, and data.type ar
   const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
   const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
   expect(typeCell).toBe('notification');
+});
+
+test('prints notification in the Type cell when msg_type is empty and type is chat_message', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        msg_type: '',
+        type: 'chat_message',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
+  const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
+  expect(typeCell).toBe('notification');
+  expect(stdout).not.toContain('chat_message');
 });
 
 test('prints an explicit zero msg_type as 0', () => {

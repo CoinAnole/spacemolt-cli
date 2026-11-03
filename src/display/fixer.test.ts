@@ -43,6 +43,14 @@ describe('emitFixerAccount', () => {
     expect(negative.stdout).toContain('Debt: -200');
   });
 
+  test('prints a bigint debt with its full grouped digits', () => {
+    const debt = 9007199254740993n;
+    const rendered = renderAccount({ debt });
+    expect(rendered.printed).toBe(true);
+    expect(rendered.stdout).toBe(['Fixer:', `  Debt: ${debt.toLocaleString()}`].join('\n'));
+    expect(rendered.stdout).not.toContain('9007199254740992');
+  });
+
   test('prints nothing for a missing object, an empty object, null, or numeric strings', () => {
     for (const value of [
       undefined,

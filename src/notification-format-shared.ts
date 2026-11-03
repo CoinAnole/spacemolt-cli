@@ -194,7 +194,6 @@ export function formatInventoryPreview(value: unknown, limit = DEFAULT_INVENTORY
 
 // ── Shared notification preview (Policy 5 ladder + typed handlers) ──────────
 
-/** Normalized envelope matching `normalizedNotification()` in `src/notifications.ts`. */
 export interface NormalizedNotification {
   /** Coarse type string (often equals msgType). */
   type: string;
@@ -2875,7 +2874,7 @@ function arrivalXpText(data: Record<string, unknown>): string | undefined {
     parts.push({
       skill,
       text: `${skill}×${text}`,
-      sort: Number.isFinite(sort) ? sort : Number.NEGATIVE_INFINITY,
+      sort: finiteNumber(sort) ?? Number.NEGATIVE_INFINITY,
     });
   }
   if (!parts.length) return undefined;

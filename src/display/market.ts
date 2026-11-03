@@ -1361,7 +1361,6 @@ export const marketFormatters = [
     { commands: ['storage_view'], shapeFallback: true },
   ),
 
-  // Direct market sell
   namedFormatter(
     'direct_sell',
     ['quantity_sold', 'total_earned', 'fills'],
@@ -1392,7 +1391,6 @@ export const marketFormatters = [
     { commands: ['sell'], shapeFallback: true },
   ),
 
-  // Direct market buy
   namedFormatter(
     'direct_buy',
     ['quantity', 'total_cost', 'fills'],
@@ -1533,7 +1531,6 @@ export const marketFormatters = [
     { commands: ['view_insurance'] },
   ),
 
-  // Intel
   namedFormatter(
     'intel',
     ['intel'],

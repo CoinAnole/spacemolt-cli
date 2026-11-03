@@ -232,6 +232,18 @@ test('list_ships listing columns appear only when listing fields are present', (
   expect(withoutListing).not.toContain('Price');
 });
 
+test('list_ships omits Cargo and Mods when owned ships lack cargo_used and modules', () => {
+  const fixture = cloneListShips();
+  for (const ship of cloneShips(fixture)) {
+    delete ship.cargo_used;
+    delete ship.modules;
+  }
+
+  const header = tableHeader(renderListShips(fixture).stdout.join('\n'));
+  expect(header).not.toContain('Cargo');
+  expect(header).not.toContain('Mods');
+});
+
 test('list_ships prints a zero listing price', () => {
   const fixture = cloneListShips();
   const ships = cloneShips(fixture);
@@ -1316,6 +1328,27 @@ test('non-station refuel fuel cost prints Fuel cost for a numeric cost', () => {
   expect(stdout).toContain('Fuel cost: 100 cr');
 });
 
+test('bigint ship-transfer cost prints full digit Fuel cost and Total spent', () => {
+  const cost = 9007199254740993n;
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      source: 'ship_transfer',
+      fuel: 10,
+      cost,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const fuelCost = stdout.split('\n').find((line) => line.startsWith('Fuel cost:'));
+  const totalSpent = stdout.split('\n').find((line) => line.startsWith('Total spent:'));
+  expect(fuelCost?.replace(/\D/g, '')).toBe('9007199254740993');
+  expect(totalSpent?.replace(/\D/g, '')).toBe('9007199254740993');
+  expect(stdout).not.toContain('cr/fuel');
+});
+
 test('non-station refuel prints a fuel rate when fuel is positive', () => {
   const stdout = renderStructuredResult(
     'refuel',
@@ -1351,6 +1384,11 @@ test('repair kits print hull restored and kits used without fallback', () => {
   expect(stdout).not.toContain('item(s)');
   expect(stdout).not.toContain('?/?');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('repair prints Kits used: 0 for kits_used 0', () => {
+  const stdout = renderRepair({ action: 'repair', source: 'kits', kits_used: 0 }).stdout.join('\n');
+  expect(stdout).toContain('Kits used: 0');
 });
 
 test('repair prints an item name without an id', () => {
@@ -1397,6 +1435,27 @@ test('repair target prints target hull and restored amount', () => {
   expect(stdout).not.toContain('Cost:');
   expect(stdout).not.toContain('item(s)');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('one-sided repair target prints Target: Alice and Target: player-id', () => {
+  const nameOnly = renderRepair({
+    action: 'repair',
+    source: 'kits',
+    target_player_name: 'Alice',
+  }).stdout.join('\n');
+  expect(nameOnly).toContain('Target: Alice');
+  expect(nameOnly).not.toContain('(');
+  expect(nameOnly).not.toContain(')');
+
+  const idOnly = renderRepair({
+    action: 'repair',
+    source: 'kits',
+    target_player_id: 'player-id',
+  }).stdout.join('\n');
+  expect(idOnly).toContain('Target: player-id');
+  expect(idOnly).not.toContain('Alice');
+  expect(idOnly).not.toContain('(');
+  expect(idOnly).not.toContain(')');
 });
 
 test('repair fleet prints pilots and omits hull-restored and kits lines', () => {
@@ -1512,6 +1571,21 @@ test('repair fleet omits Shield unless a member has it', () => {
   expect(fleetHeader(withoutShield)).not.toContain('Shield');
   expect(withoutShield).toContain('Alice');
   expect(withoutShield).toContain('Bob');
+});
+
+test('repair fleet omits You and Leader when is_you and is_leader are absent', () => {
+  const fixture = structuredClone(repairFleetFixture) as {
+    members: Array<Record<string, unknown>>;
+  };
+  for (const member of fixture.members) {
+    delete member.is_you;
+    delete member.is_leader;
+  }
+  const stdout = renderRepair(fixture).stdout.join('\n');
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Pilot')) ?? '';
+  expect(header).toContain('Pilot');
+  expect(header).not.toContain('You');
+  expect(header).not.toContain('Leader');
 });
 
 test('repair matches command plus source when action is omitted', () => {

@@ -1231,7 +1231,7 @@ export const statusFormatters = [
       emitLine(`\n${c.bright}=== Bounty Paid ===${c.reset}`);
       emitLine(`Empire: ${r.empire}`);
       emitLine(`Amount paid: ${formatNumber(r.amount_paid)} cr`);
-      if (r.paid_from !== undefined && r.paid_from !== null && r.paid_from !== '') {
+      if (rowsHaveValue([r], ['paid_from'])) {
         emitLine(`Paid from: ${r.paid_from}`);
       }
       if (r.credits !== undefined) emitLine(`Credits: ${formatNumber(r.credits)}`);

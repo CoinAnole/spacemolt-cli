@@ -52,6 +52,21 @@ test('jettison prints conversion output, including the openapi example quantity'
   expect(stdout).not.toContain('[object Object]');
 });
 
+test('jettison prints copied fuel and omits copied location aliases', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+    },
+    ship: { fuel: 10 },
+    location: { system_id: 'sol' },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Fuel Now: 10');
+  expect(stdout).not.toContain('System Id');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test.each(['jettison', 'storage jettison', 'storage_jettison'])('%s prints conversion.output_quantity 0', (command) => {
   const { stdout, stderr } = renderJettison(command, {
     details: {
@@ -410,6 +425,19 @@ test('single-action jettison OK line prints OK', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('top-level jettison boolean false prints Sealed: false', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      sealed: false,
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Sealed: false');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('blank jettison action with item_id prints === Result ===', () => {
   const { stdout, stderr } = renderJettison('jettison', {
     details: {
@@ -420,6 +448,20 @@ test('blank jettison action with item_id prints === Result ===', () => {
 
   expect(stderr).toBe('');
   expect(stdout).toContain('=== Result ===');
+});
+
+test('whitespace jettison action prints === Result === and the Action line', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: '   ',
+      item_id: 'ore_iron',
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('=== Result ===');
+  expect(stdout).toContain('Action:');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('omitted jettison action with item_id prints === Jettison ===', () => {

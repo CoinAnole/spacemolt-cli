@@ -948,6 +948,27 @@ test('survey_system empty or unusable ranched_by does not add Ranched By', () =>
   }
 });
 
+test('survey_system omits Ranched By when ranched_by is a string and does not print that string', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched_by: 'RAW_RANCHED_BY',
+        },
+      ];
+    }),
+  );
+
+  expect(stdout).toContain('ember_grazer');
+  expect(stdout).not.toContain('Ranched By');
+  expect(stdout).not.toContain('RAW_RANCHED_BY');
+});
+
 test('survey_system omits Ranched column when no row has ranched', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

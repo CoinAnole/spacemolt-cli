@@ -131,7 +131,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
       }
     }
   } catch (error) {
-    // Silently ignore update check failures - don't disrupt the user's workflow
     if (debug) {
       const msg = error instanceof Error ? error.message : String(error);
       writer.out(`${colors.dim}[DEBUG] Update check failed: ${msg}${colors.reset}`);

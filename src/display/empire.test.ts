@@ -81,6 +81,20 @@ test('renders inactive tax collection preview flag', () => {
   expect(stdout).toContain('Tax collection is in preview mode.');
 });
 
+test('an empty note matches an omitted note and does not print Estimate only', () => {
+  const { note: _, ...omittedNote } = taxEstimateFixture;
+  const omitted = renderStructuredResult('get_tax_estimate', omittedNote, options, context).stdout.join('\n');
+  const empty = renderStructuredResult(
+    'get_tax_estimate',
+    { ...taxEstimateFixture, note: '' },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(empty).toBe(omitted);
+  expect(empty).not.toContain('Estimate only');
+});
+
 test('renders personal market margin tax fields', () => {
   const rendered = renderStructuredResult(
     'get_tax_estimate',
@@ -487,6 +501,20 @@ test('prints last_assessed_at 1779926400000 as Last assessed: 2026-05-28 00:00 U
   expect(stdout).toContain('Last assessed: 2026-05-28 00:00 UTC');
 });
 
+test('prints next_assessment_approx_seconds 0 as Next assessment approx: 0s', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      next_assessment_approx_seconds: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Next assessment approx: 0s');
+});
+
 test('renders numeric period_started_at 0 as Period started: none', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -589,6 +617,20 @@ test('prints the Tax Estimate header and omits Income tax when income_tax is emp
 
   expect(stdout).toContain('=== Tax Estimate ===');
   expect(stdout).not.toContain('Income tax');
+});
+
+test('prints Income tax: entry when income_tax is an empty record', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: [{}],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const incomeLine = stdout.split('\n').find((line) => line.startsWith('Income tax:'));
+  expect(incomeLine).toBe('Income tax: entry');
 });
 
 test('omits Foreign Overrides when foreign_sales_tax_bps is an empty map', () => {

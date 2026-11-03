@@ -110,6 +110,12 @@ test('treats empty-string destination_name as missing and uses id', () => {
   expect(stdout).not.toContain('Earth Station (earth_station)');
 });
 
+test('destination_name 0 prints → 0 (earth_station) with the fixture destination_base_id', () => {
+  const stdout = renderClaim(claimDetails({ destination_name: 0 }));
+  const hero = stdout.split('\n').find((row) => row.includes('→'));
+  expect(hero).toContain('→ 0 (earth_station)');
+});
+
 test('prints Idempotent: yes only when true', () => {
   const retry = renderClaim(claimDetails({ idempotent: true }));
   expect(retry).toContain('Idempotent: yes');
@@ -449,6 +455,17 @@ test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and retur
   expect(stdout).toContain('Prizes (0):');
   expect(stdout).toContain('prize-1');
   expect(printed).toBe(true);
+});
+
+test('empty-string title with one prize row prints (1): and not Prizes', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }], title: '' }), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  const heading = stdout.split('\n').find((row) => row.includes('(1):'));
+  expect(heading).toContain(' (1):');
+  expect(stdout).not.toContain('Prizes');
 });
 
 test('12 prize rows with prizeCount 20 print ... and 10 more', () => {

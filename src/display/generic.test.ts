@@ -338,6 +338,13 @@ test('dock empty gifts array prints Gifts: 0 and no rows', () => {
   expect(stdout).not.toContain('From:');
 });
 
+test('dock storage_items 0 prints Storage items: 0', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.storage_items = 0;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Storage items: 0');
+});
+
 test('dock gifts_count 0 prints Gifts: 0 when the array is absent', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   fixture.gifts_count = 0;
@@ -422,6 +429,18 @@ test('dock still sums unread_chat and prints unread_chat_note as sent', () => {
   expect(stdout).not.toContain('200 or more');
   expect(stdout).not.toContain('system:');
   expect(stdout).not.toContain('local:');
+});
+
+test('dock unread_chat channels all 0 prints Unread chat: 0', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  fixture.unread_chat = { system: 0, local: 0, faction: 0, private: 0 };
+  const stdout = renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Unread chat: 0');
 });
 
 test('dock gifts omit the truncated suffix unless strictly true and skip a blank note', () => {
@@ -3191,6 +3210,54 @@ test('renders catalog facilities with maintenance_fuel and maintenance_inputs re
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('renders catalog facilities maintenance_fuel 0 as 0 fuel stock', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      type: 'facilities',
+      items: [
+        {
+          id: 'bunker_fed_reactor',
+          name: 'Bunker-Fed Reactor',
+          category: 'infrastructure',
+          level: 1,
+          maintenance_fuel: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('0 fuel stock');
+});
+
+test('renders catalog facility maintenance item without quantity as ? Steel Plate', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      type: 'facilities',
+      items: [
+        {
+          id: 'storage_locker',
+          name: 'Storage Locker',
+          category: 'infrastructure',
+          level: 1,
+          maintenance_inputs: [{ item_id: 'steel_plate', name: 'Steel Plate' }],
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('? Steel Plate');
+});
+
 test('renders catalog facilities power_supply 0 as 0 supply', () => {
   const rendered = renderStructuredResult(
     'catalog',
@@ -4492,6 +4559,26 @@ test('prints Credits still escrowed: 450cr when escrowed_credits is 450', () => 
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Credits still escrowed: 450cr');
+});
+
+test('prints Credits still escrowed: 0cr when escrowed_credits is 0', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        job_id: 'escrow-job-0',
+        recipe: 'Refine Steel',
+        escrowed_credits: 0,
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Credits still escrowed: 0cr');
 });
 
 test('renders craft queue rental and escrow columns when present', () => {
