@@ -971,6 +971,18 @@ test('renders limited carrier contract capacity', () => {
   expect(stdout).toContain('Active contracts: 2 / 4');
 });
 
+test('renders an explicit zero carrier contract limit', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: { ...carrierCapacity, active_contracts: 2, active_contracts_unlimited: false, active_contract_limit: 0 },
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+
+  expect(stdout).toContain('Active contracts: 2 / 0');
+});
+
 test('renders unlimited carrier contract capacity when a numeric limit is also set', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',

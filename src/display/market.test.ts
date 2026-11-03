@@ -2070,6 +2070,23 @@ test('view_orders created_at unix seconds prints the UTC minute', () => {
   expect(stdout).toContain('2024-05-29 00:00');
 });
 
+test('view_orders created_at unix milliseconds prints the UTC minute', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [
+        {
+          created_at: 1716940800000,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('2024-05-29 00:00');
+});
+
 test('view_orders page 0 prints page 0/1', () => {
   const stdout = renderStructuredResult(
     'view_orders',
@@ -2083,6 +2100,55 @@ test('view_orders page 0 prints page 0/1', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('page 0/1');
+});
+
+test('view_orders bigint total prints the exact order count', () => {
+  const total = 9007199254740993n;
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [],
+      total,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(`${total.toLocaleString()} orders`);
+  expect(stdout).not.toContain('9007199254740992');
+});
+
+test('view_orders total 1n prints 1 order', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [],
+      total: 1n,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('1 order');
+  expect(stdout).not.toContain('1 orders');
+});
+
+test('view_orders remaining 0 and quantity 100 prints 0/100', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [
+        {
+          remaining: 0,
+          quantity: 100,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('0/100');
 });
 
 test('browse_ships listing with hull 0 omits Hull', () => {

@@ -244,6 +244,18 @@ test('all-loot string skill value prints Skill XP without grouping', () => {
   expect(stdout).not.toContain('Skill XP: armor +1,200');
 });
 
+test('all-loot bigint skill value prints Skill XP without rounding', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.xp_gained = { armor: 9007199254740993n };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: armor +9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('all-loot blanks missing or non-numeric quantity cells and keeps partial rows', () => {
   const stdout = stdoutOf(
     'loot_wreck',

@@ -713,7 +713,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
         ? record.primary_color
         : undefined;
     const secondary =
-      typeof record.secondary_color === 'string' && record.secondary_color.trim() !== ''
+      typeof record.secondary_color === 'string' && chartDescription(record.secondary_color)
         ? record.secondary_color
         : undefined;
     if (primary !== undefined || secondary !== undefined) {

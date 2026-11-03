@@ -1219,6 +1219,22 @@ test('station refuel omits a reconstructed total when market_cost is a bigint', 
   expect(stdout).not.toContain('9007199254740992');
 });
 
+test('station refuel uses numeric cost as Market cost when market cost and tax are omitted', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      source: 'station',
+      fuel: 10,
+      cost: 40,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Market cost: 40 cr (4 cr/fuel)');
+});
+
 test('refuel prints a zero fuel delta as (0) and not (+0)', () => {
   const stdout = renderStructuredResult(
     'refuel',
@@ -1236,6 +1252,21 @@ test('refuel prints a zero fuel delta as (0) and not (+0)', () => {
   expect(stdout).not.toContain('(+0)');
 });
 
+test('refuel prints a target id without a name', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      target_id: 'player-9',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Target: player-9');
+  expect(stdout).not.toContain('Target: player-9 (');
+});
+
 test('non-station refuel fuel cost prints Fuel cost for a numeric cost', () => {
   const stdout = renderStructuredResult(
     'refuel',
@@ -1249,6 +1280,22 @@ test('non-station refuel fuel cost prints Fuel cost for a numeric cost', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Fuel cost: 100 cr');
+});
+
+test('non-station refuel prints a fuel rate when fuel is positive', () => {
+  const stdout = renderStructuredResult(
+    'refuel',
+    {
+      action: 'refuel',
+      source: 'ship_transfer',
+      fuel: 10,
+      cost: 100,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Fuel cost: 100 cr (10 cr/fuel)');
 });
 
 function renderRepair(fixture: Record<string, unknown>) {
@@ -1757,6 +1804,14 @@ test('single-weapon reload keeps the magazine lines and skips the bulk table', (
   expect(stdout).toContain('Rounds discarded: 0');
   expect(stdout).not.toContain('total |');
   expect(stdout).not.toContain('=== Results ===');
+});
+
+test('single-weapon reload prints Previous ammo: 0', () => {
+  const fixture = structuredClone(reloadFixture) as { details: Record<string, unknown> };
+  fixture.details.previous_ammo = 0;
+  const rendered = renderReload(fixture);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Previous ammo: 0');
 });
 
 test('all-success bulk reload prints summary, magazines, and discarded counts', () => {

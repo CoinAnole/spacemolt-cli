@@ -238,6 +238,17 @@ test('mine prints xp_gained mining string 1200 without grouping', () => {
   expect(stdout).not.toContain('Skill XP: mining +1,200');
 });
 
+test('mine prints xp_gained mining bigint without rounding', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { mining: 9007199254740993n };
+    }),
+  );
+
+  expect(stdout).toContain('Skill XP: mining +9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
 test('mine prints quantity as a plain decimal without grouping', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

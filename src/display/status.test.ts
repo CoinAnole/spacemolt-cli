@@ -246,6 +246,22 @@ test('remote poi scan prints cloaked no', () => {
   expect(players).not.toContain('yes');
 });
 
+test('remote poi scan omits the Cloaked column when cloaked is not boolean', () => {
+  const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  const contacts = fixture.contacts as Array<Record<string, unknown>>;
+  const contact = contacts[0];
+  if (!contact) throw new Error('expected scan contact');
+  fixture.contacts = [{ ...contact, cloaked: 'yes' }];
+
+  const stdout = renderScan(fixture);
+  const playersStart = stdout.indexOf('=== Players ===');
+  const playersEnd = stdout.indexOf('=== Empire NPCs ===');
+  const players = stdout.slice(playersStart, playersEnd);
+  const header = players.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+  const headers = (header ?? '').split('|').map((part) => part.trim());
+  expect(headers).toEqual(['Name', 'ID', 'Ship', 'Hull', 'Shield', 'Faction', 'Revealed']);
+});
+
 test('remote poi scan omits a whitespace pirate role', () => {
   const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
   const pirates = fixture.pirates as Array<Record<string, unknown>>;
@@ -2337,6 +2353,28 @@ test('get_nearby prints a question mark for a missing arena NPC hull', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('hull ?/40');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_nearby prints a question mark for a missing arena NPC shield', () => {
+  const stdout = renderStructuredResult(
+    'get_nearby',
+    {
+      nearby: [],
+      arena_npcs: [
+        {
+          npc_id: 'arena-cleaver-1',
+          name: 'Ring Cleaver',
+          ship_class_name: 'Fighter',
+          max_shield: 40,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('shield ?/40');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -5808,6 +5846,13 @@ test('get_state prints both player color strings', () => {
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('Colors: #FFFFFF / #000000');
+});
+
+test('get_state prints an em dash for a blank secondary color', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as { player: Record<string, unknown> };
+  fixture.player.secondary_color = '';
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Colors: #FFFFFF / —');
 });
 
 test('get_state prints each hint line', () => {

@@ -1556,7 +1556,7 @@ export const marketFormatters = [
         );
         emitLine(`\n${c.bright}=== Trade Intel ===${c.reset}`);
         if (r.intel_level !== undefined) emitLine(`Intel level: ${r.intel_level}`);
-        if (r.showing !== undefined || r.total !== undefined) {
+        if (hasAnyField(r, ['showing', 'total'])) {
           emitLine(`Showing: ${formatDisplayNumber(r.showing)} / ${formatDisplayNumber(r.total)}`);
         }
         printCompactTable('Items', rows, [
