@@ -593,7 +593,7 @@ function emitMapSystemInfo(result: Record<string, unknown>): void {
 function emitRemoteScanTargetLine(result: Record<string, unknown>): void {
   const targetId = nativeScanField(result, 'target_id');
   const poiId = nativeRemotePoiId(result);
-  if (typeof targetId !== 'string' || targetId === '' || targetId === poiId) return;
+  if (!usableLabel(targetId) || targetId === poiId) return;
   emitLine(`Target: ${targetId}`);
 }
 

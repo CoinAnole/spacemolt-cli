@@ -1317,7 +1317,7 @@ export const marketFormatters = [
         const credits = finiteNumber(r.credits);
         emitLine(`Faction credits: ${credits === undefined ? r.credits : credits.toLocaleString()}`);
       }
-      if (isFactionStorage && (factionFuelReserve !== undefined || factionFuelCapacity !== undefined)) {
+      if (isFactionStorage && hasAnyField(r, ['faction_fuel_reserve', 'faction_fuel_capacity'])) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
       if (hasNonEmptyBaseId(r.hint))

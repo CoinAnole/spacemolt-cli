@@ -107,6 +107,14 @@ test('scan prints Hull: 0', () => {
   expect(stdout).toContain('Hull: 0');
 });
 
+test('scan prints Shield: 0', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  fixture.shield = 0;
+  const stdout = renderStructuredResult('scan', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Shield: 0');
+});
+
 test('scan branded creature prints Branded, Brand, and Ranch before Revealed', () => {
   const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
   fixture.branded = true;
@@ -4208,6 +4216,20 @@ test('get_system_agents omits Docked when every agent omits the field', () => {
   expect(header).toContain('Status');
 });
 
+test('get_system_agents prints the Faction column from clan_tag alone', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) {
+    delete agent.faction_tag;
+    delete agent.faction_id;
+    agent.clan_tag = 'SMC';
+  }
+  const stdout = renderSystemAgents(fixture);
+  const header = agentsHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).toContain('Faction');
+});
+
 test('get_system_agents omits the Ship column when every ship_name and ship_class is empty', () => {
   const fixture = cloneSystemAgents();
   for (const agent of fixture.agents) {
@@ -5876,6 +5898,16 @@ test('get_state snapshot covers every V2GameState property except duplicate cred
   expect(stdout.split('Credits: 4242').length - 1).toBe(1);
 });
 
+test('get_state prints Berths when ship.berths is populated', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateSnapshotFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Berths: Economy: 2/4 free');
+});
+
 test('get_state prints the riding ship id', () => {
   const stdout = renderStructuredResult(
     'get_state',
@@ -5951,6 +5983,13 @@ test('get_state prints ship location when the string is non-empty', () => {
   fixture.ship.location = 'outer-ring';
   const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Ship location: outer-ring');
+});
+
+test('get_state prints Custom Name when ship.custom_name is non-empty', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as { ship: Record<string, unknown> };
+  fixture.ship.custom_name = 'Rock Skipper';
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Custom Name: Rock Skipper');
 });
 
 test('get_state prints a trimmed player status message', () => {

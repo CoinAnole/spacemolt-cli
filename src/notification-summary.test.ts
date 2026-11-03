@@ -779,6 +779,26 @@ describe('notification presentation', () => {
     });
   });
 
+  test('does not summarize a high-signal system jump message', () => {
+    const jumpFailedA = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:10.000Z',
+      data: { action: 'jump', message: 'Jump failed' },
+    };
+    const jumpFailedB = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:15.000Z',
+      data: { action: 'jump', message: 'Jump failed' },
+    };
+
+    const presented = presentNotifications([jumpFailedA, jumpFailedB]);
+
+    expect(presented.notifications).toEqual([jumpFailedA, jumpFailedB]);
+    expect(presented.summarizedCount).toBe(0);
+  });
+
   test('actionResultMessage uses @ poi and accepts poi_name', () => {
     const undock = {
       type: 'action_result',
@@ -1111,6 +1131,26 @@ describe('notification presentation', () => {
 
     expect(presented.notifications.map((n) => n.msg_type)).toEqual(['system', 'system', 'system_progress_summary']);
     expect(presented.summarizedCount).toBe(2);
+  });
+
+  test('does not summarize a non-system msg_type', () => {
+    const versionA = {
+      type: 'system',
+      msg_type: 'version_info',
+      timestamp: '2026-07-24T19:14:00.000Z',
+      data: { action: 'jump' },
+    };
+    const versionB = {
+      type: 'system',
+      msg_type: 'version_info',
+      timestamp: '2026-07-24T19:14:05.000Z',
+      data: { action: 'jump' },
+    };
+
+    const presented = presentNotifications([versionA, versionB]);
+
+    expect(presented.notifications).toEqual([versionA, versionB]);
+    expect(presented.summarizedCount).toBe(0);
   });
 
   test('summarizes mixed crafting, action results, and system progress independently', () => {

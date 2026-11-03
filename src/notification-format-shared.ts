@@ -2849,9 +2849,9 @@ function arrivalXpText(data: Record<string, unknown>): string | undefined {
   const covered = new Set<string>();
   if (isRecord(data.xp_gained)) {
     for (const [key, count] of Object.entries(data.xp_gained)) {
-      const skill = key.trim();
       const text = arrivalCountText(count);
-      if (!skill || text === undefined) continue;
+      if (nonEmptyString(key) === undefined || text === undefined) continue;
+      const skill = key.trim();
       const sort = typeof count === 'number' ? count : Number(count);
       parts.push({
         skill,
@@ -3806,10 +3806,6 @@ function previewGeneric(notification: NormalizedNotification, options: ResolvedP
   };
 }
 
-/**
- * Normalize a raw or synthetic notification into the shared envelope shape.
- * Mirrors `normalizedNotification` in notifications.ts for pure-path reuse.
- */
 export function normalizeNotification(notification: unknown): NormalizedNotification {
   if (!isRecord(notification)) {
     return {

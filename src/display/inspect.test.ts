@@ -1271,6 +1271,29 @@ test('omits Faction intel when a system has no faction_system_intel', () => {
   expect(stdout).not.toContain('Faction intel');
 });
 
+test('omits Faction intel when faction_system_intel is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+      },
+      faction_system_intel: 'RAW_FACTION_SYSTEM_INTEL',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('System: Sol');
+  expect(stdout).not.toContain('Faction intel');
+  expect(stdout).not.toContain('RAW_FACTION_SYSTEM_INTEL');
+});
+
 test('omits Connections when a system connections array is empty', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -3770,6 +3793,25 @@ test('falls through when inspect has kind but no specialized payload', () => {
   ).toBe(true);
 });
 
+test('falls through when inspect package is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'package',
+      package: 'RAW_PACKAGE_VALUE',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Inspect ===');
+  expect(stdout).toContain('RAW_PACKAGE_VALUE');
+  expect(stdout).not.toContain('Contents: (empty)');
+});
+
 test('renders poi inspect results with description', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5780,6 +5822,27 @@ test('prints Fuel: 0/? when fuel is 0 and max_fuel is absent', () => {
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Fuel: 0/?');
+});
+
+test('prints Fuel: ?/? when station fuel is null and max_fuel is absent', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          fuel: null,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Fuel: ?/?');
 });
 
 test('prints Fuel: ?/500 when station fuel is missing and max_fuel is 500', () => {

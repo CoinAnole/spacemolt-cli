@@ -423,7 +423,7 @@ const MODULE_AMMO_FIELDS: Array<[string, string]> = [
 
 function moduleAmmoCell(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : undefined;
+  if (isStrictFiniteNumber(value)) return String(value);
   if (typeof value === 'string') {
     const text = value.trim();
     return text.length > 0 ? text : undefined;

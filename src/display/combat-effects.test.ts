@@ -324,6 +324,10 @@ test('summarizeModuleBonuses of reach 3 and special 4 is reach 3 and does not co
   expect(summary).not.toContain('4');
 });
 
+test('an inherited module bonus is an empty string', () => {
+  expect(summarizeModuleBonuses(Object.create({ reach: 3 }))).toBe('');
+});
+
 test('MODULE_BONUS_EXCLUSIONS includes required_skills', () => {
   expect(MODULE_BONUS_EXCLUSIONS.has('required_skills')).toBe(true);
   expect(summarizeModuleBonuses({ reach: 3, required_skills: { scanning: 3 } })).toBe('reach 3');
@@ -529,6 +533,12 @@ test('negative accuracy prints accuracy -10%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: -0.1 } } })).toBe('accuracy -10%');
 });
 
+test('a non-finite hit_chance_mod is an empty string and does not contain NaN', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: Number.NaN } } });
+  expect(summary).toBe('');
+  expect(summary).not.toContain('NaN');
+});
+
 test('hit_chance_mod 0 prints accuracy 0%', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { hit_chance_mod: 0 } } })).toBe('accuracy 0%');
 });
@@ -543,6 +553,12 @@ test('disrupt ticks prints the duration', () => {
 
 test('disrupt ticks of 0 prints no disrupt duration', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: 0 } } })).toBe('');
+});
+
+test('a non-finite disrupt_ticks is an empty string and does not contain NaN', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { disrupt_ticks: Number.NaN } } });
+  expect(summary).toBe('');
+  expect(summary).not.toContain('NaN');
 });
 
 test('bonus disrupt ticks prints bonus disrupt 2 ticks', () => {

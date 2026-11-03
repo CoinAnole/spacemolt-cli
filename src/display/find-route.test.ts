@@ -427,6 +427,12 @@ describe('find_route formatter', () => {
     expect(stdout).toContain(`Found: ${formatIntegerText(2)}`);
   });
 
+  test('prints Found: 0 for a numeric zero found value', () => {
+    const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: 0, route: null });
+    expect(stdout.split('\n')).toContain('Found: 0');
+    expect(stdout).not.toContain('Found: (invalid)');
+  });
+
   test('prints Found: (invalid) for an object found value', () => {
     const stdout = stdoutOf({ ...documentedMissingRouteFixture, found: { ok: true }, route: null });
     expect(stdout).toContain('Found: (invalid)');

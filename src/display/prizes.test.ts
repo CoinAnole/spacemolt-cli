@@ -85,6 +85,13 @@ test('treats empty-string ship_name as missing and uses class', () => {
   expect(stdout).not.toContain('Captured Lark');
 });
 
+test('whitespace ship_name keeps the spaces on the claim hero', () => {
+  const stdout = renderClaim(claimDetails({ ship_name: '   ' }));
+  const hero = stdout.split('\n').find((row) => row.includes('→'));
+  expect(hero).toBe('    (skiff) → Earth Station (earth_station)');
+  expect(hero).not.toBe('skiff → Earth Station (earth_station)');
+});
+
 test('numeric ship_name 1 uses the ship class and does not print 1', () => {
   const stdout = renderClaim(claimDetails({ ship_name: 1 }));
   const hero = stdout.split('\n').find((row) => row.includes('→'));

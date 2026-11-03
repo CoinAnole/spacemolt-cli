@@ -213,6 +213,15 @@ describe('enrichStorageViewStructuredContent', () => {
 
     expect(enriched.target).toBe('faction');
   });
+
+  test('leaves target undefined for a non-string payload target', () => {
+    const enriched = enrichStorageViewStructuredContent(
+      { hint: '12 items in storage at earth_station' },
+      { payloadTarget: 0 },
+    );
+
+    expect(enriched.target).toBeUndefined();
+  });
 });
 
 describe('sumStorageItemQuantities', () => {

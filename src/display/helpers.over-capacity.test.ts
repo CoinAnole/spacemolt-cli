@@ -184,6 +184,24 @@ describe('emitStationLifeSupport', () => {
     expect(stdout).toContain('Upkeep: Oxygen x2');
     expect(stdout).not.toContain('every');
   });
+
+  test('life support prints upkeep cadence without maintenance items', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ supply: 40, maintenance_cycle_ticks: 100 }), {
+      plain: true,
+    });
+    const stdout = buffer.stdout.join('\n');
+    const line = buffer.stdout.find((entry) => entry.includes('Upkeep'));
+    expect(line).toBe('  Upkeep every 100 ticks');
+    expect(stdout).not.toContain('Upkeep every 100 ticks:');
+  });
+
+  test('plants online prints explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ plants: 0 }), { plain: true });
+    const line = buffer.stdout.find((entry) => entry.includes('Plants online'));
+    expect(line).toBe('  Plants online: 0');
+  });
 });
 
 describe('emitStationPower', () => {
@@ -209,5 +227,13 @@ describe('emitStationPower', () => {
     const stdout = buffer.stdout.join('\n');
     expect(stdout).toContain('85% efficiency');
     expect(stdout).not.toContain('8500%');
+  });
+
+  test('fractional station-power efficiency prints one decimal', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 10, current_draw: 10, efficiency: 85.5 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('85.5% efficiency');
   });
 });

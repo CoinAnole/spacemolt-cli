@@ -1676,6 +1676,26 @@ test('ship buy order with being_built false prints Building: no', () => {
   expect(stdout).toContain('Building: no');
 });
 
+test('view_ship_buy_orders row without being_built omits Building', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Earth Station',
+          class_id: 'prospector',
+          class_name: 'Prospector',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Building');
+});
+
 test('browse_ships listing with ship_id, a numeric price, hull, and shield 0 prints the hull line', () => {
   const stdout = renderStructuredResult(
     'browse_ships',
@@ -2224,6 +2244,26 @@ test('view_ship_buy_orders row with class_id and no class_name prints prospector
   ).stdout.join('\n');
 
   expect(stdout).toContain('prospector (prospector)');
+});
+
+test('empty-string ship buy-order buyer omits Buyer', () => {
+  const stdout = renderStructuredResult(
+    'view_ship_buy_orders',
+    {
+      orders: [
+        {
+          order_id: 'ship-order-1',
+          base_name: 'Earth Station',
+          class_id: 'prospector',
+          buyer: '',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Buyer:');
 });
 
 test('faction storage credits 0 prints Faction credits: 0', () => {

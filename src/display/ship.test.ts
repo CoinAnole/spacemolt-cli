@@ -2542,3 +2542,10 @@ test('get_base empty facilities array prints Facilities: 0', () => {
   const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Facilities: 0');
 });
+
+test('get_drone omits Script when script is absent', () => {
+  const stdout = renderStructuredResult('get_drone', { id: 'drone-1' }, options, context).stdout.join('\n');
+  expect(stdout).toContain('=== Drone ===');
+  expect(stdout).toContain('drone-1');
+  expect(stdout).not.toContain('Script:');
+});

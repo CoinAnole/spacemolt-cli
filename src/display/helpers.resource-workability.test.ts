@@ -104,4 +104,26 @@ describe('emitResourceInfoLines', () => {
     expect(buffer.stdout.join('\n')).toContain('5 left');
     expect(buffer.stdout.join('\n')).not.toContain('/0');
   });
+
+  test('omitted remaining_display and max_remaining prints the remaining count', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitResourceInfoLines([{ resource_id: 'ore_iron', remaining: 12 }]), {
+      plain: true,
+    });
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('12 remaining');
+    expect(stdout).not.toContain('/');
+  });
+
+  test("remaining 0 with remaining_display '0 left' prints depleted", () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitResourceInfoLines([{ resource_id: 'ore_iron', remaining: 0, remaining_display: '0 left' }]),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('depleted');
+    expect(stdout).not.toContain('0 left');
+  });
 });

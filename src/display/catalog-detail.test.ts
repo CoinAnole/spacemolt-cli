@@ -206,6 +206,10 @@ test('formatProducedByFacilityIds drops non-string ids', () => {
   expect(formatProducedByFacilityIds([1])).toBeUndefined();
 });
 
+test('formatProducedByFacilityIds of a sole empty string is undefined', () => {
+  expect(formatProducedByFacilityIds([''])).toBeUndefined();
+});
+
 test('formatCatalogYesNo maps booleans only', () => {
   expect(formatCatalogYesNo(true)).toBe('yes');
   expect(formatCatalogYesNo(false)).toBe('no');
@@ -446,6 +450,10 @@ test('quantity 0 prints 0x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: 0 }])).toBe('0x Steel Plate');
 });
 
+test('empty-string quantity prints x Steel Plate', () => {
+  expect(summarizeNamedItemQuantities([{ name: 'Steel Plate', quantity: '' }])).toBe('x Steel Plate');
+});
+
 test('missing quantity prints ?x Steel Plate', () => {
   expect(summarizeNamedItemQuantities([{ name: 'Steel Plate' }])).toBe('?x Steel Plate');
 });
@@ -468,6 +476,18 @@ test('build material quantity 0 prints 0x station_core', () => {
   );
   const line = buffer.stdout.find((row) => row.includes('Build materials:'));
   expect(line).toBe('Build materials: 0x station_core');
+});
+
+test('empty-string build material quantity prints x station_core', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ item_id: 'station_core', quantity: '' }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: x station_core');
+  expect(line).not.toBe('Build materials: ?x station_core');
 });
 
 test('ship build materials prefer name over item_id', () => {
@@ -741,6 +761,18 @@ test('null built-in facility is omitted and the named row prints Built-in: React
   expect(stdout).not.toContain('null');
 });
 
+test('empty-string built-in facility name prints Built-in: reactor', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ mobile_base: { built_in_facilities: [{ id: 'reactor', name: '' }] } }, {}),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Built-in: reactor');
+  expect(stdout).not.toContain('(reactor)');
+});
+
 test('empire is preferred when it differs from faction', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: 'nebula', faction: 'solarian' }, {}), {
@@ -851,6 +883,16 @@ test('empty-string empire does not fall back to faction', () => {
   expect(buffer.stdout.join('\n')).not.toContain('Empire:');
 });
 
+test('empire 0 prints Empire: 0 and does not use faction', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: 0, faction: 'outerrim' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Empire: 0');
+  expect(stdout).not.toContain('outerrim');
+});
+
 test('non-finite ship price omits Price', () => {
   const nan = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(nan, () => emitCatalogShipDetail({ price: Number.NaN }, {}), { plain: true });
@@ -870,6 +912,18 @@ test('empty-string capability value prints Capabilities: cloak', () => {
   );
   const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
   expect(line).toBe('Capabilities: cloak');
+});
+
+test('whitespace capability value keeps the spaces', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: [{ type: 'cloak', value: '   ' }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak    ');
+  expect(line).not.toBe('Capabilities: cloak');
 });
 
 test('empty-array capability value prints Capabilities: cloak with a trailing space', () => {

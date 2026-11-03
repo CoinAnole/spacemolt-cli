@@ -99,6 +99,7 @@ test('readArenaRecord requires all three counters to be finite', () => {
   });
   expect(readArenaRecord({ arena_wins: 3, arena_losses: 1 })).toBeUndefined();
   expect(readArenaRecord({ arena_wins: 3, arena_losses: Number.NaN, arena_knockouts: 7 })).toBeUndefined();
+  expect(readArenaRecord({ arena_losses: 1, arena_knockouts: 7 })).toBeUndefined();
 });
 
 test('formatArenaRecord keeps the arena_status Record pluralization', () => {

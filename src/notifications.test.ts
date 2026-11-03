@@ -10431,6 +10431,26 @@ describe('notification formatting', () => {
       expect(preview.details[0]).not.toContain('knocked out');
     });
 
+    test('arena NPC hull without max_hull', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_arena',
+          system_id: 'sol',
+          tick: 901603,
+          arena_npcs_changed: [
+            {
+              npc_id: 'arena-runner-1',
+              name: 'Ring Runner',
+              hull: 40,
+            },
+          ],
+        },
+      });
+
+      expect(preview.details[0]).toBe('Arena NPCs — changed 1: Ring Runner [arena-runner-1] hull 40');
+    });
+
     test('limits arena identities to three and still reports every count', () => {
       const preview = formatNotificationPreview({
         msg_type: 'observation_update',

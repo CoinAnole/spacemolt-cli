@@ -268,6 +268,23 @@ test('omits statement income by category when the map is empty', () => {
   expect(stdout).not.toContain('Income by category');
 });
 
+test('omits statement Ships when the ships array is empty', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        ships: [],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Ships:');
+});
+
 test('prints the singular Empire Policy heading for one empire', () => {
   const stdout = renderStructuredResult(
     'get_empire_info',
@@ -553,6 +570,24 @@ test('renders numeric period_started_at 0 as Period started: none', () => {
   expect(stdout).toContain('Period started: none');
 });
 
+test('renders numeric assessed_at 0 as Assessed at: 1970-01-01 00:00 UTC', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        assessed_at: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Assessed at: 1970-01-01 00:00 UTC');
+  expect(stdout).not.toContain('Assessed at: none');
+});
+
 test('prints statement tick 0', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -582,6 +617,26 @@ test('prints an income_tax record note flat instead of the raw response dump', (
 
   expect(stdout).toContain('Income tax: note flat');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints an income_tax record note flat and omits nested records and arrays', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: {
+        note: 'flat',
+        detail: { kind: 'nested-detail-token' },
+        tags: ['nested-array-token'],
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const incomeLine = stdout.split('\n').find((line) => line.startsWith('Income tax:'));
+  expect(incomeLine).toBe('Income tax: note flat');
+  expect(stdout).not.toContain('nested-detail-token');
+  expect(stdout).not.toContain('nested-array-token');
 });
 
 test('prints an income_tax string withheld instead of the raw response dump', () => {
@@ -668,6 +723,20 @@ test('prints the Tax Estimate header and omits Income tax when income_tax is emp
 
   expect(stdout).toContain('=== Tax Estimate ===');
   expect(stdout).not.toContain('Income tax');
+});
+
+test('prints the Tax Estimate header and omits Sales tax rates when sales_tax_rates is an empty array', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      sales_tax_rates: [],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Tax Estimate ===');
+  expect(stdout).not.toContain('Sales tax rates');
 });
 
 test('prints Income tax: entry when income_tax is an empty record', () => {

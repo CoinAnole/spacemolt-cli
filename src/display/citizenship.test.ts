@@ -161,6 +161,16 @@ test('citizenship list prints a comma remaining line for defensive string ids', 
   expect(stdout).not.toContain('=== Citizenships ===');
 });
 
+test('citizenship list prints repeated string citizenships once', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    citizenships: ['solarian', 'solarian'],
+  });
+
+  expect(stdout).toContain('Citizenships: solarian');
+  expect(stdout).not.toContain('solarian, solarian');
+});
+
 test('citizenship list prints a citizenship grant identified only by name', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',
@@ -397,4 +407,21 @@ test('citizenship apply omits Status when status is an empty string', () => {
 
   expect(stdout).toContain('=== Citizenship Application ===');
   expect(stdout).not.toContain('Status:');
+});
+
+test('citizenship apply with an empty message matches an omitted message', () => {
+  const omitted = stdoutOf('citizenship_apply', {
+    origin: 'nebula',
+  });
+  const empty = stdoutOf('citizenship_apply', {
+    origin: 'nebula',
+    message: '',
+  });
+
+  expect(empty.split('\n')).toEqual(omitted.split('\n'));
+  expect(empty).toContain('Origin: nebula');
+  const lines = empty.split('\n');
+  const headingIndex = lines.indexOf('=== Citizenship Application ===');
+  expect(lines[headingIndex + 1]).toBe('Origin: nebula');
+  expect(lines[headingIndex + 1]).not.toBe('');
 });
