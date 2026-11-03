@@ -370,6 +370,24 @@ test('sell quantity-only auto-listed prints Auto-listed: 4 without an @ price', 
   expect(stdout).not.toContain('@');
 });
 
+test('sell auto-listed price_each 0 prints Auto-listed: 4 @ 0 cr', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      auto_listed: { quantity: 4, price_each: 0 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const lines = stdout.split('\n');
+
+  expect(lines).toContain('Auto-listed: 4 @ 0 cr');
+  expect(lines).not.toContain('Auto-listed: 4');
+});
+
 test('sell prints cargo and storage counts after fills and before unsold', () => {
   const stdout = renderStructuredResult(
     'sell',
@@ -1028,6 +1046,14 @@ test('faction_query_intel keeps a non-integer current tick raw and omits age', (
   expect(stdout).not.toContain('age');
   expect(stdout).not.toContain(', live');
   expect(stdout).toContain('Live systems: sol');
+});
+
+test('faction_query_intel prints current_tick 0 as Current tick: 0', () => {
+  const fixture = cloneIntelFixture();
+  fixture.current_tick = 0;
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('Current tick: 0');
 });
 
 test('faction_query_intel prints non-integer read_at_tick values with no status word', () => {

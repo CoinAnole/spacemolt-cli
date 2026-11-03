@@ -260,6 +260,17 @@ test('mine prints quantity as a plain decimal without grouping', () => {
   expect(stdout).not.toContain('1,234');
 });
 
+test('mine yield quantity 0 prints Mined 0', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.quantity = 0;
+    }),
+  );
+
+  expect(stdout).toContain('Mined 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('mine unlimited remaining skips depletion even with percent 0 and max_remaining', () => {
   const both = stdoutOf(
     clonePresent((details) => {
@@ -291,6 +302,16 @@ test('mine unlimited remaining skips depletion even with percent 0 and max_remai
     expect(stdout).not.toContain('-1/');
     expect(stdout).not.toContain('% remaining');
   }
+});
+
+test('mine depletion_percent 0 on a finite remaining deposit prints 100.00% remaining', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.depletion_percent = 0;
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Deposit:')).toBe('Deposit: 120/300 (100.00% remaining)');
 });
 
 test('mine depleted remaining skips depletion even with percent 100', () => {

@@ -204,6 +204,25 @@ test('empty-string jettison result success omits Success', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('null jettison result success omits Success', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          success: null,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('non-boolean jettison success declines to the raw response', () => {
   const { stdout } = renderJettison('storage jettison', {
     details: {

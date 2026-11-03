@@ -944,7 +944,7 @@ function formatCommissionQuote(r: Record<string, unknown>): boolean {
   if (!hasAnyField(r, ['ship_class', 'credits_only_total', 'yard_margin'])) {
     return false;
   }
-  if (r.can_commission === undefined && r.material_cost === undefined && !Array.isArray(r.build_materials)) {
+  if (!hasAnyField(r, ['can_commission', 'material_cost']) && !Array.isArray(r.build_materials)) {
     return false;
   }
 
@@ -1231,7 +1231,7 @@ export const marketFormatters = [
       const side = createOrderSide(r, command);
       if (!side) return false;
       if (r.kind !== undefined && r.kind !== 'single') return false;
-      if (r.order_id === undefined && r.listing_fee === undefined) return false;
+      if (!hasAnyField(r, ['order_id', 'listing_fee'])) return false;
 
       const itemName = r.item || r.item_name || r.item_id || 'unknown';
       const itemId = r.item_id && r.item_id !== itemName ? ` (${r.item_id})` : '';
