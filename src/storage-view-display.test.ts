@@ -76,6 +76,23 @@ describe('rewriteStorageViewHint', () => {
     );
   });
 
+  test('pooled faction hint keeps the faction label and bunker suffix', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        base_id: 'crimson_war_citadel',
+        hint: "3,076,406 items in faction storage at crimson_war_citadel, nova_terra_central Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+        items: [{ item_id: 'iron_ore', quantity: 3076406 }],
+      },
+      { requestedStationId: 'crimson_war_citadel' },
+    );
+
+    expect(rewritten.storage_title).toBe('across 2 stations');
+    expect(rewritten.hint).toContain('items in faction storage at');
+    expect(rewritten.hint).toContain(
+      "Fuel bunker here: deposit fuel from your ship's tank with storage deposit target=faction item_id=fuel.",
+    );
+  });
+
   test('leaves single-station hints unchanged', () => {
     const content = {
       base_id: 'earth_station',

@@ -146,6 +146,18 @@ test('renders freight quotes with route, actors, costs, liability, and appraisal
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote with insurance_selected false prints Insurance selected: no', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      insurance_selected: false,
+    },
+  });
+
+  expect(stdout).toContain('Insurance selected: no');
+});
+
 test('freight quote shipper without an id still prints the quote', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',

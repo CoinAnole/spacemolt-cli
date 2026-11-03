@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
-import { emitStationFuelPricing, isOverCapacity, overCapacitySuffix, withDisplayRenderBuffer } from './helpers.ts';
+import {
+  emitStationDefences,
+  emitStationFuelPricing,
+  isOverCapacity,
+  overCapacitySuffix,
+  withDisplayRenderBuffer,
+} from './helpers.ts';
 
 function withBuffer<T>(fn: () => T, options: { plain?: boolean } = {}): T {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
@@ -106,5 +112,19 @@ describe('emitStationFuelPricing', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationFuelPricing({ fuel_price_all_in: 0 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('All-in Refuel Price: 0 credits/unit');
+  });
+});
+
+describe('emitStationDefences', () => {
+  test('emitStationDefences prints explicit armor 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ armor: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Armor: 0');
+  });
+
+  test('emitStationDefences prints explicit hull 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ hull: 0, max_hull: 10 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Hull: 0/10');
   });
 });

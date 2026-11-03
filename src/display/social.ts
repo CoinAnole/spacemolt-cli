@@ -465,8 +465,8 @@ function listBattlesNextLine(result: Record<string, unknown>, rowCount: number):
   if (!isRecord(result.list_battles_query) || result.has_more !== true || rowCount <= 0) return undefined;
   const query = result.list_battles_query;
   const args: string[] = [];
-  if (typeof query.search === 'string' && query.search !== '') args.push(`search=${query.search}`);
-  if (typeof query.category === 'string' && query.category !== '') args.push(`category=${query.category}`);
+  if (typeof query.search === 'string' && hasAnyField([query], ['search'])) args.push(`search=${query.search}`);
+  if (typeof query.category === 'string' && hasAnyField([query], ['category'])) args.push(`category=${query.category}`);
   if (typeof query.limit === 'number' && Number.isFinite(query.limit)) args.push(`limit=${query.limit}`);
   const offset = query.offset;
   // Count returned rows, not the requested limit, so a short page does not skip.
@@ -2045,7 +2045,6 @@ export const socialFormatters = [
     { commands: ['facility_list', 'facility_owned'], shapeFallback: true },
   ),
 
-  // Facility List
   namedFormatter(
     'facility_list',
     ['station_facilities', 'player_facilities', 'faction_facilities', 'public_facilities'],
@@ -2115,7 +2114,6 @@ export const socialFormatters = [
     { commands: ['facility_upgrades'], shapeFallback: true },
   ),
 
-  // Facility Types
   namedFormatter(
     'facility_types',
     ['categories', 'total'],
@@ -2146,7 +2144,6 @@ export const socialFormatters = [
     { commands: ['facility_types'], shapeFallback: true },
   ),
 
-  // Fleet Status
   namedFormatter(
     'fleet',
     ['fleet'],
@@ -2222,7 +2219,6 @@ export const socialFormatters = [
     { commands: ['fleet_status'], shapeFallback: true },
   ),
 
-  // Battle Status
   namedFormatter(
     'battle_status',
     ['battle', 'battle_id', 'combat_state', 'participants', 'boarding'],

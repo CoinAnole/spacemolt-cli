@@ -795,6 +795,28 @@ test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () =>
   expect(stdout).not.toContain('Ranched By');
 });
 
+test('survey_system omits Ranched for an empty-string ranched value and does not print 0', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: '',
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).not.toContain('Ranched');
+  expect(lineContaining(stdout, 'ember_grazer')).not.toContain('0');
+  expect(stdout).not.toContain('Ranched');
+});
+
 test('survey_system omits Ranched for a NaN ranched value and does not print NaN', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

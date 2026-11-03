@@ -3506,6 +3506,25 @@ test('get_status_summary prints Crew occupancy and omits it without personnel or
   expect(ridingOut).toContain('passenger on Ibis');
 });
 
+test('get_status_summary prints Skills None when no skill entries', () => {
+  const fixture = structuredClone(getStatusFixture) as {
+    skills?: unknown;
+    player: Record<string, unknown>;
+  };
+  delete fixture.skills;
+  delete fixture.player.skills;
+  delete fixture.player.stats;
+  const stdout = renderStructuredResult('get_status_summary', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Skills:    None');
+});
+
+test('get_status_summary prints Docked in space when no dock fields', () => {
+  const fixture = structuredClone(getStatusFixture) as { location: Record<string, unknown> };
+  delete fixture.location.docked_at;
+  const stdout = renderStructuredResult('get_status_summary', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Docked:    in space');
+});
+
 test('get_status prints the riding ship id', () => {
   const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
   riding.riding = { carrier: 'Ibis', ship_id: 'ship-ibis-1' };
@@ -3838,6 +3857,17 @@ test('get_system string connections print a bare id', () => {
   const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
 
   expect(stdout).toContain('  - alpha_centauri');
+});
+
+test('get_system omits a zero connection distance', () => {
+  const fixture = structuredClone(systemInfoFixture);
+  (fixture.system as { connections: unknown }).connections = [
+    { system_id: 'alpha_centauri', name: 'Alpha Centauri', distance: 0 },
+  ];
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Alpha Centauri');
+  expect(stdout).not.toContain('(0 ly)');
 });
 
 test('get_system prints class without station when has_base is false', () => {

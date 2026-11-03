@@ -111,6 +111,18 @@ test('arenaStatLines suppresses a 0/0/0 record with no XP', () => {
   expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 0 }, undefined)).toEqual([]);
 });
 
+test('arenaStatLines prints the record when only losses are positive', () => {
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 2, arena_knockouts: 0 }, undefined)).toEqual([
+    'Arena: 0 wins / 2 losses / 0 knockouts',
+  ]);
+});
+
+test('arenaStatLines prints the record when only knockouts are positive', () => {
+  expect(arenaStatLines({ arena_wins: 0, arena_losses: 0, arena_knockouts: 4 }, undefined)).toEqual([
+    'Arena: 0 wins / 0 losses / 4 knockouts',
+  ]);
+});
+
 test('arenaStatLines prints a record and a sorted XP ledger', () => {
   expect(
     arenaStatLines(
@@ -674,6 +686,10 @@ test('formatRuleDigest keeps max_side_size 0 as full fleet and omits empty or ze
     }),
   ).toBe('up to 2 ships per side · tier 2–4 · max scale 2 · only fuel · no webifier');
   expect(formatRuleDigest({ max_side_size: 1, min_ship_tier: 3 })).toBe('solo duel · min tier 3');
+});
+
+test('formatRuleDigest skips a NaN max_side_size and keeps no cloak', () => {
+  expect(formatRuleDigest({ max_side_size: Number.NaN, no_cloak: true })).toBe('no cloak');
 });
 
 test('a positive max crew cap prints solo duel and max crew', () => {

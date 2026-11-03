@@ -12,6 +12,7 @@ import {
   catalogShipsFixture,
   catalogSkillsFixture,
   catalogSkillsOneFixture,
+  craftPackagedQuoteFixture,
   dockDeliveryMissionsEnvelope,
   dockFixture,
   dockGiftsFixture,
@@ -3881,6 +3882,33 @@ test('renders package pack job with action package label and eta', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('craft ETA prints explicit 0', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'pack',
+        kind: 'package',
+        job_id: 'pkg-job-1',
+        package_id: 'pkg-abc',
+        label: 'Spare Parts Kit',
+        eta_ticks: 0,
+        facility_id: 'workshop:player:station',
+        mode: 'craft',
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('ETA: 0 ticks');
+});
+
 test('renders package unpack job fields', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -3992,6 +4020,38 @@ test('renders a one-tick Time/run craft quote', () => {
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('Time/run: 1 tick');
+});
+
+test('craft Time/run prints explicit 0', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'craft',
+        cost: {
+          inputs: [{ item_id: 'circuit_board', name: 'Circuit Board', quantity: 2 }],
+        },
+        dry_run: true,
+        effective_time_per_run: 0,
+        est_completion_tick: 1131729,
+        facility_id: 'workshop:player:station',
+        have_credits: true,
+        have_inputs: true,
+        mode: 'craft',
+        produces: [{ item_id: 'power_cell', name: 'Power Cell', quantity: 1 }],
+        recipe: 'Build Power Cell',
+        runs: 1,
+        venue: 'Station Workshop',
+        venue_type: 'workshop',
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Time/run: 0 ticks');
 });
 
 test('renders craft queue total_jobs and truncation message', () => {
@@ -4633,6 +4693,15 @@ test('renders packaged craft quote with gates, ready, and output package preview
   expect(stdout).not.toContain('Credits total');
   expect(stdout).not.toContain('credits_total');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('packaged quote prints container consumed explicit 0', () => {
+  const fixture = structuredClone(craftPackagedQuoteFixture) as Record<string, unknown>;
+  const details = fixture.details as Record<string, unknown>;
+  const outputPackage = details.output_package as Record<string, unknown>;
+  outputPackage.container_consumed = 0;
+  const stdout = renderStructuredResult('craft', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Container consumed: 0');
 });
 
 test('renders numeric packaged-craft package ids', () => {

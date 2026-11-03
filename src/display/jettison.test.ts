@@ -237,6 +237,24 @@ test('jettison result-row scalar outside known keys prints Pilot Id', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('jettison result-row with pilot_id null prints Item Id and omits Pilot Id', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          pilot_id: null,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Pilot Id');
+});
+
 test('failed jettison result prints Error', () => {
   const { stdout, stderr } = renderJettison('storage jettison', {
     details: {

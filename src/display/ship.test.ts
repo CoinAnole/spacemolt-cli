@@ -823,12 +823,46 @@ test('get_wrecks prints a zero cargo quantity', () => {
   expect(lucky).not.toContain('?x');
 });
 
+test('get_wrecks prints a question mark when cargo quantity is omitted', () => {
+  const fixture = cloneWrecksFixture();
+  const cargo = wreckAt(fixture, 0).cargo as Array<Record<string, unknown>>;
+  const item = cargo[0];
+  if (!item) throw new Error('expected cargo item');
+  delete item.quantity;
+
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  expect(lucky).toContain('?x Iron Ore');
+});
+
+test('get_wrecks prints a question mark when a module has no name or id', () => {
+  const fixture = cloneWrecksFixture();
+  const modules = wreckAt(fixture, 0).modules as Array<Record<string, unknown>>;
+  const fitted = modules[0];
+  if (!fitted) throw new Error('expected module');
+  delete fitted.name;
+  delete fitted.type_id;
+  delete fitted.id;
+
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  expect(lucky.split('\n')).toContain('    - ?');
+});
+
 test('get_wrecks omits the victim suffix when victim_name is omitted', () => {
   const fixture = cloneWrecksFixture();
   delete wreckAt(fixture, 0).victim_name;
   const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
   const shipLine = lucky.split('\n').find((line) => line.startsWith('  Ship:'));
   expect(shipLine).toBe('  Ship: Lucky Strike / skiff');
+});
+
+test('get_wrecks prints Ship unknown when ship name and class are absent', () => {
+  const fixture = cloneWrecksFixture();
+  const wreck = wreckAt(fixture, 0);
+  delete wreck.ship_name;
+  delete wreck.ship_class;
+  const lucky = wreckSection(renderGetWrecks(fixture).stdout.join('\n'), 'wreck-1');
+  const shipLine = lucky.split('\n').find((line) => line.startsWith('  Ship:'));
+  expect(shipLine).toContain('Ship: unknown');
 });
 
 test('get_wrecks prints (No wrecks at this location) for an empty wrecks array', () => {
@@ -1326,6 +1360,15 @@ test('repair prints an item name without an id', () => {
   expect(stdout).toContain('Item: Repair Kit');
   expect(stdout).not.toContain('(repair_kit)');
   expect(stdout).not.toContain('Item: Repair Kit (');
+});
+
+test('repair prints an item id without a name', () => {
+  const fixture = structuredClone(repairFixture) as Record<string, unknown>;
+  delete fixture.item_name;
+  const stdout = renderRepair(fixture).stdout.join('\n');
+  expect(stdout).toContain('Item: repair_kit');
+  expect(stdout).not.toContain('Item: repair_kit (');
+  expect(stdout).not.toContain('(Repair Kit)');
 });
 
 test('repair station prints restored hull not an overstated kits number', () => {

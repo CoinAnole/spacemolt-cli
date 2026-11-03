@@ -37,8 +37,8 @@ export function formatItemTable(items: Array<Record<string, unknown>>, indent = 
 
   const idW = Math.max(2, ...items.map((i) => String(i.item_id || '').length));
   const nameW = Math.max(4, ...items.map((i) => String(i.name || i.item_name || i.item_id || '').length));
-  const qtyW = Math.max(3, ...items.map((i) => String(i.quantity ?? '').length));
-  const sizeW = Math.max(9, ...items.map((i) => String(i.size ?? '').length));
+  const qtyW = Math.max(3, ...items.map((item) => rowValue(item, ['quantity']).length));
+  const sizeW = Math.max(9, ...items.map((item) => rowValue(item, ['size']).length));
 
   lines.push('');
   lines.push(

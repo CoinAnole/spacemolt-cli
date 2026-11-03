@@ -53,6 +53,12 @@ describe('emitGiftEntries', () => {
     expect(stdout).not.toContain('  Note: hello  ');
   });
 
+  test('leading note spaces are kept', () => {
+    const { stdout } = renderGifts([{ message: '  hello' }]);
+    expect(stdout).toContain('  Note:   hello');
+    expect(stdout).not.toContain('  Note: hello');
+  });
+
   test('item line omits the id suffix when name and item_id are both fuel_cell', () => {
     const { stdout } = renderGifts([
       {

@@ -1302,7 +1302,7 @@ export const statusFormatters = [
   formatter(
     (r, command) => {
       if (!commandNameEquals(command, 'player_profile')) return false;
-      if (typeof r.username !== 'string' || !r.username) return false;
+      if (!usableLabel(r.username)) return false;
       emitPilotProfile(r, 'web');
       return true;
     },

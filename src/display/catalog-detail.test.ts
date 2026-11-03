@@ -349,6 +349,28 @@ test('whitespace description is omitted', () => {
   expect(stdout).not.toContain('   ');
 });
 
+test('object ship or item description is omitted', () => {
+  const ship = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    ship,
+    () => emitCatalogShipDetail({ description: { note: 'secret' }, class: 'Shuttle' }, {}),
+    { plain: true },
+  );
+  const shipStdout = ship.stdout.join('\n');
+  expect(shipStdout).toContain('Class: Shuttle');
+  expect(shipStdout).not.toContain('[object Object]');
+  expect(shipStdout).not.toContain('secret');
+
+  const item = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(item, () => emitCatalogItemDetail({ description: { note: 'secret' }, category: 'ore' }, {}), {
+    plain: true,
+  });
+  const itemStdout = item.stdout.join('\n');
+  expect(itemStdout).toContain('Category: ore');
+  expect(itemStdout).not.toContain('[object Object]');
+  expect(itemStdout).not.toContain('secret');
+});
+
 test('item description with surrounding spaces prints the padded liner line and not a trimmed one', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ description: '  liner  ' }, {}), { plain: true });

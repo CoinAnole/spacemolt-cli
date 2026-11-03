@@ -11978,6 +11978,20 @@ describe('notification formatting', () => {
       expect(message).not.toContain('jump×0');
     });
 
+    test('count map omits a non-numeric command count', () => {
+      const notification = {
+        type: 'action',
+        msg_type: 'action_result_summary',
+        data: {
+          count: 2,
+          commands: { jump: '12', dock: 2 },
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('2 action results summarized; dock×2');
+      expect(message).not.toContain('jump');
+    });
+
     test('commission base id without a base name', () => {
       const notification = {
         type: 'system',

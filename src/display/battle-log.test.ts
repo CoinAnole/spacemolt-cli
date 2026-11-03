@@ -1273,6 +1273,18 @@ describe('battleLogAttackRows', () => {
     ).toBe('chance 12%');
   });
 
+  test('a weapon with only hit_chance 0 and hit_success false prints chance 0%', () => {
+    expect(
+      battleLogAttackRows([{ tick: 0, attacks: [{ weapons: [{ hit_chance: 0, hit_success: false }] }] }])[0]?.defense,
+    ).toBe('chance 0%');
+  });
+
+  test('a weapon with only hit_roll 0 and hit_success false prints roll 0', () => {
+    expect(
+      battleLogAttackRows([{ tick: 0, attacks: [{ weapons: [{ hit_roll: 0, hit_success: false }] }] }])[0]?.defense,
+    ).toBe('roll 0');
+  });
+
   test('a weapon with only hit_success true prints a hit row', () => {
     const rows = battleLogAttackRows([
       {

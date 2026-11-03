@@ -213,6 +213,23 @@ test('create_sell_order prints not-listed and self-clear lines including 0', () 
   expect(stdout).toContain('Self-clear returned to storage: 3');
 });
 
+test('create_sell_order escrow_refunded 0 prints Escrow refunded: 0 cr', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      order_id: 'order-1',
+      escrow_refunded: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Escrow refunded: 0 cr');
+});
+
 const singleSellBody = {
   action: 'create_sell_order',
   kind: 'single',
@@ -1820,6 +1837,48 @@ test('get_trades listing with seller_name and seller prints Seller: Ada', () => 
   expect(stdout).not.toContain('Seller: Bob');
 });
 
+test('get_trades listing with seller and no seller_name prints Seller: Bob', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+          seller: 'Bob',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: Bob');
+});
+
+test('get_trades listing with only seller_id prints Seller: seller-9', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      listings: [
+        {
+          item_id: 'ore_iron',
+          quantity: 1,
+          price_each: 10,
+          listing_id: 'listing-1',
+          seller_id: 'seller-9',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: seller-9');
+});
+
 test('faction storage prints a bigint credit balance without grouping', () => {
   const stdout = renderStructuredResult(
     'storage_view',
@@ -1859,6 +1918,29 @@ test('browse_ships listing with no seller fields prints Seller: Unknown', () => 
   expect(stdout).toContain('Seller: Unknown');
 });
 
+test('browse_ships listing with only seller_id prints Seller: seller-9', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          listing_id: 'listing-1',
+          seller_id: 'seller-9',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: seller-9');
+});
+
 test('browse_ships listing with seller and seller_name prints Seller: Marlowe', () => {
   const stdout = renderStructuredResult(
     'browse_ships',
@@ -1882,6 +1964,29 @@ test('browse_ships listing with seller and seller_name prints Seller: Marlowe', 
 
   expect(stdout).toContain('Seller: Marlowe');
   expect(stdout).not.toContain('Seller: Ada');
+});
+
+test('browse_ships listing with seller_name and no seller prints Seller: Ada', () => {
+  const stdout = renderStructuredResult(
+    'browse_ships',
+    {
+      base_name: 'Earth Station',
+      listings: [
+        {
+          ship_id: 'ship-1',
+          ship_name: 'Lucky Strike',
+          class_id: 'prospector',
+          price: 125000,
+          listing_id: 'listing-1',
+          seller_name: 'Ada',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Seller: Ada');
 });
 
 test('browse_ships listing with ship_id and a numeric price but no class_id prints (Unknown)', () => {

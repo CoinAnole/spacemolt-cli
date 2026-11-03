@@ -48,8 +48,8 @@ export function formatCountMap(value: unknown, limit = DEFAULT_COUNT_MAP_LIMIT):
   if (!record) return undefined;
   const entries = Object.entries(record)
     .map(([key, count]) => {
-      const n = finiteNumber(count);
-      if (!nonEmptyString(key) || n === undefined || n <= 0) return undefined;
+      const n = positiveFinite(count);
+      if (!nonEmptyString(key) || n === undefined) return undefined;
       return [key, n] as const;
     })
     .filter((entry): entry is readonly [string, number] => Boolean(entry))
@@ -145,7 +145,6 @@ function collectInventoryEntries(value: unknown, acc: Map<string, number>, depth
 
   if (!isRecord(value)) return;
 
-  // Prefer nested list bags when present (merge all recognized nests).
   let sawNest = false;
   for (const nestKey of INVENTORY_NEST_KEYS) {
     if (!(nestKey in value)) continue;

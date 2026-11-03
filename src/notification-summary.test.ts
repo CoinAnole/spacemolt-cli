@@ -242,6 +242,21 @@ describe('notification presentation', () => {
     expect((summary?.data as { rental_jobs?: number } | undefined)?.rental_jobs).toBe(1);
   });
 
+  test('crafting summary keeps top-level escrowed credits when jobs are absent', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: { escrowed_credits: 0 },
+    };
+
+    const presented = presentNotifications([update]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('crafting_summary');
+    expect((summary?.data as { escrowed_credits?: number } | undefined)?.escrowed_credits).toBe(0);
+  });
+
   test('leaves value-level high-signal crafting updates visible', () => {
     const update = {
       type: 'crafting',

@@ -316,6 +316,18 @@ describe('find_route formatter', () => {
     expect(cells(rowByText(stdout, 'Route', 'Sol'))[4]).toBe('(missing)');
   });
 
+  test('prints a blank entrance when a wormhole entrance_poi is undefined', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        route: [{ system_id: 'sol', name: 'Sol', jumps: 0, via_wormhole: true, entrance_poi: undefined }],
+      }),
+    );
+    const row = cells(rowByText(stdout, 'Route', 'Sol'));
+    expect(row[3]).toBe('yes');
+    expect(row[4]).toBe('');
+    expect(stdout).not.toContain('(missing)');
+  });
+
   test('keeps an entrance that arrived on a non-wormhole step', () => {
     const stdout = stdoutOf(
       foundBody({

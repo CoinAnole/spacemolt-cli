@@ -941,7 +941,7 @@ function formatSupplyCommission(r: Record<string, unknown>): boolean {
 }
 
 function formatCommissionQuote(r: Record<string, unknown>): boolean {
-  if (r.ship_class === undefined && r.credits_only_total === undefined && r.yard_margin === undefined) {
+  if (!hasAnyField(r, ['ship_class', 'credits_only_total', 'yard_margin'])) {
     return false;
   }
   if (r.can_commission === undefined && r.material_cost === undefined && !Array.isArray(r.build_materials)) {

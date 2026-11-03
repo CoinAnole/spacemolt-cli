@@ -85,6 +85,13 @@ test('treats empty-string ship_name as missing and uses class', () => {
   expect(stdout).not.toContain('Captured Lark');
 });
 
+test('numeric ship_name 1 uses the ship class and does not print 1', () => {
+  const stdout = renderClaim(claimDetails({ ship_name: 1 }));
+  const hero = stdout.split('\n').find((row) => row.includes('→'));
+  expect(hero).toBe('skiff → Earth Station (earth_station)');
+  expect(hero).not.toContain('1');
+});
+
 test('claim with ship_name and no ship_class prints the name only', () => {
   const stdout = renderClaim(claimDetails({}, ['ship_class']));
   expect(stdout).toContain('Captured Lark → Earth Station (earth_station)');
@@ -162,6 +169,12 @@ test('empty-string status omits Status:', () => {
 test('numeric status 0 omits Status:', () => {
   const stdout = renderClaim(claimDetails({ status: 0 }));
   expect(stdout).not.toContain('Status:');
+});
+
+test('numeric status 1 omits Status:', () => {
+  const stdout = renderClaim(claimDetails({ status: 1 }));
+  expect(stdout).not.toContain('Status:');
+  expect(stdout).not.toContain('Status: 1');
 });
 
 test('prints unknown status tokens as-is', () => {
@@ -377,6 +390,14 @@ test('arrival tick 0 prints Arrival and 0', () => {
   expect(stdout).toContain('0');
 });
 
+test('a prize recovery without fuel fields omits the Fuel column', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Fuel');
+});
+
 test('travel with only system ids prints travel sol → alpha_centauri', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -407,6 +428,16 @@ test('empty-string transit_kind prints sol / earth_station and not an arrow', ()
   expect(stdout).not.toContain('→');
 });
 
+test('numeric transit_kind 1 omits sol and does not print 1', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ transit_kind: 1, system_id: 'sol' }]), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('sol');
+  expect(stdout).not.toContain('1');
+});
+
 test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and returns true', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   const printed = withDisplayRenderBuffer(
@@ -418,6 +449,16 @@ test('prizeCount 0 with a prize row prints Prizes (0) and the prize id and retur
   expect(stdout).toContain('Prizes (0):');
   expect(stdout).toContain('prize-1');
   expect(printed).toBe(true);
+});
+
+test('12 prize rows with prizeCount 20 print ... and 10 more', () => {
+  const prizes = Array.from({ length: 12 }, (_, index) => ({ prize_id: `prize-${index + 1}` }));
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes, prizeCount: 20 }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('... and 10 more');
+  expect(stdout).not.toContain('... and 2 more');
+  expect(stdout).not.toContain('prize-11');
 });
 
 test('null prize row is dropped and prints Prizes (1) and returns true', () => {

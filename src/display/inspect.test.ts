@@ -1439,6 +1439,27 @@ test('prints Station: earth_station when a base has an id and no name', () => {
   expect(stdout.split('\n')).toContain('Station: earth_station');
 });
 
+test('prints Station and ID from a flat base payload with a name and id', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        name: 'Earth Station',
+        id: 'earth_station',
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Station: Earth Station');
+  expect(stdout.split('\n')).toContain('ID: earth_station');
+});
+
 test('prints Station: undefined when a base has neither name nor id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -1500,6 +1521,27 @@ test('omits the Position line for a partial position with x 0 and no y', () => {
   expect(rendered.success).toBe(true);
   const stdout = rendered.stdout.join('\n');
   expect(stdout).not.toContain('Position');
+});
+
+test('prints Position: (null, 4) when a system coordinate is null', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'sol',
+      kind: 'system',
+      system: {
+        system_id: 'sol',
+        name: 'Sol',
+        position: { x: null, y: 4 },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Position: (null, 4)');
 });
 
 test('omits the Position line when system position has y and no x', () => {
