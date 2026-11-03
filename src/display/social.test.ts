@@ -4064,6 +4064,16 @@ test('faction_info does not invent a personal rent bill from rent or player_rent
   expect(stdout).toContain('Faction rent bill:');
 });
 
+test('faction_info prints Charter for a non-empty string and omits an empty charter', () => {
+  const charter = 'We hold the lane.';
+  const present = renderFactionInfo({ ...factionInfoFixture, charter } as Record<string, unknown>);
+  expect(present).toContain('Charter:');
+  expect(present).toContain(charter);
+
+  const absent = renderFactionInfo({ ...factionInfoFixture, charter: '' } as Record<string, unknown>);
+  expect(absent).not.toContain('Charter');
+});
+
 test('faction_info json passes faction_rent through without the table summary', () => {
   const stdout = renderFactionInfo(factionInfoWithRent(), 'json');
   const parsed = JSON.parse(stdout) as { faction_rent: Record<string, number> };
@@ -4075,6 +4085,21 @@ test('faction_info json passes faction_rent through without the table summary', 
   expect(parsed.faction_rent.grace_cycles).toBe(1);
   expect(parsed.faction_rent.est_rent_per_day).toBe(7200);
   expect(stdout).not.toContain('Faction rent bill');
+});
+
+test('faction_profile prints an Allies table for one ally row', () => {
+  const stdout = renderStructuredResult(
+    'faction_profile',
+    {
+      name: 'Drift Matrix',
+      tag: 'DMX7',
+      allies: [{ name: 'Interstellar Continental', tag: 'NOIR' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Allies ===');
+  expect(stdout).toContain('NOIR');
 });
 
 const factionInfoMobileBase = {
@@ -4130,6 +4155,23 @@ test('faction_info prints the mobile base snapshot after the rent lines', () => 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('faction_profile prints Description for a non-empty string and omits an empty description', () => {
+  const description = 'Traders of the rim.';
+  const present = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    description,
+  });
+  expect(present).toContain(`Description: ${description}`);
+
+  const absent = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    description: '',
+  });
+  expect(absent).not.toContain('Description');
+});
+
 test('faction_info omits mobile base lines when those keys are absent', () => {
   const stdout = renderFactionInfo(structuredClone(factionInfoFixture) as Record<string, unknown>);
   expect(stdout).not.toContain('Mobile base');
@@ -4138,6 +4180,24 @@ test('faction_info omits mobile base lines when those keys are absent', () => {
   expect(stdout).not.toContain('Started tick:');
   expect(stdout).not.toContain('Origin:');
   expect(stdout).toContain('=== Faction:');
+});
+
+test('faction_profile prints Charter for a non-empty body and omits a whitespace charter', () => {
+  const charter = 'Hold the outer lane.';
+  const present = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    charter,
+  });
+  expect(present).toContain('Charter:');
+  expect(present).toContain(charter);
+
+  const absent = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    charter: ' \n\t',
+  });
+  expect(absent).not.toContain('Charter');
 });
 
 test('faction_info prints nothing for null or non-record mobile base values', () => {
@@ -4191,6 +4251,23 @@ test('faction_info prints a commission without a mobile base snapshot', () => {
   expect(stdout).not.toContain('Escrow');
 });
 
+test('faction_profile prints Earned without a slash or with an unknown earned', () => {
+  const earnedOnly = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    achievements: { earned: 4 },
+  });
+  expect(earnedOnly).toContain('Earned: 4');
+  expect(earnedOnly).not.toContain('Earned: 4 /');
+
+  const totalOnly = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    achievements: { total: 9 },
+  });
+  expect(totalOnly).toContain('Earned: ? / 9');
+});
+
 test('faction_info prints the mobile base snapshot before the commission', () => {
   const fixture = factionInfoWithMobileBase();
   fixture.mobile_base_commission = { commission_id: 'comm-1', archetype_id: 'civitas' };
@@ -4226,6 +4303,16 @@ test('faction_info prints partial mobile base headers and skips absent endpoint 
   expect(stdout).not.toContain('Destination:');
   expect(stdout).not.toContain('Started tick:');
   expect(stdout).not.toContain('System:');
+});
+
+test('faction_profile prints Colors with an em dash when only primary_color is present', () => {
+  const stdout = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    primary_color: '#112233',
+  });
+  expect(stdout).toContain('Colors: #112233 / —');
+  expect(stdout.match(/#[0-9A-Fa-f]+/g)).toEqual(['#112233']);
 });
 
 test('faction_info does not print escrow from a mobile base record', () => {
@@ -4631,6 +4718,19 @@ test('renders an array of top contributions for faction_intel_status', () => {
 
   expect(stdout).toContain('=== Top Contributions ===');
   expect(stdout).toContain('Marlowe');
+});
+
+test('faction_intel_status prints Coverage for an explicit zero', () => {
+  const stdout = renderStructuredResult(
+    'faction_intel_status',
+    {
+      coverage_pct: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Coverage: 0%');
 });
 
 test('faction get_mobile_base prints stationary, preparing, and isolated snapshots', () => {

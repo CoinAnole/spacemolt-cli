@@ -404,6 +404,26 @@ test('prints notification in the Type cell when msg_type is empty and type is ch
   expect(stdout).not.toContain('chat_message');
 });
 
+test('prints chat_message in the Type cell when msg_type is null and type is chat_message', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        msg_type: null,
+        type: 'chat_message',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Type'));
+  const typeCell = dataRow?.split('|').map((cell) => cell.trim())[1];
+  expect(typeCell).toBe('chat_message');
+  expect(typeCell).not.toBe('notification');
+});
+
 test('prints an explicit zero msg_type as 0', () => {
   const stdout = stdoutOf('get_notifications', {
     count: 1,

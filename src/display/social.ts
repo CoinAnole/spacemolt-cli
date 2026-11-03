@@ -2070,7 +2070,6 @@ export const socialFormatters = [
     { commands: ['facility_list'], shapeFallback: true },
   ),
 
-  // Facility Upgrades (for facility_upgrades and faction variants)
   namedFormatter(
     'facility_upgrades',
     ['upgrades'],
