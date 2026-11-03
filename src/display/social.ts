@@ -2009,7 +2009,7 @@ export const socialFormatters = [
     commands: ['facility_ranch_status'],
     suppressShapeFallbackOnDecline: true,
   }),
-  formatter((result) => renderRanchSetCull(result), {
+  formatter(renderRanchSetCull, {
     commands: ['facility_ranch_set_cull'],
     suppressShapeFallbackOnDecline: true,
   }),
