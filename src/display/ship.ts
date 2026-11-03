@@ -81,7 +81,7 @@ function preferPopulatedArray(
 }
 
 function formatFuelDelta(value: unknown): string | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  if (!isStrictFiniteNumber(value)) return undefined;
   return value > 0 ? `+${value}` : String(value);
 }
 

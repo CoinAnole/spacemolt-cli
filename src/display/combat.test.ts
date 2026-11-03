@@ -110,6 +110,13 @@ test('a non-finite your_side does not print Side', () => {
   expect(stdout).not.toContain('Side:');
 });
 
+test('your_side string "1" prints the Attack header and does not contain Side', () => {
+  const stdout = renderCombat('attack', { ...playerReply, your_side: '1' });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Side');
+});
+
 test('whitespace warning prints no Warning line', () => {
   const stdout = renderCombat('attack', {
     details: { ...attackBrandedFixture.details, warning: '   ' },
@@ -181,6 +188,13 @@ test('an empty-string leftover does not print Note', () => {
 
   expect(stdout).toContain('=== Attack ===');
   expect(stdout).not.toContain('Note:');
+});
+
+test('an attack reply with note null prints the Attack header and does not contain Note', () => {
+  const stdout = renderCombat('attack', { ...playerReply, note: null });
+
+  expect(stdout).toContain('=== Attack ===');
+  expect(stdout).not.toContain('Note');
 });
 
 test('nested loot without location aliases still uses the combat block', () => {

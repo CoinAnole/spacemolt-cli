@@ -314,6 +314,12 @@ test('an empty special string is not appended', () => {
   expect(summarizeModuleBonuses({ reach: 3, special: '' })).toBe('reach 3');
 });
 
+test('summarizeModuleBonuses of reach 3 and special 4 is reach 3 and does not contain 4', () => {
+  const summary = summarizeModuleBonuses({ reach: 3, special: 4 });
+  expect(summary).toBe('reach 3');
+  expect(summary).not.toContain('4');
+});
+
 test('MODULE_BONUS_EXCLUSIONS includes required_skills', () => {
   expect(MODULE_BONUS_EXCLUSIONS.has('required_skills')).toBe(true);
   expect(summarizeModuleBonuses({ reach: 3, required_skills: { scanning: 3 } })).toBe('reach 3');
@@ -545,6 +551,12 @@ test('bonus disrupt speed prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_speed: 0.1 } } })).toBe('bonus disrupt speed +10%');
 });
 
+test('disrupt_bonus_speed 0 is bonus disrupt speed 0% and is not omitted', () => {
+  const summary = summarizeAmmoEffects({ effect: { ammo: { disrupt_bonus_speed: 0 } } });
+  expect(summary).toBe('bonus disrupt speed 0%');
+  expect(summary).not.toBe('');
+});
+
 test('disrupt damage prints the signed percent', () => {
   expect(summarizeAmmoEffects({ effect: { ammo: { disrupt_damage: 0.1 } } })).toBe('disrupt damage +10%');
 });
@@ -668,6 +680,14 @@ test('a weapon_damage buff with amount 0 prints Buff: weapon_damage 0%', () => {
 test('a buff without a stat prints Buff: buff +5%', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ amount: 5 }] }), { plain: true });
+  expect(buffer.stdout).toEqual(['Effects:', '  Buff: buff +5%']);
+});
+
+test('an active buff with an empty-string stat and amount 5 prints Buff: buff +5%', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitShipCombatEffects({ active_buffs: [{ stat: '', amount: 5 }] }), {
+    plain: true,
+  });
   expect(buffer.stdout).toEqual(['Effects:', '  Buff: buff +5%']);
 });
 

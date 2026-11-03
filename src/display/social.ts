@@ -2015,7 +2015,7 @@ export const socialFormatters = [
   ),
 
   // Facilities
-  formatter((result) => renderRanchStatus(result), {
+  formatter(renderRanchStatus, {
     commands: ['facility_ranch_status'],
     suppressShapeFallbackOnDecline: true,
   }),

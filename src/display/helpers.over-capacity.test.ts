@@ -4,6 +4,8 @@ import {
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
+  emitStationLifeSupport,
+  emitStationPower,
   isOverCapacity,
   overCapacitySuffix,
   withDisplayRenderBuffer,
@@ -140,6 +142,18 @@ describe('emitStationDefences', () => {
     withDisplayRenderBuffer(buffer, () => emitStationDefences({ max_hull: 10 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Hull: ?/10');
   });
+
+  test('emitStationDefences prints a max hull question mark when max_hull is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ hull: 5 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Hull: 5/?');
+  });
+
+  test('emitStationDefences prints a dps question mark when only reach is set', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ weapon_reach: 2 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toBe('Guns: ? DPS (reach 2)');
+  });
 });
 
 describe('emitStationIds', () => {
@@ -149,5 +163,51 @@ describe('emitStationIds', () => {
     const stdout = buffer.stdout.join('\n');
     expect(stdout).toContain('ID: unknown');
     expect(stdout).not.toContain('POI:');
+  });
+
+  test('emitStationIds prints base_id when id is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationIds({ base_id: 'earth_station' }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('ID: earth_station');
+  });
+});
+
+describe('emitStationLifeSupport', () => {
+  test('life support prints upkeep items without a cadence', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitStationLifeSupport({ maintenance: [{ name: 'Oxygen', quantity_per_cycle: 2 }] }),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Upkeep: Oxygen x2');
+    expect(stdout).not.toContain('every');
+  });
+});
+
+describe('emitStationPower', () => {
+  test('station power uses draw when current_draw is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 120, draw: 95 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Power: 95/120 draw');
+  });
+
+  test('station power fuel inputs use quantity when quantity_per_cycle is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity: 3 }] }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 3 Fuel Cell');
+  });
+
+  test('station power efficiency above 1 is not rescaled', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 10, current_draw: 10, efficiency: 85 }), {
+      plain: true,
+    });
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('85% efficiency');
+    expect(stdout).not.toContain('8500%');
   });
 });

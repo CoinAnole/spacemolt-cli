@@ -84,7 +84,6 @@ export async function checkForUpdates(options: UpdateCheckOptions = {}): Promise
   if (env.SPACEMOLT_UPDATE_CHECK !== 'true') return;
 
   try {
-    // Check cache to avoid spamming GitHub API
     let cache = await loadUpdateCache(cachePath);
     let latestVersion: string | null = null;
 

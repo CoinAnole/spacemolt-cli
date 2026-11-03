@@ -85,7 +85,6 @@ export function formatIntegerText(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Format API reputation-change maps consistently across human-readable output. */
 export function formatReputationChangesSummary(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const parts = Object.entries(value)

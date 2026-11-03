@@ -104,13 +104,6 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
       const keyValue = parseKeyValue(value);
       return keyValue?.key === 'content';
     });
-  const pushPrivateChatMissingContentError = () => {
-    errors.push({
-      field: 'content',
-      message: 'Private chat requires both a target and message. Use: spacemolt chat private "Player Name" "Message"',
-      code: 'missing_private_chat_content',
-    });
-  };
   const pushAmbiguousPrivateChatTargetError = (targetPrefix: string, nextToken: string) => {
     errors.push({
       field: 'target_id',
@@ -189,7 +182,12 @@ function parseRawArgs(args: string[], registry: CommandRegistrySource): ParsedAr
           const nextArg = args[i + 1];
           setPayloadField('target_id', arg);
           if (!nextArg) {
-            pushPrivateChatMissingContentError();
+            errors.push({
+              field: 'content',
+              message:
+                'Private chat requires both a target and message. Use: spacemolt chat private "Player Name" "Message"',
+              code: 'missing_private_chat_content',
+            });
             break;
           }
           if (hasNamedContentAfter(i + 1) && !looksLikeNamedArgument(nextArg)) {

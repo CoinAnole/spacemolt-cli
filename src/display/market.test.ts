@@ -78,6 +78,23 @@ test('sell prints a bigint quantity_sold instead of summing fills', () => {
   expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
 });
 
+test('sell with no quantity_sold and fill quantities 4 and 5 prints Sold: 9 and Instant fills: 9', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      fills: [{ quantity: 4 }, { quantity: 5 }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Sold: 9');
+  expect(stdout).toContain('Instant fills: 9');
+});
+
 test('buy prints a bigint total_cost instead of a rounded fill sum', () => {
   const stdout = renderStructuredResult(
     'buy',
@@ -118,6 +135,25 @@ test('buy prints Total cost when nothing was filled', () => {
 
   expect(stdout).toContain('Total cost: 0 cr');
   expect(stdout).not.toContain('Instant fills:');
+});
+
+test('buy with quantity 10 and unfilled 4 and no fills prints Filled: 6 and Instant fills: 6, not Total cost', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 10,
+      unfilled: 4,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Filled: 6');
+  expect(stdout).toContain('Instant fills: 6');
+  expect(stdout).not.toContain('Total cost');
 });
 
 test('create_sell_order prints bigint quantity_filled and total_earned', () => {
@@ -1752,6 +1788,25 @@ test('commission_status count mismatch prints count 0 when the array is non-empt
 
   expect(stdout).toContain('count 0');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('commission_status materials title uses viper (commission-9) when ship_name is absent', () => {
+  const stdout = renderStructuredResult(
+    'commission_status',
+    {
+      commissions: [
+        {
+          commission_id: 'commission-9',
+          ship_class_id: 'viper',
+          required_materials: { hull_plate: 2 },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Materials: viper (commission-9) ===');
 });
 
 test('empty get_trades listings prints (No listings at this market)', () => {

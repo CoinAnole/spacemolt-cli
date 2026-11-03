@@ -663,6 +663,33 @@ describe('battleLogAttackRows', () => {
     ]);
   });
 
+  test('tick null and battle_tick 4 produces a row whose tick is 4', () => {
+    const rows = battleLogAttackRows([
+      {
+        tick: null,
+        battle_tick: 4,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            shield_damage: 50,
+            hull_damage: 10,
+          },
+        ],
+      },
+    ]);
+    expectAttackRows(rows, [
+      {
+        tick: 4,
+        from: 'player-1',
+        to: 'pirate-1',
+        hit: '',
+        shieldHull: '50/10',
+        defense: '',
+      },
+    ]);
+  });
+
   test('missing hit_success still expands defense_components', () => {
     const rows = battleLogAttackRows([
       {
@@ -685,6 +712,16 @@ describe('battleLogAttackRows', () => {
         defense: 'Pulse Laser kinetic 500→470→455→440 (S6 T3 F3)',
       },
     ]);
+  });
+
+  test('the second entry with no tick or battle_tick and a miss attack has tick 1', () => {
+    const rows = battleLogAttackRows([
+      { tick: 7, attacks: [{ hit_success: false }] },
+      { attacks: [{ hit_success: false }] },
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[1]?.tick).toBe(1);
+    expect(rows[1]?.hit).toBe('miss');
   });
 
   test('skips non-record entries and empty attacks', () => {

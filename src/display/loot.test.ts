@@ -134,6 +134,26 @@ test('empty all-loot arrays print (None) and omitted optional arrays print nothi
   expect(omitted).not.toContain('(None)');
 });
 
+test('all-loot empty-string message matches message omitted, and a non-empty message is printed', () => {
+  const omittedMessage = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      delete details.message;
+    }),
+  );
+  const emptyMessage = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.message = '';
+    }),
+  );
+  const printed = stdoutOf('loot_wreck', lootWreckAllCargoFixture);
+
+  expect(emptyMessage).toBe(omittedMessage);
+  expect(printed).toContain('Looted 2 cargo stacks.');
+  expect(emptyMessage).not.toContain('Looted 2 cargo stacks.');
+});
+
 test('absent looted is a one-line miss and still prints wreck empty, modules, and message', () => {
   const stdout = stdoutOf(
     'loot_wreck',

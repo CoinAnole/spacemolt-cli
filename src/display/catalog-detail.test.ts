@@ -681,6 +681,19 @@ test('string mobile_base services print Mobile base and Ship modules: yes withou
   expect(stdout).not.toContain('market');
 });
 
+test('null built-in facility is omitted and the named row prints Built-in: Reactor (reactor)', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () =>
+      emitCatalogShipDetail({ mobile_base: { built_in_facilities: [null, { id: 'reactor', name: 'Reactor' }] } }, {}),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Built-in: Reactor (reactor)');
+  expect(stdout).not.toContain('null');
+});
+
 test('empire is preferred when it differs from faction', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ empire: 'nebula', faction: 'solarian' }, {}), {

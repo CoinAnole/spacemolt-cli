@@ -217,6 +217,21 @@ test('freight quote with a whitespace destination_base_id omits Route and still 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote with a whitespace service_level prints Package and the quote heading and not Service', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      service_level: '   ',
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-1');
+  expect(stdout).not.toContain('Service:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('freight quote with a whitespace origin_base_id omits Route and still prints the quote', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -869,6 +884,23 @@ test('freight tracking location joins system, poi, and base', () => {
   });
 
   expect(stdout).toContain('sol / earth_orbit / nova_central');
+});
+
+test('freight tracking with empty system_id joins poi and base without a leading slash', () => {
+  const stdout = output('shipping_track', {
+    action: 'track',
+    contract,
+    events: [
+      {
+        system_id: '',
+        poi_id: 'earth_orbit',
+        base_id: 'nova_central',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('earth_orbit / nova_central');
+  expect(stdout).not.toContain('/ earth_orbit');
 });
 
 test('renders an explicit empty tracking message', () => {

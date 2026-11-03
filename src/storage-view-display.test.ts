@@ -143,6 +143,20 @@ describe('rewriteStorageViewHint', () => {
     expect(rewritten.hint).toBe('40 items in storage at alpha (100 total across 2 stations)');
   });
 
+  test('rewrites a multi-station hint for an empty base_id using the requested station id', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        base_id: '',
+        hint: '100 items in storage at alpha, beta',
+        items: [{ item_id: 'ore', quantity: 40 }],
+      },
+      { requestedStationId: 'alpha' },
+    );
+
+    expect(rewritten.hint).toBe('40 items in storage at alpha (100 total across 2 stations)');
+    expect(rewritten.hint).not.toContain('at  (');
+  });
+
   test('rewrites a multi-station hint for a zero local quantity', () => {
     const rewritten = rewriteStorageViewHint(
       {

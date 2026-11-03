@@ -11958,6 +11958,21 @@ describe('notification formatting', () => {
       expect(message).toBe('Commission commission-1 delivered prospector, ship ship-42');
     });
 
+    test('commission ship name without a ship class', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          ship_name: 'Prospector',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered Prospector, ship ship-42');
+      expect(message).not.toContain('(prospector)');
+    });
+
     test('count-map truncation lists six command counts and +1 more', () => {
       const notification = {
         type: 'action',
@@ -12025,6 +12040,21 @@ describe('notification formatting', () => {
       };
       const message = formatNotificationMessage(notification);
       expect(message).toBe('Commission commission-1 delivered ship ship-42, at earth_station');
+    });
+
+    test('commission base name without a base id', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          base_name: 'Earth Station',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered ship ship-42, at Earth Station');
+      expect(message).not.toContain('(');
     });
 
     test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {

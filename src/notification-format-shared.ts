@@ -3081,7 +3081,6 @@ function formatPlayerScanDigest(players: unknown, limit = 6): string {
   return `${shown}${extra}`;
 }
 
-/** remaining === -1/0 map to unlimited/depleted; other finite remaining is `N left`. */
 function surveyRemainingLabel(remaining: unknown): string | undefined {
   if (remaining === -1) return 'unlimited';
   if (remaining === 0) return 'depleted';

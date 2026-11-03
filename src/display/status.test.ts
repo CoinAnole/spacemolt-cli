@@ -5709,6 +5709,18 @@ test('get_state prints the escape-pod warning when ship.class_id is escape_pod',
   expect(stdout).toContain('WARNING: You are in an Escape Pod!');
 });
 
+test('get_state prints [CLOAKED] when player.is_cloaked is true and omits it when false', () => {
+  const cloaked = structuredClone(getStateSnapshotFixture) as { player: Record<string, unknown> };
+  cloaked.player.is_cloaked = true;
+  const cloakedOut = renderStructuredResult('get_state', cloaked, options, context).stdout.join('\n');
+  expect(cloakedOut).toContain('[CLOAKED]');
+
+  const visible = structuredClone(getStateSnapshotFixture) as { player: Record<string, unknown> };
+  visible.player.is_cloaked = false;
+  const visibleOut = renderStructuredResult('get_state', visible, options, context).stdout.join('\n');
+  expect(visibleOut).not.toContain('[CLOAKED]');
+});
+
 test('get_state prints slot counts when only defense_slots is set', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   fixture.ship.defense_slots = 1;
@@ -5899,6 +5911,18 @@ test('get_state prints a trimmed player status message', () => {
   expect(stdout).toContain('Status: hauling ore');
 });
 
+test('get_state prints a newline-padded status and omits a whitespace-only one', () => {
+  const padded = structuredClone(getStateSnapshotFixture) as { player: Record<string, unknown> };
+  padded.player.status_message = '\n  Hiring miners.  \n';
+  const paddedOut = renderStructuredResult('get_state', padded, options, context).stdout.join('\n');
+  expect(paddedOut).toContain('Status: Hiring miners.');
+
+  const blank = structuredClone(getStateSnapshotFixture) as { player: Record<string, unknown> };
+  blank.player.status_message = ' \n\t ';
+  const blankOut = renderStructuredResult('get_state', blank, options, context).stdout.join('\n');
+  expect(blankOut).not.toContain('Status:');
+});
+
 test('get_state prints faction id, clan tag, and rank', () => {
   const stdout = renderStructuredResult(
     'get_state',
@@ -5934,6 +5958,19 @@ test('get_state prints each hint line', () => {
     context,
   ).stdout.join('\n');
   expect(stdout).toContain('  - Dock before the market closes');
+});
+
+test('get_state prints a padded hint trimmed and omits a whitespace-only hint', () => {
+  const padded = structuredClone(getStateSnapshotFixture) as { hints: unknown[] };
+  padded.hints = ['  Dock before the market closes  ', ' \n\t '];
+  const paddedOut = renderStructuredResult('get_state', padded, options, context).stdout.join('\n');
+  const hintLines = (paddedOut.split('=== Hints ===')[1] ?? '').split('\n').filter((line) => line.startsWith('  - '));
+  expect(hintLines).toEqual(['  - Dock before the market closes']);
+
+  const blank = structuredClone(getStateSnapshotFixture) as { hints: unknown[] };
+  blank.hints = ['   ', '\n\t'];
+  const blankOut = renderStructuredResult('get_state', blank, options, context).stdout.join('\n');
+  expect(blankOut).not.toContain('=== Hints ===');
 });
 
 test('get_state prints a non-empty player id', () => {

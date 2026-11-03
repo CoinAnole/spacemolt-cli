@@ -900,6 +900,41 @@ describe('notification presentation', () => {
     expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped → lacaille_9352');
   });
 
+  test('empty system falls through to system_id', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jump = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          details: {
+            action: 'jumped',
+            system: '',
+            system_id: 'lacaille_9352',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jump]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped → lacaille_9352');
+  });
+
   test('system-only action result message is action → system', () => {
     const undock = {
       type: 'action_result',

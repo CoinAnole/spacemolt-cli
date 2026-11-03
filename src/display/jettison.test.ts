@@ -256,6 +256,24 @@ test('jettison result-row scalar outside known keys prints Pilot Id', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('jettison results row with pilot_count 0 prints Pilot Count: 0 and not the raw response', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [
+        {
+          item_id: 'ore_iron',
+          pilot_count: 0,
+        },
+      ],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Pilot Count: 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('jettison result-row with pilot_id null prints Item Id and omits Pilot Id', () => {
   const { stdout, stderr } = renderJettison('storage jettison', {
     details: {
@@ -327,6 +345,21 @@ test('results-row bigint quantity prints the exact digits', () => {
   expect(stderr).toBe('');
   expect(stdout).toContain('Quantity: 9007199254740993');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('top-level jettison quantity 9007199254740993n prints exact digits and no Results heading', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'ore_iron',
+      quantity: 9007199254740993n,
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('Quantity: 9007199254740993');
+  expect(stdout).not.toContain('9007199254740992');
+  expect(stdout).not.toContain('Results');
 });
 
 test('an unknown conversion field still dumps the response', () => {
