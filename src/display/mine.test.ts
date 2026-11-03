@@ -481,3 +481,49 @@ test('filtered mine result with an empty message declines to the raw fallback', 
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Mine ===');
 });
+
+test('filtered mine result with filtered false declines to the raw fallback', () => {
+  const payload = {
+    kind: 'filtered',
+    filtered: false,
+    message: mineFilteredDetails.message,
+  };
+
+  expect(mineFormatters[0]?.(payload, 'mine')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Mine ===');
+});
+
+test('mine yield with an empty remaining_display declines to the raw fallback', () => {
+  const payload = {
+    kind: 'yield',
+    resource_id: 'ore_iron',
+    quantity: 42,
+    remaining: 120,
+    remaining_display: '',
+  };
+
+  expect(mineFormatters[0]?.(payload, 'mine')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Mine ===');
+});
+
+test('mine yield with a bigint quantity declines to the raw fallback', () => {
+  const payload = {
+    kind: 'yield',
+    resource_id: 'ore_iron',
+    quantity: 42n,
+    remaining: 120,
+    remaining_display: '120 units',
+  };
+
+  expect(mineFormatters[0]?.(payload, 'mine')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Mined');
+});

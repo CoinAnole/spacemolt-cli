@@ -559,13 +559,6 @@ function personnelCasualtyColumns(rows: Array<Record<string, unknown>>): Array<[
   return columns;
 }
 
-function zoneMoveLogRows(entries: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  return flattenTickRecords(entries, 'zone_moves').map((row) => ({
-    ...row,
-    reason_display: formatZoneMoveReason(row.reason),
-  }));
-}
-
 function zoneMoveLogColumns(rows: Array<Record<string, unknown>>): Array<[string, string[]]> {
   const columns: Array<[string, string[]]> = [
     ['Tick', ['tick']],
@@ -584,7 +577,10 @@ function emitBattleLogDetailTables(entries: Array<Record<string, unknown>>): voi
   if (boardingRows.length) {
     printCompactTable('Boarding', boardingRows, boardingLogColumns(boardingRows), { maxCellWidth: 80 });
   }
-  const zoneMoveRows = zoneMoveLogRows(entries);
+  const zoneMoveRows = flattenTickRecords(entries, 'zone_moves').map((row) => ({
+    ...row,
+    reason_display: formatZoneMoveReason(row.reason),
+  }));
   if (zoneMoveRows.length) {
     printCompactTable('Zone moves', zoneMoveRows, zoneMoveLogColumns(zoneMoveRows), { maxCellWidth: 56 });
   }

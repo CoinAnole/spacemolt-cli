@@ -613,6 +613,21 @@ test('prints a taxable_income_by_source string withheld instead of the raw respo
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints an assessed_property_by_ship string withheld instead of the raw response heading', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: '',
+      assessed_property_by_ship: 'withheld',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Property by ship: withheld');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('prints a sales_tax_rates record instead of the raw response dump', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',

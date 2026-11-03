@@ -154,6 +154,21 @@ test('omitted conversion prints no output lines', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('empty conversion object prints the jettison heading and omits output fields', () => {
+  const { stdout, stderr } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      conversion: {},
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('=== Jettison ===');
+  expect(stdout).not.toContain('Output Item Id');
+  expect(stdout).not.toContain('Output Quantity');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('empty jettison results print (None)', () => {
   const { stdout, stderr } = renderJettison('storage jettison', {
     details: {
@@ -573,6 +588,23 @@ test('string conversion output_quantity declines to the raw response', () => {
 
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('Output Quantity:');
+});
+
+test('Infinity conversion output_quantity declines to the raw response', () => {
+  const { stdout } = renderJettison('jettison', {
+    details: {
+      action: 'jettison',
+      item_id: 'purified_water',
+      quantity: 3,
+      conversion: {
+        output_item_id: 'water_ice',
+        output_quantity: Infinity,
+      },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Output Quantity');
 });
 
 test('null conversion declines to the raw response', () => {

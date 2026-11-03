@@ -58,4 +58,16 @@ describe('formatItemTable', () => {
     const row = lines.find((line) => line.includes('ore_iron'));
     expect(row?.split('|')[0]?.trim()).toBe('ore_iron');
   });
+
+  test('formatItemTable treats null quantity as absent', () => {
+    const lines = formatItemTable([{ item_id: 'fuel_cell', name: 'Fuel Cell', quantity: null, size: 1 }]);
+    const row = lines.find((line) => line.includes('fuel_cell'));
+    expect(row).toBe('  Fuel Cell | fuel_cell |     |         1');
+  });
+
+  test('formatItemTable uses item_name when name is an empty string', () => {
+    const lines = formatItemTable([{ item_id: 'ore_iron', name: '', item_name: 'Iron Ore', quantity: 3, size: 2 }]);
+    const row = lines.find((line) => line.includes('ore_iron'));
+    expect(row?.split('|')[0]?.trim()).toBe('Iron Ore');
+  });
 });

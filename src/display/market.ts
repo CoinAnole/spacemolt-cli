@@ -1313,7 +1313,7 @@ export const marketFormatters = [
       }
       const factionFuelReserve = r.faction_fuel_reserve;
       const factionFuelCapacity = r.faction_fuel_capacity;
-      if (isFactionStorage && r.credits !== undefined) {
+      if (isFactionStorage && hasAnyField(r, ['credits'])) {
         const credits = finiteNumber(r.credits);
         emitLine(`Faction credits: ${credits === undefined ? r.credits : credits.toLocaleString()}`);
       }

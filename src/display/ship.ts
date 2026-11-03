@@ -345,7 +345,7 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
 
 export interface CargoHoldOptions {
   credits?: boolean; // default true
-  usage?: boolean; // default true; the Used: line
+  usage?: boolean;
   emptyItems?: 'table' | 'none'; // default 'table'
 }
 

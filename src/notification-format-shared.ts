@@ -1431,7 +1431,7 @@ function previewBattleEnded(
 ): NotificationPreview {
   const reason = safeScalar(data.reason);
   const message = safeScalar(data.message);
-  const reasonToken = typeof reason === 'string' ? reason.trim() : '';
+  const reasonToken = nonEmptyString(reason) ?? '';
   const messageLine = message !== undefined ? firstLine(String(message)) : '';
 
   let headline: string;

@@ -404,6 +404,13 @@ test('a prize recovery without fuel fields omits the Fuel column', () => {
   expect(stdout).not.toContain('Fuel');
 });
 
+test('a prize recovery without location fields omits Location', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Location');
+});
+
 test('travel with only system ids prints travel sol → alpha_centauri', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(

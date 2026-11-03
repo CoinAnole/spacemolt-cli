@@ -673,7 +673,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
 
   if (kind === 'web') {
     emitLine(`Username: ${c.bright}${record.username}${c.reset}`);
-  } else if (typeof record.username === 'string' && record.username.trim() !== '') {
+  } else if (chartDescription(record.username)) {
     emitLine(`Username: ${c.bright}${record.username}${c.reset}`);
   }
 
@@ -694,7 +694,7 @@ function emitPilotProfile(record: Record<string, unknown>, kind: 'web' | 'v2'): 
   }
 
   if (kind === 'v2') {
-    if (typeof record.clan_tag === 'string' && record.clan_tag.trim() !== '') {
+    if (chartDescription(record.clan_tag)) {
       emitLine(`Clan tag: ${record.clan_tag}`);
     }
     if (typeof record.status_message === 'string') {

@@ -261,6 +261,10 @@ test('summarizeCombatSpecialEffects omits empty, zero, false, and non-scalars', 
   ).toBe('');
 });
 
+test('an inherited combat-effect key is omitted', () => {
+  expect(summarizeCombatSpecialEffects(Object.create({ lifesteal_pct: 20 }))).toBe('');
+});
+
 test('a non-finite combat effect is omitted', () => {
   expect(summarizeCombatSpecialEffects({ aoe_radius: Number.NaN, chain_targets: Number.POSITIVE_INFINITY })).toBe('');
 });
@@ -333,6 +337,10 @@ test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses',
   expect(summarizeModuleBonuses(warpScrambler)).not.toContain('cpu');
   expect(summarizeModuleBonuses(warpScrambler)).not.toContain('power');
   expect(summarizeModuleBonuses({ reach: 3, shield_bonus: 0, speed_penalty: 0, cpu_usage: 9 })).toBe('reach 3');
+});
+
+test('a string-zero shield bonus is omitted', () => {
+  expect(summarizeModuleBonuses({ reach: 3, shield_bonus: '0' })).toBe('reach 3');
 });
 
 test('summarizeModuleBonuses drops a non-flag true shield_bonus and keeps reach 3', () => {

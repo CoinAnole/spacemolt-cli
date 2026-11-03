@@ -652,6 +652,94 @@ test('renders facility dismantle with materials table and cargo_container hint',
   expect(stdout).not.toContain('2 item(s)');
 });
 
+test('facility dismantle prints package_count 0', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: 'fac-1',
+      package_count: 0,
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Packages to produce: 0');
+});
+
+test('facility dismantle prints an empty facility_name', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: 'fac-1',
+      facility_name: '',
+      package_count: 2,
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Facility: ');
+});
+
+test('facility dismantle omits a blank hint', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: 'fac-1',
+      package_count: 2,
+      hint: '',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('\n\n');
+});
+
+test('facility dismantle declines an empty facility_id', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: '',
+      package_count: 2,
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).not.toContain('Facility ID:');
+  expect(stdout).not.toContain('Packages to produce:');
+});
+
+test('facility dismantle prints a message', () => {
+  const rendered = renderStructuredResult(
+    'facility_dismantle',
+    {
+      action: 'dismantle',
+      facility_id: 'fac-1',
+      package_count: 2,
+      message: 'Dismantle queued.',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Dismantle queued.');
+});
+
 test('renders dismantle_outpost kit refund and details-only auto-undocked field line', () => {
   // Nest under details so envelope-level auto_undocked banner is not emitted;
   // the formatter still surfaces details.auto_undocked as a field line.

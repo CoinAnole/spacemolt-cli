@@ -135,6 +135,14 @@ describe('emitGiftEntries', () => {
     expect(idOnly.stdout.split('\n').find((line) => line.startsWith('    '))).toBe('    ship-9');
   });
 
+  test('a class-name-only ship prints only Prospector', () => {
+    const classNameOnly = renderGifts([{ ships: [{ class_name: 'Prospector' }] }]);
+    const row = classNameOnly.stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    Prospector');
+    expect(row).not.toContain('(');
+    expect(row?.trim().includes(' ')).toBe(false);
+  });
+
   test('zero, negative, and bigint credits print without numeric-string coercion', () => {
     const zero = renderGifts([{ sender: 'Ada', credits: 0 }]);
     expect(zero.stdout).toContain('Credits: 0 cr');

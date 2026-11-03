@@ -455,6 +455,22 @@ test('renders accept participants with Team from your_side and a unique (you) ma
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('participant sort renders arena accept with Kestrel on side 2 before Rook and Coin on side 1', () => {
+  const stdout = output('arena_accept', {
+    details: {
+      ...arenaAcceptDetails,
+      participants: [
+        { player_id: 'player-77', username: 'Kestrel', side_id: 2 },
+        { player_id: 'player-13', username: 'Rook', side_id: 1 },
+        { player_id: 'player-12', username: 'Coin', side_id: 1 },
+      ],
+    },
+  });
+  expect(stdout).toContain(
+    '  1    | opponent | Coin          | player-12\n  1    | opponent | Rook          | player-13',
+  );
+});
+
 test('your_side 0 renders arena accept with one side-0 participant as yours with (you)', () => {
   const stdout = output('arena_accept', {
     details: {

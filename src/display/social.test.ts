@@ -4315,6 +4315,16 @@ test('faction_profile prints Colors with an em dash when only primary_color is p
   expect(stdout.match(/#[0-9A-Fa-f]+/g)).toEqual(['#112233']);
 });
 
+test('faction_profile prints Colors with an em dash when only secondary_color is present', () => {
+  const stdout = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    secondary_color: '#ffd700',
+  });
+  expect(stdout).toContain('Colors: — / #ffd700');
+  expect(stdout.match(/#[0-9A-Fa-f]+/g)).toEqual(['#ffd700']);
+});
+
 test('faction_info does not print escrow from a mobile base record', () => {
   const fixture = factionInfoWithMobileBase();
   const base = fixture.mobile_base as Record<string, unknown>;
@@ -5255,6 +5265,34 @@ test('prints Size and Arena-only when both fields are present', () => {
 
   expect(stdout).toContain('Size: 2/5');
   expect(stdout).toContain(ARENA_ONLY_FLEET_LINE);
+});
+
+test('prints In fleet: no when fleet_status in_fleet is false', () => {
+  const stdout = renderFleetStatus({ ...fleetFixture, in_fleet: false });
+
+  expect(stdout).toContain('In fleet: no');
+});
+
+test('prints Size: 5 when fleet_status max_size is 5 and members is not an array', () => {
+  const { members: _members, ...withoutMembers } = fleetFixture;
+  const stdout = renderFleetStatus({ ...withoutMembers, max_size: 5 });
+
+  expect(stdout).toContain('Size: 5');
+  expect(stdout).not.toMatch(/Size: \d+\/\d+/);
+});
+
+test('prints ID: unknown when fleet_status in_fleet is true and fleet id is absent', () => {
+  const { fleet_id: _fleetId, ...withoutFleetId } = fleetFixture;
+  const stdout = renderFleetStatus({ ...withoutFleetId, in_fleet: true });
+
+  expect(stdout).toContain('ID: unknown');
+});
+
+test('prints Leader: player-9 when fleet_status has only leader_id', () => {
+  const { leader: _leader, ...withoutLeader } = fleetFixture;
+  const stdout = renderFleetStatus({ ...withoutLeader, in_fleet: true, leader_id: 'player-9' });
+
+  expect(stdout).toContain('Leader: player-9');
 });
 
 test('fleet shape fallback does not claim public faction profiles', () => {

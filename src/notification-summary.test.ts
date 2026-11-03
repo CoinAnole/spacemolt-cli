@@ -242,6 +242,25 @@ describe('notification presentation', () => {
     expect((summary?.data as { rental_jobs?: number } | undefined)?.rental_jobs).toBe(1);
   });
 
+  test('jobs without finite escrow ignore top-level escrowed_credits', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: {
+        tick: 901500,
+        jobs: [{ external: true }],
+        escrowed_credits: 50,
+      },
+    };
+
+    const presented = presentNotifications([update]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('crafting_summary');
+    expect((summary?.data as { escrowed_credits?: number } | undefined)?.escrowed_credits).toBeUndefined();
+  });
+
   test('crafting summary keeps top-level escrowed credits when jobs are absent', () => {
     const update = {
       type: 'crafting',

@@ -5469,6 +5469,12 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
     });
 
+    test('empty action_error bag', () => {
+      const preview = formatNotificationPreview(actionErrorNotification({}));
+      expect(preview.headline).toBe('action failed (tick ?): unknown error');
+      expect(preview.details).toEqual([]);
+    });
+
     test('unparseable details are ignored without throwing or diagnostic tokens', () => {
       for (const details of [null, [opticalFiber, circuitBoard], 'need more fiber']) {
         const preview = formatNotificationPreview(
@@ -9938,6 +9944,15 @@ describe('notification formatting', () => {
       expect(preview.headline).toBe('+5x ore_iron (0 remaining at POI)');
     });
 
+    test('mining_yield prints quantity 0', () => {
+      const preview = formatNotificationPreview({
+        type: 'mining',
+        msg_type: 'mining_yield',
+        data: { quantity: 0, resource_id: 'ore_iron' },
+      });
+      expect(preview.headline).toBe('+0x ore_iron');
+    });
+
     test('skill_level_up and skill_xp_gain pure previews', () => {
       const levelUp = formatNotificationPreview({
         msg_type: 'skill_level_up',
@@ -9961,6 +9976,14 @@ describe('notification formatting', () => {
       });
       expect(xp.tag).toBe('XP');
       expect(xp.headline).toBe('+5 XP in mining (10/20)');
+    });
+
+    test('skill_level_up prints level 0', () => {
+      const levelUp = formatNotificationPreview({
+        msg_type: 'skill_level_up',
+        data: { skill_id: 'mining', new_level: 0, xp_gained: 0 },
+      });
+      expect(levelUp.headline).toBe('mining is now level 0! (+0 XP)');
     });
 
     test('skill_xp_gain without current or next XP', () => {
@@ -10012,6 +10035,15 @@ describe('notification formatting', () => {
       expect(reconnected.details.some((d) => d.includes('recovered with 2 ticks'))).toBe(true);
     });
 
+    test('pilotless_ship prints unknown ship and explicit 0 ticks', () => {
+      const pilotless = formatNotificationPreview({
+        msg_type: 'pilotless_ship',
+        data: { ticks_remaining: 0 },
+      });
+      expect(pilotless.headline).toBe("unknown's ship is now pilotless!");
+      expect(pilotless.details).toEqual(['Vulnerable for 0 ticks - can be attacked without resistance']);
+    });
+
     test('poi_arrival / poi_departure / queue / version / action_error pure previews', () => {
       expect(
         formatNotificationPreview({
@@ -10043,6 +10075,24 @@ describe('notification formatting', () => {
           data: { command: 'travel', tick: 77, message: 'drive offline' },
         }).headline,
       ).toBe('travel failed (tick 77): drive offline');
+    });
+
+    test('poi_arrival drops a blank clan tag', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'poi_arrival',
+          data: { clan_tag: '' },
+        }).headline,
+      ).toBe('Someone has arrived at this POI');
+    });
+
+    test('version_info prints version 0', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'version_info',
+          data: { version: 0 },
+        }).headline,
+      ).toBe('Server version: 0');
     });
 
     test('queue_cleared without a reason', () => {

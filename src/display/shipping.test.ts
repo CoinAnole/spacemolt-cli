@@ -188,6 +188,21 @@ test('freight quote shipper id of only spaces omits Shipper and still prints the
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote shipper with an id and no kind omits Shipper and still prints the quote', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      shipper: { id: 'marlowe' },
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).toContain('Package: package-1');
+  expect(stdout).not.toContain('Shipper:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('one-sided freight quote omits Route when destination_base_id is omitted', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',

@@ -1351,6 +1351,19 @@ test('get_poi prints ? for omitted faction fuel capacity', () => {
   expect(stdout).toContain('Faction Fuel: 320/?');
 });
 
+test('get_poi prints faction fuel zero', () => {
+  const fixture = {
+    ...poiInfoFixture,
+    poi: {
+      ...poiInfoFixture.poi,
+      faction_fuel_reserve: 0,
+      faction_fuel_capacity: 0,
+    },
+  };
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Faction Fuel: 0/0');
+});
+
 test('get_poi services prints Services for a non-empty list', () => {
   const fixture = {
     ...poiInfoFixture,
@@ -3700,6 +3713,21 @@ test('get_map list without descriptions stays a Name/System ID table', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_map systems list prints total_count 0', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      systems: [{ system_id: 'sol', name: 'Sol' }],
+      total_count: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(stdout).toContain('total 0');
+});
+
 test('get_map list with mixed descriptions prints a Chart descriptions table', () => {
   const stdout = renderStructuredResult(
     'get_map',
@@ -4178,6 +4206,19 @@ test('get_system_agents omits Docked when every agent omits the field', () => {
   expect(header).toContain('Combat');
   expect(header).toContain('Offline');
   expect(header).toContain('Status');
+});
+
+test('get_system_agents omits the Ship column when every ship_name and ship_class is empty', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) {
+    agent.ship_name = '';
+    agent.ship_class = '';
+  }
+  const stdout = renderSystemAgents(fixture);
+  const header = agentsHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Ship');
 });
 
 test('get_system_agents shows Docked when every agent is undocked', () => {
@@ -5484,6 +5525,17 @@ test('complete_mission omits Debt repaid when debt_repaid is 0, 0n, or absent', 
     expect(stdout).not.toContain('Debt repaid');
     expect(stdout).not.toContain('Fixer:');
   }
+});
+
+test('complete_mission prints community percent 0', () => {
+  const stdout = renderCompleteMission({
+    mission_id: 'mission-delivery-1',
+    title: 'Food Delivery',
+    credits_earned: 2500,
+    message: 'Mission complete. Rewards claimed.',
+    community_percent: 0,
+  });
+  expect(stdout).toContain('Community: 0%');
 });
 
 test('complete_mission prints non-zero debt repaid without changing Credits earned', () => {

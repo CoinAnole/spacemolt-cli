@@ -132,6 +132,10 @@ test('countRecipeVenues returns undefined when zero records were counted', () =>
   expect(countRecipeVenues([1, 'x'])).toBeUndefined();
 });
 
+test('a non-record beside a record counts craftable 1', () => {
+  expect(countRecipeVenues([1, { hand_craftable: true }])).toEqual({ craftable: 1 });
+});
+
 test('countRecipeVenues counts a mixed four-row array of records', () => {
   expect(
     countRecipeVenues([
@@ -514,6 +518,24 @@ test('non-record ship build materials print 1x station_core and not skip', () =>
   expect(buffer.stdout.join('\n')).not.toContain('skip');
 });
 
+test('empty build materials omit Build materials', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ build_materials: [] }, {}), {
+    plain: true,
+  });
+  expect(buffer.stdout.join('\n')).not.toContain('Build materials');
+});
+
+test('a non-array build_materials value omits Build materials and station_core', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ build_materials: 'station_core' }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Build materials');
+  expect(stdout).not.toContain('station_core');
+});
+
 test('missing name prints 2x item', () => {
   expect(summarizeNamedItemQuantities([{ quantity: 2 }])).toBe('2x item');
 });
@@ -521,6 +543,10 @@ test('missing name prints 2x item', () => {
 test('non-array summarizeNamedItemQuantities returns empty', () => {
   expect(summarizeNamedItemQuantities(undefined)).toBe('');
   expect(summarizeNamedItemQuantities('steel')).toBe('');
+});
+
+test('an empty quantity array returns empty', () => {
+  expect(summarizeNamedItemQuantities([])).toBe('');
 });
 
 test('non-record rows print 2x Steel Plate', () => {
