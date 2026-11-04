@@ -19,7 +19,8 @@
     "test:coverage": "bun test --coverage",
     "report:fixture-schemas": "bun scripts/report-fixture-schema-divergences.ts",
     "report:curated-commands": "bun scripts/report-curated-command-divergences.ts",
-    "report:openapi-consistency": "bun scripts/report-openapi-consistency.ts"
+    "report:openapi-consistency": "bun scripts/report-openapi-consistency.ts",
+    "verify:command-retry": "bun scripts/verify-command-retry.ts"
   },
   "bin": {
     "spacemolt": "./src/client.ts"
