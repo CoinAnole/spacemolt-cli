@@ -41,7 +41,7 @@ export function losesIntegerText(value: number): boolean {
 }
 
 function rawJsonNumber(digits: string): unknown {
-  // JSON.rawJSON is in Bun 1.4.2 and absent from TypeScript 5.9.3 and @types/bun 1.4.2.
+  // JSON.rawJSON is in Bun 1.4.4 and absent from TypeScript 5.9.3 and @types/bun 1.4.4.
   const rawJSON = (JSON as JSON & { rawJSON?: (text: string) => unknown }).rawJSON;
   if (!rawJSON) throw new Error('JSON.rawJSON is required to emit integers outside the safe range.');
   return rawJSON(digits);
