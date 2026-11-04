@@ -1,3 +1,4 @@
+import { writeSync } from 'node:fs';
 import type { SpaceMoltConfig } from './runtime.ts';
 import type { OutputFormat } from './types.ts';
 
@@ -33,10 +34,30 @@ export interface CliRuntimeContext {
   output?: CliOutputOptions;
 }
 
+// Do not bind or replace process.stdout.write. On Bun 1.4.2 that truncates
+// piped console.log at 65536 bytes. writeSync(1) does not.
+function writeStdoutSync(text: string): void {
+  if (text.length === 0) return;
+  const buffer = Buffer.from(text);
+  let offset = 0;
+  while (offset < buffer.length) {
+    let written: number;
+    try {
+      written = writeSync(1, buffer, offset, buffer.length - offset);
+    } catch (error) {
+      const code = error instanceof Error && 'code' in error ? (error as NodeJS.ErrnoException).code : undefined;
+      if (code === 'EPIPE') return;
+      if (code === 'EAGAIN' || code === 'EWOULDBLOCK' || code === 'EINTR') continue;
+      throw error;
+    }
+    if (written <= 0) throw new Error(`stdout write stalled after ${offset} of ${buffer.length} bytes`);
+    offset += written;
+  }
+}
+
 export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRuntimeContext {
   const out = console.log.bind(console);
   const err = console.error.bind(console);
-  const writeOut = process.stdout.write.bind(process.stdout);
   return {
     env: process.env,
     writer: {
@@ -47,7 +68,7 @@ export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRun
         err(message);
       },
       writeOut(chunk) {
-        writeOut(chunk);
+        writeStdoutSync(chunk);
       },
     },
     clock: {
@@ -123,7 +144,6 @@ export function withCliWriterSync<T>(writer: CliWriter, fn: () => T): T {
 function installCliWriter(writer: CliWriter): () => void {
   const originalLog = console.log;
   const originalError = console.error;
-  const originalWrite = process.stdout.write;
 
   console.log = (...args: unknown[]) => {
     writer.out(args.map(String).join(' '));
@@ -131,23 +151,9 @@ function installCliWriter(writer: CliWriter): () => void {
   console.error = (...args: unknown[]) => {
     writer.err(args.map(String).join(' '));
   };
-  process.stdout.write = ((
-    chunk: string | Uint8Array,
-    encodingOrCallback?: BufferEncoding | ((err?: Error) => void),
-    callback?: (err?: Error) => void,
-  ) => {
-    const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
-    if (writer.writeOut) writer.writeOut(text);
-    else writer.out(text);
-
-    const cb = typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;
-    if (cb) cb();
-    return true;
-  }) as typeof process.stdout.write;
 
   return () => {
     console.log = originalLog;
     console.error = originalError;
-    process.stdout.write = originalWrite;
   };
 }
