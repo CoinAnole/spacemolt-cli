@@ -564,6 +564,18 @@ test('renders an explicit empty listing message with pagination', () => {
   expect(stdout).toContain('Reason: no_matching_shipments');
 });
 
+test('shipping_list total 0 with one shipment prints 1 of 0 and not 1 of 1', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    page: 1,
+    total: 0,
+    shipments: [{ contract: { ...contract, id: 'shipment-total-0' } }],
+  });
+
+  expect(stdout).toContain('page 1, 1 of 0');
+  expect(stdout).not.toContain('1 of 1');
+});
+
 test('renders the default empty freight listing when empty_reason is absent', () => {
   const stdout = output('shipping_list', {
     action: 'list',
@@ -1075,6 +1087,18 @@ test('renders unlimited carrier contract capacity when a numeric limit is also s
   expect(stdout).not.toContain('Active contracts: 2 / 4');
 });
 
+test('shipping_profile capacity active_contracts 0 with unlimited true prints Active contracts: 0 (unlimited)', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: { ...carrierCapacity, active_contracts: 0, active_contracts_unlimited: true },
+    progression: carrierProgression,
+    debts: [freightDebt],
+  });
+
+  expect(stdout).toContain('Active contracts: 0 (unlimited)');
+});
+
 test('renders carrier capacity without a contract limit when profile active contracts differ', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',
@@ -1153,6 +1177,28 @@ test('renders debt payment changes separately from remaining debts', () => {
   expect(stdout).toContain('Amount paid: 500 cr');
   expect(stdout).toContain('=== Updated Debts ===');
   expect(stdout).toContain('=== Outstanding Debts ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('shipping_pay_debt amount_paid 0 prints Amount paid: 0 cr and does not fall back to the raw response', () => {
+  const stdout = output('shipping_pay_debt', {
+    details: {
+      action: 'pay_debt',
+      amount_paid: 0,
+      profile: { ...carrierProfile, outstanding_debt: 250 },
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      debt_blocks_acceptance: true,
+      debt_block_reason: '250 cr remains unpaid.',
+      updated_debts: [{ ...freightDebt, outstanding: 250 }],
+      outstanding_debts: [{ ...freightDebt, outstanding: 250 }],
+    },
+    player: { credits: 5000 },
+    ship: {},
+    cargo: [],
+  });
+
+  expect(stdout).toContain('Amount paid: 0 cr');
   expect(stdout).not.toContain('=== Response ===');
 });
 

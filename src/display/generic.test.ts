@@ -135,6 +135,26 @@ test('renders dock satisfaction without condition text', () => {
   expect(stdout).toContain('Station condition: unknown (82%)');
 });
 
+test('dock station condition omits the percent when satisfaction_pct is absent', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const stationCondition = fixture.station_condition as Record<string, unknown>;
+  delete stationCondition.satisfaction_pct;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  const conditionLine = stdout.split('\n').find((line) => line.startsWith('Station condition:'));
+  expect(conditionLine).toBe('Station condition: Most systems operational.');
+  expect(conditionLine).not.toMatch(/\([^)]*%\)/);
+});
+
+test('dock omits station condition when text and satisfaction are absent', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const stationCondition = fixture.station_condition as Record<string, unknown>;
+  delete stationCondition.condition;
+  delete stationCondition.condition_text;
+  delete stationCondition.satisfaction_pct;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).not.toContain('Station condition:');
+});
+
 test('renders a missing dock base as station', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   fixture.action = 'dock';

@@ -12334,6 +12334,39 @@ describe('notification formatting', () => {
       };
       expect(formatNotificationMessage(notification)).toContain('1 run left');
     });
+
+    test('crafting job with runs_remaining 2n', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          jobs: [{ recipe: 'A', runs_remaining: 2n }],
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('2 runs left');
+    });
+
+    test('system_progress_summary latest_arrival_tick 0', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'system_progress_summary',
+        data: {
+          latest_arrival_tick: 0,
+        },
+      };
+      expect(formatNotificationMessage(notification)).toContain('arrival tick 0');
+    });
+
+    test('crafting update with no jobs and tick 0', () => {
+      const notification = {
+        type: 'crafting',
+        msg_type: 'crafting_update',
+        data: {
+          tick: 0,
+        },
+      };
+      expect(formatNotificationMessage(notification)).toBe('tick 0');
+    });
   });
 
   describe('gift_received pure preview', () => {

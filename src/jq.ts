@@ -620,10 +620,6 @@ function compareSuggestions(left: KeySuggestion, right: KeySuggestion): number {
   return left.path.localeCompare(right.path);
 }
 
-function suggestionRankKey(suggestion: KeySuggestion): string {
-  return suggestion.rank.join(':');
-}
-
 function sharesDomain(requestedWords: string[], suggestion: KeySuggestion): boolean {
   const requestedDomainWords = domainWords(requestedWords);
   if (requestedDomainWords.length === 0) return false;
@@ -655,8 +651,8 @@ function selectFuzzySuggestions(missing: MissingPathContext, suggestions: KeySug
 
   const [best] = suggestions;
   if (!best) return [];
-  const bestRankKey = suggestionRankKey(best);
-  const bestRankedSuggestions = suggestions.filter((suggestion) => suggestionRankKey(suggestion) === bestRankKey);
+  const bestRankKey = best.rank.join(':');
+  const bestRankedSuggestions = suggestions.filter((suggestion) => suggestion.rank.join(':') === bestRankKey);
   return bestRankedSuggestions.length === 1 ? bestRankedSuggestions : [];
 }
 

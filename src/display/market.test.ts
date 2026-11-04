@@ -266,6 +266,23 @@ test('create_sell_order escrow_refunded 0 prints Escrow refunded: 0 cr', () => {
   expect(stdout).toContain('Escrow refunded: 0 cr');
 });
 
+test('create_sell_order listing_fee 0 prints Listing fee: 0 cr', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      order_id: 'order-1',
+      listing_fee: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Listing fee: 0 cr');
+});
+
 const singleSellBody = {
   action: 'create_sell_order',
   kind: 'single',
@@ -422,6 +439,22 @@ test('sell auto-listed price_each 0 prints Auto-listed: 4 @ 0 cr', () => {
 
   expect(lines).toContain('Auto-listed: 4 @ 0 cr');
   expect(lines).not.toContain('Auto-listed: 4');
+});
+
+test('sell auto-listed escrow 0 prints Escrow: 0 cr', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      auto_listed: { quantity: 4, escrow: 0 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Escrow: 0 cr');
 });
 
 test('sell prints cargo and storage counts after fills and before unsold', () => {
@@ -1638,6 +1671,28 @@ test('view_insurance risk factors with neither policy id nor ship class use poli
   expect(stdout).toContain('=== Risk Factors (policy) ===');
 });
 
+test('a view_insurance policy without risk_factors prints the policies table and omits Risk Factors and (None)', () => {
+  const stdout = renderStructuredResult(
+    'view_insurance',
+    {
+      policies: [
+        {
+          ship_class: 'prospector',
+          policy_id: 'policy-1',
+          coverage: 85000,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Policies ===');
+  expect(stdout).toContain('prospector');
+  expect(stdout).not.toContain('Risk Factors');
+  expect(stdout).not.toContain('(None)');
+});
+
 test('get_insurance_quote with quote.refused true prints Refused: yes', () => {
   const stdout = renderStructuredResult(
     'get_insurance_quote',
@@ -1653,6 +1708,23 @@ test('get_insurance_quote with quote.refused true prints Refused: yes', () => {
   expect(stdout).toContain('Refused: yes');
   expect(stdout).not.toContain('Refused: no');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('a get_insurance_quote with no factors prints the quote heading and omits Risk Factors', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        premium: 1200,
+        coverage: 85000,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Insurance Quote ===');
+  expect(stdout).not.toContain('Risk Factors');
 });
 
 test('ship buy order with being_built false prints Building: no', () => {

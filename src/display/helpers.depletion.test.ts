@@ -34,6 +34,12 @@ describe('formatDepletionRemainingSuffix', () => {
     expect(result).toBe(` (${rawColors.yellow}${rawColors.reset}25.00% remaining${rawColors.reset}${rawColors.reset})`);
   });
 
+  test('yellow remaining band includes exactly 5 percent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const result = withDisplayRenderBuffer(buffer, () => formatDepletionRemainingSuffix(95), { plain: false });
+    expect(result).toBe(` (${rawColors.yellow}${rawColors.reset}5.00% remaining${rawColors.reset}${rawColors.reset})`);
+  });
+
   test('red remaining band when color is on', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     const result = withDisplayRenderBuffer(buffer, () => formatDepletionRemainingSuffix(96), { plain: false });

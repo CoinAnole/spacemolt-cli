@@ -2549,3 +2549,13 @@ test('get_drone omits Script when script is absent', () => {
   expect(stdout).toContain('drone-1');
   expect(stdout).not.toContain('Script:');
 });
+
+test('get_drone parent script branch prints scan belt', () => {
+  const stdout = renderStructuredResult(
+    'get_drone',
+    { drone: { id: 'drone-1' }, script: 'scan belt' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('scan belt');
+});

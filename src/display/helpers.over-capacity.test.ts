@@ -211,12 +211,26 @@ describe('emitStationPower', () => {
     expect(buffer.stdout.join('\n')).toContain('Power: 95/120 draw');
   });
 
+  test('station power prints a question mark when draw is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 120 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Power: ?/120 draw');
+  });
+
   test('station power fuel inputs use quantity when quantity_per_cycle is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity: 3 }] }), {
       plain: true,
     });
     expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 3 Fuel Cell');
+  });
+
+  test('station power fuel inputs use item_id when name is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ fuel_inputs: [{ item_id: 'fuel_cell', quantity: 2 }] }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 2 fuel_cell');
   });
 
   test('station power efficiency above 1 is not rescaled', () => {

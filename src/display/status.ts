@@ -484,7 +484,7 @@ function summarizeCompletionRewards(r: Record<string, unknown>): {
     communityLine?: string;
   } = {};
 
-  if (r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '') {
+  if (rowsHaveValue([r], ['credits_earned'])) {
     let creditsLine = `Credits earned: ${formatNumber(r.credits_earned)}`;
     const promised = completionCreditAmount(r.credits_promised);
     const shortfall = completionCreditAmount(r.credits_shortfall);
@@ -1496,7 +1496,7 @@ export const statusFormatters = [
       if (rowsHaveValue(rows, ['status_message'])) agentColumns.push(['Status', ['status_message']]);
 
       emitLine(`\n${c.bright}=== System Agents: ${r.system_id ?? 'current system'} ===${c.reset}`);
-      if (typeof r.warning === 'string' && r.warning.trim() !== '') {
+      if (chartDescription(r.warning)) {
         emitLine(`${c.yellow}Warning:${c.reset} ${r.warning}`);
       }
       printCompactTable('Agents', rows, agentColumns);

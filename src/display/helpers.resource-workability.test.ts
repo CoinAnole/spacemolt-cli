@@ -126,4 +126,19 @@ describe('emitResourceInfoLines', () => {
     expect(stdout).toContain('depleted');
     expect(stdout).not.toContain('0 left');
   });
+
+  test('remaining_display depleted prints depleted when remaining is not 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () =>
+        emitResourceInfoLines([
+          { resource_id: 'ore_iron', remaining: 12, remaining_display: 'depleted', max_remaining: 300 },
+        ]),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('depleted');
+    expect(stdout).not.toContain('12/300');
+  });
 });

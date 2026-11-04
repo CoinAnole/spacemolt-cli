@@ -467,6 +467,18 @@ test('missing ship build quantity prints ?x station_core', () => {
   expect(line).toBe('Build materials: ?x station_core');
 });
 
+test('build material with only id plate prints Build materials: 2x plate and not 2x item', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ id: 'plate', quantity: 2 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 2x plate');
+  expect(line).not.toBe('Build materials: 2x item');
+});
+
 test('build material quantity 0 prints 0x station_core', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -500,6 +512,18 @@ test('ship build materials prefer name over item_id', () => {
   );
   const line = buffer.stdout.find((row) => row.includes('Build materials:'));
   expect(line).toBe('Build materials: 2x Steel Plate');
+});
+
+test('build material item_name Plate prints Build materials: 1x Plate and not plate', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ build_materials: [{ item_name: 'Plate', item_id: 'plate', quantity: 1 }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 1x Plate');
+  expect(buffer.stdout.join('\n')).not.toContain('plate');
 });
 
 test('empty-string build material name does not fall through to item_id', () => {
@@ -536,6 +560,15 @@ test('non-record ship build materials print 1x station_core and not skip', () =>
   const line = buffer.stdout.find((row) => row.includes('Build materials:'));
   expect(line).toBe('Build materials: 1x station_core');
   expect(buffer.stdout.join('\n')).not.toContain('skip');
+});
+
+test('build material record with only quantity 2 prints Build materials: 2x item', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ build_materials: [{ quantity: 2 }] }, {}), {
+    plain: true,
+  });
+  const line = buffer.stdout.find((row) => row.includes('Build materials:'));
+  expect(line).toBe('Build materials: 2x item');
 });
 
 test('empty build materials omit Build materials', () => {
@@ -683,6 +716,18 @@ test('blank capability record prints Capabilities: cloak without a leading comma
   const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
   expect(line).toBe('Capabilities: cloak');
   expect(line).not.toContain(',');
+});
+
+test('non-record inherent_capabilities skip prints Capabilities: cloak and does not print skip', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ inherent_capabilities: ['skip', { type: 'cloak' }] }, {}),
+    { plain: true },
+  );
+  const line = buffer.stdout.find((row) => row.includes('Capabilities:'));
+  expect(line).toBe('Capabilities: cloak');
+  expect(buffer.stdout.join('\n')).not.toContain('skip');
 });
 
 test('whitespace capability flag prints Capabilities: cloak', () => {

@@ -1448,7 +1448,7 @@ function previewBattleEnded(
     details.push('no winning side');
   } else if (typeof data.winning_side !== 'bigint') {
     const winningSide = Number(data.winning_side);
-    if (Number.isFinite(winningSide) && winningSide === -1) details.push('no winning side');
+    if (finiteNumber(winningSide) === -1) details.push('no winning side');
   }
   if (reasonToken && messageLine && messageLine !== reasonToken && !headline.includes(messageLine)) {
     details.push(messageLine);
@@ -2684,7 +2684,6 @@ function previewFleetDock(
   if (message !== undefined) {
     const messageLine = firstLine(String(message));
     if (identity && !messageLine.includes(identity)) {
-      // Clip the lead so ` — identity` still fits in maxLineLength.
       const lead = messageLine.replace(/\.+$/, '').trim();
       const suffix = ` — ${identity}`;
       const budget = options.maxLineLength - suffix.length;

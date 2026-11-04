@@ -364,6 +364,18 @@ test('survey_system empty deposits at survey power 0 print the no-ore sentence',
   expect(stdout).toContain('ember_grazer');
 });
 
+test('survey_system boolean false survey power prints Survey power: false and the zero-ore deposits sentence', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.survey_power = false;
+      details.deposits = [];
+    }),
+  );
+
+  expect(stdout).toContain('Survey power: false');
+  expect(stdout).toContain('Deposits:\n  (none — survey power 0 reads no ore)');
+});
+
 test('survey_system prints deposit rows when survey power is 0', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -680,6 +692,16 @@ test('survey_system skips Skill XP for empty and zero maps', () => {
 
   expect(empty).not.toContain('Skill XP:');
   expect(zero).not.toContain('Skill XP:');
+});
+
+test('survey_system prints Skill XP for a boolean false skill gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: false };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning +false');
 });
 
 test('survey_system prints Skill XP for a bigint zero gain', () => {

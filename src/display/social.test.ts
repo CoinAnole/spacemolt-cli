@@ -3527,6 +3527,19 @@ function facilityTableHeader(section: string): string | undefined {
   return section.split('\n').find((line) => line.includes('|') && line.includes('Name') && line.includes('Level'));
 }
 
+test('grouped facility_list prints a Building cell of true when under_construction is true', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const playerFacilities = fixture.player_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0]) throw new Error('Player facility fixture is incomplete.');
+  playerFacilities[0].under_construction = true;
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  const header = facilityTableHeader(player);
+  expect(header).toBeDefined();
+  expect(header).toContain('Building');
+  expect(tableCell(player, 'player-refinery', 'Building')).toBe('true');
+});
+
 test('grouped facility_list prints Missed as 0 for player and faction and not from a missing key elsewhere', () => {
   const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
   fixture.public_facilities = [
@@ -3715,6 +3728,23 @@ test('facility_list prints a nested ally rental fee of 0 without a price', () =>
   expect(ally).not.toContain('0cr');
   expect(allyRow.rental_fee_per_run).toBeUndefined();
   expect((allyRow.production as Record<string, unknown>).rental_fee_per_run).toBe(0);
+});
+
+test('facility_list prints a Public cell of false for a top-level public flag', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.public_facilities = [
+    {
+      facility_id: 'public-closed',
+      name: 'Closed Yard',
+      category: 'production',
+      level: 1,
+      public: false,
+    },
+  ];
+
+  const stdout = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const publicSection = sectionAfter(stdout, 'Public Facilities', 'Player Facilities');
+  expect(tableCell(publicSection, 'public-closed', 'Public')).toBe('false');
 });
 
 test('facility_list prints a top-level ally rental fee of 0', () => {
@@ -5160,6 +5190,34 @@ test('omits facility state and maintenance columns when the API omits those fiel
   expect(stdout).not.toContain('Maint');
 });
 
+test('grouped facility_list prints an Active cell of false when active is false', () => {
+  const rendered = renderStructuredResult(
+    'facility_list',
+    {
+      base_id: 'nova_terra_central',
+      station_facilities: [
+        {
+          facility_id: 'power-cell-assembler',
+          type: 'power_cell_assembler',
+          name: 'Power Cell Assembler',
+          category: 'production',
+          level: 1,
+          active: false,
+        },
+      ],
+      player_facilities: [],
+      faction_facilities: [],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  const station = sectionAfter(stdout, 'Station Facilities');
+  expect(rendered.success).toBe(true);
+  expect(tableCell(station, 'power-cell-assembler', 'Active')).toBe('false');
+});
+
 test('faction_facility_owned clone shows Damaged, Building, and Dismantling as yes', () => {
   const fixture = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
   const facilities = fixture.facilities as Array<Record<string, unknown>>;
@@ -5202,6 +5260,16 @@ test('omits faction facility state column when the API omits that field', () => 
   expect(stdout).not.toContain('Active');
   expect(stdout).not.toContain('Idle');
   expect(stdout).toContain('Rent');
+});
+
+test('faction_facility_owned prints the sent idle_reason in the Idle column', () => {
+  const fixture = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  const facilities = fixture.facilities as Array<Record<string, unknown>>;
+  if (!facilities[0]) throw new Error('Faction facility fixture is incomplete.');
+  facilities[0].idle_reason = 'no power';
+  const stdout = renderStructuredResult('faction_facility_owned', fixture, options, context).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Faction Facilities');
+  expect(tableCell(section, 'faction-yard-1', 'Idle')).toBe('no power');
 });
 
 const ARENA_ONLY_FLEET_LINE = 'Arena-only: yes (unlimited at this arena; disbands if the leader leaves the arena)';
@@ -5334,6 +5402,32 @@ test('renders forum thread reply pagination metadata', () => {
   expect(stdout).toContain('Replies: 41');
   expect(stdout).toContain('reply page 2 | per page 20 | total replies 41');
   expect(stdout).toContain('More replies available.');
+});
+
+test('forum_get_thread prints Upvotes: 0 when upvotes is 0', () => {
+  const fixture = structuredClone(forumThreadFixture) as Record<string, unknown>;
+  const thread = fixture.thread as Record<string, unknown>;
+  thread.upvotes = 0;
+  const rendered = renderStructuredResult('forum_get_thread', fixture, options, context);
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Upvotes: 0');
+});
+
+test('forum_get_thread omits the Upvotes line when the key is absent', () => {
+  const source = structuredClone(forumThreadFixture) as Record<string, unknown>;
+  const sourceThread = source.thread as Record<string, unknown>;
+  const { upvotes: _upvotes, ...thread } = sourceThread;
+  const rendered = renderStructuredResult(
+    'forum_get_thread',
+    { ...source, thread } as Record<string, unknown>,
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Fuel convoy');
+  expect(stdout).not.toContain('Upvotes');
 });
 
 const FORUM_EDIT_THREAD_ID = forumEditThreadFixture.thread_id;
@@ -5546,6 +5640,34 @@ test('renders chat history timestamps from v2 timestamp_utc field', () => {
   expect(stdout).toContain('2026-05-23 15:04:05');
   expect(stdout).toContain('Ibis');
   expect(stdout).toContain('Clear skies over Sol today.');
+});
+
+test('get_chat_history with has_more false does not print More messages available', () => {
+  const rendered = renderStructuredResult(
+    'get_chat_history',
+    {
+      channel: 'local',
+      has_more: false,
+      total_count: 1,
+      messages: [
+        {
+          id: 'chat-1',
+          channel: 'local',
+          sender_id: 'player-ibis',
+          sender: 'Ibis',
+          content: 'Clear skies over Sol today.',
+          timestamp_utc: '2026-05-23T15:04:05.000Z',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Clear skies over Sol today.');
+  expect(stdout).not.toContain('More messages available.');
 });
 
 test('chat confirmation formats documented numeric sent_at as UTC', () => {

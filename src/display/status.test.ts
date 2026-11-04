@@ -6957,6 +6957,14 @@ test('view_completed_mission objective progress branch prints explicit zero', ()
   expect(stdout).toContain('Haul (0/2)');
 });
 
+test('view_completed_mission objective quantity branch prints quantity 0', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Haul', quantity: 0 }],
+  });
+  expect(stdout).toContain('quantity 0');
+});
+
 test('view_completed_mission objective station branch prints target_base_name', () => {
   const stdout = renderStatusTable('view_completed_mission', {
     title: 'Done',
@@ -6997,6 +7005,14 @@ test('view_completed_mission objective system_id fallback prints the system id',
     objectives: [{ description: 'Visit', system_id: 'sol' }],
   });
   expect(stdout).toContain('Visit (system sol)');
+});
+
+test('view_completed_mission difficulty zero branch prints Difficulty: 0', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    difficulty: 0,
+  });
+  expect(stdout).toContain('Difficulty: 0');
 });
 
 test('view_completed_mission objective target_base_id fallback prints the station id', () => {

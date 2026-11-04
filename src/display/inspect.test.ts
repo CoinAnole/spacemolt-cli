@@ -2059,6 +2059,37 @@ test('omits Slot from the entry header for a single catalog item without a slot 
   expect(entryHeader).not.toContain('Slot');
 });
 
+test('prints Slot in the entry header for a single catalog item with an empty-string slot', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'iron_ore',
+      kind: 'catalog',
+      catalog: {
+        type: 'items',
+        items: [
+          {
+            id: 'iron_ore',
+            name: 'Iron Ore',
+            category: 'ore',
+            size: 1,
+            base_value: 2,
+            slot: '',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const entryHeader = stdout.split('\n').find((line) => line.includes('Name') && line.includes('Category'));
+  expect(entryHeader).toBeDefined();
+  expect(entryHeader).toContain('Slot');
+});
+
 test('prints Catalog (catalog) when the catalog type is missing', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -4663,6 +4694,32 @@ test('renders a POI wormhole that expires in 0', () => {
   expect(stdout.split('\n')).toContain('Wormhole: Alpha (expires in 0)');
 });
 
+test('renders a null wormhole expiry as Wormhole: Alpha (expires in null)', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'wormhole_alpha',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'wormhole_alpha',
+          name: 'Alpha Mouth',
+        },
+        detail: {
+          wormhole_destination: 'Alpha',
+          wormhole_expires_in: null,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Wormhole: Alpha (expires in null)');
+});
+
 test('renders a wormhole with no wormhole_expires_in as Wormhole: Alpha', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5566,6 +5623,29 @@ test('prints Base: earth_station for a base_id-only POI base', () => {
 
   expect(stdout.split('\n')).toContain('Base: earth_station');
   expect(stdout.split('\n')).not.toContain('Base: yes');
+});
+
+test('omits the Base line for a summary base_id of 0', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_orbit',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'earth_orbit',
+          name: 'Earth Orbit',
+          base_id: 0,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Base:'));
+  expect(line).toBeUndefined();
+  expect(stdout).not.toContain('Base: 0');
 });
 
 test('renders base inspect results with station defences', () => {
