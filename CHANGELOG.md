@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- Piped stdout larger than 64KB is no longer truncated.
+
 - `set_status` help says the status message is at most 64 characters and the clan tag is at most 4 characters. The server counts characters, not bytes (gameserver 0.654.2).
 
 - `get_base` and docked-base `inspect` print `Dining` and `Leisure` when `GetBaseResponse` sends `dining_points` or `leisure_points`, including an explicit 0, and `Tourism revenue` in credits when `tourism_revenue` is sent, including an explicit 0. An omitted key prints nothing. These lines are not summed from facility rows and are not printed by `get_poi` (gameserver 0.654.0).
