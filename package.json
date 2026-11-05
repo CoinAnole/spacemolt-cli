@@ -20,8 +20,12 @@
     "report:fixture-schemas": "bun scripts/report-fixture-schema-divergences.ts",
     "report:curated-commands": "bun scripts/report-curated-command-divergences.ts",
     "report:openapi-consistency": "bun scripts/report-openapi-consistency.ts",
+    "verify:catalog-dump": "bun scripts/verify-catalog-dump.ts",
     "verify:command-retry": "bun scripts/verify-command-retry.ts",
-    "verify:id-resolution": "bun scripts/verify-id-resolution.ts"
+    "verify:id-cache-merge": "bun scripts/verify-id-cache-merge.ts",
+    "verify:id-resolution": "bun scripts/verify-id-resolution.ts",
+    "verify:reserved-ids": "bun scripts/verify-reserved-ids.ts",
+    "verify:subscription-follow": "bun scripts/verify-subscription-follow.ts"
   },
   "bin": {
     "spacemolt": "./src/client.ts"
