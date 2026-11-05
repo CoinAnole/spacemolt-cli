@@ -231,9 +231,11 @@ export function deduplicatedNotifications(response: APIResponse, seenIds = new S
   const deduplicated: Notification[] = [];
   for (const notification of candidates) {
     const notificationRecord = notification as unknown as Record<string, unknown>;
-    const id = typeof notificationRecord.id === 'string' ? notificationRecord.id : undefined;
-    if (id && seenIds.has(id)) continue;
-    if (id) seenIds.add(id);
+    const id = notificationRecord.id;
+    if (typeof id === 'string') {
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+    }
     deduplicated.push(notification);
   }
   return deduplicated;
