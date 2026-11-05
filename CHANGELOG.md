@@ -10,6 +10,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - Follow mode prints a notification with an empty id once per poll.
 
+- Two finished id-cache saves no longer drop one of the ids.
+
 - An older response no longer replaces a newer name or location for the same cached id.
 
 - Concurrent login and another command on the same profile no longer drop the saved password or replace a newer session expiry with an older one.

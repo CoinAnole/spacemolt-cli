@@ -11,6 +11,7 @@ function sameKeys(left, right) {
 }
 
 function role(phase) {
+  if (phase === "locked") return "locked";
   if (phase === "start" || phase === "chmod_cache" || phase === "reading") return "waiting";
   if (HOLDING.has(phase)) return "holding";
   return "renamed";
@@ -50,6 +51,25 @@ function picture(v) {
   }
   const shipRole = role(v.phase.ship);
   const poiRole = role(v.phase.poi);
+  if (shipRole === "locked" && poiRole === "locked") return `${cacheText(v)}. Both saves hold the id-cache lock`;
+  if (shipRole === "locked") {
+    const other =
+      poiRole === "waiting"
+        ? "The get_system save is waiting"
+        : poiRole === "holding"
+          ? "The get_system save is holding its read"
+          : "The get_system save has renamed";
+    return `${cacheText(v)}. The list_ships save holds the id-cache lock and has not read yet. ${other}`;
+  }
+  if (poiRole === "locked") {
+    const other =
+      shipRole === "waiting"
+        ? "The list_ships save is waiting"
+        : shipRole === "holding"
+          ? "The list_ships save is holding its read"
+          : "The list_ships save has renamed";
+    return `${cacheText(v)}. The get_system save holds the id-cache lock and has not read yet. ${other}`;
+  }
   const shipStale = shipRole === "holding" && !sameKeys(v.snapshot.ship, v.file);
   const poiStale = poiRole === "holding" && !sameKeys(v.snapshot.poi, v.file);
   if (shipStale && poiStale) return `${cacheText(v)}. Both saves are holding a read that is missing an id`;
@@ -79,6 +99,8 @@ export const step = (action, from, to) => {
   const id = who(from, to);
   const label = saveName(id);
   if (name === "Done") return null;
+  if (name === "Acquire") return `${label} takes the id-cache lock`;
+  if (name === "Release") return `${label} releases the id-cache lock`;
   if (name === "Exists") {
     return to.phase[id] === "dir" ? `${label} sees that the id cache is not there yet` : `${label} sees that the id cache is already there`;
   }

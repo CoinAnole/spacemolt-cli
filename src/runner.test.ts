@@ -6,6 +6,7 @@ import type { SpaceMoltClient } from './api';
 import { SpaceMoltClient as RealSpaceMoltClient } from './api';
 import type { CliEnv, CliRuntimeContext } from './cli-context';
 import { cargoFixture } from './display/formatter-fixtures';
+import { publicPlayerProfileFixture } from './display/status.fixtures';
 import { runInvocation } from './main';
 import { VERSION } from './runtime';
 import {
@@ -84,6 +85,17 @@ async function withConfigHome<T>(configHome: string, fn: () => Promise<T>): Prom
     if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = originalConfigHome;
   }
+}
+
+function idCacheFilesUnder(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  const found: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...idCacheFilesUnder(full));
+    else if (entry.name.endsWith('.ids.json')) found.push(full);
+  }
+  return found;
 }
 
 afterEach(() => {
@@ -1098,7 +1110,7 @@ describe('runInvocation option isolation', () => {
     const execute = async (command: string, payload: Record<string, unknown>) => {
       calls.push({ command, payload });
       if (command === 'player_profile') {
-        return { structuredContent: { username: 'Arbiter47', online: true } };
+        return { structuredContent: publicPlayerProfileFixture };
       }
       return { structuredContent: { name: 'Interstellar Continental', tag: 'NOIR', member_count: 25 } };
     };
@@ -1119,14 +1131,17 @@ describe('runInvocation option isolation', () => {
 
     const playerOut: string[] = [];
     const playerErr: string[] = [];
-    const playerCode = await runInvocation(
-      ['--structured', 'player_profile', 'Arbiter47'],
-      client,
-      fakeContext(playerOut, playerErr, { XDG_CONFIG_HOME: configHome }),
+    const playerCode = await withConfigHome(configHome, () =>
+      runInvocation(
+        ['--structured', 'player_profile', 'Arbiter47'],
+        client,
+        fakeContext(playerOut, playerErr, { XDG_CONFIG_HOME: configHome }),
+      ),
     );
     expect(playerCode).toBe(0);
     expect(playerErr).toEqual([]);
-    expect(JSON.parse(playerOut.join('\n'))).toEqual({ username: 'Arbiter47', online: true });
+    expect(JSON.parse(playerOut.join('\n'))).toEqual(publicPlayerProfileFixture);
+    expect(idCacheFilesUnder(configHome)).toEqual([]);
 
     // Nested group surface: `faction profile` → internal command faction_profile
     const factionOut: string[] = [];

@@ -76,6 +76,9 @@ const ID_KINDS = new Set<IdKind>([
 const CACHE_FILE_MODE = 0o600;
 const CACHE_DIR_MODE = 0o700;
 const MAX_HINTS = 500;
+const ID_CACHE_LOCK_RETRY_MS = 10;
+const ID_CACHE_LOCK_TIMEOUT_MS = 2_000;
+const ID_CACHE_LOCK_STALE_MS = 30_000;
 const DEFAULT_CLOCK = { now: () => new Date() };
 const DEFAULT_COLORS = colorsForPlain(false);
 const COMMAND_ID_RESOLVER_RULES: Record<string, Partial<Record<IdKind, string[]>>> = {
@@ -249,6 +252,156 @@ export async function saveIdCache(hints: IdHint[], sessionPath?: string): Promis
   }
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
+
+let cachedClkTck: number | undefined;
+
+// Field 22 is the token after the last ")": comm itself may contain ")" and spaces.
+function processStartTimeMs(pid: number): number | undefined {
+  if (process.platform !== 'linux') return undefined;
+  if (cachedClkTck === undefined) {
+    const result = Bun.spawnSync(['getconf', 'CLK_TCK'], { stdout: 'pipe', stderr: 'pipe' });
+    if (result.exitCode !== 0) return undefined;
+    const value = Number(new TextDecoder().decode(result.stdout).trim());
+    if (!Number.isFinite(value) || value <= 0) return undefined;
+    cachedClkTck = value;
+  }
+  const ticks = cachedClkTck;
+  let stat: string;
+  let procStat: string;
+  try {
+    stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf-8');
+    procStat = fs.readFileSync('/proc/stat', 'utf-8');
+  } catch {
+    return undefined;
+  }
+  const close = stat.lastIndexOf(')');
+  if (close < 0) return undefined;
+  const starttime = Number(
+    stat
+      .slice(close + 1)
+      .trim()
+      .split(/\s+/)[19],
+  );
+  if (!Number.isFinite(starttime)) return undefined;
+  const btimeLine = procStat.split('\n').find((line) => line.startsWith('btime '));
+  if (!btimeLine) return undefined;
+  const btimeSec = Number(btimeLine.slice('btime '.length).trim());
+  if (!Number.isFinite(btimeSec)) return undefined;
+  const startedAtMs = (btimeSec + starttime / ticks) * 1000;
+  return Number.isFinite(startedAtMs) ? startedAtMs : undefined;
+}
+
+export function staleAdvisoryLockDecision(input: {
+  ownerAlive: boolean | undefined;
+  startedAtMs: number | undefined;
+  lockMtimeMs: number;
+  nowMs: number;
+  staleMs: number;
+}): 'keep' | 'remove' {
+  const ageMs = input.nowMs - input.lockMtimeMs;
+  if (input.ownerAlive === false) return 'remove';
+  if (input.ownerAlive === undefined) return ageMs >= input.staleMs ? 'remove' : 'keep';
+  const processStartedAfterLock = input.startedAtMs !== undefined && input.startedAtMs > input.lockMtimeMs;
+  if (processStartedAfterLock || ageMs >= input.staleMs) return 'remove';
+  return 'keep';
+}
+
+function removeStaleIdCacheLock(lockPath: string): boolean {
+  let observed: string;
+  try {
+    observed = fs.readFileSync(lockPath, 'utf-8');
+  } catch (error) {
+    return isErrnoException(error) && error.code === 'ENOENT';
+  }
+
+  const pid = Number.parseInt(observed, 10);
+  let ownerAlive: boolean | undefined;
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    ownerAlive = undefined;
+  } else {
+    try {
+      process.kill(pid, 0);
+      ownerAlive = true;
+    } catch (error) {
+      if (isErrnoException(error) && error.code === 'ESRCH') ownerAlive = false;
+      else ownerAlive = true;
+    }
+  }
+  let lockMtimeMs: number;
+  try {
+    lockMtimeMs = fs.statSync(lockPath).mtimeMs;
+  } catch (error) {
+    return isErrnoException(error) && error.code === 'ENOENT';
+  }
+
+  const decision = staleAdvisoryLockDecision({
+    ownerAlive,
+    startedAtMs: ownerAlive === true ? processStartTimeMs(pid) : undefined,
+    lockMtimeMs,
+    nowMs: Date.now(),
+    staleMs: ID_CACHE_LOCK_STALE_MS,
+  });
+  if (decision !== 'remove') return false;
+
+  try {
+    const still = fs.readFileSync(lockPath, 'utf-8');
+    if (still !== observed) return false;
+    fs.unlinkSync(lockPath);
+    return true;
+  } catch (error) {
+    return isErrnoException(error) && error.code === 'ENOENT';
+  }
+}
+
+async function acquireIdCacheLock(cachePath: string): Promise<() => Promise<void>> {
+  const lockPath = `${cachePath}.lock`;
+  const token = `${process.pid} ${Date.now().toString(16)}${Math.random().toString(16).slice(2)}\n`;
+  const deadline = Date.now() + ID_CACHE_LOCK_TIMEOUT_MS;
+
+  while (true) {
+    let opened = false;
+    let published = false;
+    try {
+      const handle = await fs.promises.open(lockPath, 'wx', CACHE_FILE_MODE);
+      opened = true;
+      try {
+        await handle.writeFile(token, 'utf-8');
+        await handle.sync();
+        published = true;
+      } finally {
+        await handle.close();
+      }
+      return async () => {
+        try {
+          const still = fs.readFileSync(lockPath, 'utf-8');
+          if (still !== token) return;
+          fs.unlinkSync(lockPath);
+        } catch (error) {
+          if (isErrnoException(error) && error.code === 'ENOENT') return;
+          throw error;
+        }
+      };
+    } catch (error) {
+      if (opened && !published) {
+        try {
+          await fs.promises.unlink(lockPath);
+        } catch {
+          /* the write or sync error is the one to rethrow */
+        }
+      }
+      if (!isErrnoException(error) || error.code !== 'EEXIST') throw error;
+      if (removeStaleIdCacheLock(lockPath)) continue;
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting to update the id cache at ${cachePath}.`);
+      }
+      await Bun.sleep(ID_CACHE_LOCK_RETRY_MS);
+    }
+  }
+}
+
 export async function cacheIdsFromResponse(
   command: string,
   response: APIResponse,
@@ -263,9 +416,23 @@ export async function cacheIdsFromResponse(
   const extracted = extractIdHints(command, result, clock.now().toISOString());
   if (extracted.length === 0) return;
 
-  const existing = loadIdCacheSync(sessionPath);
-  const merged = mergeHints(extracted, existing);
-  await saveIdCache(merged, sessionPath);
+  // undefined is the renderer's miss. tryGetIdCachePath(undefined) would read process.env.
+  if (sessionPath === undefined) return;
+  const cachePath = tryGetIdCachePath(sessionPath);
+  if (!cachePath) return;
+
+  const parentDir = path.dirname(cachePath);
+  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: CACHE_DIR_MODE });
+  hardenPermissions(parentDir, CACHE_DIR_MODE);
+
+  const release = await acquireIdCacheLock(cachePath);
+  try {
+    const existing = loadIdCacheSync(sessionPath);
+    const merged = mergeHints(extracted, existing);
+    await saveIdCache(merged, sessionPath);
+  } finally {
+    await release();
+  }
 }
 
 export function extractIdHints(command: string, result: Record<string, unknown>, seenAt: string): IdHint[] {
