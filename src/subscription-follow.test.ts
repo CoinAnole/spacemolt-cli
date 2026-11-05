@@ -258,6 +258,64 @@ describe('subscription follow runner integration', () => {
     }
   });
 
+  test('keeps an empty string id once per response', () => {
+    const first = { type: 'market', id: '', mark: 'first' };
+    const second = { type: 'market', id: '', mark: 'second' };
+    const kept = deduplicatedNotifications({
+      notifications: [first, second],
+    } as unknown as APIResponse) as unknown as Array<typeof first>;
+
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toBe(first);
+  });
+
+  test('keeps a note with no id beside a note with an empty string id', () => {
+    const missing = { type: 'market', mark: 'missing' };
+    const empty = { type: 'market', id: '', mark: 'empty' };
+    const kept = deduplicatedNotifications({
+      notifications: [missing, empty],
+    } as unknown as APIResponse) as unknown as Array<typeof missing | typeof empty>;
+
+    expect(kept).toEqual([missing, empty]);
+  });
+
+  test('does not dedupe false, null, or 0, and keeps the string 0 once', () => {
+    const falsy = { type: 'market', id: false, mark: 'bool' };
+    const falsyLater = { type: 'market', id: false, mark: 'bool2' };
+    const missing = { type: 'market', id: null, mark: 'null' };
+    const zero = { type: 'market', id: 0, mark: 'zero' };
+    const textZero = { type: 'market', id: '0', mark: 'text-zero' };
+    const textZeroLater = { type: 'market', id: '0', mark: 'text-zero-2' };
+    const kept = deduplicatedNotifications({
+      notifications: [falsy, falsyLater, missing, zero, textZero, textZeroLater],
+    } as unknown as APIResponse) as unknown as Array<typeof falsy | typeof missing | typeof zero | typeof textZero>;
+
+    expect(kept).toEqual([falsy, falsyLater, missing, zero, textZero]);
+  });
+
+  test('keeps a spaced string id distinct from the unspaced id', () => {
+    const spaced = { type: 'market', id: ' a ', mark: 'spaced' };
+    const plain = { type: 'market', id: 'a', mark: 'plain' };
+    const kept = deduplicatedNotifications({
+      notifications: [spaced, plain],
+    } as unknown as APIResponse) as unknown as Array<typeof spaced>;
+
+    expect(kept).toEqual([spaced, plain]);
+  });
+
+  test('a later call with a new set keeps the same string id again', () => {
+    const note = { type: 'market', id: 'a', mark: 'again' };
+    const first = deduplicatedNotifications({
+      notifications: [note],
+    } as unknown as APIResponse) as unknown as Array<typeof note>;
+    const second = deduplicatedNotifications({
+      notifications: [note],
+    } as unknown as APIResponse) as unknown as Array<typeof note>;
+
+    expect(first).toEqual([note]);
+    expect(second).toEqual([note]);
+  });
+
   test('bounds deduplication to one poll while suppressing envelope overlap in every poll', async () => {
     const repeated = notification('n-repeated', 'system', 'repeated_event', 'Repeated update');
     const result = await runFollowHarness({

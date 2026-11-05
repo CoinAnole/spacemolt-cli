@@ -32,22 +32,20 @@ Clause 2 is a data invariant of the real function. Nothing model-checks TypeScri
 
 The chart groups the 2, 4, 8, and 16 second waits as one label, "Waiting out a failed poll". The 30 second cap is its own label. `DelayMatches` is what checks the sequence. The chart does not draw the 7 steps that start the wait, because that step stays on the waiting label. The view hides the 35 steps that stutter after "Unsubscribed once". A wait that fails shares the Ctrl+C arrow. Its label is "you press Ctrl+C [during the wait] or the wait fails".
 
-## Clause 2 breaks
+## Clause 2 holds
 
-`bun run verify:subscription-follow` exits 1. That failure is the finding below. Do not drop the empty string from the bound, and do not change `expectKeep` so that `""` is not a string id, to make the run pass. `other failures` is 0. That means every non-empty string id in the bound is kept once, and every notification in the bound with no string id is kept.
+`bun run verify:subscription-follow` exits 0 and prints `verify-subscription-follow: pass`, the property line, `checks: 119172`, the bound line, and `elapsed_ms`. It finishes in about 1.5 seconds. That transcript does not contain `empty-string id failures:` or `other failures:`. Those lines are printed only when the script fails. Exit 0 means both counters were 0.
 
-`checks: 119172`. `empty-string id failures: 34492`. `other failures: 0`. It finishes in about 1.5 seconds.
+A string `id`, including `""`, is kept once. `"a"`, `"b"`, `"0"`, and `" a "` are kept once. `" a "` is not `"a"`. `"0"` is not `0`. A notification with no `id`, or with `null`, `false`, or `0`, is kept every time and is not deduped. The follow loop calls `deduplicatedNotifications(response)` with a new `Set` each poll.
 
-The first failure is two notifications on `response.notifications`, both with `id: ""`. `structuredContent` and `result` are empty. The promise keeps the first. The function returns both.
-
-In `deduplicatedNotifications` that is: `id` is set when `typeof id === "string"`, then `if (id && seenIds.has(id))` does not see `""`, and `if (id) seenIds.add(id)` does not record it. Both notifications are pushed. A second alert with an empty id is printed.
+In `deduplicatedNotifications` that is: `typeof id === "string"`, then `seenIds.has(id)` skips a repeat and `seenIds.add(id)` records it, including `""`. A non-string id is pushed and not recorded. Do not drop the empty string from the bound, and do not change `expectKeep` so that `""` is not a string id.
 
 ## When a change touches this
 
 Run clause 1 with `/statechart`, and clause 2 with the command below, if a diff touches `runSubscriptionFollow`, `interruptibleSleep`, `bestEffortUnsubscribe`, `deduplicatedNotifications`, `throttledRetryAfter`, `RETRY_DELAYS_SECONDS`, or `FOLLOW_POLL_INTERVAL_SECONDS` in `src/subscription-follow.ts`.
 
 ```bash
-git diff fbd4f141c76d47fc638fc87120805a902195ebcc -- src/subscription-follow.ts
+git diff 038ece044c825c53aa4d861ec20f5e9744ff4ad4 -- src/subscription-follow.ts
 ```
 
 Replace that hash when the coverage record below moves. A change only in `validateSubscriptionFollow` does not change this model or this bound. Say so, and do not move the sync commit.
@@ -72,7 +70,7 @@ Replace that hash when the coverage record below moves. A change only in `valida
 
 Clause 2 is `deduplicatedNotifications` on one response. The follow loop calls it with a new set each poll. The checker does too.
 
-Sync commit: `fbd4f141c76d47fc638fc87120805a902195ebcc`. That commit is the product code this describes. The checker and this skill do not change `runSubscriptionFollow` or `deduplicatedNotifications`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints this empty-string failure, or a clause 1 run that still reaches 119 states, does not by itself mean a new edit was checked.
+Sync commit: `038ece044c825c53aa4d861ec20f5e9744ff4ad4`. That commit is the product code this describes. The checker and this skill do not change `runSubscriptionFollow` or `deduplicatedNotifications`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints this pass, or a clause 1 run that still reaches 119 states, does not by itself mean a new edit was checked.
 
 ## Bounds and assumptions
 
@@ -112,7 +110,7 @@ Clause 2, from the repo root, with Bun on `PATH` (this run used Bun 1.4.4; no ot
 bun run verify:subscription-follow
 ```
 
-The current result is the empty-string failure above. Exit 1. A run that prints `other failures: 0` and the same first empty-string pair is that finding. A run that prints `verify-subscription-follow: pass` would mean the empty string is kept once too. Do not edit the expected result so the current code passes.
+The current result is the pass above. Exit 0. A run that prints `verify-subscription-follow: pass` means the empty string is kept once. Do not drop the empty string from the bound, and do not change `expectKeep` so that `""` is not a string id.
 
 ## Read a failure
 
@@ -139,26 +137,26 @@ A successful poll that sets the next delay to 2 instead of `FOLLOW_POLL_INTERVAL
 
 Clause 2: replay the printed notes through `deduplicatedNotifications`. The actual line is what the real function returned.
 
-The empty-string pair above is a bug in the current code. Say it as: both notifications have a string `id` of `""`, and the function returns both because `if (id && seenIds.has(id))` skips the empty string. Do not change product code unless the user asked.
+If both notifications with a string `id` of `""` are returned, that is a regression to a truthiness test: `if (id && seenIds.has(id))` skips the empty string, and `if (id) seenIds.add(id)` does not record it. Do not drop `""` from the bound, and do not change `expectKeep` so that `""` is not a string id. Do not change product code unless the user asked.
 
 `other failures` above 0 is a new bug, or one of the scratches below. A thrown call, or a malformed envelope that invents a notification, is a bug unless the input is not a record the function claims to read. Do not edit `expectKeep` so the current code passes.
 
-Deleting the `seenIds` check (`if (false && id && seenIds.has(id)) continue`) fails with `other failures: 62644`. The first failure is two notes with `id: "a"` on `response.notifications`. Both are returned. Put the `if (id && seenIds.has(id)) continue` line back.
+Deleting the `seenIds` check (`if (false && typeof id === "string" && seenIds.has(id)) continue`, or deleting `if (seenIds.has(id)) continue`) fails with `other failures: 62644`. The first failure is two notes with `id: "a"` on `response.notifications`. Both are returned. Put `if (seenIds.has(id)) continue` and `seenIds.add(id)` back inside `if (typeof id === "string")`.
 
-Dropping a notification with no string id (`if (!id) continue` before `deduplicated.push`) fails with `other failures: 110379`. The first failure is one note with `type: "market"` and no `id`. The actual array is empty. Remove that `continue`.
+Dropping a notification with no string id (`if (typeof id !== "string") continue` before `deduplicated.push`) fails with `other failures: 110379`. The first failure is one note with `type: "market"` and no `id`. The actual array is empty. `""` is a string, so `empty-string id failures` stays 0 on that scratch. Remove that `continue`.
 
-After either scratch is reverted, the result is `other failures: 0` and `empty-string id failures: 34492`.
+After either scratch is reverted, the script prints the pass above and does not print `empty-string id failures:` or `other failures:`. Every failure transcript prints the label `empty-string id failures:`, including `empty-string id failures: 0`. A truthiness regression is a non-zero `empty-string id failures` count, or both notes with `id: ""` being returned. The no-id scratch prints `empty-string id failures: 0` and is not that regression.
 
 ## Update the check when the change is intended
 
 1. Re-read `runSubscriptionFollow`, `interruptibleSleep`, `bestEffortUnsubscribe`, and `deduplicatedNotifications` at the new commit. Write down each new or removed await between the successful subscribe and the unsubscribe call, and any change to which notifications are candidates or which string counts as an id.
 2. Edit `verification/subscription-follow/SubscriptionFollow.tla` and `scripts/verify-subscription-follow.ts` from that reading. Keep one await or one loop decision as one action. Change clause 1 or clause 2 only when the product change says the promise changed (a comment, a test, `CHANGELOG.md`, or the commit message). Record the old sentence and the new sentence, and cite that evidence. Keep `UnsubscribeOnPollThrow = FALSE` while the `get_notifications` catch does not call `bestEffortUnsubscribe`. Keep `CleanupGuard = TRUE` while `if (!cleanupAttempted)` is in `finally`. Keep `expectKeep` treating every string, including `""`, as an id that is kept once.
 3. Read clause 1 with `/statechart`, using `verification/subscription-follow/view.mjs` for the labels. Run `bun run verify:subscription-follow`.
-4. Break the new behavior the way the code would break. For the catch, set `UnsubscribeOnPollThrow = TRUE` and confirm the 3-step path above. Put `FALSE` back. For dedup, delete the `seenIds` check, confirm `other failures` is not 0 and the first pair is `id: "a"`, and put the check back. Confirm clause 1 is the pass above, or the new finding you mean to report, and clause 2 is the empty-string failure, or a pass only if the empty string is now kept once in the product.
+4. Break the new behavior the way the code would break. For the catch, set `UnsubscribeOnPollThrow = TRUE` and confirm the 3-step path above. Put `FALSE` back. For dedup, delete the `seenIds` check, confirm `other failures` is not 0 and the first pair is `id: "a"`, and put the check back. Confirm clause 1 is the pass above. Confirm clause 2 exits 0 and prints `verify-subscription-follow: pass` and `checks: 119172`, and does not print `empty-string id failures:` or `other failures:`. Every failure transcript prints the label `empty-string id failures:`, including when the count is 0. A truthiness regression is a non-zero `empty-string id failures` count, or both notes with `id: ""` being returned. Do not drop `""` from the bound, and do not change `expectKeep`.
 5. Move the sync commit in this skill only after steps 1–4. If step 1 found an await or an id rule the check does not cover, do not move the hash.
 
 ## What a pass does not cover
 
 Clause 1's pass is this model only: one loop, one signal, retry indexes through the 30 second cap, and one sample throttle wait. It is not a failed subscribe, not the scan inside `throttledRetryAfter`, not a wrong unsubscribe command name, and not a third unsubscribe call counted separately from a second.
 
-Clause 2 is not a pass. The empty string is returned twice. A future pass would cover the lists in the bound, not every notification a server can send, and not `presentNotifications`.
+Clause 2's pass covers the lists in the bound, not every notification a server can send, and not `presentNotifications`. The empty string is kept once inside one response. It is not deduped across polls.
