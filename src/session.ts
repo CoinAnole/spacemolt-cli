@@ -398,12 +398,7 @@ function laterExpiry(incoming: unknown, onDisk: unknown): string | undefined {
   return incomingText;
 }
 
-/**
- * Copy of incoming. expires_at is the later parseable timestamp even when the
- * ids differ. Username, password, and player_id are copied from disk only when
- * the id is unchanged and the incoming value is empty. A new id does not
- * inherit them. Does not mutate incoming.
- */
+/** expires_at is taken even when the ids differ. */
 export function mergePublishedSession(incoming: Session, onDisk: Session | null): Session {
   if (!onDisk || !hasText(onDisk.id)) return incoming;
   const published: Session = { ...incoming };

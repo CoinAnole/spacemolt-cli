@@ -160,34 +160,30 @@ async function publishLock(lockPath: string, token: string): Promise<void> {
   if (failure !== undefined) throw failure;
 }
 
-function releaseLock(lockPath: string, token: string): void {
-  let current: string;
-  try {
-    current = fs.readFileSync(lockPath, 'utf8');
-  } catch (error) {
-    if (isErrno(error, 'ENOENT')) return;
-    throw error;
-  }
-  if (current !== token) return;
-  try {
-    fs.unlinkSync(lockPath);
-  } catch (error) {
-    if (isErrno(error, 'ENOENT')) return;
-    throw error;
-  }
-}
-
 export async function acquireAdvisoryLock(
   lockPath: string,
   options: { timeoutMs: number; retryMs: number; staleMs: number; timeoutError: string },
-): Promise<() => Promise<void>> {
+): Promise<() => void> {
   const deadline = Date.now() + options.timeoutMs;
   while (true) {
     const token = `${process.pid} ${Date.now().toString(16)}${Math.random().toString(16).slice(2)}\n`;
     try {
       await publishLock(lockPath, token);
-      return async () => {
-        releaseLock(lockPath, token);
+      return () => {
+        let current: string;
+        try {
+          current = fs.readFileSync(lockPath, 'utf8');
+        } catch (error) {
+          if (isErrno(error, 'ENOENT')) return;
+          throw error;
+        }
+        if (current !== token) return;
+        try {
+          fs.unlinkSync(lockPath);
+        } catch (error) {
+          if (isErrno(error, 'ENOENT')) return;
+          throw error;
+        }
       };
     } catch (error) {
       if (!isErrno(error, 'EEXIST')) throw error;

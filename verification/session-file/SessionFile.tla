@@ -68,7 +68,7 @@ Init ==
 \* createSession() with no saved credentials, then saveSession
 \* readFile, mergePublishedSession, and rename.
 \* createTransientSession spreads savedCredentials only when login passed them.
-\* Login does not. Incoming password FALSE, incoming id "login", incoming expiry Tick.
+\* Login does not.
 LoginCreate ==
   /\ login = "start"
   /\ filePassword' = KeptPassword(FALSE, "login")
@@ -84,7 +84,6 @@ LoginCreate ==
 \* sendRequest, login command, when data.session is present.
 \* saveSession readFile, mergePublishedSession, and rename.
 \* The in-memory session is the object createSession returned. Still no password.
-\* Incoming password FALSE, incoming id "login", incoming expiry Tick.
 LoginSend ==
   /\ login = "created"
   /\ filePassword' = KeptPassword(FALSE, "login")
@@ -141,7 +140,6 @@ GetSession ==
 
 \* sendRequest for that route command, when data.session is present.
 \* saveSession readFile, mergePublishedSession, and rename.
-\* Incoming password routeSnapPassword, incoming id routeSnapId, incoming expiry Tick.
 RouteSend ==
   /\ other = "held"
   /\ filePassword' = KeptPassword(routeSnapPassword, routeSnapId)
@@ -171,7 +169,6 @@ RecoverLoad ==
 
 \* createSession() with no saved credentials.
 \* saveSession readFile, mergePublishedSession, and rename.
-\* Incoming password FALSE, incoming id "recover", incoming expiry Tick.
 \* This is the passwordless window.
 RecoverCreate ==
   /\ other = "loaded"
@@ -188,7 +185,6 @@ RecoverCreate ==
 
 \* newSession.username / password copied from the load, then saveSession
 \* readFile, mergePublishedSession, and rename.
-\* Incoming password recoverPassword, incoming id "recover".
 \* expires_at is still the value createTransientSession returned, not a new tick.
 RecoverRestore ==
   /\ other = "wiped"
@@ -204,7 +200,6 @@ RecoverRestore ==
 \* loginWithSession -> sendRequest.
 \* saveSession readFile, mergePublishedSession, and rename.
 \* The same object still has the copied password.
-\* Incoming password recoverPassword, incoming id "recover", incoming expiry Tick.
 RecoverLogin ==
   /\ other = "restored"
   /\ filePassword' = KeptPassword(recoverPassword, "recover")
