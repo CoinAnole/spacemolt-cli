@@ -28,6 +28,7 @@ const {
   listProfileNames,
   getSpacemoltHome,
   loadCliConfig,
+  mergePublishedSession,
   saveCliConfig,
   SessionManager,
   setActiveProfile,
@@ -35,6 +36,9 @@ const {
   showDefaultProfile,
   updateCliConfig,
 } = await import('./session.ts');
+
+const { acquireAdvisoryLock, lockOwnerAlive, procStatStartTicks, processStartedAfterLock, staleAdvisoryLockDecision } =
+  await import('./advisory-lock.ts');
 
 const publicClient = await import('./client.ts');
 
@@ -569,6 +573,8 @@ describe('SessionManager', () => {
     const session1 = await manager.getSession();
     expect(transportCalled).toBe(false);
     expect(session1.id).toBe('sess_valid');
+    // The valid session's later expiry would be kept across this id change.
+    await fs.promises.unlink(manager.getSessionPath());
 
     const expiredSession: Session = {
       id: 'sess_expired',
@@ -1094,5 +1100,475 @@ describe('SessionManager', () => {
     expect(calls).toBe(4);
     expect(waits).toEqual([0, 0, 0]);
     expect(sessionObj.player_id).toBeUndefined();
+  });
+
+  test('mergePublishedSession keeps omitted credentials and the later expiry for the same id', () => {
+    const incoming: Session = {
+      id: 'same',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+    };
+    const result = mergePublishedSession(incoming, {
+      id: 'same',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-05-01T00:00:00.000Z',
+      username: 'pilot',
+      password: 'secret',
+      player_id: 'player_1',
+    });
+
+    expect(result).not.toBe(incoming);
+    expect(incoming.password).toBeUndefined();
+    expect(result).toMatchObject({
+      id: 'same',
+      username: 'pilot',
+      password: 'secret',
+      player_id: 'player_1',
+      expires_at: '2026-06-06T00:00:00.000Z',
+    });
+  });
+
+  test('mergePublishedSession lets a non-empty incoming password replace the saved one', () => {
+    const result = mergePublishedSession(
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-05-01T00:00:00.000Z',
+        password: 'new-secret',
+      },
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-06-06T00:00:00.000Z',
+        password: 'secret',
+      },
+    );
+
+    expect(result.password).toBe('new-secret');
+  });
+
+  test('mergePublishedSession does not copy credentials onto a different id', () => {
+    const result = mergePublishedSession(
+      {
+        id: 'new',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-05-01T00:00:00.000Z',
+      },
+      {
+        id: 'old',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-06-06T00:00:00.000Z',
+        username: 'pilot',
+        password: 'secret',
+        player_id: 'player_1',
+      },
+    );
+
+    expect(result.password).toBeUndefined();
+    expect(result.username).toBeUndefined();
+    expect(result.player_id).toBeUndefined();
+    expect(result.expires_at).toBe('2026-06-06T00:00:00.000Z');
+    expect(result.id).toBe('new');
+  });
+
+  test('mergePublishedSession publishes incoming when the file has no session id', () => {
+    const incoming: Session = {
+      id: 'incoming',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+      password: 'secret',
+    };
+
+    expect(mergePublishedSession(incoming, null)).toBe(incoming);
+    expect(
+      mergePublishedSession(incoming, {
+        id: '',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-07-01T00:00:00.000Z',
+        password: 'other',
+      }),
+    ).toBe(incoming);
+  });
+
+  test('mergePublishedSession treats an empty password as omitted', () => {
+    const result = mergePublishedSession(
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-06-06T00:00:00.000Z',
+        username: '',
+        password: '',
+        player_id: '',
+      },
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-05-01T00:00:00.000Z',
+        username: 'pilot',
+        password: 'secret',
+        player_id: 'player_1',
+      },
+    );
+
+    expect(result.username).toBe('pilot');
+    expect(result.password).toBe('secret');
+    expect(result.player_id).toBe('player_1');
+  });
+
+  test('later expiry ignores a non-string and keeps an unparseable side from winning', () => {
+    const incoming: Session = {
+      id: 'same',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    };
+    const numericOnDisk = mergePublishedSession(incoming, {
+      id: 'same',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: 1_700_000_000_000 as unknown as string,
+    });
+    expect(numericOnDisk.expires_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(typeof numericOnDisk.expires_at).toBe('string');
+    expect(incoming.expires_at).toBe('2020-01-01T00:00:00.000Z');
+
+    const unparseableIncoming = mergePublishedSession(
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: 'not-a-timestamp',
+      },
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-06-06T00:00:00.000Z',
+      },
+    );
+    expect(unparseableIncoming.expires_at).toBe('2026-06-06T00:00:00.000Z');
+
+    const numericIncoming = mergePublishedSession(
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: 2_500_000_000_000 as unknown as string,
+      },
+      {
+        id: 'same',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: '2026-06-06T00:00:00.000Z',
+      },
+    );
+    expect(numericIncoming.expires_at).toBe('2026-06-06T00:00:00.000Z');
+  });
+
+  test('overlapping saveSession calls keep the password and the newer expiry', async () => {
+    const manager = new SessionManager({
+      profile: 'merge_overlap',
+      profileIsExplicit: true,
+      env: testEnv,
+    });
+    const older = '2026-01-02T00:00:00.000Z';
+    const newer = '2026-06-06T00:00:00.000Z';
+    const withPassword: Session = {
+      id: 'sess_shared',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: older,
+      username: 'pilot',
+      password: 'secret',
+    };
+    const withExpiry: Session = {
+      id: 'sess_shared',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: newer,
+    };
+
+    await Promise.all([manager.saveSession(withPassword), manager.saveSession(withExpiry)]);
+
+    expect(withExpiry.password).toBeUndefined();
+    expect(await manager.loadSession()).toMatchObject({
+      id: 'sess_shared',
+      username: 'pilot',
+      password: 'secret',
+      expires_at: newer,
+    });
+  });
+
+  test('two processes merge a password and a newer expiry under the session lock', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'session-two-process-'));
+    const configHome = path.join(home, '.config');
+    const moduleUrl = pathToFileURL(path.join(import.meta.dir, 'session.ts')).href;
+    const older = '2026-01-02T00:00:00.000Z';
+    const newer = '2026-06-06T00:00:00.000Z';
+    const sessionPath = path.join(configHome, 'spacemolt-cli', 'sessions', 'pilot.json');
+    const lockPath = `${sessionPath}.lock`;
+    const script = `
+      import * as fs from 'node:fs';
+      const { SessionManager } = await import(${JSON.stringify(moduleUrl)});
+      const originalRename = fs.promises.rename.bind(fs.promises);
+      fs.promises.rename = async (from, to) => {
+        await Bun.sleep(200);
+        return originalRename(from, to);
+      };
+      const manager = new SessionManager({
+        profile: 'pilot',
+        profileIsExplicit: true,
+        env: { HOME: ${JSON.stringify(home)}, XDG_CONFIG_HOME: ${JSON.stringify(configHome)} },
+      });
+      const session = {
+        id: 'sess_shared',
+        created_at: '2026-01-01T00:00:00.000Z',
+        expires_at: process.env.EXPIRES,
+      };
+      if (process.env.PASSWORD) {
+        session.username = 'pilot';
+        session.password = process.env.PASSWORD;
+      }
+      await manager.saveSession(session);
+    `;
+    const spawnSaver = (expires: string, password?: string) =>
+      Bun.spawn([process.execPath, '-e', script], {
+        env: {
+          ...process.env,
+          HOME: home,
+          XDG_CONFIG_HOME: configHome,
+          EXPIRES: expires,
+          ...(password ? { PASSWORD: password } : {}),
+        },
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+
+    const passwordChild = spawnSaver(older, 'secret');
+    const expiryChild = spawnSaver(newer);
+    let sawLock = false;
+    const started = Date.now();
+    let codes: Array<number | null> = [passwordChild.exitCode, expiryChild.exitCode];
+    while (Date.now() - started < 5_000) {
+      if (fs.existsSync(lockPath)) sawLock = true;
+      codes = [passwordChild.exitCode, expiryChild.exitCode];
+      if (codes.every((code) => code !== null)) break;
+      await Bun.sleep(2);
+    }
+    if (codes.some((code) => code === null)) {
+      passwordChild.kill();
+      expiryChild.kill();
+      await Promise.all([passwordChild.exited, expiryChild.exited]);
+      codes = [passwordChild.exitCode, expiryChild.exitCode];
+    }
+    const [passwordErr, expiryErr] = await Promise.all([
+      new Response(passwordChild.stderr).text(),
+      new Response(expiryChild.stderr).text(),
+    ]);
+    const detail = `${passwordErr}\n${expiryErr}`;
+    if (codes[0] !== 0 || codes[1] !== 0) {
+      throw new Error(`session savers exited ${codes.join(',')}\n${detail}`);
+    }
+    if (!sawLock) throw new Error(`session lock file did not appear\n${detail}`);
+    expect(JSON.parse(fs.readFileSync(sessionPath, 'utf8'))).toMatchObject({
+      password: 'secret',
+      username: 'pilot',
+      expires_at: newer,
+    });
+    expect(fs.existsSync(lockPath)).toBe(false);
+  }, 20_000);
+
+  test('saveSession of a new id drops the old password and keeps the later expiry', async () => {
+    const manager = new SessionManager({
+      profile: 'merge_new_id',
+      profileIsExplicit: true,
+      env: testEnv,
+    });
+    await manager.saveSession({
+      id: 'sess_old',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+      username: 'pilot',
+      password: 'secret',
+    });
+    await manager.saveSession({
+      id: 'sess_new',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-05-01T00:00:00.000Z',
+    });
+
+    const loaded = await manager.loadSession();
+    expect(loaded?.id).toBe('sess_new');
+    expect(loaded?.password).toBeUndefined();
+    expect(loaded?.username).toBeUndefined();
+    expect(loaded?.expires_at).toBe('2026-06-06T00:00:00.000Z');
+  });
+
+  test('saveSession recovers a lock owned by an exited process', async () => {
+    const manager = new SessionManager({
+      profile: 'merge_dead_lock',
+      profileIsExplicit: true,
+      env: testEnv,
+    });
+    const sessionPath = manager.getSessionPath();
+    fs.mkdirSync(path.dirname(sessionPath), { recursive: true });
+    const child = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'ignore' });
+    expect(await child.exited).toBe(0);
+    const lockPath = `${sessionPath}.lock`;
+    fs.writeFileSync(lockPath, `${child.pid} nonce-a\n`);
+
+    await manager.saveSession({
+      id: 'sess_dead',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+      password: 'secret',
+    });
+
+    expect(fs.existsSync(lockPath)).toBe(false);
+    expect(await manager.loadSession()).toMatchObject({ password: 'secret' });
+  });
+
+  test('saveSession fails clearly while a live process owns the session lock', async () => {
+    const manager = new SessionManager({
+      profile: 'merge_live_lock',
+      profileIsExplicit: true,
+      env: testEnv,
+    });
+    const session: Session = {
+      id: 'sess_live',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+      password: 'secret',
+    };
+    await manager.saveSession(session);
+    const sessionPath = manager.getSessionPath();
+    const before = fs.readFileSync(sessionPath);
+    const lockPath = `${sessionPath}.lock`;
+    fs.writeFileSync(lockPath, `${process.pid} nonce-a\n`);
+
+    await expect(manager.saveSession({ ...session, password: 'other' })).rejects.toThrow(
+      `Timed out waiting to update the session file at ${sessionPath}.`,
+    );
+    expect(fs.readFileSync(sessionPath)).toEqual(before);
+    expect(fs.existsSync(lockPath)).toBe(true);
+    fs.unlinkSync(lockPath);
+  });
+
+  test('saveSession recovers a live-pid session lock that is 31s old', async () => {
+    const manager = new SessionManager({
+      profile: 'merge_stale_pid',
+      profileIsExplicit: true,
+      env: testEnv,
+    });
+    const sessionPath = manager.getSessionPath();
+    fs.mkdirSync(path.dirname(sessionPath), { recursive: true });
+    const lockPath = `${sessionPath}.lock`;
+    fs.writeFileSync(lockPath, `${process.pid} not-this-acquire\n`);
+    const old = new Date(Date.now() - 31_000);
+    fs.utimesSync(lockPath, old, old);
+
+    await manager.saveSession({
+      id: 'sess_stale_pid',
+      created_at: '2026-01-01T00:00:00.000Z',
+      expires_at: '2026-06-06T00:00:00.000Z',
+      password: 'secret',
+    });
+
+    expect(fs.existsSync(lockPath)).toBe(false);
+    expect(await manager.loadSession()).toMatchObject({ id: 'sess_stale_pid', password: 'secret' });
+  });
+
+  test('staleAdvisoryLockDecision keeps a young live holder and a differing nonce', () => {
+    const match = {
+      observed: '10 nonce-a\n',
+      still: '10 nonce-a\n',
+      ownerAlive: true as boolean | undefined,
+      processStartedAfterLock: false,
+      ageMs: 1_000,
+      staleMs: 30_000,
+    };
+
+    expect(staleAdvisoryLockDecision(match)).toBe('keep');
+    expect(staleAdvisoryLockDecision({ ...match, processStartedAfterLock: true })).toBe('remove');
+    expect(staleAdvisoryLockDecision({ ...match, ageMs: 30_000 })).toBe('remove');
+    expect(staleAdvisoryLockDecision({ ...match, ownerAlive: false, ageMs: 0 })).toBe('remove');
+    expect(staleAdvisoryLockDecision({ ...match, still: '10 other\n' })).toBe('keep');
+    expect(staleAdvisoryLockDecision({ ...match, ownerAlive: false, still: '10 other\n' })).toBe('keep');
+    expect(staleAdvisoryLockDecision({ ...match, ownerAlive: undefined })).toBe('keep');
+    expect(staleAdvisoryLockDecision({ ...match, ownerAlive: undefined, ageMs: 30_000 })).toBe('remove');
+  });
+
+  test('lock owner stays alive for every kill error except ESRCH', () => {
+    const original = process.kill;
+    try {
+      process.kill = (() => {
+        const error = new Error('denied') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      }) as typeof process.kill;
+      expect(lockOwnerAlive(1)).toBe(true);
+
+      process.kill = (() => {
+        const error = new Error('denied') as NodeJS.ErrnoException;
+        error.code = 'EACCES';
+        throw error;
+      }) as typeof process.kill;
+      expect(lockOwnerAlive(1)).toBe(true);
+
+      process.kill = (() => {
+        const error = new Error('gone') as NodeJS.ErrnoException;
+        error.code = 'ESRCH';
+        throw error;
+      }) as typeof process.kill;
+      expect(lockOwnerAlive(1)).toBe(false);
+
+      process.kill = (() => {
+        throw new Error('other');
+      }) as typeof process.kill;
+      expect(lockOwnerAlive(1)).toBe(true);
+    } finally {
+      process.kill = original;
+    }
+
+    expect(lockOwnerAlive(Number.NaN)).toBeUndefined();
+    expect(lockOwnerAlive(0)).toBeUndefined();
+    expect(lockOwnerAlive(-1)).toBeUndefined();
+    expect(lockOwnerAlive(process.pid)).toBe(true);
+  });
+
+  test('proc stat start ticks are field 22 after the last parenthesis', () => {
+    const starttime = 5000;
+    const line = `42 (weird) name) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 ${starttime} 99`;
+    expect(procStatStartTicks(line)).toBe(starttime);
+    const btimeSec = 1_700_000_000;
+    const clkTck = 250;
+    const startedMs = (btimeSec + starttime / clkTck) * 1000;
+    expect(processStartedAfterLock({ statLine: line, btimeSec, clkTck, mtimeMs: startedMs - 1 })).toBe(true);
+    expect(processStartedAfterLock({ statLine: line, btimeSec, clkTck, mtimeMs: startedMs })).toBe(false);
+    expect(processStartedAfterLock({ statLine: '42 no-paren S 1', btimeSec, clkTck, mtimeMs: 0 })).toBe(false);
+    expect(processStartedAfterLock({ statLine: '42 (x) S 1 2', btimeSec, clkTck, mtimeMs: 0 })).toBe(false);
+    const notANumber = '42 (x) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 not-a-number';
+    expect(processStartedAfterLock({ statLine: notANumber, btimeSec, clkTck, mtimeMs: 0 })).toBe(false);
+  });
+
+  test('advisory lock release unlinks only its own token', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'lock-release-'));
+    const lockPath = path.join(home, 'session.json.lock');
+    const options = {
+      timeoutMs: 2_000,
+      retryMs: 10,
+      staleMs: 30_000,
+      timeoutError: 'timed out',
+    };
+    const release = await acquireAdvisoryLock(lockPath, options);
+    const token = fs.readFileSync(lockPath, 'utf8');
+    expect(token.startsWith(`${process.pid} `)).toBe(true);
+    expect(token.endsWith('\n')).toBe(true);
+    expect(token).not.toContain('secret');
+    fs.writeFileSync(lockPath, `${process.pid} other-nonce\n`);
+    await release();
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(`${process.pid} other-nonce\n`);
+    fs.unlinkSync(lockPath);
+
+    const releaseOwn = await acquireAdvisoryLock(lockPath, options);
+    await releaseOwn();
+    expect(fs.existsSync(lockPath)).toBe(false);
+
+    const releaseMissing = await acquireAdvisoryLock(lockPath, options);
+    fs.unlinkSync(lockPath);
+    await releaseMissing();
+    expect(fs.existsSync(lockPath)).toBe(false);
   });
 });

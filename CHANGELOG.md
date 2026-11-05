@@ -12,6 +12,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - An older response no longer replaces a newer name or location for the same cached id.
 
+- Concurrent login and another command on the same profile no longer drop the saved password or replace a newer session expiry with an older one.
+
 - Piped stdout larger than 64KB is no longer truncated.
 
 - `set_status` help says the status message is at most 64 characters and the clan tag is at most 4 characters. The server counts characters, not bytes (gameserver 0.654.2).
