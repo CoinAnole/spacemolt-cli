@@ -34,9 +34,9 @@ Clause 2 exits 1. That failure is the finding below. Clause 1 passes. Do not wea
 
 `bun run verify:id-cache-merge` prints `verify-id-cache-merge: pass` and `checks: 1458`. That is `response-newer failures: 0` and `stored-newer failures: 0`. It finishes in about half a second.
 
-`mergeHints` walks `[...existing, ...newHints]` and compares `seenAt` with `localeCompare`. When the stored sighting's `seenAt` is greater, that sighting is `hint` and the older response is `previous`. Otherwise the hint later in the walk stays `hint`. The stored name is `hint.name || previous.name`. Context is `compactContext({ ...previous.context, ...hint.context })`. `seenAt` is `hint.seenAt`. `sortNewest` only orders the list after the map is built. It does not choose the fields.
+`mergeHints` groups `[...existing, ...newHints]` by `kind:id:sourceCommand` and folds each group from oldest `seenAt` to newest. `localeCompare` ties keep walk order, so the later entry is last. Each step binds `hint` to that next sighting and `previous` to the fold so far. The stored name is `hint.name || previous.name`. Context is `compactContext({ ...previous.context, ...hint.context })`. `seenAt` is `hint.seenAt`. A field copied from an older sighting is not treated as one the newer sighting reported. `sortNewest` only orders the saved list. It does not choose the fields.
 
-The file keeps `location=sol` at `2026-05-18T00:01:00.000Z` when an older `list_ships` response carries `location=earth_station`. An empty newer name does not wipe `Manny`. A context key only the older sighting had stays. A context key on both comes from the newer sighting.
+The file keeps `location=sol` at `2026-05-18T00:01:00.000Z` when an older `list_ships` response carries `location=earth_station`. An empty newer name does not wipe `Manny`. A context key only the older sighting had stays. A context key on both comes from the newer sighting. Two hints with the same `seenAt` in one `get_system` keep the later poi's `type` and `system_id`, plus `has_base` from the earlier poi and the newer cache's `base_id`, name, and `seenAt`. An empty newer name keeps the later of two older `list_ships` rows, including that row's `is_active`.
 
 Deleting `|| previous.name`, so the line is `name: hint.name`, is a different failure. `response-newer failures: 162` and `stored-newer failures: 162`. The first failure is `response-newer`: the stored name is `Manny`, the newer response name is empty, and the file's name is empty. Restore `hint.name || previous.name`. `response-newer failures` returns to 0.
 
@@ -88,7 +88,7 @@ Put `MergeExisting = TRUE` back. The 18-step path whose first load step is "sees
 Run clause 1, and read clause 2 with `/statechart`, if a diff touches `mergeHints`, `cacheIdsFromResponse`, `loadIdCacheSync`, or `saveIdCache` in `src/id-cache.ts`.
 
 ```bash
-git diff f791142d560807aa34a2987365e0c6f825c5267c -- src/id-cache.ts
+git diff 43e9701086a22a97fe42322c95e63b7ca72379c7 -- src/id-cache.ts
 ```
 
 Replace that hash when the coverage record below moves. A change only in `resolveCachedId` or the match helpers is `verify-id-resolution`, not this check. A change only in `extractIdHints` can make clause 1 stop before the merge and print that the `list_ships` response did not extract the sighting the bound asked for. That is a modeling error until you point the response shape at the new extractor. Do not move the sync commit for that print alone.
@@ -97,7 +97,7 @@ Replace that hash when the coverage record below moves. A change only in `resolv
 
 | What | Where |
 | --- | --- |
-| Walk stored hints, then the response, and keep the later `seenAt` | `mergeHints`. The key is `kind:id:sourceCommand`. `hint` is the newer sighting and `previous` is the older one. Equal `seenAt` does not swap, so the hint later in the walk wins. Clause 1 calls it through `cacheIdsFromResponse` |
+| Fold one key from oldest `seenAt` to newest | `mergeHints`. The key is `kind:id:sourceCommand`. Ties keep walk order, so the later entry is last. `hint` is that next sighting and `previous` is the fold so far. Clause 1 calls it through `cacheIdsFromResponse` |
 | Empty name keeps the other name | `name: hint.name \|\| previous.name` after that binding |
 | Context overlay | `compactContext({ ...previous.context, ...hint.context })`. `seenAt` is `hint.seenAt` |
 | Order the saved list | `sortNewest`. It does not choose name or context |
@@ -106,7 +106,7 @@ Replace that hash when the coverage record below moves. A change only in `resolv
 | Replace `<profile>.ids.json` | `Rename` is `rename(tmpPath, cachePath)`. `ChmodFinal` is `hardenPermissions` on the cache path after that |
 | Load and keep keys already in the snapshot | `MergeExisting`. `FALSE` is `SkipLoad` and a rename of only this save's key |
 
-Sync commit: `f791142d560807aa34a2987365e0c6f825c5267c`. That commit is the `mergeHints` change clause 1 describes. Re-read at that commit: `mergeHints` compares `seenAt`, then keeps `name: hint.name || previous.name` with `hint` the newer sighting and `previous` the older one. No filesystem call was added or removed. Clause 2's 18-step path is still the current product and is not a reason to refuse this hash. The checker and this skill do not change `mergeHints`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints a `location=sol` failure does not by itself mean a new edit was checked. The lock PR is what re-runs `MergeExisting = FALSE` and moves the hash again.
+Sync commit: `43e9701086a22a97fe42322c95e63b7ca72379c7`. That commit is the `mergeHints` change clause 1 describes. Re-read at that commit: hints for one key are folded oldest `seenAt` first, ties by walk order, then `name: hint.name || previous.name` with `hint` the next sighting and `previous` the fold so far. No filesystem call was added or removed. Clause 2's 18-step path is still the current product and is not a reason to refuse this hash. The checker and this skill do not change `mergeHints`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints a `location=sol` failure does not by itself mean a new edit was checked. The lock PR is what re-runs `MergeExisting = FALSE` and moves the hash again.
 
 ## Bounds and assumptions
 
