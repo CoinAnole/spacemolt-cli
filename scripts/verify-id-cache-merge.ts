@@ -219,12 +219,11 @@ async function main(): Promise<void> {
                   const older = newer === loadedHint ? responseHint : loadedHint;
                   const name = expectedName(newer, older);
                   const context = expectedContext(newer, older);
-                  const laterSeen = storedIsNewer ? loadedHint.seenAt : responseHint.seenAt;
                   if (
                     actual &&
                     (actual.name ?? '') === name &&
                     sameContext(actual.context, context) &&
-                    actual.seenAt === laterSeen
+                    actual.seenAt === newer.seenAt
                   )
                     continue;
                   counts[order] += 1;

@@ -615,29 +615,36 @@ export function printWhereCanI(
 }
 
 function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
-  const merged = new Map<string, IdHint>();
-  for (const incoming of [...existing, ...newHints]) {
-    const key = `${incoming.kind}:${incoming.id}:${incoming.sourceCommand}`;
-    const stored = merged.get(key);
-    if (!stored) {
-      merged.set(key, incoming);
-      continue;
-    }
-    let hint = incoming;
-    let previous = stored;
-    if (previous.seenAt.localeCompare(hint.seenAt) > 0) {
-      hint = stored;
-      previous = incoming;
-    }
-    merged.set(key, {
-      ...previous,
-      ...hint,
-      name: hint.name || previous.name,
-      seenAt: hint.seenAt,
-      context: compactContext({ ...previous.context, ...hint.context }),
-    });
+  const grouped = new Map<string, IdHint[]>();
+  for (const hint of [...existing, ...newHints]) {
+    const key = `${hint.kind}:${hint.id}:${hint.sourceCommand}`;
+    const group = grouped.get(key);
+    if (group) group.push(hint);
+    else grouped.set(key, [hint]);
   }
-  return sortNewest([...merged.values()]);
+
+  const merged: IdHint[] = [];
+  for (const group of grouped.values()) {
+    // Oldest first so a copied field is not later treated as the newer sighting's own.
+    const ordered = group
+      .map((hint, index) => ({ hint, index }))
+      .sort((left, right) => left.hint.seenAt.localeCompare(right.hint.seenAt) || left.index - right.index);
+    const first = ordered[0];
+    if (!first) continue;
+    let previous = first.hint;
+    for (const entry of ordered.slice(1)) {
+      const hint = entry.hint;
+      previous = {
+        ...previous,
+        ...hint,
+        name: hint.name || previous.name,
+        seenAt: hint.seenAt,
+        context: compactContext({ ...previous.context, ...hint.context }),
+      };
+    }
+    merged.push(previous);
+  }
+  return sortNewest(merged);
 }
 
 function dedupeHints(hints: IdHint[]): IdHint[] {

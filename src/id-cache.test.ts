@@ -650,6 +650,109 @@ describe('id cache', () => {
     ]);
   });
 
+  test('a stale get_system keeps the later poi fields and the newer cache', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-double-poi-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'poi',
+              id: 'sol_earth',
+              name: 'Earth Station',
+              sourceCommand: 'get_system',
+              seenAt: '2026-05-18T00:01:00.000Z',
+              context: { base_id: 'earth_station' },
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse(
+      'get_system',
+      {
+        structuredContent: {
+          system: {
+            id: 'sol',
+            name: 'Sol',
+            pois: [{ id: 'sol_earth', name: 'Earth', type: 'planet', has_base: true }],
+          },
+          poi: { id: 'sol_earth', name: 'Surface', type: 'station', system_id: 'sol' },
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+
+    expect(loadIdCacheSync(sessionPath).find((hint) => hint.kind === 'poi' && hint.id === 'sol_earth')).toEqual({
+      kind: 'poi',
+      id: 'sol_earth',
+      name: 'Earth Station',
+      sourceCommand: 'get_system',
+      seenAt: '2026-05-18T00:01:00.000Z',
+      context: { type: 'station', has_base: true, system_id: 'sol', base_id: 'earth_station' },
+    });
+  });
+
+  test('an empty newer name keeps the later of two older list_ships rows', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-two-older-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'ship',
+              id: 'ship-1',
+              name: '',
+              sourceCommand: 'list_ships',
+              seenAt: '2026-05-18T00:01:00.000Z',
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse(
+      'list_ships',
+      {
+        structuredContent: {
+          ships: [
+            { id: 'ship-1', name: 'First', is_active: true },
+            { id: 'ship-1', name: 'Second', is_active: false },
+          ],
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+
+    expect(loadIdCacheSync(sessionPath)).toEqual([
+      {
+        kind: 'ship',
+        id: 'ship-1',
+        name: 'Second',
+        sourceCommand: 'list_ships',
+        seenAt: '2026-05-18T00:01:00.000Z',
+        context: { is_active: false },
+      },
+    ]);
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
