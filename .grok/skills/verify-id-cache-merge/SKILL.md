@@ -19,7 +19,7 @@ Harm: a name that used to be ambiguous becomes unique, so the next `attack`, `tr
 
 Two clauses. Each check says which clause it is.
 
-1. Name and context for one key come from the latest `seenAt`. An empty name does not wipe a name the other sighting had. A context key only on the older sighting is kept. A context key on both comes from the newer sighting.
+1. Name and context for one key come from the latest `seenAt`. An empty name does not wipe a name the other sighting had. A context key only on the older sighting is kept. A context key on both comes from the newer sighting. The stored `seenAt` is that later timestamp. That is the same sighting, not a new promise.
 2. Two completed `cacheIdsFromResponse` saves of different keys both still contain their keys.
 
 Clause 1 is a data invariant of `mergeHints`. Nothing model-checks TypeScript. `mergeHints` is not exported, and this check does not copy it or export it. `scripts/verify-id-cache-merge.ts` writes one stored sighting, then calls the real `cacheIdsFromResponse`, which loads that file and calls `mergeHints`.
@@ -28,28 +28,17 @@ Clause 2 is which order the filesystem calls can run in. It is a TLA+ model, che
 
 ## The current code breaks it
 
-Both checks exit 1. That failure is the finding below. Do not weaken either clause, the bound, or `MergeExisting`, to make a run pass. Do not change product merge behavior unless the user asked.
+Clause 2 exits 1. That failure is the finding below. Clause 1 passes. Do not weaken either clause, the bound, or `MergeExisting`, to make a run pass. Do not change product merge behavior unless the user asked.
 
 ### Clause 1
 
-`bun run verify:id-cache-merge` prints `verify-id-cache-merge: fail`. `response-newer failures: 0`. `stored-newer failures: 386`. `checks: 1458`. It finishes in about 0.6 seconds.
+`bun run verify:id-cache-merge` prints `verify-id-cache-merge: pass` and `checks: 1458`. That is `response-newer failures: 0` and `stored-newer failures: 0`. It finishes in about half a second.
 
-The first failure:
+`mergeHints` walks `[...existing, ...newHints]` and compares `seenAt` with `localeCompare`. When the stored sighting's `seenAt` is greater, that sighting is `hint` and the older response is `previous`. Otherwise the hint later in the walk stays `hint`. The stored name is `hint.name || previous.name`. Context is `compactContext({ ...previous.context, ...hint.context })`. `seenAt` is `hint.seenAt`. `sortNewest` only orders the list after the map is built. It does not choose the fields.
 
-```
-stored-newer
-stored list_ships ship ship-1 name=Manny is_active=true location=sol seenAt=2026-05-18T00:01:00.000Z
-response name=Manny is_active=true location=earth_station seenAt=2026-05-18T00:00:00.000Z
-expected name=Manny is_active=true location=sol from seenAt=2026-05-18T00:01:00.000Z
-actual name=Manny is_active=true location=earth_station seenAt=2026-05-18T00:00:00.000Z
-The stored context is is_active=true location=earth_station. The context from seenAt 2026-05-18T00:01:00.000Z, keeping keys only the older sighting had, is is_active=true location=sol.
-```
+The file keeps `location=sol` at `2026-05-18T00:01:00.000Z` when an older `list_ships` response carries `location=earth_station`. An empty newer name does not wipe `Manny`. A context key only the older sighting had stays. A context key on both comes from the newer sighting.
 
-In `mergeHints` that is: `cacheIdsFromResponse` calls `mergeHints(extracted, existing)`. The walk is `[...existing, ...newHints]`. The response hint is later, so it overwrites. `location` becomes `earth_station` and `seenAt` becomes the older timestamp. The code does not compare `seenAt`. `name` stays `Manny` only because both sightings have that name. When the later hint's name is a different non-empty string, `hint.name || previous.name` stores that older name too. `sortNewest` only orders the list after the map is built. It does not choose the fields.
-
-The 729 pairs where the response is the newer sighting match the clause, including an empty response name and a context key that only the stored sighting has. The 386 failures are the pairs where the stored sighting is newer and the older response carries a different non-empty name or a different value for a shared context key.
-
-Deleting `|| previous.name`, so the line is `name: hint.name`, is a different failure. `response-newer failures: 162` and `stored-newer failures: 484`. The first failure is `response-newer`: the stored name is `Manny`, the newer response name is empty, and the file's name is empty. Restore `hint.name || previous.name`. The first failure returns to the `location=sol` case above, with `response-newer failures: 0`.
+Deleting `|| previous.name`, so the line is `name: hint.name`, is a different failure. `response-newer failures: 162` and `stored-newer failures: 162`. The first failure is `response-newer`: the stored name is `Manny`, the newer response name is empty, and the file's name is empty. Restore `hint.name || previous.name`. `response-newer failures` returns to 0.
 
 ### Clause 2
 
@@ -99,7 +88,7 @@ Put `MergeExisting = TRUE` back. The 18-step path whose first load step is "sees
 Run clause 1, and read clause 2 with `/statechart`, if a diff touches `mergeHints`, `cacheIdsFromResponse`, `loadIdCacheSync`, or `saveIdCache` in `src/id-cache.ts`.
 
 ```bash
-git diff fbd4f141c76d47fc638fc87120805a902195ebcc -- src/id-cache.ts
+git diff f791142d560807aa34a2987365e0c6f825c5267c -- src/id-cache.ts
 ```
 
 Replace that hash when the coverage record below moves. A change only in `resolveCachedId` or the match helpers is `verify-id-resolution`, not this check. A change only in `extractIdHints` can make clause 1 stop before the merge and print that the `list_ships` response did not extract the sighting the bound asked for. That is a modeling error until you point the response shape at the new extractor. Do not move the sync commit for that print alone.
@@ -108,16 +97,16 @@ Replace that hash when the coverage record below moves. A change only in `resolv
 
 | What | Where |
 | --- | --- |
-| Walk stored hints, then the response, and overwrite one key | `mergeHints`. The key is `kind:id:sourceCommand`. Clause 1 calls it through `cacheIdsFromResponse` |
-| Empty name keeps the other name | `name: hint.name \|\| previous.name` |
-| Context overlay | `compactContext({ ...previous.context, ...hint.context })` |
+| Walk stored hints, then the response, and keep the later `seenAt` | `mergeHints`. The key is `kind:id:sourceCommand`. `hint` is the newer sighting and `previous` is the older one. Equal `seenAt` does not swap, so the hint later in the walk wins. Clause 1 calls it through `cacheIdsFromResponse` |
+| Empty name keeps the other name | `name: hint.name \|\| previous.name` after that binding |
+| Context overlay | `compactContext({ ...previous.context, ...hint.context })`. `seenAt` is `hint.seenAt` |
 | Order the saved list | `sortNewest`. It does not choose name or context |
 | Read the cache | `Exists` is `existsSync` in `loadIdCacheSync`. A missing file is `[]` and is not read. `ChmodCache` and `Read` are `hardenPermissions` and `readFileSync` when the file is there |
 | See the directory, then the private temp file | `DirExists`, `ChmodDir`, `OpenTemp`, `WriteTemp`, `SyncTemp`, `CloseTemp` are `existsSync` on the parent, `hardenPermissions` on that directory, and `open` / `writeFile` / `sync` / `close` on the temp path |
 | Replace `<profile>.ids.json` | `Rename` is `rename(tmpPath, cachePath)`. `ChmodFinal` is `hardenPermissions` on the cache path after that |
 | Load and keep keys already in the snapshot | `MergeExisting`. `FALSE` is `SkipLoad` and a rename of only this save's key |
 
-Sync commit: `fbd4f141c76d47fc638fc87120805a902195ebcc`. That commit is the product code this describes. The checker and this skill do not change `mergeHints`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints the `location=sol` failure and this 18-step path does not by itself mean a new edit was checked.
+Sync commit: `f791142d560807aa34a2987365e0c6f825c5267c`. That commit is the `mergeHints` change clause 1 describes. Re-read at that commit: `mergeHints` compares `seenAt`, then keeps `name: hint.name || previous.name` with `hint` the newer sighting and `previous` the older one. No filesystem call was added or removed. Clause 2's 18-step path is still the current product and is not a reason to refuse this hash. The checker and this skill do not change `mergeHints`. Move the hash only after the update procedure below, and only to a commit whose covered functions you have re-read. A run that still prints a `location=sol` failure does not by itself mean a new edit was checked. The lock PR is what re-runs `MergeExisting = FALSE` and moves the hash again.
 
 ## Bounds and assumptions
 
@@ -139,7 +128,7 @@ Assumptions:
 
 Clause 1: replay the printed stored sighting and the response through `cacheIdsFromResponse`. The actual line is what `loadIdCacheSync` returned.
 
-The `stored-newer` location failure above is a bug in the current code. Say it as: the file had `location=sol` at the later `seenAt`, the older `list_ships` response carried `earth_station`, and `mergeHints` stored `earth_station` because the response came later in `[...existing, ...newHints]`. Do not change product code unless the user asked.
+A `stored-newer` location failure is a bug. Say it as: the file had `location=sol` at the later `seenAt`, the older `list_ships` response carried `earth_station`, and the file kept `earth_station`. Do not change product code unless the user asked.
 
 A `response-newer` failure is a new bug, or the empty-name scratch. A shape line that says the `list_ships` response did not extract the bound's sighting is a modeling error. Point the ship object at what `extractIdHints` now emits, then rerun. If the merged fields are still wrong for that sighting, it is a bug.
 
@@ -154,9 +143,9 @@ It is a modeling error when a save reads the other save's temp file, or when `re
 1. Re-read `mergeHints`, `cacheIdsFromResponse`, `loadIdCacheSync`, and `saveIdCache` at the new commit. Write down any new or removed filesystem call between the cache `existsSync` and the final `hardenPermissions`, and any change to which sighting supplies `name`, `context`, or `seenAt`.
 2. Edit `scripts/verify-id-cache-merge.ts` and `verification/id-cache-merge/IdCacheMerge.tla` from that reading. Keep one filesystem call as one action. Change clause 1 or `BothKeys` only when the product change says the promise changed (a comment, a test, `CHANGELOG.md`, or the commit message). Record the old sentence and the new sentence, and cite that evidence. Keep `MergeExisting = TRUE` while `loadIdCacheSync` and the walk over `existing` are in the code. Leave `MAX_HINTS` out of the bound.
 3. Run `bun run verify:id-cache-merge`. Read the model with `/statechart`, using `verification/id-cache-merge/view.mjs` for the labels.
-4. Break the new behavior the way the code would break. For the empty name, delete `|| previous.name`. Confirm the checker fails with the `response-newer` empty-name failure. Put the `||` back. For the load, set `MergeExisting = FALSE`. Confirm `/statechart` fails with "does not read the id cache". Put `TRUE` back. Confirm clause 1's first failure is the `location=sol` case and clause 2's first load step is "sees that the id cache is not there yet".
+4. This commit's step 4 is the empty-name scratch only. Delete `|| previous.name` so the line is `name: hint.name`. Confirm the checker fails, and the first failure is `response-newer`: the stored name is `Manny`, the newer response name is empty, and the file's name is empty. Put the `||` back. Confirm `response-newer failures` is 0. Clause 2's 18-step path is still the current product and is not a reason to refuse this hash. The hash points at the `mergeHints` commit, whose filesystem calls are unchanged. The lock PR is what re-runs `MergeExisting = FALSE` and moves the hash again.
 5. Move the sync commit in this skill only after steps 1–4. If step 1 found a call or a field rule the check does not cover, do not move the hash.
 
 ## What a pass does not cover
 
-A pass is not the current result. Both clauses fail. A future pass would cover this bound and this model only: one ship key's name and context for the pairs above, and two saves of two different keys. It would not cover the 500-hint cap, equal `seenAt`, a third save, a failed `rename`, or every command `extractIdHints` can parse.
+Clause 1 passes for this bound only: one ship key's name, context, and `seenAt` for the pairs above. It does not cover the 500-hint cap, equal `seenAt`, a name of spaces, numeric context, or every command `extractIdHints` can parse. Clause 2 still fails. A future pass of that model would cover two saves of two different keys only. It would not cover a third save or a failed `rename`.
