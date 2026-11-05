@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { cargoFixture, nearbyFixture, systemInfoFixture, viewMarketFixture } from './display/formatter-fixtures';
 import {
   cacheIdsFromResponse,
@@ -21,7 +22,48 @@ import {
   saveIdCache,
   searchItemHints,
   softIdResolutionPolicy,
+  staleAdvisoryLockDecision,
 } from './id-cache';
+
+const OVERLAPPING_SAVE_KEYS = ['poi:sol_earth:get_system', 'ship:ship-1:list_ships', 'system:sol:get_system'];
+
+function cachedIdKeys(sessionPath: string): string[] {
+  return loadIdCacheSync(sessionPath)
+    .map((hint) => `${hint.kind}:${hint.id}:${hint.sourceCommand}`)
+    .sort();
+}
+
+function overlapSaveScript(moduleUrl: string): string {
+  return [
+    "import * as fs from 'node:fs';",
+    `import { cacheIdsFromResponse } from ${JSON.stringify(moduleUrl)};`,
+    'const rename = fs.promises.rename.bind(fs.promises);',
+    'fs.promises.rename = async (from, to) => {',
+    '  await Bun.sleep(200);',
+    '  return rename(from, to);',
+    '};',
+    'const kind = process.argv[2];',
+    'const sessionPath = process.argv[3];',
+    "if (kind === 'ship') {",
+    '  await cacheIdsFromResponse(',
+    "    'list_ships',",
+    "    { structuredContent: { ships: [{ id: 'ship-1', name: 'Manny' }] } },",
+    '    sessionPath,',
+    '  );',
+    '} else {',
+    '  await cacheIdsFromResponse(',
+    "    'get_system',",
+    '    {',
+    '      structuredContent: {',
+    "        system: { id: 'sol', name: 'Sol', pois: [{ id: 'sol_earth', name: 'Earth' }] },",
+    '      },',
+    '    },',
+    '    sessionPath,',
+    '  );',
+    '}',
+    '',
+  ].join('\n');
+}
 
 describe('id cache', () => {
   test('extracts POI and system IDs from get_system output', () => {
@@ -1337,5 +1379,83 @@ describe('id cache', () => {
     expect(colored).toContain('resolved');
     expect(colored).toContain('find_route.id "cro" → "crosshaven" (prefix)');
     expect(colored).not.toContain('Error:');
+  });
+
+  test('a live holder that started before the lock and is younger than 30s stays', () => {
+    const lockMtimeMs = 1_700_000_000_000;
+    expect(
+      staleAdvisoryLockDecision({
+        ownerAlive: true,
+        startedAtMs: lockMtimeMs - 5_000,
+        lockMtimeMs,
+        nowMs: lockMtimeMs + 1_000,
+        staleMs: 30_000,
+      }),
+    ).toBe('keep');
+  });
+
+  test('overlapping list_ships and get_system saves keep the ship, the poi, and the system', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-overlap-'));
+    const sessionPath = path.join(tempDir, 'pilot.json');
+
+    await Promise.all([
+      cacheIdsFromResponse(
+        'list_ships',
+        { structuredContent: { ships: [{ id: 'ship-1', name: 'Manny' }] } },
+        sessionPath,
+      ),
+      cacheIdsFromResponse(
+        'get_system',
+        {
+          structuredContent: {
+            system: { id: 'sol', name: 'Sol', pois: [{ id: 'sol_earth', name: 'Earth' }] },
+          },
+        },
+        sessionPath,
+      ),
+    ]);
+
+    expect(cachedIdKeys(sessionPath)).toEqual([...OVERLAPPING_SAVE_KEYS].sort());
+  });
+
+  test('two processes that save together keep both ids and take the lock file', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-procs-'));
+    const sessionPath = path.join(tempDir, 'pilot.json');
+    const lockPath = `${getIdCachePath(sessionPath)}.lock`;
+    const scriptPath = path.join(tempDir, 'overlap-save.ts');
+    const moduleUrl = pathToFileURL(path.join(import.meta.dir, 'id-cache.ts')).href;
+    fs.writeFileSync(scriptPath, overlapSaveScript(moduleUrl));
+
+    const ship = Bun.spawn([process.execPath, scriptPath, 'ship', sessionPath], { stdout: 'pipe', stderr: 'pipe' });
+    const poi = Bun.spawn([process.execPath, scriptPath, 'poi', sessionPath], { stdout: 'pipe', stderr: 'pipe' });
+
+    let sawLock = false;
+    let stop = false;
+    const watch = (async () => {
+      while (!stop) {
+        if (fs.existsSync(lockPath)) sawLock = true;
+        await Bun.sleep(5);
+      }
+    })();
+
+    const result = await Promise.race([
+      Promise.all([ship.exited, poi.exited]).then((codes) => ({ kind: 'done' as const, codes })),
+      Bun.sleep(8_000).then(() => ({ kind: 'timeout' as const })),
+    ]);
+    stop = true;
+    await watch;
+
+    const shipErr = await new Response(ship.stderr).text();
+    const poiErr = await new Response(poi.stderr).text();
+    if (result.kind === 'timeout') {
+      ship.kill();
+      poi.kill();
+      throw new Error(`timed out waiting for overlapping id-cache saves\n${shipErr}\n${poiErr}`);
+    }
+    if (result.codes[0] !== 0 || result.codes[1] !== 0) {
+      throw new Error(`overlap saves failed\nship ${result.codes[0]}: ${shipErr}\npoi ${result.codes[1]}: ${poiErr}`);
+    }
+    if (!sawLock) throw new Error(`missing lock file ${lockPath}`);
+    expect(cachedIdKeys(sessionPath)).toEqual([...OVERLAPPING_SAVE_KEYS].sort());
   });
 });
