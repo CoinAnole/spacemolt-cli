@@ -258,22 +258,17 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
 
 let cachedClkTck: number | undefined;
 
-function clkTck(): number | undefined {
-  if (cachedClkTck !== undefined) return cachedClkTck;
-  if (process.platform !== 'linux') return undefined;
-  const result = Bun.spawnSync(['getconf', 'CLK_TCK'], { stdout: 'pipe', stderr: 'pipe' });
-  if (result.exitCode !== 0) return undefined;
-  const value = Number(new TextDecoder().decode(result.stdout).trim());
-  if (!Number.isFinite(value) || value <= 0) return undefined;
-  cachedClkTck = value;
-  return cachedClkTck;
-}
-
 // Field 22 is the token after the last ")": comm itself may contain ")" and spaces.
 function processStartTimeMs(pid: number): number | undefined {
   if (process.platform !== 'linux') return undefined;
-  const ticks = clkTck();
-  if (ticks === undefined) return undefined;
+  if (cachedClkTck === undefined) {
+    const result = Bun.spawnSync(['getconf', 'CLK_TCK'], { stdout: 'pipe', stderr: 'pipe' });
+    if (result.exitCode !== 0) return undefined;
+    const value = Number(new TextDecoder().decode(result.stdout).trim());
+    if (!Number.isFinite(value) || value <= 0) return undefined;
+    cachedClkTck = value;
+  }
+  const ticks = cachedClkTck;
   let stat: string;
   let procStat: string;
   try {
@@ -297,17 +292,6 @@ function processStartTimeMs(pid: number): number | undefined {
   if (!Number.isFinite(btimeSec)) return undefined;
   const startedAtMs = (btimeSec + starttime / ticks) * 1000;
   return Number.isFinite(startedAtMs) ? startedAtMs : undefined;
-}
-
-function lockOwnerAlive(pid: number): boolean | undefined {
-  if (!Number.isSafeInteger(pid) || pid <= 0) return undefined;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    if (isErrnoException(error) && error.code === 'ESRCH') return false;
-    return true;
-  }
 }
 
 export function staleAdvisoryLockDecision(input: {
@@ -334,7 +318,18 @@ function removeStaleIdCacheLock(lockPath: string): boolean {
   }
 
   const pid = Number.parseInt(observed, 10);
-  const ownerAlive = lockOwnerAlive(pid);
+  let ownerAlive: boolean | undefined;
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    ownerAlive = undefined;
+  } else {
+    try {
+      process.kill(pid, 0);
+      ownerAlive = true;
+    } catch (error) {
+      if (isErrnoException(error) && error.code === 'ESRCH') ownerAlive = false;
+      else ownerAlive = true;
+    }
+  }
   let lockMtimeMs: number;
   try {
     lockMtimeMs = fs.statSync(lockPath).mtimeMs;
