@@ -616,17 +616,24 @@ export function printWhereCanI(
 
 function mergeHints(newHints: IdHint[], existing: IdHint[]): IdHint[] {
   const merged = new Map<string, IdHint>();
-  for (const hint of [...existing, ...newHints]) {
-    const key = `${hint.kind}:${hint.id}:${hint.sourceCommand}`;
-    const previous = merged.get(key);
-    if (!previous) {
-      merged.set(key, hint);
+  for (const incoming of [...existing, ...newHints]) {
+    const key = `${incoming.kind}:${incoming.id}:${incoming.sourceCommand}`;
+    const stored = merged.get(key);
+    if (!stored) {
+      merged.set(key, incoming);
       continue;
+    }
+    let hint = incoming;
+    let previous = stored;
+    if (previous.seenAt.localeCompare(hint.seenAt) > 0) {
+      hint = stored;
+      previous = incoming;
     }
     merged.set(key, {
       ...previous,
       ...hint,
       name: hint.name || previous.name,
+      seenAt: hint.seenAt,
       context: compactContext({ ...previous.context, ...hint.context }),
     });
   }

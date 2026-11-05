@@ -511,6 +511,145 @@ describe('id cache', () => {
     );
   });
 
+  test('an older list_ships response does not replace a newer location', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-stored-newer-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'ship',
+              id: 'ship-1',
+              name: 'Manny',
+              sourceCommand: 'list_ships',
+              seenAt: '2026-05-18T00:01:00.000Z',
+              context: { is_active: true, location: 'sol' },
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse(
+      'list_ships',
+      { structuredContent: { ships: [{ id: 'ship-1', name: 'Manny', is_active: true, location: 'earth_station' }] } },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+
+    expect(loadIdCacheSync(sessionPath)).toEqual([
+      {
+        kind: 'ship',
+        id: 'ship-1',
+        name: 'Manny',
+        sourceCommand: 'list_ships',
+        seenAt: '2026-05-18T00:01:00.000Z',
+        context: { is_active: true, location: 'sol' },
+      },
+    ]);
+  });
+
+  test('an empty newer name does not wipe a stored name', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-empty-name-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'ship',
+              id: 'ship-1',
+              name: 'Manny',
+              sourceCommand: 'list_ships',
+              seenAt: '2026-05-18T00:00:00.000Z',
+              context: { location: 'sol' },
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse(
+      'list_ships',
+      { structuredContent: { ships: [{ id: 'ship-1', location: 'earth_station' }] } },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:01:00.000Z') },
+    );
+
+    expect(loadIdCacheSync(sessionPath)).toEqual([
+      {
+        kind: 'ship',
+        id: 'ship-1',
+        name: 'Manny',
+        sourceCommand: 'list_ships',
+        seenAt: '2026-05-18T00:01:00.000Z',
+        context: { location: 'earth_station' },
+      },
+    ]);
+  });
+
+  test('a context key only the older sighting had is kept', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-older-context-'));
+    const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');
+    const cachePath = getIdCachePath(sessionPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(
+      cachePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'ship',
+              id: 'ship-1',
+              name: 'Manny',
+              sourceCommand: 'list_ships',
+              seenAt: '2026-05-18T00:01:00.000Z',
+              context: { location: 'sol' },
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    await cacheIdsFromResponse(
+      'list_ships',
+      {
+        structuredContent: {
+          ships: [{ id: 'ship-1', name: 'Rock Skipper', is_active: false, location: 'earth_station' }],
+        },
+      },
+      sessionPath,
+      { now: () => new Date('2026-05-18T00:00:00.000Z') },
+    );
+
+    expect(loadIdCacheSync(sessionPath)).toEqual([
+      {
+        kind: 'ship',
+        id: 'ship-1',
+        name: 'Manny',
+        sourceCommand: 'list_ships',
+        seenAt: '2026-05-18T00:01:00.000Z',
+        context: { is_active: false, location: 'sol' },
+      },
+    ]);
+  });
+
   test('persists hints next to the active session path', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-id-cache-'));
     const sessionPath = path.join(tempDir, 'sessions', 'pilot.json');

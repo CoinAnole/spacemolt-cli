@@ -138,6 +138,9 @@ function failureText(
         `The stored context is ${contextText(actual.context)}. The context from seenAt ${newerSeen}, keeping keys only the older sighting had, is ${contextText(expectedContextValue)}.`,
       );
     }
+    if (actual.seenAt !== newerSeen) {
+      mismatches.push(`The stored seenAt is ${actual.seenAt}. The later seenAt is ${newerSeen}.`);
+    }
   }
   const actualLine = actual
     ? `actual name=${nameText(actual.name)} ${contextText(actual.context)} seenAt=${actual.seenAt}`
@@ -216,7 +219,14 @@ async function main(): Promise<void> {
                   const older = newer === loadedHint ? responseHint : loadedHint;
                   const name = expectedName(newer, older);
                   const context = expectedContext(newer, older);
-                  if (actual && (actual.name ?? '') === name && sameContext(actual.context, context)) continue;
+                  const laterSeen = storedIsNewer ? loadedHint.seenAt : responseHint.seenAt;
+                  if (
+                    actual &&
+                    (actual.name ?? '') === name &&
+                    sameContext(actual.context, context) &&
+                    actual.seenAt === laterSeen
+                  )
+                    continue;
                   counts[order] += 1;
                   remember(examples, order, failureText(order, loadedHint, responseHint, actual, name, context));
                 }

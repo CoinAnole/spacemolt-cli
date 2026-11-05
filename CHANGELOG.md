@@ -10,6 +10,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 - Follow mode prints a notification with an empty id once per poll.
 
+- An older response no longer replaces a newer name or location for the same cached id.
+
 - Piped stdout larger than 64KB is no longer truncated.
 
 - `set_status` help says the status message is at most 64 characters and the clan tag is at most 4 characters. The server counts characters, not bytes (gameserver 0.654.2).
