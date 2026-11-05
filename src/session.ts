@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { acquireAdvisoryLock } from './advisory-lock.ts';
 import type { CliWriter } from './cli-context.ts';
 import { ServiceUnavailableError } from './errors.ts';
 import { colorsForPlain } from './output-style.ts';
@@ -24,6 +25,9 @@ const SESSION_DIR_MODE = 0o700;
 const CONFIG_LOCK_RETRY_MS = 10;
 const CONFIG_LOCK_TIMEOUT_MS = 2_000;
 const CONFIG_LOCK_STALE_MS = 30_000;
+const SESSION_LOCK_RETRY_MS = 10;
+const SESSION_LOCK_TIMEOUT_MS = 2_000;
+const SESSION_LOCK_STALE_MS = 30_000;
 const CONFIG_LOCK_SLEEP = new Int32Array(new SharedArrayBuffer(4));
 export type EnvLike = Record<string, string | undefined>;
 
@@ -373,6 +377,51 @@ export function showDefaultProfile(
   else console.log(message);
 }
 
+function hasText(value: string | undefined): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Later parseable timestamp. Only strings are parsed. A number, null, or
+ * missing value cannot win. The result is one of the two original strings.
+ */
+function laterExpiry(incoming: unknown, onDisk: unknown): string | undefined {
+  const incomingText = typeof incoming === 'string' ? incoming : undefined;
+  const onDiskText = typeof onDisk === 'string' ? onDisk : undefined;
+  const incomingMs = incomingText === undefined ? Number.NaN : Date.parse(incomingText);
+  const onDiskMs = onDiskText === undefined ? Number.NaN : Date.parse(onDiskText);
+  const incomingOk = incomingText !== undefined && Number.isFinite(incomingMs);
+  const onDiskOk = onDiskText !== undefined && Number.isFinite(onDiskMs);
+  if (incomingOk && onDiskOk) return onDiskMs > incomingMs ? onDiskText : incomingText;
+  if (incomingOk) return incomingText;
+  if (onDiskOk) return onDiskText;
+  return incomingText;
+}
+
+/** expires_at is taken even when the ids differ. */
+export function mergePublishedSession(incoming: Session, onDisk: Session | null): Session {
+  if (!onDisk || !hasText(onDisk.id)) return incoming;
+  const published: Session = { ...incoming };
+  if (incoming.id === onDisk.id) {
+    if (!hasText(published.username) && hasText(onDisk.username)) published.username = onDisk.username;
+    if (!hasText(published.password) && hasText(onDisk.password)) published.password = onDisk.password;
+    if (!hasText(published.player_id) && hasText(onDisk.player_id)) published.player_id = onDisk.player_id;
+  }
+  const chosenExpiry = laterExpiry(published.expires_at, onDisk.expires_at);
+  if (chosenExpiry !== undefined) published.expires_at = chosenExpiry;
+  return published;
+}
+
+async function readSessionFile(sessionPath: string): Promise<Session | null> {
+  try {
+    const parsed: unknown = JSON.parse(await fs.promises.readFile(sessionPath, 'utf8'));
+    if (!isRecord(parsed) || typeof parsed.id !== 'string' || !hasText(parsed.id)) return null;
+    return parsed as unknown as Session;
+  } catch {
+    return null;
+  }
+}
+
 type SessionTransport = <T>(
   url: string,
   options?: JsonRequestOptions,
@@ -506,30 +555,42 @@ export class SessionManager {
     if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
     hardenPermissions(parentDir, SESSION_DIR_MODE);
 
-    const tmpPath = path.join(
-      parentDir,
-      `.${path.basename(sessionPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
-    );
-    const contents = `${JSON.stringify(session, null, 2)}\n`;
-
+    const release = await acquireAdvisoryLock(`${sessionPath}.lock`, {
+      timeoutMs: SESSION_LOCK_TIMEOUT_MS,
+      retryMs: SESSION_LOCK_RETRY_MS,
+      staleMs: SESSION_LOCK_STALE_MS,
+      timeoutError: `Timed out waiting to update the session file at ${sessionPath}.`,
+    });
     try {
-      const handle = await fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE);
+      const onDisk = await readSessionFile(sessionPath);
+      const published = mergePublishedSession(session, onDisk);
+      const tmpPath = path.join(
+        parentDir,
+        `.${path.basename(sessionPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+      );
+      const contents = `${JSON.stringify(published, null, 2)}\n`;
+
       try {
-        await handle.writeFile(contents, 'utf-8');
-        await handle.sync();
-      } finally {
-        await handle.close();
+        const handle = await fs.promises.open(tmpPath, 'wx', SESSION_FILE_MODE);
+        try {
+          await handle.writeFile(contents, 'utf-8');
+          await handle.sync();
+        } finally {
+          await handle.close();
+        }
+        hardenPermissions(tmpPath, SESSION_FILE_MODE);
+        await fs.promises.rename(tmpPath, sessionPath);
+        hardenPermissions(sessionPath, SESSION_FILE_MODE);
+      } catch (err) {
+        try {
+          await fs.promises.unlink(tmpPath);
+        } catch {
+          /* best effort */
+        }
+        throw err;
       }
-      hardenPermissions(tmpPath, SESSION_FILE_MODE);
-      await fs.promises.rename(tmpPath, sessionPath);
-      hardenPermissions(sessionPath, SESSION_FILE_MODE);
-    } catch (err) {
-      try {
-        await fs.promises.unlink(tmpPath);
-      } catch {
-        /* best effort */
-      }
-      throw err;
+    } finally {
+      await release();
     }
   }
 

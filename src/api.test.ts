@@ -151,6 +151,135 @@ function createClient(
   return { client, calls, store, sleeps };
 }
 
+function defer<T>(): { promise: Promise<T>; resolve(value: T): void } {
+  let resolve: ((value: T) => void) | undefined;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return {
+    promise,
+    resolve(value: T) {
+      resolve?.(value);
+    },
+  };
+}
+
+function traceClientConfig(apiBase: string): SpaceMoltClientOptions['config'] {
+  return {
+    apiBase,
+    jsonOutput: true,
+    debug: false,
+    plain: false,
+    quiet: true,
+    format: 'table',
+    compact: false,
+    profile: 'pilot',
+    profileIsExplicit: true,
+  };
+}
+
+class GatedSessionManager extends SessionManager {
+  afterLoad: (() => Promise<void>) | null = null;
+
+  override async loadSession(profileOverride?: string): Promise<Session | null> {
+    const loaded = await super.loadSession(profileOverride);
+    const hook = this.afterLoad;
+    this.afterLoad = null;
+    if (hook) await hook();
+    return loaded;
+  }
+}
+
+function loginFrame(expiresAt: string): QueuedHttp {
+  return queuedHttp(
+    response({
+      structuredContent: { player: { id: 'player_1' } },
+      session: {
+        id: 'sess_login',
+        created_at: '2026-05-01T00:00:00.000Z',
+        expires_at: expiresAt,
+      },
+    }),
+  );
+}
+
+function routeFrame(expiresAt: string): QueuedHttp {
+  return queuedHttp(
+    response({
+      session: {
+        id: 'sess_route',
+        created_at: '2026-05-01T00:00:00.000Z',
+        expires_at: expiresAt,
+      },
+    }),
+  );
+}
+
+function createSessionTrace() {
+  const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-session-trace-'));
+  const env = { XDG_CONFIG_HOME: configRoot, HOME: configRoot };
+  const apiBase = 'https://game.test/api/v2';
+  const clock = () => Date.parse('2026-04-01T00:00:00.000Z');
+  const loginHttp = defer<QueuedHttp>();
+  let loginStarted: (() => void) | undefined;
+  const loginSeen = new Promise<void>((resolve) => {
+    loginStarted = resolve;
+  });
+  const routeHttp = defer<QueuedHttp>();
+  let routeStarted: (() => void) | undefined;
+  const routeSeen = new Promise<void>((resolve) => {
+    routeStarted = resolve;
+  });
+  const loginManager = new GatedSessionManager({
+    apiBase,
+    profile: 'pilot',
+    profileIsExplicit: true,
+    env,
+    clock,
+    transport: async <T>() => ({
+      status: 200,
+      ok: true,
+      data: response({
+        session: {
+          id: 'sess_login',
+          created_at: '2026-05-01T00:00:00.000Z',
+          expires_at: '2026-05-01T00:00:00.000Z',
+        },
+      }) as T,
+    }),
+  });
+  const routeManager = new SessionManager({
+    apiBase,
+    profile: 'pilot',
+    profileIsExplicit: true,
+    env,
+    clock,
+  });
+  const loginClient = new SpaceMoltClient({
+    config: traceClientConfig(apiBase),
+    sessionStore: loginManager,
+    transport: {
+      async requestJson<T>() {
+        loginStarted?.();
+        const frame = await loginHttp.promise;
+        return { status: frame.status ?? 200, ok: true, data: frame.data as T };
+      },
+    },
+  });
+  const routeClient = new SpaceMoltClient({
+    config: traceClientConfig(apiBase),
+    sessionStore: routeManager,
+    transport: {
+      async requestJson<T>() {
+        routeStarted?.();
+        const frame = await routeHttp.promise;
+        return { status: frame.status ?? 200, ok: true, data: frame.data as T };
+      },
+    },
+  });
+  return { configRoot, loginManager, loginClient, routeClient, loginHttp, routeHttp, loginSeen, routeSeen };
+}
+
 describe('SpaceMoltClient', () => {
   test('defaults market buys to station storage delivery', async () => {
     const { client, calls } = createClient([response()]);
@@ -2299,6 +2428,199 @@ describe('SpaceMoltClient', () => {
       expect(logs.join('\n')).toContain(
         '[UNAVAILABLE] Authentication provider unreachable. Waiting 2 seconds before retry...',
       );
+    } finally {
+      fs.rmSync(configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('route save after login keeps the password and the route expiry', async () => {
+    const trace = createSessionTrace();
+    try {
+      const loginPromise = trace.loginClient.execute('login', { username: 'Pilot', password: 'secret' });
+      await trace.loginSeen;
+      const routePromise = trace.routeClient.execute('mine');
+      await trace.routeSeen;
+      trace.loginHttp.resolve(loginFrame('2026-05-15T00:00:00.000Z'));
+      await loginPromise;
+      trace.routeHttp.resolve(routeFrame('2026-06-06T00:00:00.000Z'));
+      await routePromise;
+
+      expect(await trace.loginManager.loadSession()).toMatchObject({
+        username: 'Pilot',
+        password: 'secret',
+        player_id: 'player_1',
+        expires_at: '2026-06-06T00:00:00.000Z',
+      });
+    } finally {
+      fs.rmSync(trace.configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('credential save after a route save keeps the newer route expiry', async () => {
+    const trace = createSessionTrace();
+    try {
+      const loginPromise = trace.loginClient.execute('login', { username: 'Pilot', password: 'secret' });
+      await trace.loginSeen;
+      const routePromise = trace.routeClient.execute('mine');
+      await trace.routeSeen;
+      trace.loginManager.afterLoad = async () => {
+        trace.routeHttp.resolve(routeFrame('2026-06-06T00:00:00.000Z'));
+        await routePromise;
+      };
+      trace.loginHttp.resolve(loginFrame('2026-05-15T00:00:00.000Z'));
+      await loginPromise;
+
+      expect(await trace.loginManager.loadSession()).toMatchObject({
+        username: 'Pilot',
+        password: 'secret',
+        expires_at: '2026-06-06T00:00:00.000Z',
+      });
+    } finally {
+      fs.rmSync(trace.configRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('credential save after session recovery keeps the re-login expiry', async () => {
+    const configRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-session-recover-trace-'));
+    const env = { XDG_CONFIG_HOME: configRoot, HOME: configRoot };
+    const apiBase = 'https://game.test/api/v2';
+    const clock = () => Date.parse('2026-04-01T00:00:00.000Z');
+    const seed = new SessionManager({
+      apiBase,
+      profile: 'pilot',
+      profileIsExplicit: true,
+      env,
+      clock,
+    });
+    await seed.saveSession(
+      session({
+        id: 'sess_old',
+        username: 'Pilot',
+        password: 'secret',
+        player_id: 'player_1',
+        created_at: '2026-04-01T00:00:00.000Z',
+        expires_at: '2026-04-15T00:00:00.000Z',
+      }),
+    );
+
+    const recoverSessionHttp = defer<QueuedHttp>();
+    let recoverSessionStarted!: () => void;
+    const recoverSessionCalled = new Promise<void>((resolve) => {
+      recoverSessionStarted = resolve;
+    });
+    const mineHttp = defer<QueuedHttp>();
+    let mineStarted!: () => void;
+    const mineCalled = new Promise<void>((resolve) => {
+      mineStarted = resolve;
+    });
+    let recoveryCalls = 0;
+    const recoveryManager = new SessionManager({
+      apiBase,
+      profile: 'pilot',
+      profileIsExplicit: true,
+      env,
+      clock,
+      transport: async <T>() => {
+        recoverSessionStarted();
+        const frame = await recoverSessionHttp.promise;
+        return { status: frame.status ?? 200, ok: true, data: frame.data as T };
+      },
+    });
+    const recoveryClient = new SpaceMoltClient({
+      config: traceClientConfig(apiBase),
+      sessionStore: recoveryManager,
+      transport: {
+        async requestJson<T>() {
+          recoveryCalls += 1;
+          if (recoveryCalls === 1) {
+            mineStarted();
+            const frame = await mineHttp.promise;
+            return { status: frame.status ?? 200, ok: true, data: frame.data as T };
+          }
+          if (recoveryCalls === 2) {
+            return {
+              status: 200,
+              ok: true,
+              data: response({
+                structuredContent: { player: { id: 'player_1' } },
+                session: {
+                  id: 'sess_recover',
+                  player_id: 'player_1',
+                  created_at: '2026-05-20T00:00:00.000Z',
+                  expires_at: '2026-06-06T00:00:00.000Z',
+                },
+              }) as T,
+            };
+          }
+          return { status: 200, ok: true, data: response() as T };
+        },
+      },
+    });
+    const loginHttp = defer<QueuedHttp>();
+    let loginStarted!: () => void;
+    const loginCalled = new Promise<void>((resolve) => {
+      loginStarted = resolve;
+    });
+    const loginManager = new GatedSessionManager({
+      apiBase,
+      profile: 'pilot',
+      profileIsExplicit: true,
+      env,
+      clock,
+      transport: async <T>() => ({
+        status: 200,
+        ok: true,
+        data: response({
+          session: {
+            id: 'sess_login',
+            created_at: '2026-05-01T00:00:00.000Z',
+            expires_at: '2026-05-01T00:00:00.000Z',
+          },
+        }) as T,
+      }),
+    });
+    const loginClient = new SpaceMoltClient({
+      config: traceClientConfig(apiBase),
+      sessionStore: loginManager,
+      transport: {
+        async requestJson<T>() {
+          loginStarted();
+          const frame = await loginHttp.promise;
+          return { status: frame.status ?? 200, ok: true, data: frame.data as T };
+        },
+      },
+    });
+
+    try {
+      const minePromise = recoveryClient.execute('mine');
+      await mineCalled;
+      mineHttp.resolve(queuedHttp(response({ error: { code: 'session_expired', message: 'expired' } })));
+      await recoverSessionCalled;
+
+      const loginPromise = loginClient.execute('login', { username: 'Pilot', password: 'secret' });
+      await loginCalled;
+      loginManager.afterLoad = async () => {
+        recoverSessionHttp.resolve(
+          queuedHttp(
+            response({
+              session: {
+                id: 'sess_recover',
+                created_at: '2026-05-20T00:00:00.000Z',
+                expires_at: '2026-05-20T00:00:00.000Z',
+              },
+            }),
+          ),
+        );
+        await minePromise;
+      };
+      loginHttp.resolve(loginFrame('2026-05-15T00:00:00.000Z'));
+      await loginPromise;
+
+      expect(await seed.loadSession()).toMatchObject({
+        username: 'Pilot',
+        password: 'secret',
+        expires_at: '2026-06-06T00:00:00.000Z',
+      });
     } finally {
       fs.rmSync(configRoot, { recursive: true, force: true });
     }
