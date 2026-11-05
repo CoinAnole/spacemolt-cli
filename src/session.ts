@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { acquireAdvisoryLock } from './advisory-lock.ts';
 import type { CliWriter } from './cli-context.ts';
+import { withConfigLock } from './config-lock.ts';
 import { ServiceUnavailableError } from './errors.ts';
 import { colorsForPlain } from './output-style.ts';
 import { isRateLimitAutoRetryWait, normalizeRateLimitError } from './rate-limit.ts';
@@ -22,13 +23,9 @@ import type { APIResponse, JsonRequestOptions, JsonResponse, Session } from './t
 export let ACTIVE_PROFILE: string | undefined;
 const SESSION_FILE_MODE = 0o600;
 const SESSION_DIR_MODE = 0o700;
-const CONFIG_LOCK_RETRY_MS = 10;
-const CONFIG_LOCK_TIMEOUT_MS = 2_000;
-const CONFIG_LOCK_STALE_MS = 30_000;
 const SESSION_LOCK_RETRY_MS = 10;
 const SESSION_LOCK_TIMEOUT_MS = 2_000;
 const SESSION_LOCK_STALE_MS = 30_000;
-const CONFIG_LOCK_SLEEP = new Int32Array(new SharedArrayBuffer(4));
 export type EnvLike = Record<string, string | undefined>;
 
 export function getSpacemoltHome(
@@ -199,77 +196,6 @@ export function hardenPermissions(targetPath: string, mode: number): void {
   }
 }
 
-function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && 'code' in error;
-}
-
-function removeStaleConfigLock(lockPath: string): boolean {
-  let observed: string;
-  try {
-    observed = fs.readFileSync(lockPath, 'utf-8');
-  } catch (error) {
-    return isErrnoException(error) && error.code === 'ENOENT';
-  }
-
-  const pid = Number.parseInt(observed.trim(), 10);
-  let ownerAlive: boolean | undefined;
-  if (!Number.isSafeInteger(pid) || pid <= 0) {
-    ownerAlive = undefined;
-  } else {
-    try {
-      process.kill(pid, 0);
-      ownerAlive = true;
-    } catch (error) {
-      if (isErrnoException(error) && error.code === 'ESRCH') ownerAlive = false;
-      else ownerAlive = true;
-    }
-  }
-
-  if (ownerAlive === true) return false;
-  try {
-    const oldEnough = Date.now() - fs.statSync(lockPath).mtimeMs >= CONFIG_LOCK_STALE_MS;
-    if (ownerAlive === undefined && !oldEnough) return false;
-    // Re-check content still matches what we observed before unlink so we do not
-    // remove a lock another process has already reclaimed after our first read.
-    const still = fs.readFileSync(lockPath, 'utf-8');
-    if (still !== observed) return false;
-    fs.unlinkSync(lockPath);
-    return true;
-  } catch (error) {
-    return isErrnoException(error) && error.code === 'ENOENT';
-  }
-}
-
-function acquireConfigLock(configPath: string): () => void {
-  const lockPath = `${configPath}.lock`;
-  const deadline = Date.now() + CONFIG_LOCK_TIMEOUT_MS;
-  while (true) {
-    try {
-      const fd = fs.openSync(lockPath, 'wx', SESSION_FILE_MODE);
-      try {
-        fs.writeFileSync(fd, `${process.pid}\n`, 'utf-8');
-        fs.fsyncSync(fd);
-      } finally {
-        fs.closeSync(fd);
-      }
-      return () => {
-        try {
-          fs.unlinkSync(lockPath);
-        } catch (error) {
-          if (!isErrnoException(error) || error.code !== 'ENOENT') throw error;
-        }
-      };
-    } catch (error) {
-      if (!isErrnoException(error) || error.code !== 'EEXIST') throw error;
-      if (removeStaleConfigLock(lockPath)) continue;
-      if (Date.now() >= deadline) {
-        throw new Error(`Timed out waiting to update CLI configuration at ${configPath}.`);
-      }
-      Atomics.wait(CONFIG_LOCK_SLEEP, 0, 0, CONFIG_LOCK_RETRY_MS);
-    }
-  }
-}
-
 function writeCliConfigAtomic(configPath: string, config: CliConfig): void {
   const parentDir = path.dirname(configPath);
   const tmpPath = path.join(
@@ -332,14 +258,11 @@ export function updateCliConfig(
   const parentDir = path.dirname(configPath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
   hardenPermissions(parentDir, SESSION_DIR_MODE);
-  const release = acquireConfigLock(configPath);
-  try {
+  return withConfigLock(configPath, () => {
     const next = update(loadCliConfig(homeDir, platform, env));
     writeCliConfigAtomic(configPath, next);
     return next;
-  } finally {
-    release();
-  }
+  });
 }
 
 /** Replace entire config under lock; use `updateCliConfig` for field-preserving mutations. */
@@ -348,12 +271,9 @@ export function saveCliConfig(config: CliConfig, homeDir?: string, platform?: st
   const parentDir = path.dirname(configPath);
   if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true, mode: SESSION_DIR_MODE });
   hardenPermissions(parentDir, SESSION_DIR_MODE);
-  const release = acquireConfigLock(configPath);
-  try {
+  withConfigLock(configPath, () => {
     writeCliConfigAtomic(configPath, config);
-  } finally {
-    release();
-  }
+  });
 }
 
 export function getDefaultProfile(homeDir?: string, platform?: string, env?: EnvLike): string | undefined {

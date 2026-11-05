@@ -1,10 +1,26 @@
 function role(phase) {
-  if (phase === "holding" || phase === "loaded" || phase === "releasing") return "writing config.json";
-  if (phase === "rereading") return "about to delete the lock";
+  if (phase === "holding" || phase === "loaded" || phase === "releasing" || phase === "dropping") {
+    return "writing config.json";
+  }
+  if (phase === "claiming" || phase === "rereading" || phase === "unlinking" || phase === "unclaiming" || phase === "clearing") {
+    return "about to delete the lock";
+  }
   if (phase === "judging" || phase === "reading") return "looking at the lock";
   if (phase === "done") return "finished";
   if (phase === "crashed") return "exited";
   return "waiting";
+}
+
+function lockSentence(v) {
+  if (v.intruder) {
+    if (v.lock === "reused" || v.lock === "stale") return "A new process holds the old id";
+    return "The new process is still writing after its lock was deleted";
+  }
+  if (v.lock === "none") return "The lock is free";
+  if (v.lock === "stale") return "A stale lock is waiting";
+  if (v.lock === "a") return "The profile save holds the lock";
+  if (v.lock === "b") return "The user-agent save holds the lock";
+  return "A new process holds the old id";
 }
 
 function picture(v) {
@@ -20,18 +36,7 @@ function picture(v) {
     return saved.has("profile") && saved.has("agent") ? "Both settings saved" : "One setting was lost";
   }
   const reused = v.pidReused ? "The old process id is in use again. " : "";
-  const lock = v.intruder
-    ? v.lock === "dead"
-      ? "A new process holds the old id"
-      : "The new process is still writing after its lock was deleted"
-    : v.lock === "none"
-      ? "The lock is free"
-      : v.lock === "dead"
-        ? "A stale lock is waiting"
-        : v.lock === "a"
-          ? "The profile save holds the lock"
-          : "The user-agent save holds the lock";
-  return `${reused}${lock}. The profile save is ${role(profile)}. The user-agent save is ${role(agent)}.`;
+  return `${reused}${lockSentence(v)}. The profile save is ${role(profile)}. The user-agent save is ${role(agent)}.`;
 }
 
 export const title = "Two saves of CLI settings";
@@ -50,20 +55,36 @@ export const step = (action, from, to) => {
   }
   if (name === "ReadLock") return `${who} reads the lock file`;
   if (name === "Judge") {
+    if (to.phase.a === "claiming" || to.phase.b === "claiming") return `${who} sees that the lock owner is gone`;
+    if (from.lock === "none") return `${who} sees that the lock is already gone`;
+    return `${who} sees that the lock owner is still running`;
+  }
+  if (name === "Claim") {
     return to.phase.a === "rereading" || to.phase.b === "rereading"
-      ? `${who} sees that the lock owner is gone`
-      : `${who} sees that the lock owner is still running`;
+      ? `${who} takes the break file`
+      : `${who} leaves the break file`;
   }
   if (name === "Reread") {
-    return from.lock !== "none" && to.lock === "none" ? `${who} deletes the lock` : `${who} leaves the lock in place`;
+    return to.phase.a === "unlinking" || to.phase.b === "unlinking"
+      ? `${who} still sees the stale lock`
+      : `${who} leaves the lock in place`;
   }
+  if (name === "Unlink") return `${who} deletes the lock`;
+  if (name === "DropClaimRead") return `${who} reads the break file`;
+  if (name === "DropClaimUnlink") return `${who} drops the break file`;
   if (name === "Load") return `${who} reads config.json`;
   if (name === "Save") return `${who} writes its setting`;
-  if (name === "Release") return `${who} drops the lock`;
+  if (name === "ReleaseRead") {
+    return to.phase.a === "dropping" || to.phase.b === "dropping"
+      ? `${who} still holds the lock`
+      : `${who} leaves a replaced lock`;
+  }
+  if (name === "ReleaseUnlink") return `${who} drops the lock`;
   if (name === "Crash") return `${who} exits and leaves the lock behind`;
   if (name === "KernelReissue") return "The exited process id is given to a new spacemolt";
   if (name === "IntruderAcquire") return "That new spacemolt takes the lock";
-  if (name === "IntruderRelease") return "That new spacemolt drops the lock";
+  if (name === "IntruderRead") return "That new spacemolt reads its lock";
+  if (name === "IntruderUnlink") return "That new spacemolt drops the lock";
   if (name === "Done") return "Both saves have stopped";
   return name;
 };

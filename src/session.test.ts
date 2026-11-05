@@ -285,6 +285,49 @@ describe('SessionManager', () => {
     fs.unlinkSync(`${configPath}.lock`);
   });
 
+  test('config lock body is the pid and a nonce, and release leaves a replaced body', () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-token-lock-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const configPath = getCliConfigPath(home, undefined, env);
+    const lockPath = `${configPath}.lock`;
+    let held = '';
+
+    updateCliConfig(
+      () => {
+        held = fs.readFileSync(lockPath, 'utf-8');
+        fs.writeFileSync(lockPath, `${process.pid} other-nonce\n`);
+        return { defaultProfile: 'arbiter47' };
+      },
+      home,
+      undefined,
+      env,
+    );
+
+    expect(held.startsWith(`${process.pid} `)).toBe(true);
+    expect(held.endsWith('\n')).toBe(true);
+    expect(held.trim()).not.toBe(String(process.pid));
+    expect(fs.readFileSync(lockPath, 'utf-8')).toBe(`${process.pid} other-nonce\n`);
+    expect(getDefaultProfile(home, undefined, env)).toBe('arbiter47');
+    fs.unlinkSync(lockPath);
+  });
+
+  test('config updates recover a dead pid whose lock body has a nonce', async () => {
+    const home = fs.mkdtempSync(path.join(tempDir, 'config-dead-nonce-'));
+    const env = { HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') };
+    const configPath = getCliConfigPath(home, undefined, env);
+    const lockPath = `${configPath}.lock`;
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    const child = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'ignore' });
+    expect(await child.exited).toBe(0);
+    fs.writeFileSync(lockPath, `${child.pid} deadbeef\n`);
+
+    setDefaultProfile('arbiter47', home, undefined, env);
+
+    expect(getDefaultProfile(home, undefined, env)).toBe('arbiter47');
+    expect(fs.existsSync(lockPath)).toBe(false);
+    expect(fs.existsSync(`${lockPath}.break`)).toBe(false);
+  });
+
   test('showDefaultProfile writes no-default and current-default messages', () => {
     const configPath = path.join(tempDir, '.config', 'spacemolt-cli', 'config.json');
     fs.rmSync(configPath, { force: true });

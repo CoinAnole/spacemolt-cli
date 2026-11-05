@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- Two overlapping updates of `config.json` keep both the default profile and the user agent when a dead process id is reused. A live process that still holds the lock waits out the same timeout as before.
+
 - Follow mode prints a notification with an empty id once per poll.
 
 - Two finished id-cache saves no longer drop one of the ids.
