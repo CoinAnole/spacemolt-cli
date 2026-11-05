@@ -1,9 +1,10 @@
 ---
-name: verify-cli-changelog
+name: audit-cli-changelog
 description: >
   Audit the SpaceMolt CLI against recent gameserver changelog entries after
   docs and API metadata are already current. Write recommended CLI changes to
   docs/cli-changelog-recommendations-<version>.md and list what already works.
+  This writes a recommendation file. It is not a pass/fail formal check.
   Use when the user says "docs and metadata have already been updated", asks
   to "verify that our cli works with these recent spacemolt changes", or
   points at spacemolt-docs/changelog.json for a CLI check. Do not bump the
@@ -11,7 +12,7 @@ description: >
 user-invocable: true
 ---
 
-# Verify CLI against changelog
+# Audit the CLI against the changelog
 
 Docs and generated metadata are already updated. Do **not** load
 `update-spacemolt-docs`. Do **not** fetch the submodule, commit a pointer,
