@@ -1999,6 +1999,15 @@ describe('command metadata', () => {
     expect(license?.description).toContain('empire reputation requirement');
     expect(license?.description).toContain("your faction's own station");
     expect(license?.description).toContain('Piloting');
+    expect(license?.description).toContain('T1=1M, T2=5M, T3=10M, T4=20M, T5=50M');
+    expect(license?.description).toContain("10% of the current market value of the hull's build materials");
+    expect(license?.description).toContain("hull's empire treasury");
+    expect(license?.description).toContain('split that royalty evenly among all pirate station managers');
+    expect(license?.description).toContain('not your crafting cost');
+    expect(license?.description).toContain('changes as market prices move');
+    expect(license?.description).toContain('Starter, prestige, and pirate boss flagships cannot be licensed');
+    expect(license?.description).toContain('Pirate boss flagships are capture-only');
+    expect(license?.description).not.toContain('`');
 
     const commission = BUNDLED_COMMAND_REGISTRY.commands.commission_ship;
     expect(commission?.usage).toContain('fund_from_faction');
@@ -2011,6 +2020,11 @@ describe('command metadata', () => {
     expect(commission?.description).toContain('source_missing_materials=true');
     expect(commission?.description).toContain('Do not combine provide_materials with source_missing_materials');
     expect(commission?.description).toContain('do not market-source missing materials');
+    expect(commission?.description).toContain(
+      'A faction-funded build pays labor and the per-build royalty from the treasury.',
+    );
+    expect(commission?.description).not.toContain('royalty credit');
+    expect(commission?.description).not.toContain('royalty_percent');
     expect(commission?.description).toContain('NPC, empire, and faction yards');
     expect(commission?.description).toContain('buy_ship_license');
     expect(commission?.description).toContain('required_reputation');
@@ -2038,6 +2052,11 @@ describe('command metadata', () => {
     expect(licenseHelp).toContain('specific ship design');
     expect(licenseHelp).toContain('empire reputation requirement');
     expect(licenseHelp).toContain('Piloting');
+    expect(licenseHelp).toContain('T1=1M, T2=5M, T3=10M, T4=20M, T5=50M');
+    expect(licenseHelp).toContain("current market value of the hull's build materials");
+    expect(licenseHelp).toContain('pirate station managers');
+    expect(licenseHelp).toContain('not your crafting cost');
+    expect(licenseHelp).toContain('capture-only');
 
     const commissionHelp = captureHelp('commission_ship');
     expect(commissionHelp).toContain('fund_from_faction');
@@ -2045,6 +2064,8 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('source_missing_materials=true/false');
     expect(commissionHelp).toContain('Do not combine provide_materials with source_missing_materials');
     expect(commissionHelp).toContain('do not market-source missing materials');
+    expect(commissionHelp).toContain('pays labor and the per-build royalty from the treasury');
+    expect(commissionHelp).not.toContain('royalty credit');
     expect(commissionHelp).toContain('If true, commission only the hull without its default module loadout.');
     expect(commissionHelp).toContain('Do not combine with provide_materials.');
     expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
@@ -2144,6 +2165,7 @@ describe('command metadata', () => {
     expect(config?.description).not.toContain('provide_materials');
     expect(config?.description).toContain('Default quotes a fitted hull');
     expect(config?.description).toContain('faction yards do not market-source missing materials');
+    expect(config?.description).not.toContain('royalty');
     expect(config?.description).toContain('same bare_hull and source_missing_materials choices');
     expect(config?.description).toContain(
       'The same ship_class quotes a mobile-base blueprint; the quote is the construction bill; it is not the jump resource.',
@@ -2170,6 +2192,7 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
     expect(help).toContain('Default quotes a fitted hull');
     expect(help).toContain('faction yards do not market-source missing materials');
+    expect(help).not.toContain('royalty');
     expect(help).not.toContain('provide_materials');
   });
 

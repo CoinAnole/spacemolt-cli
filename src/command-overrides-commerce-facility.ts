@@ -609,7 +609,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   buy_ship_license: {
     usage: '<ship_class>',
     description:
-      "License a specific ship design so your faction can build it at its own stations. Cost is paid from the faction treasury and scales with the design's tier. The license covers the hull's empire reputation requirement at your faction's own station; the commissioning member still needs its Piloting level.",
+      "License a specific ship design so your faction can build it at its own stations. Cost is paid from the faction treasury and scales with the design's tier: T1=1M, T2=5M, T3=10M, T4=20M, T5=50M. Each later build pays a royalty of 10% of the current market value of the hull's build materials to the hull's empire treasury. Pirate hulls split that royalty evenly among all pirate station managers. That royalty is not your crafting cost, and the amount changes as market prices move. Starter, prestige, and pirate boss flagships cannot be licensed. Pirate boss flagships are capture-only. The license covers the hull's empire reputation requirement at your faction's own station; the commissioning member still needs its Piloting level.",
     example: 'spacemolt buy_ship_license solarian_frigate',
     seeAlso: ['station_info', 'commission_ship', 'catalog'],
     category: 'Facilities',
