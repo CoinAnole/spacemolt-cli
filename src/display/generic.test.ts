@@ -1865,6 +1865,7 @@ test('prints gift_ship disposition and goodwill instead of a raw dump', () => {
   expect(stdout).not.toContain('=== Station Gift ===');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('Message:');
+  expect(stdout).not.toContain('Insurance');
 });
 
 test('prints gift_ship disposition without goodwill', () => {
@@ -1933,6 +1934,49 @@ test('prints empire gift credits with goodwill and without a base id', () => {
   expect(stdout).not.toContain('Fleet Id');
   expect(stdout).not.toContain('=== Station Gift ===');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints a present empire flagship bounty as sent and skips an omitted one', () => {
+  const paid = depositStdout({
+    details: {
+      action: 'empire_gift_ship',
+      empire_id: 'solarian',
+      empire_name: 'Solarian',
+      ship_id: 'ship-1',
+      class_id: 'hull_example',
+      flagship_bounty: 750000,
+      goodwill: giftGoodwillExample,
+    },
+  });
+  expect(paid).toContain('=== Empire Gift Ship ===');
+  expect(paid).toContain('Flagship Bounty: 750000');
+  expect(paid).toContain('Goodwill:');
+  expect(paid).not.toContain('1000000');
+  expect(paid).not.toContain('1,000,000');
+  expect(paid).not.toContain('Fleet Id');
+  expect(paid).not.toContain('Hull Designator');
+  expect(paid).not.toContain('Npc Id');
+  expect(paid).not.toContain('Petition');
+  expect(paid).not.toContain('Insurance');
+
+  const omitted = depositStdout({
+    details: {
+      action: 'empire_gift_ship',
+      empire_id: 'solarian',
+      empire_name: 'Solarian',
+      ship_id: 'ship-1',
+      class_id: 'hull_example',
+    },
+  });
+  expect(omitted).toContain('=== Empire Gift Ship ===');
+  expect(omitted).not.toContain('Flagship Bounty');
+  expect(omitted).not.toContain('1000000');
+  expect(omitted).not.toContain('Goodwill:');
+  expect(omitted).not.toContain('Fleet Id');
+  expect(omitted).not.toContain('Hull Designator');
+  expect(omitted).not.toContain('Npc Id');
+  expect(omitted).not.toContain('Petition');
+  expect(omitted).not.toContain('Insurance');
 });
 
 test.each(['self', 'solarian'])('prints goodwill on a non-station bulk deposit to %s', (target) => {

@@ -1093,7 +1093,15 @@ describe('help output branches', () => {
     expect(output).toContain('Only those unused materials are sold.');
     expect(output).toContain('This sale does not apply to a station material gift');
     expect(output).not.toContain('donate to an empire treasury');
-    expect(output).toContain("a stronghold's own stolen flagship can be sent home from any station");
+    expect(output).toContain("a boss's stolen flagship can be sent to any pirate stronghold from any station");
+    expect(output).not.toContain("a stronghold's own stolen flagship can be sent home from any station");
+    expect(output).toContain(
+      "A boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home",
+    );
+    expect(output).toContain('voids its insurance');
+    expect(output).toContain('An omitted flagship_bounty is not zero.');
+    expect(output).toContain('joined_fleet');
+    expect(output).toContain('boss_ship');
     expect(output).toContain('empire_gift_ship');
     expect(output).toContain('An empire station does not take ships.');
     expect(output).toContain('A starter ship is scrapped, earns no goodwill, and omits fleet and petition fields.');
@@ -1101,7 +1109,7 @@ describe('help output branches', () => {
     expect(output).toContain('never on nested results');
     expect(output).toContain('does not add a goodwill column');
     expect(output).toContain('prints situation as sent');
-    expect(output).not.toContain('boss flagship');
+    expect(output).toContain('was a boss flagship');
     expect(output).toContain('empire ship: storage deposit <ship_id> target=solarian');
     expect(output).toContain('Not valid for fixer:tab.');
     expect(output).not.toContain('Not valid for station: targets.');

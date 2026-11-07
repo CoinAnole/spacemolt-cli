@@ -3603,8 +3603,26 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('This sale does not apply to a station material gift');
     expect(deposit?.description).toContain('No packages or quest items');
     expect(deposit?.description).not.toContain('No credits, ships');
-    expect(deposit?.description).toContain('stolen flagship');
-    expect(deposit?.description).not.toContain('boss flagship');
+    expect(deposit?.description).toContain(
+      "a boss's stolen flagship can be sent to any pirate stronghold from any station",
+    );
+    expect(deposit?.description).toContain(
+      "A boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home",
+    );
+    expect(deposit?.description).toContain('does not detect a flagship');
+    expect(deposit?.description).toContain(
+      "disposition is scrapped (broken down for parts), refitted (rebuilt to the crew's own design and added to its fleet), joined_fleet (a pirate-built hull added to its fleet as it is), or boss_ship (the boss flies it in person now or as soon as the boss is free)",
+    );
+    expect(deposit?.description).toContain('omitted for gifts to players');
+    expect(deposit?.description).toContain('A pirate crew may refit it to its own design afterwards.');
+    expect(deposit?.description).toContain('Giving a ship to a pirate crew voids its insurance');
+    expect(deposit?.description).toContain('gift_ship response has no insurance field');
+    expect(deposit?.description).toContain(
+      "flagship_bounty is the credits the empire paid for a pirate boss's stolen flagship (a flat 1000000)",
+    );
+    expect(deposit?.description).toContain('was a boss flagship');
+    expect(deposit?.description).toContain('An omitted flagship_bounty is not zero.');
+    expect(deposit?.description).not.toContain('sent home from any station');
     expect(deposit?.description).toContain('empire_gift_ship');
     expect(deposit?.description).toContain('An empire station does not take ships.');
     expect(deposit?.description).toContain(
@@ -3644,7 +3662,7 @@ describe('command metadata', () => {
     );
     expect(deposit?.schema?.target?.description).not.toContain("sold on that station's market");
     expect(deposit?.schema?.target?.description).toContain(
-      "target=station:<base ID> gives a ship to that pirate stronghold while you and the ship are docked there (gift_ship; a stronghold's own stolen flagship can be sent home from any station). An empire station does not take ships. An empire-alias ship donation is empire_gift_ship. A pirate crew keeps a gift from a pilot never introduced to the pirate network and gives nothing back.",
+      "target=station:<base ID> gives a ship to that pirate stronghold while you and the ship are docked there (gift_ship; a boss's stolen flagship can be sent to any pirate stronghold from any station). An empire station does not take ships. An empire-alias ship donation is empire_gift_ship. A pirate crew keeps a gift from a pilot never introduced to the pirate network and gives nothing back.",
     );
     expect(deposit?.schema?.target?.description).not.toContain('boss flagship');
     expect(withdraw?.schema?.target?.description).toContain(
@@ -3704,6 +3722,8 @@ describe('command metadata', () => {
       'target=self|faction|player|empire|pirate:<crew>|fixer:tab|station:<base-or-POI-ID>',
     );
     expect(deposit?.usage).toContain('fixer tab: item id credits, quantity, target=fixer:tab');
+    expect(deposit?.usage).toContain("a boss's stolen flagship can be sent to any pirate stronghold from any station");
+    expect(deposit?.usage).not.toContain('sent home from any station');
     expect(deposit?.example).toContain('fixer tab: storage deposit credits 500 target=fixer:tab');
     expect(deposit?.description).toContain(
       'Pay shared fixer debt (gameserver 0.633.0) while docked at a public empire station with mission services: storage deposit credits 500 target=fixer:tab.',
@@ -3730,7 +3750,7 @@ describe('command metadata', () => {
     expect(deposit?.schema?.item_id?.description).toContain('local path can auto-dock first');
     expect(deposit?.schema?.item_id?.description).toContain('target=fixer:tab');
     expect(deposit?.schema?.item_id?.description).toContain(
-      "target=<player_name> on a deposit gifts the ship (gift_ship), target=station:<base ID> on a deposit gives it to that pirate stronghold while you and the ship are docked there (also gift_ship; a stronghold's own stolen flagship can be sent home from any station), and an empire alias on a deposit donates it to that empire (empire_gift_ship).",
+      "target=<player_name> on a deposit gifts the ship (gift_ship), target=station:<base ID> on a deposit gives it to that pirate stronghold while you and the ship are docked there (also gift_ship; a boss's stolen flagship can be sent to any pirate stronghold from any station), and an empire alias on a deposit donates it to that empire (empire_gift_ship).",
     );
     expect(deposit?.schema?.item_id?.description).toContain('An empire station does not take ships.');
     expect(deposit?.schema?.item_id?.description).toContain(
