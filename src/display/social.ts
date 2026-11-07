@@ -241,6 +241,17 @@ function formatFacilityTypeServicePool(r: Record<string, unknown>): string | und
   return parts.length ? parts.join(', ') : undefined;
 }
 
+// FacilityTypeDetailResponse.maintenance_per_cycle only. A fuel line is an item row.
+// Do not read maintenance_fuel, and do not split a trade_authenticator quantity.
+function emitFacilityTypeMaintenance(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  printCompactTable('Req. stock', value.filter(isRecord), [
+    ['Name', ['name']],
+    ['Item ID', ['item_id']],
+    ['Qty', ['quantity']],
+  ]);
+}
+
 function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   const typeId = typeof r.type_id === 'string' ? r.type_id.trim() : '';
   if (!typeId) return false;
@@ -263,6 +274,7 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
     );
   }
   emitDefinedLine('Description', r.description);
+  emitFacilityTypeMaintenance(r.maintenance_per_cycle);
   const pool = formatFacilityTypeServicePool(r);
   if (pool) {
     emitLine('');

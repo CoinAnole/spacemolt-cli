@@ -35,6 +35,12 @@ const FACILITY_BUILDABLE_PRINT_HELP =
   'Detail output prints Buildable as yes or no when buildable is a boolean, including an explicit false. The types list prints a Buildable column when any row sends that boolean. An omitted buildable key prints nothing. ' +
   FACILITY_COPY_LIMIT_HELP;
 
+const FACILITY_TYPE_UPKEEP_PRINT_HELP =
+  "Detail output prints Req. stock when maintenance_per_cycle is an array: one row per item with name, item id, and quantity, including an explicit quantity 0. An empty array prints Req. stock and (None). An omitted maintenance_per_cycle prints nothing. A fuel line is one of those items. There is no separate fuel field. The types list and the discovery table do not add an upkeep column. For a market that uses trade_authenticator, such as trade_concourse, the trade_authenticator quantity adds a charge that grows with the docked station's recent market trade volume and burns in full each cycle. Gameserver 0.658.0.";
+
+const FACILITY_LIST_TRADE_AUTHENTICATOR_HELP =
+  "Req. stock prints maintenance_per_cycle as quantity and name. An omitted key still adds no column. A market's trade_authenticator quantity is its declared stock plus a charge that grows with this station's recent market trade volume. The market burns that charge in full each cycle, and on a player station it goes offline when faction storage cannot cover the whole quantity. The column does not split that quantity into stock and a charge. Gameserver 0.658.0.";
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -619,7 +625,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_list: {
     category: 'Facilities',
     description:
-      "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3. Player Facilities and Faction Facilities print Missed, and a missing missed_rent_cycles prints 0. Station, Public, and Ally tables print Missed only when a row sends missed_rent_cycles; an omitted key on those rows stays blank and does not add the column.",
+      "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3. Player Facilities and Faction Facilities print Missed, and a missing missed_rent_cycles prints 0. Station, Public, and Ally tables print Missed only when a row sends missed_rent_cycles; an omitted key on those rows stays blank and does not add the column. " +
+      FACILITY_LIST_TRADE_AUTHENTICATOR_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
   facility_owned: {
@@ -638,6 +645,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description:
       "Browse facility types. Pass facility_type for one type. Detail output prints that type's rent_per_cycle as Rent/cycle, including an explicit 0 as 0. An omitted key prints no rent line. The number is your quote per facility cycle (100 ticks) at the docked station: 0 at your own faction's player station or outpost, where members pay no rent; an outsider there is quoted the tenant rent paid to the owning faction. List and discovery pages have no rent quote. " +
       FACILITY_BUILDABLE_PRINT_HELP +
+      ' ' +
+      FACILITY_TYPE_UPKEEP_PRINT_HELP +
       ' ' +
       OUTSIDER_STATION_RENT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/types',

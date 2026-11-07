@@ -3264,7 +3264,20 @@ describe('command metadata', () => {
       expect(text).toContain('one copy per station');
       expect(text).toContain('fuel tank expansions still stack');
       expect(text).toContain('Gameserver 0.648.3');
+      expect(text).toContain('Req. stock');
+      expect(text).toContain('maintenance_per_cycle');
+      expect(text).toContain('explicit quantity 0');
+      expect(text).toContain('An empty array prints Req. stock and (None)');
+      expect(text).toContain('An omitted maintenance_per_cycle prints nothing');
+      expect(text).toContain('A fuel line is one of those items');
+      expect(text).toContain('no separate fuel field');
+      expect(text).toContain('do not add an upkeep column');
+      expect(text).toContain('trade_authenticator');
+      expect(text).toContain('recent market trade volume');
+      expect(text).toContain('burns in full each cycle');
+      expect(text).toContain('Gameserver 0.658.0');
       expect(text).not.toContain('not an OpenAPI field');
+      expect(text).not.toContain('maintenance_fuel');
     }
   });
 
@@ -3295,6 +3308,18 @@ describe('command metadata', () => {
       expect(text).toContain('missing missed_rent_cycles prints 0');
       expect(text).toContain('print Missed only when a row sends missed_rent_cycles');
       expect(text).toContain('does not add the column');
+      expect(text).toContain('trade_authenticator');
+      expect(text).toContain('declared stock plus a charge');
+      expect(text).toContain("this station's recent market trade volume");
+      expect(text).toContain('burns that charge in full each cycle');
+      expect(text).not.toContain('burns that whole quantity');
+      expect(text).not.toContain('burns the whole');
+      expect(text).toContain('player station');
+      expect(text).toContain('faction storage cannot cover the whole quantity');
+      expect(text).toContain('does not split that quantity into stock and a charge');
+      expect(text).toContain('An omitted key still adds no column');
+      expect(text).toContain('Gameserver 0.658.0');
+      expect(text).not.toContain('maintenance_fuel');
     }
 
     const factionEdit = captureHelp('faction edit');

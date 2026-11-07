@@ -3008,6 +3008,90 @@ test('facility_types detail declines a whitespace type_id', () => {
   expect(stdout).not.toContain('Service pool:');
 });
 
+test('facility_types detail prints maintenance rows, including quantity 0, and ignores maintenance_fuel', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.name = 'Trade Concourse';
+  fixture.type_id = 'trade_concourse';
+  fixture.description = 'Its upkeep grows with trade volume.';
+  fixture.maintenance_per_cycle = [
+    { item_id: 'trade_authenticator', name: 'Trade Authenticator', quantity: 0 },
+    { item_id: 'fuel_cell', name: 'Fuel Cell', quantity: 3 },
+    null,
+  ];
+  fixture.maintenance_fuel = 55;
+  const lines = facilityTypeDetailLines(fixture);
+  const stdout = lines.join('\n');
+  const descriptionIndex = lines.indexOf('Description: Its upkeep grows with trade volume.');
+  const stockIndex = lines.findIndex((line) => line.includes('=== Req. stock ==='));
+  const poolIndex = lines.findIndex((line) => line.startsWith('Service pool:'));
+  const section = sectionAfter(stdout, 'Req. stock');
+  expect(descriptionIndex).toBeGreaterThanOrEqual(0);
+  expect(stockIndex).toBeGreaterThan(descriptionIndex);
+  expect(poolIndex).toBeGreaterThan(stockIndex);
+  expect(tableCell(section, 'Trade Authenticator', 'Item ID')).toBe('trade_authenticator');
+  expect(tableCell(section, 'Trade Authenticator', 'Qty')).toBe('0');
+  expect(tableCell(section, 'Fuel Cell', 'Item ID')).toBe('fuel_cell');
+  expect(tableCell(section, 'Fuel Cell', 'Qty')).toBe('3');
+  expect(stdout).not.toContain('fuel stock');
+  expect(stdout).not.toContain('55');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('facility_types detail prints nothing for an omitted or non-array maintenance_per_cycle', () => {
+  const omitted = facilityTypeDetailLines(structuredClone(facilityTypesDetailFixture) as Record<string, unknown>);
+  expect(omitted.join('\n')).not.toContain('Req. stock');
+
+  for (const maintenance_per_cycle of [null, 'fuel_cell', { item_id: 'fuel_cell', quantity: 1 }]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.maintenance_per_cycle = maintenance_per_cycle;
+    fixture.maintenance_fuel = 55;
+    const stdout = facilityTypeDetailLines(fixture).join('\n');
+    expect(stdout).toContain('=== Facility type: Crew Office ===');
+    expect(stdout).not.toContain('Req. stock');
+    expect(stdout).not.toContain('fuel stock');
+    expect(stdout).not.toContain('55');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('facility_types detail prints Req. stock and (None) for an empty maintenance array', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.maintenance_per_cycle = [];
+  fixture.maintenance_fuel = 55;
+  const stdout = facilityTypeDetailLines(fixture).join('\n');
+  expect(stdout).toContain('=== Req. stock ===\n(None)');
+  expect(stdout).not.toContain('fuel stock');
+  expect(stdout).not.toContain('55');
+});
+
+test('facility_types detail upkeep stays off json, yaml, structured, and compact output', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.maintenance_per_cycle = [{ item_id: 'trade_authenticator', name: 'Trade Authenticator', quantity: 0 }];
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const stdout = renderStructuredResult(
+      'facility_types',
+      structuredClone(fixture),
+      renderOptions,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('Req. stock');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('item_id: trade_authenticator');
+      expect(stdout).toContain('quantity: 0');
+    } else {
+      const row = JSON.parse(stdout).maintenance_per_cycle[0];
+      expect(row.item_id).toBe('trade_authenticator');
+      expect(row.quantity).toBe(0);
+    }
+  }
+});
+
 function facilityTypeListFixture(
   types: Array<Record<string, unknown>>,
   extra: Record<string, unknown> = {},
@@ -3272,6 +3356,49 @@ test('facility_types discovery still prints category buildable counts', () => {
   expect(stdout).toContain('=== Categories ===');
   expect(stdout).toContain('Buildable');
   expect(stdout).not.toContain('=== Facility types ===');
+});
+
+test('facility_types list and discovery do not add an upkeep column', () => {
+  const listed = renderFacilityTypes(
+    facilityTypeListFixture([
+      {
+        id: 'trade_concourse',
+        name: 'Trade Concourse',
+        category: 'service',
+        level: 1,
+        build_cost: 1000,
+        buildable: true,
+        maintenance_per_cycle: [{ item_id: 'trade_authenticator', name: 'Trade Authenticator', quantity: 4 }],
+        maintenance_fuel: 55,
+      },
+    ]),
+  );
+  const listSection = sectionAfter(listed, 'Facility types');
+  expect(listSection).toContain('Trade Concourse');
+  expect(listSection).not.toContain('Req. stock');
+  expect(listSection).not.toContain('Upkeep');
+  expect(listSection).not.toContain('trade_authenticator');
+  expect(listSection).not.toContain('Trade Authenticator');
+  expect(listSection).not.toContain('55');
+  expect(listSection).not.toContain('fuel stock');
+
+  const discovery = structuredClone(facilityTypesFixture) as Record<string, unknown>;
+  const categories = discovery.categories as Record<string, Record<string, unknown>>;
+  categories.service = {
+    count: 2,
+    description: 'Markets',
+    maintenance_per_cycle: [{ item_id: 'trade_authenticator', name: 'Trade Authenticator', quantity: 4 }],
+    maintenance_fuel: 77,
+  };
+  const discovered = renderFacilityTypes(discovery);
+  const categorySection = sectionAfter(discovered, 'Categories');
+  expect(categorySection).toContain('Markets');
+  expect(discovered).not.toContain('Req. stock');
+  expect(discovered).not.toContain('Upkeep');
+  expect(discovered).not.toContain('trade_authenticator');
+  expect(discovered).not.toContain('Trade Authenticator');
+  expect(discovered).not.toContain('fuel stock');
+  expect(discovered).not.toContain('77');
 });
 
 test('renders facility list item req. stock and labor per cycle', () => {
