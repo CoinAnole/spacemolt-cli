@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `accept_mission` help says faction postings pay only the first pilot to complete them. Distress rescues are unchanged: first claim wins. `faction post_mission` help says any number of pilots can accept a posting, but only the first to complete it gets paid (gameserver 0.657.5).
+
 - `buy_ship_license` help says the per-build royalty is 10% of the current market value of the hull's build materials, paid to the hull's empire treasury. Pirate hulls split that royalty evenly among all pirate station managers. It is not your crafting cost, and the amount changes as market prices move. License prices are T1=1M, T2=5M, T3=10M, T4=20M, and T5=50M. Starter, prestige, and pirate boss flagships cannot be licensed. Pirate boss flagships are capture-only. `commission_ship` help says a faction-funded build pays labor and that royalty from the treasury (gameserver 0.657.2).
 
 - `faction edit` usage lists `ally_battle_opt_out=true/false` beside the fuel, facility, and intel toggles. Help says auto-joins for your own faction and for your wars still happen when that toggle is set. The field text is unchanged: true keeps members out of battles they would auto-join for an ally, they can still join with `battle action=engage`, and the default is false (gameserver 0.657.0).

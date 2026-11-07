@@ -352,7 +352,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     usage:
       '<title> <type> <description>  (plus key=value or --payload-json: giver_name, giver_title, objectives, rewards, dialog, expiration_hours, triggers)',
     description:
-      'Post a mission on your faction mission board (docked at a faction_missions facility; requires manage_treasury). Unknown item_ids fail with invalid_item; see Fields.',
+      'Post a mission on your faction mission board (docked at a faction_missions facility; requires manage_treasury). Unknown item_ids fail with invalid_item; see Fields. Any number of pilots can accept a posting, but only the first to complete it gets paid.',
     example:
       'spacemolt faction_post_mission "Ore Needed" delivery "We need iron ore delivered." --payload-json \'{"objectives":[{"type":"deliver_item","description":"Deliver iron ore","item_id":"iron_ore","quantity":50}],"rewards":{"credits":5000,"items":[{"item_id":"Iron Ore","quantity":10}]}}\'; bounty: faction post_mission "Hunt Kestrel" bounty "Destroy Kestrel\'s ship." --payload-json \'{"objectives":[{"type":"kill_player","description":"Destroy Kestrel","target_id":"Kestrel"}],"rewards":{"credits":50000},"triggers":["open_to_all"]}\'',
     discoverWith: ['catalog', 'faction_list_missions'],

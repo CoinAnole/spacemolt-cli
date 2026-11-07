@@ -1121,7 +1121,8 @@ describe('command metadata', () => {
     expect(config.description).toContain('emergency broadcast');
     expect(config.description).toContain('distress_signal');
     expect(config.description).toContain('docked or not');
-    expect(config.description).toContain('First claim');
+    expect(config.description).toContain('First claim wins');
+    expect(config.description).toContain('Faction postings pay only the first pilot to complete them.');
     expect(config.description).toContain('5-mission');
     expect(config.description).toContain('30 minutes');
     expect(config.description).toContain('3 hours');
@@ -1163,7 +1164,8 @@ describe('command metadata', () => {
     expect(help).toContain('emergency broadcast');
     expect(help).toContain('distress_signal');
     expect(help).toContain('docked or not');
-    expect(help).toContain('First claim');
+    expect(help).toContain('First claim wins');
+    expect(help).toContain('Faction postings pay only the first pilot to complete them.');
     expect(help).toContain('5-mission');
     expect(help).toContain('30 minutes');
     expect(help).toContain('3 hours');
@@ -4094,6 +4096,9 @@ describe('command metadata', () => {
     const postMission = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.post_mission?.config;
     expect(postMission?.description).toContain('invalid_item');
     expect(postMission?.description).toContain('see Fields');
+    expect(postMission?.description).toContain(
+      'Any number of pilots can accept a posting, but only the first to complete it gets paid.',
+    );
     expect(postMission?.description).not.toContain('kill_pirate');
     expect(postMission?.description).not.toContain('kill_player');
     expect(postMission?.description).not.toContain('Intel Center');
@@ -4116,6 +4121,7 @@ describe('command metadata', () => {
 
     const help = captureHelp('faction post_mission');
     expect(help).toContain('invalid_item');
+    expect(help).toContain('Any number of pilots can accept a posting, but only the first to complete it gets paid.');
     expect(help).toContain('deliver_item');
     expect(help).toContain('kill_player');
     expect(help).toContain('Hunt Kestrel');

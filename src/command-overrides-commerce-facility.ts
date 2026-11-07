@@ -49,7 +49,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   accept_mission: {
     usage: '<mission_id>  (board: docked at issuing base, or template_id=; distress rescue: from anywhere)',
     description:
-      "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours.",
+      "Accept a mission from the station board, or claim a distress-response rescue (gameserver 0.608.0). Board contracts require docking at the issuing base. A distress rescue has no issuing base: pass the mission_id from the emergency broadcast or from the caller's distress_signal response, from anywhere, docked or not. First claim wins. A claimed rescue counts toward the 5-mission cap. Server-generated calls expire after 30 minutes; player calls expire in 3 hours. Faction postings pay only the first pilot to complete them.",
     example: 'spacemolt accept_mission a3f9c21e8b04',
     discoverWith: ['get_missions'],
     seeAlso: ['get_missions', 'get_active_missions', 'distress_signal'],
