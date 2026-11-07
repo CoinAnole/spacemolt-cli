@@ -8,6 +8,10 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `faction edit` usage lists `ally_battle_opt_out=true/false` beside the fuel, facility, and intel toggles. Help says auto-joins for your own faction and for your wars still happen when that toggle is set. The field text is unchanged: true keeps members out of battles they would auto-join for an ally, they can still join with `battle action=engage`, and the default is false (gameserver 0.657.0).
+
+- `faction info` prints `Battle opt-out:` as yes or no in the Ally access block when `ally_battle_opt_out` is a boolean, including false. An omitted key prints nothing. A non-boolean prints nothing. The line prints whenever the key arrives, including when `is_member` is false, and membership does not invent it (gameserver 0.657.0).
+
 - Two overlapping updates of `config.json` keep both the default profile and the user agent when a dead process id is reused. A live process that still holds the lock waits out the same timeout as before.
 
 - Follow mode prints a notification with an empty id once per poll.

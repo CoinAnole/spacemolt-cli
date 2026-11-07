@@ -4180,19 +4180,35 @@ describe('command metadata', () => {
 
   test('faction_edit help documents ally access toggles', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.edit?.config;
-    expect(config?.usage).toContain('ally_fuel_access');
-    expect(config?.usage).toContain('ally_facility_access');
-    expect(config?.usage).toContain('ally_intel_opt_out');
+    expect(config?.usage).toContain('ally_fuel_access=true/false');
+    expect(config?.usage).toContain('ally_facility_access=true/false');
+    expect(config?.usage).toContain('ally_intel_opt_out=true/false');
+    expect(config?.usage).toContain('ally_battle_opt_out=true/false');
     expect(config?.description).toContain('ally-sharing toggles');
     expect(config?.description).toContain('fuel access');
     expect(config?.description).toContain('facility access');
     expect(config?.description).toContain('intel opt-out');
+    expect(config?.description).toContain('battle opt-out');
+    expect(config?.description).toContain(
+      'Auto-joins for your own faction and for your wars still happen when ally_battle_opt_out is set.',
+    );
     expect(config?.example).toContain('ally_fuel_access=true');
 
     const help = captureHelp('faction edit');
-    expect(help).toContain('ally_fuel_access');
-    expect(help).toContain('ally_facility_access');
-    expect(help).toContain('ally_intel_opt_out');
+    expect(help).toContain('ally_fuel_access=true/false');
+    expect(help).toContain('ally_facility_access=true/false');
+    expect(help).toContain('ally_intel_opt_out=true/false');
+    expect(help).toContain('ally_battle_opt_out=true/false');
+    expect(help).toContain(
+      'Auto-joins for your own faction and for your wars still happen when ally_battle_opt_out is set.',
+    );
+    const fieldsAt = help.indexOf('Fields:');
+    expect(fieldsAt).toBeGreaterThan(-1);
+    const fields = help.slice(fieldsAt);
+    expect(fields).toContain(
+      "True to keep your members out of battles they would auto-join on an ally's behalf. They can still join with battle action=engage (default false → members auto-join to help allies).",
+    );
+    expect(fields).not.toContain('Auto-joins for your own faction');
   });
 
   test('facility production commands have curated routes and help', () => {

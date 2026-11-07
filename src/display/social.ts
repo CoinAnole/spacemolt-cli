@@ -1666,11 +1666,18 @@ export const socialFormatters = [
       const allyFuel = formatYesNo(r.ally_fuel_access);
       const allyFacility = formatYesNo(r.ally_facility_access);
       const allyIntelOptOut = formatYesNo(r.ally_intel_opt_out);
-      if (allyFuel !== undefined || allyFacility !== undefined || allyIntelOptOut !== undefined) {
+      const allyBattleOptOut = formatYesNo(r.ally_battle_opt_out);
+      if (
+        allyFuel !== undefined ||
+        allyFacility !== undefined ||
+        allyIntelOptOut !== undefined ||
+        allyBattleOptOut !== undefined
+      ) {
         emitLine('Ally access:');
         if (allyFuel !== undefined) emitLine(`  Fuel: ${allyFuel}`);
         if (allyFacility !== undefined) emitLine(`  Facilities: ${allyFacility}`);
         if (allyIntelOptOut !== undefined) emitLine(`  Intel opt-out: ${allyIntelOptOut}`);
+        if (allyBattleOptOut !== undefined) emitLine(`  Battle opt-out: ${allyBattleOptOut}`);
       }
 
       const facilities = firstArray(r, ['facilities']);
