@@ -76,15 +76,24 @@ function picture(v) {
   if (v.lock === "empty" && v.age === "old") return "The empty lock is old";
   if (crashedLeftEmpty(v)) return "A crashed save left an empty lock";
   if (v.lock === "empty") return "The lock file is empty";
+  if (v.lease === "a" || v.lease === "b") return "A save holds the break file";
   if (v.phase.a === "crashed" || v.phase.b === "crashed") return "A save exited and left the lock";
   if (v.phase.a === "done" || v.phase.b === "done") return "One save has finished";
   if (
     v.phase.a === "reading" ||
     v.phase.a === "judging" ||
+    v.phase.a === "claiming" ||
     v.phase.a === "rereading" ||
+    v.phase.a === "restatting" ||
+    v.phase.a === "unclaiming" ||
+    v.phase.a === "clearing" ||
     v.phase.b === "reading" ||
     v.phase.b === "judging" ||
-    v.phase.b === "rereading"
+    v.phase.b === "claiming" ||
+    v.phase.b === "rereading" ||
+    v.phase.b === "restatting" ||
+    v.phase.b === "unclaiming" ||
+    v.phase.b === "clearing"
   ) {
     return "A save is looking at the lock";
   }
@@ -119,18 +128,33 @@ export const step = (action, from, to) => {
   }
   if (name === "ReadLock") return `${who} reads the lock file`;
   if (name === "Judge") {
-    const back = (loginMoved && to.phase.a === "idle") || (refreshMoved && to.phase.b === "idle");
-    return back ? `${who} sees that the lock is already gone` : `${who} checks the lock owner`;
+    const claiming = (loginMoved && to.phase.a === "claiming") || (refreshMoved && to.phase.b === "claiming");
+    const seen = loginMoved ? from.observed.a : from.observed.b;
+    if (claiming) {
+      return seen === "empty" ? `${who} sees an old empty lock` : `${who} decides to remove the lock`;
+    }
+    if (from.lock === "none") return `${who} sees that the lock is already gone`;
+    if (seen === "empty") return `${who} leaves the empty lock`;
+    return `${who} sees that the lock owner is still running`;
   }
+  if (name === "Claim") return `${who} takes the break file`;
   if (name === "Reread") {
     const unlinking = (loginMoved && to.phase.a === "unlinking") || (refreshMoved && to.phase.b === "unlinking");
+    const restatting = (loginMoved && to.phase.a === "restatting") || (refreshMoved && to.phase.b === "restatting");
     if (unlinking) return `${who} still sees the lock it means to delete`;
+    if (restatting) return `${who} reads the empty lock again`;
     if (from.lock === "none") return `${who} sees that the lock is already gone`;
     const seen = loginMoved ? from.observed.a : from.observed.b;
     if (from.lock !== seen) return `${who} sees that the lock changed`;
     return `${who} leaves the lock in place`;
   }
+  if (name === "SecondStat") {
+    const unlinking = (loginMoved && to.phase.a === "unlinking") || (refreshMoved && to.phase.b === "unlinking");
+    return unlinking ? `${who} sees an old empty lock` : `${who} leaves the new empty lock`;
+  }
   if (name === "Unlink") return `${who} deletes the lock`;
+  if (name === "DropClaimRead") return `${who} reads the break file`;
+  if (name === "DropClaimUnlink") return `${who} drops the break file`;
   if (name === "Load") return `${who} reads the session and the id cache`;
   if (name === "Save") return `${who} writes its session and its cache entries`;
   if (name === "ReleaseRead") {

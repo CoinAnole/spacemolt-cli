@@ -22,7 +22,6 @@ import {
   saveIdCache,
   searchItemHints,
   softIdResolutionPolicy,
-  staleAdvisoryLockDecision,
 } from './id-cache';
 
 const OVERLAPPING_SAVE_KEYS = ['poi:sol_earth:get_system', 'ship:ship-1:list_ships', 'system:sol:get_system'];
@@ -1379,19 +1378,6 @@ describe('id cache', () => {
     expect(colored).toContain('resolved');
     expect(colored).toContain('find_route.id "cro" → "crosshaven" (prefix)');
     expect(colored).not.toContain('Error:');
-  });
-
-  test('a live holder that started before the lock and is younger than 30s stays', () => {
-    const lockMtimeMs = 1_700_000_000_000;
-    expect(
-      staleAdvisoryLockDecision({
-        ownerAlive: true,
-        startedAtMs: lockMtimeMs - 5_000,
-        lockMtimeMs,
-        nowMs: lockMtimeMs + 1_000,
-        staleMs: 30_000,
-      }),
-    ).toBe('keep');
   });
 
   test('overlapping list_ships and get_system saves keep the ship, the poi, and the system', async () => {

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 
 const LOCK_MODE = 0o600;
+const MAX_CLAIM_DEPTH = 3;
 
 let clkTckCache: number | undefined;
 let clkTckCached = false;
@@ -96,42 +97,20 @@ function processStartedAfterLockForPid(pid: number, mtimeMs: number): boolean {
   }
 }
 
-function removeStaleAdvisoryLock(lockPath: string, staleMs: number): boolean {
-  let observed: string;
+function dropOwn(lockPath: string, token: string): void {
+  let current: string;
   try {
-    observed = fs.readFileSync(lockPath, 'utf8');
+    current = fs.readFileSync(lockPath, 'utf8');
   } catch (error) {
-    return isErrno(error, 'ENOENT');
+    if (isErrno(error, 'ENOENT')) return;
+    throw error;
   }
-
-  const pid = Number.parseInt(observed, 10);
-  const ownerAlive = lockOwnerAlive(pid);
-  let mtimeMs: number;
+  if (current !== token) return;
   try {
-    mtimeMs = fs.statSync(lockPath).mtimeMs;
-  } catch (error) {
-    return isErrno(error, 'ENOENT');
-  }
-  const startedAfter = ownerAlive === true ? processStartedAfterLockForPid(pid, mtimeMs) : false;
-
-  try {
-    const still = fs.readFileSync(lockPath, 'utf8');
-    if (
-      staleAdvisoryLockDecision({
-        observed,
-        still,
-        ownerAlive,
-        processStartedAfterLock: startedAfter,
-        ageMs: Date.now() - mtimeMs,
-        staleMs,
-      }) !== 'remove'
-    ) {
-      return false;
-    }
     fs.unlinkSync(lockPath);
-    return true;
   } catch (error) {
-    return isErrno(error, 'ENOENT');
+    if (isErrno(error, 'ENOENT')) return;
+    throw error;
   }
 }
 
@@ -160,6 +139,94 @@ async function publishLock(lockPath: string, token: string): Promise<void> {
   if (failure !== undefined) throw failure;
 }
 
+async function removeStaleAdvisoryLock(lockPath: string, staleMs: number, depth = 0): Promise<boolean> {
+  let observed: string;
+  try {
+    observed = fs.readFileSync(lockPath, 'utf8');
+  } catch (error) {
+    if (isErrno(error, 'ENOENT')) return true;
+    throw error;
+  }
+
+  const pid = Number.parseInt(observed, 10);
+  const ownerAlive = lockOwnerAlive(pid);
+  let mtimeMs: number;
+  try {
+    mtimeMs = fs.statSync(lockPath).mtimeMs;
+  } catch (error) {
+    if (isErrno(error, 'ENOENT')) return true;
+    throw error;
+  }
+  const startedAfter = ownerAlive === true ? processStartedAfterLockForPid(pid, mtimeMs) : false;
+  const ageMs = Date.now() - mtimeMs;
+  if (
+    staleAdvisoryLockDecision({
+      observed,
+      still: observed,
+      ownerAlive,
+      processStartedAfterLock: startedAfter,
+      ageMs,
+      staleMs,
+    }) === 'keep'
+  ) {
+    return false;
+  }
+
+  const claimPath = `${lockPath}.break`;
+  const token = `${process.pid} ${Date.now().toString(16)}${Math.random().toString(16).slice(2)}\n`;
+  try {
+    await publishLock(claimPath, token);
+  } catch (error) {
+    if (!isErrno(error, 'EEXIST')) throw error;
+    if (depth + 1 >= MAX_CLAIM_DEPTH) return false;
+    return removeStaleAdvisoryLock(claimPath, staleMs, depth + 1);
+  }
+
+  try {
+    let still: string;
+    try {
+      still = fs.readFileSync(lockPath, 'utf8');
+    } catch (error) {
+      if (isErrno(error, 'ENOENT')) return true;
+      throw error;
+    }
+    let confirmAgeMs = ageMs;
+    if (ownerAlive === undefined) {
+      try {
+        confirmAgeMs = Date.now() - fs.statSync(lockPath).mtimeMs;
+      } catch (error) {
+        if (isErrno(error, 'ENOENT')) return true;
+        throw error;
+      }
+    }
+    if (
+      staleAdvisoryLockDecision({
+        observed,
+        still,
+        ownerAlive,
+        processStartedAfterLock: startedAfter,
+        ageMs: confirmAgeMs,
+        staleMs,
+      }) === 'keep'
+    ) {
+      return false;
+    }
+    try {
+      fs.unlinkSync(lockPath);
+    } catch (error) {
+      if (isErrno(error, 'ENOENT')) return true;
+      throw error;
+    }
+    return true;
+  } finally {
+    try {
+      dropOwn(claimPath, token);
+    } catch {
+      /* this process is alive, so the claim stays until it exits */
+    }
+  }
+}
+
 export async function acquireAdvisoryLock(
   lockPath: string,
   options: { timeoutMs: number; retryMs: number; staleMs: number; timeoutError: string },
@@ -170,24 +237,11 @@ export async function acquireAdvisoryLock(
     try {
       await publishLock(lockPath, token);
       return () => {
-        let current: string;
-        try {
-          current = fs.readFileSync(lockPath, 'utf8');
-        } catch (error) {
-          if (isErrno(error, 'ENOENT')) return;
-          throw error;
-        }
-        if (current !== token) return;
-        try {
-          fs.unlinkSync(lockPath);
-        } catch (error) {
-          if (isErrno(error, 'ENOENT')) return;
-          throw error;
-        }
+        dropOwn(lockPath, token);
       };
     } catch (error) {
       if (!isErrno(error, 'EEXIST')) throw error;
-      if (removeStaleAdvisoryLock(lockPath, options.staleMs)) continue;
+      if (await removeStaleAdvisoryLock(lockPath, options.staleMs)) continue;
       if (Date.now() >= deadline) throw new Error(options.timeoutError);
       await Bun.sleep(options.retryMs);
     }
