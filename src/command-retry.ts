@@ -6,23 +6,23 @@
  * rate_limited wait of at most 60 seconds, or one session recovery that logs in.
  *
  * The command under test is undock. Every v2 command that goes through
- * executeRoute shares this loop. Run: bun run verify:command-retry
+ * executeRoute shares this loop. Run: bun test src/command-retry.test.ts
  *
  * No model checker runs on this TypeScript. The script drives the real client
  * through every sequence in the response alphabet below, and through the
  * classification probes. It does not sample.
  */
-import { SpaceMoltClient, type SpaceMoltClientOptions } from '../src/api.ts';
-import { buildRequestUrl, V2_TOOL_MAP } from '../src/commands.ts';
-import { ERROR_REGISTRY } from '../src/errors.ts';
-import { MAX_RATE_LIMIT_AUTO_RETRY_WAIT_SECONDS } from '../src/rate-limit.ts';
+import { SpaceMoltClient, type SpaceMoltClientOptions } from './api.ts';
+import { buildRequestUrl, V2_TOOL_MAP } from './commands.ts';
+import { ERROR_REGISTRY } from './errors.ts';
+import { MAX_RATE_LIMIT_AUTO_RETRY_WAIT_SECONDS } from './rate-limit.ts';
 import {
   DEFAULT_SERVICE_UNAVAILABLE_WAIT_SECONDS,
   MAX_RATE_LIMIT_RETRIES,
   MAX_SERVICE_UNAVAILABLE_RETRIES,
   MAX_SESSION_RECOVERY_ATTEMPTS,
-} from '../src/runtime.ts';
-import type { APIResponse, JsonRequestOptions, Session } from '../src/types.ts';
+} from './runtime.ts';
+import type { APIResponse, JsonRequestOptions, Session } from './types.ts';
 
 const API_BASE = 'https://game.test/api/v2';
 const NOW_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
@@ -148,7 +148,7 @@ function budgetDrift(): string | undefined {
   if (problems.length === 0) return undefined;
   return `${problems.join(
     '\n',
-  )}\nThese budgets are the promise. Do not change them just to match a new constant. Confirm the new budget is intended, then update this file and the verify-command-retry skill together.`;
+  )}\nThese budgets are the promise. Do not change them just to match a new constant. Confirm the new budget is intended, then update this file and src/command-retry.test.ts together.`;
 }
 
 function describeSpec(spec: ResponseSpec): string {
@@ -408,7 +408,8 @@ async function drive(frames: Frame[], options: DriveOptions): Promise<DriveResul
 }
 
 function evaluate(script: ResponseSpec[], driven: DriveResult): string | undefined {
-  if (driven.error) return `The client or the harness threw: ${driven.error}\nSequence: ${script.map(describeSpec).join(' → ')}`;
+  if (driven.error)
+    return `The client or the harness threw: ${driven.error}\nSequence: ${script.map(describeSpec).join(' → ')}`;
   const undocks = driven.events.filter((event): event is EventUndock => event.type === 'undock');
   if (driven.stopped) {
     if (undocks.length !== script.length) {
@@ -582,8 +583,11 @@ function boundaryProbes(): Probe[] {
     harm: 'An IP timeout is not a session rate-limit retry. Another undock keeps the client inside the timeout.',
   });
 
-  const rate = (retryAfter: number, extra: Record<string, unknown> = {}, label = `rate_limited retry_after=${retryAfter}`) =>
-    objectError(429, 'rate_limited', { retry_after: retryAfter, ...extra }, label);
+  const rate = (
+    retryAfter: number,
+    extra: Record<string, unknown> = {},
+    label = `rate_limited retry_after=${retryAfter}`,
+  ) => objectError(429, 'rate_limited', { retry_after: retryAfter, ...extra }, label);
 
   const inBudget = (name: string, frame: Frame, sleepMs: number) => {
     probes.push({
@@ -607,7 +611,12 @@ function boundaryProbes(): Probe[] {
   );
   inBudget(
     'details.retry_after 1',
-    objectError(429, 'rate_limited', { message: 'slow down', details: { retry_after: 1 } }, 'rate_limited details.retry_after=1'),
+    objectError(
+      429,
+      'rate_limited',
+      { message: 'slow down', details: { retry_after: 1 } },
+      'rate_limited details.retry_after=1',
+    ),
     1_000,
   );
 
@@ -862,33 +871,34 @@ async function explore(script: ResponseSpec[]): Promise<string | undefined> {
 
 let sequenceCount = 0;
 
-async function main(): Promise<void> {
-  const started = performance.now();
+export async function verifyCommandRetry(): Promise<string | undefined> {
+  sequenceCount = 0;
   const drift = budgetDrift();
-  if (drift) {
-    console.log(`verify-command-retry: fail\n${drift}`);
-    process.exitCode = 1;
-    return;
-  }
+  if (drift) return drift;
 
   const probeFailures = await runProbes();
   if (probeFailures.length > 0) {
     const shown = probeFailures.slice(0, 3);
     const more =
       probeFailures.length > shown.length ? `\n\n${probeFailures.length - shown.length} more probe(s) failed.` : '';
-    console.log(`verify-command-retry: fail\n${shown.join('\n\n')}${more}`);
-    process.exitCode = 1;
-    return;
+    return `${shown.join('\n\n')}${more}`;
   }
-  const probeCount = boundaryProbes().length;
 
   const explorationFailure = await explore([]);
-  if (explorationFailure) {
-    console.log(`verify-command-retry: fail\n${explorationFailure}`);
+  if (explorationFailure) return explorationFailure;
+  return undefined;
+}
+
+async function main(): Promise<void> {
+  const started = performance.now();
+  const failure = await verifyCommandRetry();
+  if (failure) {
+    console.log(`verify-command-retry: fail\n${failure}`);
     process.exitCode = 1;
     return;
   }
 
+  const probeCount = boundaryProbes().length;
   const elapsed = Math.round(performance.now() - started);
   console.log(
     [
@@ -903,4 +913,6 @@ async function main(): Promise<void> {
   );
 }
 
-await main();
+if (import.meta.main) {
+  await main();
+}

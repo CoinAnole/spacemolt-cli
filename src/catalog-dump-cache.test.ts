@@ -13,6 +13,7 @@ import { buildRequestUrl } from './commands';
 import { DEFAULT_V2_API_BASE } from './runtime';
 
 const NOW = new Date('2026-09-07T12:00:00.000Z');
+const LATER = new Date(NOW.getTime() + 1000);
 const FRESH_FETCHED_AT = '2026-09-07T11:30:00.000Z';
 const STALE_FETCHED_AT = '2026-09-07T10:00:00.000Z';
 const DUMP_URL = 'https://game.spacemolt.com/api/catalog.json';
@@ -372,5 +373,223 @@ describe('catalog dump cache', () => {
     expect(headerValue(calls[1]?.init, 'If-None-Match')).toBeUndefined();
     expect(corrupt).toEqual({ structuredContent: dump });
     expect(missing).toEqual({ structuredContent: dump });
+  });
+
+  test('a 200 then refresh=true and HTTP 429 keeps the 200 catalog and fetchedAt', async () => {
+    const dir = tempDir();
+    const cachePath = catalogDumpCachePath(dir);
+    let rateLimited = false;
+    const { fetch, calls } = mockFetch(() => {
+      if (!rateLimited) return jsonResponse(dump, { etag: '"from-200"', cacheControl: 'public, max-age=3600' });
+      return jsonResponse({ version: '429-version', marker: 'from-429' }, { status: 429 });
+    });
+
+    const first = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: dir,
+      now: NOW,
+      fetch,
+    });
+    expect(first).toEqual({ structuredContent: dump });
+    const afterFirst = fs.readFileSync(cachePath, 'utf-8');
+
+    rateLimited = true;
+    const second = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: true,
+      cacheDir: dir,
+      now: LATER,
+      fetch,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(second).toEqual({ structuredContent: dump });
+    expect(fs.readFileSync(cachePath, 'utf-8')).toBe(afterFirst);
+    const stored = JSON.parse(afterFirst) as CatalogDumpCacheFile;
+    expect(stored.fetchedAt).toBe(NOW.toISOString());
+    expect(stored.catalog).toEqual(dump);
+  });
+
+  test('a 200 then refresh=true and HTTP 304 keeps the 200 catalog and moves fetchedAt', async () => {
+    const dir = tempDir();
+    let revalidate = false;
+    const { fetch, calls } = mockFetch(() => {
+      if (!revalidate) return jsonResponse(dump, { etag: '"from-200"', cacheControl: 'public, max-age=3600' });
+      return new Response(JSON.stringify({ version: '304-version', marker: 'from-304' }), {
+        status: 304,
+        headers: { etag: '"revalidated"', 'cache-control': 'max-age=120', 'content-type': 'application/json' },
+      });
+    });
+
+    const first = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: dir,
+      now: NOW,
+      fetch,
+    });
+    expect(first).toEqual({ structuredContent: dump });
+
+    revalidate = true;
+    const second = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: true,
+      cacheDir: dir,
+      now: LATER,
+      fetch,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(second).toEqual({ structuredContent: dump });
+    const stored = JSON.parse(fs.readFileSync(catalogDumpCachePath(dir), 'utf-8')) as CatalogDumpCacheFile;
+    expect(stored).toEqual({
+      fetchedAt: LATER.toISOString(),
+      etag: '"revalidated"',
+      maxAgeSeconds: 120,
+      version: '0.596.2',
+      catalog: dump,
+    });
+  });
+
+  test('HTTP 304 with no cache file is invalid_response and creates no file', async () => {
+    const dir = tempDir();
+    const { fetch, calls } = mockFetch(
+      () => new Response(null, { status: 304, headers: { etag: '"revalidated"', 'cache-control': 'max-age=120' } }),
+    );
+
+    const response = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: dir,
+      now: NOW,
+      fetch,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(response).toEqual({
+      error: { code: 'invalid_response', message: 'Catalog dump returned 304 without a local cache.' },
+    });
+    expect(fs.readdirSync(dir)).toEqual([]);
+  });
+
+  test('HTTP 500 with a cache returns the cached catalog and keeps fetchedAt', async () => {
+    const dir = tempDir();
+    const cachePath = writeCache(dir, {
+      fetchedAt: STALE_FETCHED_AT,
+      etag: '"stale"',
+      maxAgeSeconds: 3600,
+      version: '0.596.2',
+      catalog: dump,
+    });
+    const before = fs.readFileSync(cachePath, 'utf-8');
+    const { fetch, calls } = mockFetch(() => new Response('server error', { status: 500 }));
+
+    const response = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: dir,
+      now: NOW,
+      fetch,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(response).toEqual({ structuredContent: dump });
+    expect(fs.readFileSync(cachePath, 'utf-8')).toBe(before);
+    expect((JSON.parse(before) as CatalogDumpCacheFile).fetchedAt).toBe(STALE_FETCHED_AT);
+  });
+
+  test('HTTP 200 array, null, and invalid JSON are invalid_response and leave the cache byte for byte', async () => {
+    const badBodies = [
+      {
+        label: 'array',
+        message: 'Catalog dump response was not a JSON object.',
+        respond: () => jsonResponse([{ marker: 'from-200-array' }]),
+      },
+      {
+        label: 'null',
+        message: 'Catalog dump response was not a JSON object.',
+        respond: () => jsonResponse(null),
+      },
+      {
+        label: 'invalid JSON',
+        message: 'Catalog dump response was not valid JSON.',
+        respond: () => new Response('{not-json', { status: 200, headers: { 'content-type': 'application/json' } }),
+      },
+    ];
+
+    for (const body of badBodies) {
+      const dir = tempDir();
+      const cachePath = writeCache(dir, {
+        fetchedAt: STALE_FETCHED_AT,
+        etag: '"stale"',
+        maxAgeSeconds: 3600,
+        version: '0.596.2',
+        catalog: dump,
+      });
+      const before = fs.readFileSync(cachePath, 'utf-8');
+      const { fetch, calls } = mockFetch(() => body.respond());
+
+      const response = await loadCatalogDump({
+        url: DUMP_URL,
+        refresh: false,
+        cacheDir: dir,
+        now: NOW,
+        fetch,
+      });
+
+      expect({ label: body.label, calls: calls.length, response, file: fs.readFileSync(cachePath, 'utf-8') }).toEqual({
+        label: body.label,
+        calls: 1,
+        response: { error: { code: 'invalid_response', message: body.message } },
+        file: before,
+      });
+    }
+  });
+
+  test('age equal to maxAgeSeconds fetches and age 1ms under it does not', async () => {
+    const maxAgeSeconds = 3600;
+    const exactDir = tempDir();
+    writeCache(exactDir, {
+      fetchedAt: new Date(NOW.getTime() - maxAgeSeconds * 1000).toISOString(),
+      etag: '"cached"',
+      maxAgeSeconds,
+      version: '0.596.2',
+      catalog: dump,
+    });
+    const exact = mockFetch(() => {
+      throw new Error('socket hang up');
+    });
+    const exactResponse = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: exactDir,
+      now: NOW,
+      fetch: exact.fetch,
+    });
+    expect(exact.calls).toHaveLength(1);
+    expect(exact.calls[0]?.url).toBe(DUMP_URL);
+    expect(exactResponse).toEqual({ structuredContent: dump });
+
+    const insideDir = tempDir();
+    writeCache(insideDir, {
+      fetchedAt: new Date(NOW.getTime() - maxAgeSeconds * 1000 + 1).toISOString(),
+      etag: '"cached"',
+      maxAgeSeconds,
+      version: '0.596.2',
+      catalog: dump,
+    });
+    const inside = mockFetch(() => {
+      throw new Error('network should not be used');
+    });
+    const insideResponse = await loadCatalogDump({
+      url: DUMP_URL,
+      refresh: false,
+      cacheDir: insideDir,
+      now: NOW,
+      fetch: inside.fetch,
+    });
+    expect(inside.calls).toHaveLength(0);
+    expect(insideResponse).toEqual({ structuredContent: dump });
   });
 });

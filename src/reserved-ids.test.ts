@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /**
  * Check one promise of preparePayload:
  *
@@ -7,18 +6,17 @@
  * and service_prize send a station field as the cached POI base id when the
  * hint has one.
  *
- * Run: bun run verify:reserved-ids
- *
- * Nothing model-checks TypeScript. This is not a model of preparePayload.
  * Every probe calls the real function. resolveCachedId is used only to prove
  * the cache would have changed the wire, so a removed bypass cannot pass quietly.
  */
+
+import { test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalizeParsedPayload } from '../src/args.ts';
-import { COMMANDS } from '../src/commands.ts';
+import { normalizeParsedPayload } from './args.ts';
+import { COMMANDS } from './commands.ts';
 import {
   type IdHint,
   type IdKind,
@@ -26,11 +24,11 @@ import {
   resolveCachedId,
   STRICT_ID_RESOLUTION_POLICY,
   softIdResolutionPolicy,
-} from '../src/id-cache.ts';
-import { preparePayload } from '../src/payload.ts';
-import type { GlobalOptions } from '../src/types.ts';
+} from './id-cache.ts';
+import { preparePayload } from './payload.ts';
+import type { GlobalOptions } from './types.ts';
 
-const PAYLOAD_PATH = fileURLToPath(new URL('../src/payload.ts', import.meta.url));
+const PAYLOAD_PATH = fileURLToPath(new URL('./payload.ts', import.meta.url));
 // Grouped commands (storage deposit, faction deposit_credits) are not flat entries
 // in the default registry. The handler passes the flat action config, which is COMMANDS.
 const FLAT_REGISTRY = { commands: COMMANDS };
@@ -1181,7 +1179,6 @@ function runProbe(sessionPath: string, hints: IdHint[], probe: Probe): string | 
       stderr.push(message);
     },
   };
-  calls += 1;
   if (probe.catches.some((item) => item.mode === 'bypass' || item.mode === 'base-id')) catchingCalls += 1;
   const result = preparePayload(probe.command, probe.payload, options(probe.fuzzy), sessionPath, writer, FLAT_REGISTRY);
   if (probe.expect === 'exit') {
@@ -1211,18 +1208,15 @@ function writeHints(sessionPath: string, hints: IdHint[]): void {
   fs.writeFileSync(cachePath, `${JSON.stringify({ version: 1, hints })}\n`);
 }
 
-let calls = 0;
 let catchingCalls = 0;
 
 function runSuite(suite: Suite): string | undefined {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spacemolt-reserved-ids-'));
-  const counts = new Map<string, number>();
   try {
     for (const phase of suite.phases) {
       const sessionPath = path.join(dir, `${phase.name}.json`);
       writeHints(sessionPath, phase.hints);
       for (const probe of phase.probes) {
-        counts.set(probe.tag, (counts.get(probe.tag) ?? 0) + 1);
         const failure = runProbe(sessionPath, phase.hints, probe);
         if (failure) return failure;
       }
@@ -1231,66 +1225,18 @@ function runSuite(suite: Suite): string | undefined {
     fs.rmSync(dir, { recursive: true, force: true });
   }
   if (catchingCalls === 0) return 'modeling error: no probe can catch a removed bypass or a missing base-id rewrite.';
-  passCounts = counts;
   return undefined;
 }
 
-let passCounts = new Map<string, number>();
-
-function countLine(tag: string): string {
-  return `${tag}: ${passCounts.get(tag) ?? 0}`;
-}
-
-async function main(): Promise<void> {
-  const started = performance.now();
+test('reserved storage, fuel, credits, jump bearings, and prize base ids stay on the wire', () => {
+  catchingCalls = 0;
   const source = fs.readFileSync(PAYLOAD_PATH, 'utf8');
   const guard = sourceGuard(source);
-  if (guard) {
-    console.log(`verify-reserved-ids: fail\n${guard}`);
-    process.exitCode = 1;
-    return;
-  }
+  if (guard) throw new Error(guard);
   const aliases = readEmpireAliases(source);
-  if (typeof aliases === 'string') {
-    console.log(`verify-reserved-ids: fail\n${aliases}`);
-    process.exitCode = 1;
-    return;
-  }
+  if (typeof aliases === 'string') throw new Error(aliases);
   const suite = buildSuite(aliases);
-  if (typeof suite === 'string') {
-    console.log(`verify-reserved-ids: fail\n${suite}`);
-    process.exitCode = 1;
-    return;
-  }
+  if (typeof suite === 'string') throw new Error(suite);
   const failure = runSuite(suite);
-  if (failure) {
-    console.log(`verify-reserved-ids: fail\n${failure}`);
-    process.exitCode = 1;
-    return;
-  }
-  const elapsed = Math.round(performance.now() - started);
-  console.log(
-    [
-      'verify-reserved-ids: pass',
-      'property: reserved storage targets, fuel, tank_fuel, credits on the four credit commands, and numeric jump bearings are never replaced by a cached player, item, or system id. claim_prize and service_prize send a station field as the cached POI base id when the hint has one.',
-      `preparePayload calls: ${calls}`,
-      `catching calls: ${catchingCalls}`,
-      `empire aliases: ${suite.empireAliases.length}`,
-      `storage words: ${suite.storageWords}`,
-      `jump words: ${suite.jumpWords}`,
-      `fuel words: ${suite.fuelWords}`,
-      `credit words: ${suite.creditWords}`,
-      countLine('storage'),
-      countLine('jump'),
-      countLine('fuel'),
-      countLine('credits'),
-      countLine('prize'),
-      countLine('reload'),
-      countLine('prefix'),
-      countLine('boundary'),
-      `elapsed_ms: ${elapsed}`,
-    ].join('\n'),
-  );
-}
-
-await main();
+  if (failure) throw new Error(failure);
+});

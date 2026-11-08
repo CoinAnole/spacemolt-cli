@@ -1741,6 +1741,47 @@ describe('cached ID payload resolver', () => {
     expect(parsed.error.message).toContain('iron_plate');
   });
 
+  test('stops before send when two cached attack targets match', () => {
+    const sessionPath = useTempSession();
+    fs.writeFileSync(
+      getIdCachePath(sessionPath),
+      `${JSON.stringify(
+        {
+          version: 1,
+          hints: [
+            {
+              kind: 'player',
+              id: 'raider_1',
+              name: 'Raider',
+              sourceCommand: 'get_nearby',
+              seenAt: '2026-05-18T00:00:00.000Z',
+            },
+            {
+              kind: 'player',
+              id: 'raider_2',
+              name: 'Raider',
+              sourceCommand: 'get_nearby',
+              seenAt: '2026-05-18T00:01:00.000Z',
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const stderr: string[] = [];
+
+    const prepared = preparePayload('attack', { target_id: 'raider' }, options(), sessionPath, writer([], stderr));
+
+    expect(prepared).toEqual({ type: 'exit', exitCode: 1 });
+    expect(prepared).not.toMatchObject({ type: 'payload' });
+    expect(JSON.stringify(prepared)).not.toContain('raider_1');
+    expect(JSON.stringify(prepared)).not.toContain('raider_2');
+    expect(stderr.join('\n')).toContain('Ambiguous cached player match for "raider"');
+    expect(stderr.join('\n')).toContain('raider_1');
+    expect(stderr.join('\n')).toContain('raider_2');
+  });
+
   test('incident regression: find_route/jump haven never rewrites to crosshaven', () => {
     const sessionPath = useTempSession();
     fs.writeFileSync(

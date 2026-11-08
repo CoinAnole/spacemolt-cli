@@ -16,6 +16,8 @@ interface FollowHarnessOptions {
   cleanup?: APIResponse | Error;
   stopOnSleep?: number;
   signal?: SignalName;
+  /** 0-based get_notifications index that fires `signal` without rejecting or aborting the poll. */
+  signalOnPoll?: number;
   env?: CliEnv;
   holdStoppedSleepUntilAbort?: boolean;
 }
@@ -29,7 +31,10 @@ async function runFollowHarness(options: FollowHarnessOptions = {}) {
   const registered = { SIGINT: [] as Array<() => void>, SIGTERM: [] as Array<() => void> };
   const removed = { SIGINT: [] as Array<() => void>, SIGTERM: [] as Array<() => void> };
   let pollIndex = 0;
+  let pollsCompleted = 0;
   let abortedSleeps = 0;
+  const events: string[] = [];
+  const signal = options.signal ?? 'SIGINT';
 
   const client = {
     config: { profile: 'pilot' },
@@ -48,13 +53,21 @@ async function runFollowHarness(options: FollowHarnessOptions = {}) {
       calls.push({ command: name, payload });
       if (name === 'get_notifications') {
         const index = pollIndex++;
-        return (
-          (await options.poll?.(index)) ?? {
-            structuredContent: { notifications: [], count: 0, remaining: 0 },
-          }
-        );
+        if (options.signalOnPoll === index) {
+          const listener = registered[signal][0];
+          if (!listener) throw new Error('signal listener was not registered before the poll');
+          events.push('signal');
+          listener();
+        }
+        const response = (await options.poll?.(index)) ?? {
+          structuredContent: { notifications: [], count: 0, remaining: 0 },
+        };
+        pollsCompleted += 1;
+        events.push('poll-settled');
+        return response;
       }
       if (name === 'unsubscribe_market' || name === 'unsubscribe_observation') {
+        events.push('unsubscribe');
         if (options.cleanup instanceof Error) throw options.cleanup;
         return options.cleanup ?? { structuredContent: { ok: true } };
       }
@@ -62,7 +75,6 @@ async function runFollowHarness(options: FollowHarnessOptions = {}) {
     },
   } as unknown as SpaceMoltClient;
 
-  const signal = options.signal ?? 'SIGINT';
   const context: CliRuntimeContext = {
     env: { SPACEMOLT_PROFILE: 'pilot', SPACEMOLT_UPDATE_CHECK: 'false', ...options.env },
     writer: {
@@ -79,6 +91,12 @@ async function runFollowHarness(options: FollowHarnessOptions = {}) {
     clock: { now: () => new Date('2026-08-15T12:00:00.000Z') },
     async sleep(milliseconds, abortSignal) {
       sleeps.push(milliseconds);
+      if (options.signalOnPoll !== undefined && options.stopOnSleep === undefined) {
+        if (sleeps.length > options.signalOnPoll + 2) {
+          throw new Error('subscription follow kept sleeping after the in-poll signal');
+        }
+        return;
+      }
       if (sleeps.length !== (options.stopOnSleep ?? 2)) return;
       if (!options.holdStoppedSleepUntilAbort) {
         registered[signal][0]?.();
@@ -117,7 +135,19 @@ async function runFollowHarness(options: FollowHarnessOptions = {}) {
     context,
     dependencies,
   );
-  return { exitCode, stdout, stderr, calls, sleeps, registered, removed, polls: pollIndex, abortedSleeps };
+  return {
+    exitCode,
+    stdout,
+    stderr,
+    calls,
+    sleeps,
+    registered,
+    removed,
+    polls: pollIndex,
+    pollsCompleted,
+    abortedSleeps,
+    events,
+  };
 }
 
 function notification(id: string, type: string, msgType: string, message: string) {
@@ -350,6 +380,7 @@ describe('subscription follow runner integration', () => {
     expect(result.exitCode).toBe(0);
     expect(result.sleeps).toEqual([10_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000]);
     expect(result.stderr.join('\n')).toContain('Retrying in 30s');
+    expect(result.calls.filter((call) => call.command === 'unsubscribe_market')).toHaveLength(1);
   });
 
   test('resets transient retry backoff after a successful poll', async () => {
@@ -375,6 +406,25 @@ describe('subscription follow runner integration', () => {
       expect(result.removed.SIGTERM).toEqual(result.registered.SIGTERM);
     });
   }
+
+  test('SIGINT inside get_notifications unsubscribes once after that poll settles', async () => {
+    let pollCompleted = false;
+    const result = await runFollowHarness({
+      signalOnPoll: 0,
+      poll() {
+        pollCompleted = true;
+        return { structuredContent: { notifications: [], count: 0, remaining: 0 } };
+      },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.sleeps).toEqual([10_000]);
+    expect(result.calls.filter((call) => call.command === 'get_notifications')).toHaveLength(1);
+    expect(pollCompleted).toBe(true);
+    expect(result.pollsCompleted).toBe(1);
+    expect(result.calls.filter((call) => call.command === 'unsubscribe_market')).toHaveLength(1);
+    expect(result.events).toEqual(['signal', 'poll-settled', 'unsubscribe']);
+  });
 
   test('signal aborts the pending delay instead of leaving its timer alive', async () => {
     const result = await runFollowHarness({
