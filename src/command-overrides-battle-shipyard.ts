@@ -96,11 +96,11 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt_battle/retreat',
   },
   battle_stance: {
-    usage: '<stance> [target] [marines=N]',
+    usage: '<stance> [target] [marines=N] [intent=capture|plunder]',
     description:
       'Set your battle stance (fire, evade, brace, flee, or board). ' +
       WILDLIFE_FLEE_WINDOW_HELP +
-      " For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. A faster effective speed lets the boarder intercept the target's retreat and flee; an equal or faster target can kite. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does.",
+      " For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. A faster effective speed lets the boarder intercept the target's retreat and flee; an equal or faster target can kite. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does. plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players.",
     example: 'spacemolt battle_stance board pirate-1 marines=8',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_target'],

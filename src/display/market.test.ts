@@ -1950,6 +1950,86 @@ test('get_trades incoming offer expires_at prints Expires', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_trades prints a note, a toll, its tick, and a hold, and skips expires_at on that toll', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      incoming: [
+        {
+          trade_id: 'trade-toll',
+          offerer_name: 'Ada',
+          offer_items: [],
+          request_items: [],
+          request_credits: 500,
+          note: '  lane fee\nnow',
+          offer_safe_passage: true,
+          hold: true,
+          expires_tick: 15,
+          expires_at: '2026-11-01T00:00:00Z',
+        },
+      ],
+      outgoing: [
+        {
+          trade_id: 'trade-out',
+          target_name: 'Bo',
+          offer_items: [],
+          request_items: [],
+          note: '',
+          offer_safe_passage: false,
+          hold: false,
+          expires_tick: 99,
+          expires_at: '2026-11-02T00:00:00Z',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const incoming = stdout.split('Incoming:')[1] ?? '';
+  const outgoing = stdout.split('Outgoing:')[1]?.split('Incoming:')[0] ?? '';
+  expect(incoming).toContain('Note: lane fee now');
+  expect(incoming).toContain('Toll');
+  expect(incoming).toContain(`Expires tick: ${(15).toLocaleString()}`);
+  expect(incoming).toContain('Hold: true');
+  expect(incoming).not.toContain('Expires: 2026-11-01T00:00:00Z');
+  expect(incoming.indexOf('Toll')).toBeLessThan(incoming.indexOf('Expires tick:'));
+  expect(incoming.indexOf('Expires tick:')).toBeLessThan(incoming.indexOf('Hold: true'));
+  expect(outgoing).toContain('Expires: 2026-11-02T00:00:00Z');
+  expect(outgoing).not.toContain('Note:');
+  expect(outgoing).not.toContain('Toll');
+  expect(outgoing).not.toContain('Hold:');
+  expect(outgoing).not.toContain('Expires tick:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_trades omits an empty note, a false hold, and a toll tick that was not sent', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      incoming: [
+        {
+          trade_id: 'trade-plain',
+          offerer_name: 'Ada',
+          note: '   ',
+          offer_safe_passage: true,
+          hold: false,
+          expires_at: '2026-11-01T00:00:00Z',
+        },
+      ],
+      outgoing: [],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Toll');
+  expect(stdout).not.toContain('Note:');
+  expect(stdout).not.toContain('Hold:');
+  expect(stdout).not.toContain('Expires tick:');
+  expect(stdout).not.toContain('Expires:');
+});
+
 test('get_trades buy price modifier prints buy and sell price modifiers', () => {
   const stdout = renderStructuredResult(
     'get_trades',

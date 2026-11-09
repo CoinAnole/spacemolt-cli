@@ -9166,6 +9166,74 @@ describe('notification formatting', () => {
       expect(ordinary.details).toEqual([]);
     });
 
+    test('trade_offer_received prints a note, toll, hold, and the ticks that were sent', () => {
+      const toll = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        data: {
+          from_name: 'Ada',
+          trade_id: 'trade_toll',
+          request_credits: 500,
+          note: '  lane fee\nnow',
+          offer_safe_passage: true,
+          hold: true,
+          expires_tick: 15,
+          pass_until_ticks: 90,
+        },
+      });
+      expect(toll.details).toEqual([
+        'Requesting: 500 credits',
+        'Note: lane fee now',
+        'Toll',
+        'Hold: true',
+        `Expires tick: ${(15).toLocaleString()}; Pass until ticks: ${(90).toLocaleString()}`,
+        'Use: trade accept trade_id=trade_toll or trade decline trade_id=trade_toll',
+      ]);
+      expect(toll.details.join('\n')).not.toContain('2160');
+      expect(toll.details.join('\n')).not.toContain((2160).toLocaleString());
+
+      const otherPass = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        data: {
+          from_name: 'Ada',
+          trade_id: 'trade_pass',
+          offer_safe_passage: true,
+          pass_until_ticks: 2160,
+          expires_tick: 0,
+        },
+      });
+      expect(otherPass.details).toContain('Toll');
+      expect(otherPass.details).toContain(
+        `Expires tick: ${(0).toLocaleString()}; Pass until ticks: ${(2160).toLocaleString()}`,
+      );
+
+      const ordinary = formatNotificationPreview({
+        type: 'trade',
+        msg_type: 'trade_offer_received',
+        data: {
+          from_name: 'Dockmaster',
+          trade_id: 'trade_1',
+          offer_credits: 5,
+          request_credits: 2,
+          note: '',
+          offer_safe_passage: false,
+          hold: false,
+          expires_tick: 40,
+        },
+      });
+      expect(ordinary.details).toEqual([
+        'Offering: 5 credits',
+        'Requesting: 2 credits',
+        `Expires tick: ${(40).toLocaleString()}`,
+        'Use: trade accept trade_id=trade_1 or trade decline trade_id=trade_1',
+      ]);
+      expect(ordinary.details.join('\n')).not.toContain('Note:');
+      expect(ordinary.details.join('\n')).not.toContain('Toll');
+      expect(ordinary.details.join('\n')).not.toContain('Hold:');
+      expect(ordinary.details.join('\n')).not.toContain('Pass until ticks:');
+    });
+
     test('faction_invite pure preview includes decline prompt', () => {
       const preview = formatNotificationPreview({
         type: 'faction',

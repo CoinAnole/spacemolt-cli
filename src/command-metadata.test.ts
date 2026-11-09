@@ -1687,6 +1687,10 @@ describe('command metadata', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.battle_stance;
     expect(config?.usage).toContain('[target]');
     expect(config?.usage).toContain('[marines=N]');
+    expect(config?.usage).toContain('intent=capture|plunder');
+    expect(config?.description).toContain(
+      "plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players.",
+    );
     expect(config?.description).toContain('server requires');
     expect(config?.description).toContain('board');
     expect(config?.description).toContain('marines');
@@ -1737,6 +1741,10 @@ describe('command metadata', () => {
     expect(config?.schema?.id?.description).not.toContain('target_id');
     expect(help).toContain('[target]');
     expect(help).toContain('[marines=N]');
+    expect(help).toContain('intent=capture|plunder');
+    expect(help).toContain(
+      "plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players.",
+    );
     expect(help).toContain('server requires');
     expect(help).toContain('Does not cost a tick');
     expect(help).toContain('effective speed');

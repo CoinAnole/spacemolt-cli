@@ -1729,6 +1729,27 @@ function stationSalePreviewLines(data: Record<string, unknown>): string[] {
   return lines;
 }
 
+function tradeOfferNote(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.replace(/[\r\n]+/g, ' ').trim();
+  return text.length > 0 ? text : undefined;
+}
+
+function tradeOfferNoticeLines(data: Record<string, unknown>): string[] {
+  const lines: string[] = [];
+  const note = tradeOfferNote(data.note);
+  if (note !== undefined) lines.push(`Note: ${note}`);
+  if (data.offer_safe_passage === true) lines.push('Toll');
+  if (data.hold === true) lines.push('Hold: true');
+  const ticks: string[] = [];
+  const expires = formatIntegerText(data.expires_tick);
+  if (expires !== undefined) ticks.push(`Expires tick: ${expires}`);
+  const pass = formatIntegerText(data.pass_until_ticks);
+  if (pass !== undefined) ticks.push(`Pass until ticks: ${pass}`);
+  if (ticks.length > 0) lines.push(ticks.join('; '));
+  return lines;
+}
+
 function previewTradeOfferReceived(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -1742,8 +1763,11 @@ function previewTradeOfferReceived(
   const request = positiveNumber(data.request_credits);
   if (request !== undefined) details.push(`Requesting: ${request} credits`);
   details.push(...stationSalePreviewLines(data));
-  details.push(`Use: trade accept trade_id=${tradeId} or trade decline trade_id=${tradeId}`);
-  return detailPreview('TRADE', `Offer from ${from} (ID: ${tradeId})`, details, options);
+  details.push(...tradeOfferNoticeLines(data));
+  const useLine = `Use: trade accept trade_id=${tradeId} or trade decline trade_id=${tradeId}`;
+  const capacity = Math.max(0, options.maxDetails - 1);
+  const kept = details.length > capacity ? details.slice(details.length - capacity) : details;
+  return detailPreview('TRADE', `Offer from ${from} (ID: ${tradeId})`, [...kept, useLine], options);
 }
 
 function previewTradeComplete(

@@ -311,6 +311,26 @@ function emitTradeStationSale(trade: Record<string, unknown>): void {
   if (tax !== undefined) emitLine(`    Transfer tax: ${tax}`);
 }
 
+function pendingTradeNote(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.replace(/[\r\n]+/g, ' ').trim();
+  return text.length > 0 ? text : undefined;
+}
+
+function emitPendingTradeOffer(trade: Record<string, unknown>): void {
+  const note = pendingTradeNote(trade.note);
+  if (note !== undefined) emitLine(`    Note: ${note}`);
+  // Tolls expire by expires_tick. expires_at is not that expiry.
+  if (trade.offer_safe_passage === true) {
+    emitLine('    Toll');
+    const tick = formatIntegerText(trade.expires_tick);
+    if (tick !== undefined) emitLine(`    Expires tick: ${tick}`);
+  } else if (trade.expires_at) {
+    emitLine(`    Expires: ${trade.expires_at}`);
+  }
+  if (trade.hold === true) emitLine('    Hold: true');
+}
+
 function formatOptionalNumber(value: unknown): string {
   return displayCount(value) ?? '?';
 }
@@ -1108,7 +1128,7 @@ export const marketFormatters = [
           emitLine(`  ${t.trade_id}: offering ${offered} for ${requested}`);
           emitTradeStationSale(t);
           if (t.target_name) emitLine(`    To: ${t.target_name}`);
-          if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
+          emitPendingTradeOffer(t);
         }
       }
 
@@ -1119,7 +1139,7 @@ export const marketFormatters = [
           const offered = formatTradeTerms(t.offer_items, t.offer_credits);
           emitLine(`  ${t.trade_id}: ${t.offerer_name || 'someone'} offers ${offered} for ${requested}`);
           emitTradeStationSale(t);
-          if (t.expires_at) emitLine(`    Expires: ${t.expires_at}`);
+          emitPendingTradeOffer(t);
         }
       }
       return true;
