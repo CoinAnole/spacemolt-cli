@@ -157,6 +157,14 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_status', 'dock'],
   },
+  station_in_battle: {
+    code: 'station_in_battle',
+    message: 'Station is in a battle.',
+    suggestion: 'Wait until the battle ends, then retry.',
+    retryable: true,
+    auth: false,
+    relatedCommands: [],
+  },
   already_traveling: {
     code: 'already_traveling',
     message: 'Already traveling.',

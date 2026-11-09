@@ -2837,6 +2837,42 @@ describe('help output branches', () => {
     expect(grouped.stderr.join('\n')).not.toContain('Next:');
   });
 
+  test('displayError gives station_in_battle a wait-until-the-battle-ends suggestion', () => {
+    const error = {
+      code: 'station_in_battle',
+      message: 'Station is in a battle.',
+      details: { battle_id: 'not-parsed', retry: 4 },
+    };
+    const suggestions = new Map<string, string | undefined>();
+    for (const command of ['leave_faction', 'dismantle_outpost', 'trade_offer', 'faction leave'] as const) {
+      const capture = captureWriter();
+      displayError(command, error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('Error [station_in_battle]: Station is in a battle.');
+      expect(output).not.toContain('not-parsed');
+      expect(output).not.toContain('battle_id');
+      expect(output).not.toContain('seconds before retrying');
+      expect(output).toContain('This error may be retryable.');
+      expect(output).not.toContain('This is an authentication error.');
+      const suggestion = output.split('\n').find((line) => line.includes('Suggestion:'));
+      expect(suggestion).toBe('Suggestion: Wait until the battle ends, then retry.');
+      suggestions.set(command, suggestion);
+    }
+    expect(suggestions.get('leave_faction')).toBe(suggestions.get('dismantle_outpost'));
+    expect(suggestions.get('leave_faction')).toBe(suggestions.get('trade_offer'));
+    expect(suggestions.get('leave_faction')).toBe(suggestions.get('faction leave'));
+
+    const quiet = captureWriter();
+    displayError('leave_faction', error, {
+      context: displayErrorContext(quiet.writer, { quiet: true, plain: true }),
+    });
+    const quietOutput = quiet.stderr.join('\n');
+    expect(quietOutput).toContain('Error [station_in_battle]');
+    expect(quietOutput).not.toContain('Suggestion:');
+    expect(quietOutput).not.toContain('This error may be retryable.');
+    expect(quietOutput).not.toContain('not-parsed');
+  });
+
   test('displayError gives challenge_locked a READY-trial suggestion', () => {
     const capture = captureWriter();
     const context: CliRuntimeContext = {

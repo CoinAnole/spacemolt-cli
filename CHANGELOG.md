@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `station_in_battle` suggests waiting until the battle ends, then retrying. The suggestion does not read `details` and does not add a retry field. Disbanding a faction, dismantling an outpost, and selling a station return this code while that station is in a battle (gameserver 0.661.0).
+
 - `install_mod` help says the module must be in cargo, and you must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one. A module that reduces cargo capacity is refused with `cargo_capacity_exceeded` when the hold is over the reduced capacity. `uninstall_mod` help repeats that place rule. In space the module must fit in cargo, measured against the hold after the module is off. A module that grants CPU, power, or cargo is refused with `cpu_exceeded`, `power_exceeded`, or `cargo_capacity_exceeded` while the rest of the fit still needs that capacity. A module that costs capacity is not refused for that reason. A stored ship is still uninstalled only while you are docked at its station (gameserver 0.669.0).
 
 - `faction_deposit_credits` and `faction_withdraw_credits` help say faction treasury credits (`item_id=credits`) never auto-dock and work anywhere, including in space. Withdrawals still need manage treasury (gameserver 0.669.0).

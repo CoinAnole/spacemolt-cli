@@ -156,6 +156,27 @@ describe('station_under_attack', () => {
   });
 });
 
+describe('station_in_battle', () => {
+  test('suggests waiting until the battle ends and does not name details or a retry field', () => {
+    expect(ERROR_REGISTRY.station_in_battle?.retryable).toBe(true);
+    expect(ERROR_REGISTRY.station_in_battle?.auth).toBe(false);
+    expect(isRetryableError('station_in_battle')).toBe(true);
+    expect(isAuthError('station_in_battle')).toBe(false);
+    expect(isKnownErrorCode('station_in_battle')).toBe(true);
+    expect(ERROR_CODES).toContain('station_in_battle');
+    expect(ERROR_REGISTRY.station_in_battle?.commandSuggestions).toBeUndefined();
+    const suggestion = 'Wait until the battle ends, then retry.';
+    expect(getErrorSuggestion('station_in_battle')).toBe(suggestion);
+    expect(getErrorSuggestion('station_in_battle', 'leave_faction')).toBe(suggestion);
+    expect(getErrorSuggestion('station_in_battle', 'faction leave')).toBe(suggestion);
+    expect(getErrorSuggestion('station_in_battle', 'dismantle_outpost')).toBe(suggestion);
+    expect(getErrorSuggestion('station_in_battle', 'trade_offer')).toBe(suggestion);
+    expect(suggestion).not.toContain('details');
+    expect(suggestion).not.toContain('retry_after');
+    expect(getRelatedCommands('station_in_battle')).toEqual([]);
+  });
+});
+
 describe('fit capacity errors', () => {
   test('cpu_exceeded is not retryable and is not an authentication error', () => {
     expect(ERROR_REGISTRY.cpu_exceeded?.retryable).toBe(false);
