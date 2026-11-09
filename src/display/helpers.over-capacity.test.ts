@@ -250,4 +250,51 @@ describe('emitStationPower', () => {
     });
     expect(buffer.stdout.join('\n')).toContain('85.5% efficiency');
   });
+
+  test('generator supply prints as sent, including 0, and is not subtracted from supply', () => {
+    const sent = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(sent, () => emitStationPower({ supply: 120, current_draw: 95, generator_supply: 15 }), {
+      plain: true,
+    });
+    const sentText = sent.stdout.join('\n');
+    expect(sentText).toContain('Power: 95/120 draw');
+    expect(sentText).toContain('Generator supply: 15');
+    expect(sentText).not.toContain('95/105');
+    expect(sentText).not.toContain('plant');
+    expect(sentText).not.toContain('capacity');
+
+    const zero = { stdout: [] as string[], stderr: [] as string[] };
+    const printed = withDisplayRenderBuffer(
+      zero,
+      () => emitStationPower({ supply: 120, current_draw: 95, generator_supply: 0 }),
+      { plain: true },
+    );
+    expect(printed).toBe(true);
+    expect(zero.stdout.join('\n')).toContain('Generator supply: 0');
+  });
+
+  test('omitted generator supply prints nothing', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 120, draw: 95 }), { plain: true });
+    expect(buffer.stdout.join('\n')).not.toContain('Generator supply');
+  });
+
+  test('a non-number generator supply prints nothing and does not become 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 120, current_draw: 95, generator_supply: null }), {
+      plain: true,
+    });
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Power: 95/120 draw');
+    expect(stdout).not.toContain('Generator supply');
+  });
+
+  test('generator supply alone prints the power block', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const printed = withDisplayRenderBuffer(buffer, () => emitStationPower({ generator_supply: 15 }), { plain: true });
+    const stdout = buffer.stdout.join('\n');
+    expect(printed).toBe(true);
+    expect(stdout).toContain('Generator supply: 15');
+    expect(stdout).not.toContain('Power: ?');
+  });
 });

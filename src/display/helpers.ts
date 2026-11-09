@@ -543,6 +543,14 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
   return true;
 }
 
+function formatStationPowerQuantity(value: unknown): string | undefined {
+  if (typeof value === 'bigint' || (typeof value === 'number' && Number.isFinite(value))) {
+    return formatDisplayNumber(value);
+  }
+  return undefined;
+}
+
+// Docked generators. Omitted when none are connected. Not subtracted from supply.
 export function emitStationPower(power: unknown): boolean {
   if (!isRecord(power)) return false;
   const supply = power.supply;
@@ -550,11 +558,12 @@ export function emitStationPower(power: unknown): boolean {
   const efficiency = power.efficiency;
   const batteryStored = power.battery_stored;
   const batteryCapacity = power.battery_capacity;
+  const generatorSupply = formatStationPowerQuantity(power.generator_supply);
   const fuelInputs = summarizePowerFuelInputs(power.fuel_inputs);
   const remediation = typeof power.remediation === 'string' && power.remediation.trim() ? power.remediation : undefined;
   const hasPower = supply !== undefined || draw !== undefined || efficiency !== undefined;
   const hasBattery = batteryStored !== undefined || batteryCapacity !== undefined;
-  if (!hasPower && !hasBattery && !fuelInputs && !remediation) return false;
+  if (!hasPower && !hasBattery && !generatorSupply && !fuelInputs && !remediation) return false;
 
   emitLine('');
   emitLine(`${c.bright}Power:${c.reset}`);
@@ -564,6 +573,7 @@ export function emitStationPower(power: unknown): boolean {
     const efficiencyText = efficiency === undefined ? '' : ` (${formatPercent(efficiency)} efficiency)`;
     emitLine(`  Power: ${drawText}/${supplyText} draw${efficiencyText}`);
   }
+  if (generatorSupply !== undefined) emitLine(`  Generator supply: ${generatorSupply}`);
   if (hasBattery) {
     const storedText = batteryStored === undefined ? '?' : formatDisplayNumber(batteryStored);
     const capacityText = batteryCapacity === undefined ? '?' : formatDisplayNumber(batteryCapacity);

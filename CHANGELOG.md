@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_base`, docked-base `inspect`, and `facility list` print `Generator supply` on the station power block when `generator_supply` is present, including an explicit 0. An omitted key prints nothing. The number is printed as sent and is not subtracted from `supply`. The line does not apply a plant-capacity cap (gameserver 0.664.0).
+
 - Login and the short status view print `player.safe_passages` as one line per grant, in the order received, with the keys that arrived (`source`, `grantor_player_id`, `grantor_faction_id`, `system_id`, `granted_tick`, `until_tick`, and `ref_id`). An omitted key prints nothing. An empty array prints nothing. The lines are not sorted or capped, and a grantor id is not replaced with a name. `get_state` does not print them. A `safe_passage` error prints the details keys that are present (`grantor_id`, `faction_id`, `system_id`, `granted_tick`, `until_tick`, and `source`). An empty `faction_id` stays empty. `no_scrambler`, `target_not_holdable`, `already_held`, and `hold_cooldown` do not gain detail keys (gameserver 0.670.0).
 
 - `get_trades` prints a non-empty note. An empty note prints nothing. When `offer_safe_passage` is true, the offer prints as a toll and `expires_tick` prints when sent. That toll does not print `expires_at`. `hold` prints only when true. A trade-offer notification prints a non-empty note, a toll line when `offer_safe_passage` is true, a hold line when `hold` is true, `expires_tick` when sent, and `pass_until_ticks` as sent. `battle_stance` usage includes `intent=capture|plunder`. plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players (gameserver 0.670.0 and 0.663.0).
