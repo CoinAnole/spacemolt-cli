@@ -3247,6 +3247,46 @@ function previewRanchPoached(
   return { ...preview, severity: 'warning' };
 }
 
+function previewHoldUpdate(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const event = nonEmptyString(data.event);
+  const verb = event === 'started' ? 'Hold started' : event === 'ended' ? 'Hold ended' : 'Hold update';
+  const holder = formatNameId(nonEmptyString(data.holder_name), nonEmptyString(data.holder_id));
+  const target = formatNameId(nonEmptyString(data.target_name), nonEmptyString(data.target_id));
+  const source = nonEmptyString(data.source);
+  const reason = nonEmptyString(data.reason);
+  const message = nonEmptyString(data.message);
+
+  const parts: string[] = [];
+  if (event && event !== 'started' && event !== 'ended') parts.push(event);
+  if (holder && target) parts.push(`${holder} on ${target}`);
+  else if (holder) parts.push(holder);
+  else if (target) parts.push(target);
+  if (source) parts.push(source);
+  if (reason) parts.push(reason);
+
+  let headline = parts.length ? `${verb}: ${parts.join(', ')}` : verb;
+  if (headline === 'Hold update' && message !== undefined) headline = firstLine(message);
+
+  const details: string[] = [];
+  if (message !== undefined && !headline.includes(message)) details.push(firstLine(message));
+  const tradeId = nonEmptyString(data.trade_id);
+  if (tradeId !== undefined && !headline.includes(tradeId)) details.push(`trade ${tradeId}`);
+  const startTick = formatIntegerText(data.start_tick);
+  if (startTick !== undefined) {
+    const line = `start tick ${startTick}`;
+    if (!headline.includes(line)) details.push(line);
+  }
+
+  const preview = details.length
+    ? detailPreview('HOLD', headline, details, options)
+    : headlinePreview('HOLD', headline, options);
+  return { ...preview, severity: event === 'ended' ? 'info' : 'warning' };
+}
+
 function previewBattleAlert(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3670,6 +3710,8 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   // 0.599.0 support channel; coarse type is system
   refueled_by: previewRefueledBy,
   repaired_by: previewRepairedBy,
+  // OpenAPI Notification_hold_update. source and reason print as sent, including scan and scan_over.
+  hold_update: previewHoldUpdate,
 };
 
 export function hasPreviewHandler(msgType: string): boolean {

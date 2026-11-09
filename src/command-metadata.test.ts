@@ -4782,6 +4782,7 @@ describe('command metadata', () => {
       'auth_login_link',
       'auth_login_link_poll',
       'battle_self_destruct',
+      'ship_generator',
       'shipping_accept',
       'shipping_cancel',
       'shipping_pay_debt',

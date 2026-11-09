@@ -991,6 +991,27 @@ describe('notification formatting', () => {
         'Note: thanks',
       ],
     },
+    {
+      msgType: 'hold_update',
+      data: {
+        event: 'started',
+        holder_id: 'player-1',
+        holder_name: 'Marlowe',
+        target_id: 'player-2',
+        target_name: 'Ada',
+        source: 'toll',
+        trade_id: 'trade-9',
+        start_tick: 1200,
+        message: 'Marlowe holds Ada.',
+      },
+      snippets: [
+        '[HOLD]',
+        'Hold started: Marlowe (player-1) on Ada (player-2), toll',
+        'Marlowe holds Ada.',
+        'trade trade-9',
+        'start tick 1,200',
+      ],
+    },
     { msgType: 'trade_cancelled', data: { trade_id: 'trade_1' }, snippets: ['[TRADE]', 'Trade cancelled', 'trade_1'] },
     {
       msgType: 'trade_complete',
@@ -11389,6 +11410,65 @@ describe('notification formatting', () => {
       expect(output).not.toContain('get_faction_mobile_base');
       expect(output).not.toContain('Use: get_mobile_base');
       expect(output).not.toContain('{');
+    });
+  });
+
+  describe('hold_update preview', () => {
+    test('ended scan hold prints reason and source as sent, including 0', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hold_update',
+        data: {
+          event: 'ended',
+          holder_name: 'Marlowe',
+          target_name: 'Ada',
+          source: 'scan',
+          reason: 'scan_over',
+          start_tick: 0,
+          message: 'Scan hold ended.',
+        },
+      });
+      expect(preview.tag).toBe('HOLD');
+      expect(preview.severity).toBe('info');
+      expect(preview.headline).toBe('Hold ended: Marlowe on Ada, scan, scan_over');
+      expect(preview.details).toEqual(['Scan hold ended.', 'start tick 0']);
+    });
+
+    test('an unknown event prints as sent', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hold_update',
+        data: { event: 'paused', holder_id: 'player-1' },
+      });
+      expect(preview.headline).toBe('Hold update: paused, player-1');
+      expect(preview.severity).toBe('warning');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('a message-only bag uses the message', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hold_update',
+        data: { message: 'Held.' },
+      });
+      expect(preview.headline).toBe('Held.');
+      expect(preview.details).toEqual([]);
+    });
+
+    test('empty strings and a non-number start tick print nothing', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hold_update',
+        data: {
+          event: 'started',
+          holder_name: ' ',
+          holder_id: '',
+          target_name: 'Ada',
+          source: '',
+          reason: ' ',
+          trade_id: '',
+          start_tick: '1200',
+          message: '',
+        },
+      });
+      expect(preview.headline).toBe('Hold started: Ada');
+      expect(preview.details).toEqual([]);
     });
   });
 
