@@ -1679,17 +1679,20 @@ export const socialFormatters = [
       const allyFacility = formatYesNo(r.ally_facility_access);
       const allyIntelOptOut = formatYesNo(r.ally_intel_opt_out);
       const allyBattleOptOut = formatYesNo(r.ally_battle_opt_out);
+      const allyShipyard = formatYesNo(r.ally_shipyard_access);
       if (
         allyFuel !== undefined ||
         allyFacility !== undefined ||
         allyIntelOptOut !== undefined ||
-        allyBattleOptOut !== undefined
+        allyBattleOptOut !== undefined ||
+        allyShipyard !== undefined
       ) {
         emitLine('Ally access:');
         if (allyFuel !== undefined) emitLine(`  Fuel: ${allyFuel}`);
         if (allyFacility !== undefined) emitLine(`  Facilities: ${allyFacility}`);
         if (allyIntelOptOut !== undefined) emitLine(`  Intel opt-out: ${allyIntelOptOut}`);
         if (allyBattleOptOut !== undefined) emitLine(`  Battle opt-out: ${allyBattleOptOut}`);
+        if (allyShipyard !== undefined) emitLine(`  Shipyard: ${allyShipyard}`);
       }
 
       const facilities = firstArray(r, ['facilities']);

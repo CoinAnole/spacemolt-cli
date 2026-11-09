@@ -514,7 +514,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     schemaExtensions: {
       commissionable: {
         description:
-          "Ships only: filter to ships this player can commission at this shipyard (requires auth + docked). At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting and yard tier still apply).",
+          "Ships only: filter to ships this player can commission at this shipyard (requires auth + docked). At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting and yard tier still apply). Members of an allied faction can commission at a station whose owner set ally_shipyard_access, with fund_from_faction=true, under the station owner's ship licenses. They supply materials from their own faction storage at that station, and their own treasury pays labor and the empire royalty. They need ManageTreasury in their own faction. The station owner's treasury and storage are not charged. They still need the piloting level. Prestige hulls still need their own achievements. Mobile bases stay members-only. A build already placed finishes if the alliance ends or the toggle is turned off. catalog type=ships commissionable=true lists the hulls an ally can build at that station.",
       },
     },
   },

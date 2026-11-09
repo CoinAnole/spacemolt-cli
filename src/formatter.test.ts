@@ -10462,6 +10462,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('  Facilities: no');
     expect(stdout).toContain('  Intel opt-out: no');
     expect(stdout).not.toContain('Battle opt-out:');
+    expect(stdout).not.toContain('Shipyard:');
     expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).toContain('Faction Fuel Bunker');
     expect(stdout).toContain('Faction rent bill: 1,200cr/cycle');
@@ -10490,6 +10491,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('  Facilities:');
     expect(stdout).not.toContain('  Intel opt-out:');
     expect(stdout).not.toContain('Battle opt-out:');
+    expect(stdout).not.toContain('Shipyard:');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -10503,6 +10505,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('  Facilities:');
     expect(stdout).not.toContain('  Intel opt-out:');
     expect(stdout).not.toContain('Battle opt-out:');
+    expect(stdout).not.toContain('Shipyard:');
     expect(stdout).toContain('=== Faction Facilities ===');
     expect(stdout).not.toContain('=== Response ===');
   });
@@ -10522,6 +10525,7 @@ describe('structuredContent formatters', () => {
       expect(stdout).toContain('Ally access:');
       expect(stdout).toContain(`  Battle opt-out: ${label}`);
       expect(stdout.indexOf(`  Battle opt-out: ${label}`)).toBeGreaterThan(stdout.indexOf('  Intel opt-out: no'));
+      expect(stdout).not.toContain('Shipyard:');
       expect(stdout).not.toContain('=== Response ===');
     }
   });
@@ -10541,6 +10545,7 @@ describe('structuredContent formatters', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('Ally access:');
     expect(stdout).toContain('  Battle opt-out: no');
+    expect(stdout).not.toContain('Shipyard:');
     expect(stdout).not.toContain('  Fuel:');
     expect(stdout).not.toContain('  Facilities:');
     expect(stdout).not.toContain('  Intel opt-out:');
@@ -10559,6 +10564,78 @@ describe('structuredContent formatters', () => {
       expect(stdout).toContain('  Fuel: yes');
       expect(stdout).not.toContain('Battle opt-out:');
       expect(stdout).not.toContain('  Battle opt-out: no');
+      expect(stdout).not.toContain('Shipyard:');
+    }
+  });
+
+  test('faction_info prints shipyard yes or no, including for non-members', () => {
+    for (const [value, label] of [
+      [true, 'yes'],
+      [false, 'no'],
+    ] as const) {
+      const { stdout, stderr } = captureStructuredOutput('faction_info', {
+        ...factionInfoFixture,
+        is_member: false,
+        ally_shipyard_access: value,
+      });
+
+      expect(stderr).toBe('');
+      expect(stdout).toContain('Ally access:');
+      expect(stdout).toContain(`  Shipyard: ${label}`);
+      expect(stdout.indexOf(`  Shipyard: ${label}`)).toBeGreaterThan(stdout.indexOf('  Intel opt-out: no'));
+      expect(stdout).not.toContain('Battle opt-out:');
+      expect(stdout).not.toContain('=== Response ===');
+    }
+  });
+
+  test('faction_info prints shipyard after battle opt-out when both are booleans', () => {
+    const { stdout, stderr } = captureStructuredOutput('faction_info', {
+      ...factionInfoFixture,
+      ally_battle_opt_out: true,
+      ally_shipyard_access: false,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('  Battle opt-out: yes');
+    expect(stdout).toContain('  Shipyard: no');
+    expect(stdout.indexOf('  Shipyard: no')).toBeGreaterThan(stdout.indexOf('  Battle opt-out: yes'));
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_info prints shipyard alone when the other ally toggles are omitted', () => {
+    const {
+      ally_fuel_access: _fuel,
+      ally_facility_access: _facility,
+      ally_intel_opt_out: _intel,
+      ...withoutOthers
+    } = factionInfoFixture;
+    const { stdout, stderr } = captureStructuredOutput('faction_info', {
+      ...withoutOthers,
+      ally_shipyard_access: false,
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Ally access:');
+    expect(stdout).toContain('  Shipyard: no');
+    expect(stdout).not.toContain('  Fuel:');
+    expect(stdout).not.toContain('  Facilities:');
+    expect(stdout).not.toContain('  Intel opt-out:');
+    expect(stdout).not.toContain('Battle opt-out:');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('faction_info omits shipyard for a missing or non-boolean key', () => {
+    for (const value of [undefined, 'false', 'true', 0, 1, null]) {
+      const fixture = { ...factionInfoFixture, is_member: true } as Record<string, unknown>;
+      if (value === undefined) delete fixture.ally_shipyard_access;
+      else fixture.ally_shipyard_access = value;
+      const { stdout, stderr } = captureStructuredOutput('faction_info', fixture);
+
+      expect(stderr).toBe('');
+      expect(stdout).toContain('Ally access:');
+      expect(stdout).toContain('  Fuel: yes');
+      expect(stdout).not.toContain('Shipyard:');
+      expect(stdout).not.toContain('  Shipyard: no');
     }
   });
 

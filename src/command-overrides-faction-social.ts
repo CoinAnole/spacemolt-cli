@@ -282,9 +282,9 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_faction_admin/edit',
     positionals: ['description', 'charter', 'primary_color', 'secondary_color'],
     usage:
-      '[description] [charter] [primary_color] [secondary_color] [ally_fuel_access=true/false] [ally_facility_access=true/false] [ally_intel_opt_out=true/false] [ally_battle_opt_out=true/false]',
+      '[description] [charter] [primary_color] [secondary_color] [ally_fuel_access=true/false] [ally_facility_access=true/false] [ally_intel_opt_out=true/false] [ally_battle_opt_out=true/false] [ally_shipyard_access=true/false]',
     description:
-      'Update faction description, charter, colors, and ally-sharing toggles (fuel access, facility access, intel opt-out, battle opt-out). Auto-joins for your own faction and for your wars still happen when ally_battle_opt_out is set.',
+      'Update faction description, charter, colors, and ally-sharing toggles (fuel access, facility access, intel opt-out, battle opt-out, shipyard access). Auto-joins for your own faction and for your wars still happen when ally_battle_opt_out is set.',
     example: 'spacemolt faction edit ally_fuel_access=true ally_facility_access=true',
   },
   faction_create_role: {

@@ -2050,6 +2050,31 @@ describe('command metadata', () => {
     expect(commission?.description).toContain('buy_ship_license');
     expect(commission?.description).toContain('required_reputation');
     expect(commission?.description).toContain("your faction's own station");
+    expect(commission?.description).toContain(
+      "A faction buy_ship_license for this hull covers required_reputation at your faction's own station; Piloting still applies to flyable hulls; shipyard tier and materials still apply.",
+    );
+    const commissionDescription = commission?.description ?? '';
+    const commissionAlliedAt = commissionDescription.indexOf('Members of an allied faction');
+    expect(commissionAlliedAt).toBeGreaterThan(commissionDescription.indexOf("your faction's own station"));
+    const commissionAllied = commissionDescription.slice(commissionAlliedAt);
+    expect(commissionAllied.startsWith('Members of an allied faction')).toBe(true);
+    expect(commissionAllied).toContain('ally_shipyard_access');
+    expect(commissionAllied).toContain("fund_from_faction=true, under the station owner's ship licenses");
+    expect(commissionAllied).toContain('their own faction storage at that station');
+    expect(commissionAllied).toContain('their own treasury pays labor and the empire royalty');
+    expect(commissionAllied).toContain('ManageTreasury in their own faction');
+    expect(commissionAllied).toContain("The station owner's treasury and storage are not charged.");
+    expect(commissionAllied).toContain('They still need the piloting level.');
+    expect(commissionAllied).toContain('Prestige hulls still need their own achievements.');
+    expect(commissionAllied).toContain('Mobile bases stay members-only.');
+    expect(commissionAllied).toContain(
+      'A build already placed finishes if the alliance ends or the toggle is turned off.',
+    );
+    expect(commissionAllied).toContain(
+      'catalog type=ships commissionable=true lists the hulls an ally can build at that station.',
+    );
+    expect(commissionAllied).not.toContain('reputation');
+    expect(commissionAllied).not.toContain('waived');
     expect(commission?.description).toContain('Piloting');
     expect(commission?.description).not.toContain('Piloting, shipyard tier, and materials still apply.');
     expect(commission?.description).toContain('Piloting still applies to flyable hulls');
@@ -2097,6 +2122,12 @@ describe('command metadata', () => {
     expect(commissionHelp).toMatch(/Arguments:\n {2}ship_class, provide_materials\n/);
     expect(commissionHelp).toContain('buy_ship_license');
     expect(commissionHelp).toContain('required_reputation');
+    expect(commissionHelp).toContain('ally_shipyard_access');
+    expect(commissionHelp).toContain("under the station owner's ship licenses");
+    expect(commissionHelp).toContain('empire royalty');
+    expect(commissionHelp).toContain('catalog type=ships commissionable=true');
+    const helpAllied = commissionHelp.slice(commissionHelp.indexOf('Members of an allied faction'));
+    expect(helpAllied).not.toContain('reputation waived');
   });
 
   test('catalog commissionable documents faction-licensed hulls at own station', () => {
@@ -2118,7 +2149,32 @@ describe('command metadata', () => {
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
     expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
     expect(catalog?.schema?.commissionable?.description).toContain('reputation waived');
+    expect(catalog?.schema?.commissionable?.description).toContain(
+      "At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting and yard tier still apply).",
+    );
     expect(catalog?.schema?.commissionable?.description).toContain('Piloting and yard tier still apply');
+    const catalogCommissionable = catalog?.schema?.commissionable?.description ?? '';
+    const catalogAlliedAt = catalogCommissionable.indexOf('Members of an allied faction');
+    expect(catalogAlliedAt).toBeGreaterThan(catalogCommissionable.indexOf('reputation waived'));
+    const catalogAllied = catalogCommissionable.slice(catalogAlliedAt);
+    expect(catalogAllied.startsWith('Members of an allied faction')).toBe(true);
+    expect(catalogAllied).toContain('ally_shipyard_access');
+    expect(catalogAllied).toContain("fund_from_faction=true, under the station owner's ship licenses");
+    expect(catalogAllied).toContain('their own faction storage at that station');
+    expect(catalogAllied).toContain('their own treasury pays labor and the empire royalty');
+    expect(catalogAllied).toContain('ManageTreasury in their own faction');
+    expect(catalogAllied).toContain("The station owner's treasury and storage are not charged.");
+    expect(catalogAllied).toContain('They still need the piloting level.');
+    expect(catalogAllied).toContain('Prestige hulls still need their own achievements.');
+    expect(catalogAllied).toContain('Mobile bases stay members-only.');
+    expect(catalogAllied).toContain(
+      'A build already placed finishes if the alliance ends or the toggle is turned off.',
+    );
+    expect(catalogAllied).toContain(
+      'catalog type=ships commissionable=true lists the hulls an ally can build at that station.',
+    );
+    expect(catalogAllied).not.toContain('reputation');
+    expect(catalogAllied).not.toContain('waived');
     expect(catalog?.example).toContain('commissionable=true');
     expect(catalog?.example).toContain('type=skills id=refining');
     expect(catalog?.seeAlso).toEqual([
@@ -2133,6 +2189,10 @@ describe('command metadata', () => {
     const help = captureHelp('catalog');
     expect(help).toContain('licensed with buy_ship_license');
     expect(help).toContain('reputation waived');
+    expect(help).toContain('ally_shipyard_access');
+    expect(help).toContain('catalog type=ships commissionable=true lists the hulls an ally can build at that station.');
+    const catalogHelpAllied = help.slice(help.indexOf('Members of an allied faction'));
+    expect(catalogHelpAllied).not.toContain('reputation waived');
     expect(help).toContain('catalog_dump');
     expect(help).toContain('(ships|skills|recipes|items|facilities)');
   });
@@ -4294,6 +4354,8 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('ally_facility_access=true/false');
     expect(config?.usage).toContain('ally_intel_opt_out=true/false');
     expect(config?.usage).toContain('ally_battle_opt_out=true/false');
+    expect(config?.usage).toContain('ally_shipyard_access=true/false');
+    expect(config?.description).toContain('shipyard access');
     expect(config?.description).toContain('ally-sharing toggles');
     expect(config?.description).toContain('fuel access');
     expect(config?.description).toContain('facility access');
@@ -4309,6 +4371,7 @@ describe('command metadata', () => {
     expect(help).toContain('ally_facility_access=true/false');
     expect(help).toContain('ally_intel_opt_out=true/false');
     expect(help).toContain('ally_battle_opt_out=true/false');
+    expect(help).toContain('ally_shipyard_access=true/false');
     expect(help).toContain(
       'Auto-joins for your own faction and for your wars still happen when ally_battle_opt_out is set.',
     );
@@ -4319,6 +4382,9 @@ describe('command metadata', () => {
       "True to keep your members out of battles they would auto-join on an ally's behalf. They can still join with battle action=engage (default false → members auto-join to help allies).",
     );
     expect(fields).not.toContain('Auto-joins for your own faction');
+    expect(fields).toContain(
+      "True to let allied faction members commission ships at your faction's station shipyards under your ship licenses. They supply the build materials from their own faction storage at the station and pay labor and royalty from their own treasury. Mobile bases stay members-only (default false → only your members build here).",
+    );
   });
 
   test('facility production commands have curated routes and help', () => {
