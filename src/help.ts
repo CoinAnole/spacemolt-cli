@@ -1211,8 +1211,8 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
     storage jettison [item_id] [qty] [items=JSON]
     jettison [item_id] [qty] [items=JSON]  Standalone cargo jettison
     loot_wreck [wreck_id] [item_id] [quantity] [module_id=…]  Standalone wreck loot
-    faction deposit_credits <amount>  Wallet -> faction treasury
-    faction withdraw_credits <amount> Faction treasury -> wallet (requires manage_treasury)
+    faction deposit_credits <amount>  Wallet -> faction treasury (anywhere, including in space; never auto-docks)
+    faction withdraw_credits <amount> Faction treasury -> wallet (anywhere, including in space; never auto-docks; requires manage_treasury)
 
   ${c.cyan}Market / Exchange:${c.reset}
     view_market [item_id] [category] [company_store=true]  Order book; company_store=true narrows to only your faction's Company Store; prints each item's category

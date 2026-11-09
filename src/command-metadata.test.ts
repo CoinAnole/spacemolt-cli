@@ -3884,6 +3884,10 @@ describe('command metadata', () => {
     expect(deposit?.schema?.credits?.description).not.toContain('Not valid for station: targets.');
     expect(deposit?.schema?.credits?.description).toContain('to a station:<id> while docked there');
     expect(deposit?.schema?.credits?.description).toContain('or to a pirate:<crew> from anywhere');
+    expect(deposit?.schema?.credits?.description).toContain(
+      'A credits-only gift to a player works from anywhere, including in space. An item gift still needs a dock at a station with storage.',
+    );
+    expect(deposit?.schema?.credits?.description).not.toMatch(/not_docked|gift_requires_dock|must_be_docked/);
     expect(deposit?.discoverWith).toEqual(['get_status', 'get_cargo', 'list_ships']);
     expect(deposit?.seeAlso).toEqual([
       'storage_view',

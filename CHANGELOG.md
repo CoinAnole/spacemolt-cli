@@ -8,6 +8,12 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `install_mod` help says the module must be in cargo, and you must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one. A module that reduces cargo capacity is refused with `cargo_capacity_exceeded` when the hold is over the reduced capacity. `uninstall_mod` help repeats that place rule. In space the module must fit in cargo, measured against the hold after the module is off. A module that grants CPU, power, or cargo is refused with `cpu_exceeded`, `power_exceeded`, or `cargo_capacity_exceeded` while the rest of the fit still needs that capacity. A module that costs capacity is not refused for that reason. A stored ship is still uninstalled only while you are docked at its station (gameserver 0.669.0).
+
+- `faction_deposit_credits` and `faction_withdraw_credits` help say faction treasury credits (`item_id=credits`) never auto-dock and work anywhere, including in space. Withdrawals still need manage treasury (gameserver 0.669.0).
+
+- `storage deposit` credits help says a credits-only gift to a player works from anywhere, including in space. An item gift still needs a dock at a station with storage. That help does not name an error for the item-gift case (gameserver 0.669.0).
+
 - `get_base`, docked-base `inspect`, and `facility list` print `Generator supply` on the station power block when `generator_supply` is present, including an explicit 0. An omitted key prints nothing. The number is printed as sent and is not subtracted from `supply`. The line does not apply a plant-capacity cap (gameserver 0.664.0).
 
 - Login and the short status view print `player.safe_passages` as one line per grant, in the order received, with the keys that arrived (`source`, `grantor_player_id`, `grantor_faction_id`, `system_id`, `granted_tick`, `until_tick`, and `ref_id`). An omitted key prints nothing. An empty array prints nothing. The lines are not sorted or capped, and a grantor id is not replaced with a name. `get_state` does not print them. A `safe_passage` error prints the details keys that are present (`grantor_id`, `faction_id`, `system_id`, `granted_tick`, `until_tick`, and `source`). An empty `faction_id` stays empty. `no_scrambler`, `target_not_holdable`, `already_held`, and `hold_cooldown` do not gain detail keys (gameserver 0.670.0).

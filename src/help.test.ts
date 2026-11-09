@@ -1053,6 +1053,9 @@ describe('help output branches', () => {
     expect(output).toContain(
       'credits - Credits to gift to another player, to donate to an empire from anywhere, to a station:<id> while docked there, or to a pirate:<crew> from anywhere.',
     );
+    expect(output).toContain(
+      'A credits-only gift to a player works from anywhere, including in space. An item gift still needs a dock at a station with storage.',
+    );
     expect(output).not.toContain('Not valid for station: targets.');
     expect(output).toContain('Not valid for fixer:tab.');
     expect(output).not.toContain('donate to an empire treasury');
@@ -1871,6 +1874,14 @@ describe('help output branches', () => {
     expect(output).toContain(
       'When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
     );
+    expect(output).toContain('The module must be in cargo.');
+    expect(output).toContain(
+      'You must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one.',
+    );
+    expect(output).toContain(
+      'A module that reduces cargo capacity is refused with cargo_capacity_exceeded when the hold is over the reduced capacity.',
+    );
+    expect(output).not.toContain('shipyard');
 
     const uninstall = captureWriter();
     expect(showCommandHelp('uninstall_mod', uninstall.writer)).toBe(true);
@@ -1879,6 +1890,36 @@ describe('help output branches', () => {
     expect(uninstallOutput).toContain('spacemolt uninstall_mod <module_id> [ship_id=...]');
     expect(uninstallOutput).toContain('omit ship_id for the active ship');
     expect(uninstallOutput).toContain('stored ship while docked at its station');
+    expect(uninstallOutput).toContain(
+      'You must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one.',
+    );
+    expect(uninstallOutput).toContain(
+      'In space the module must fit in cargo, measured against the hold after the module is off.',
+    );
+    expect(uninstallOutput).toContain(
+      'A module that grants CPU, power, or cargo is refused with cpu_exceeded, power_exceeded, or cargo_capacity_exceeded while the rest of the fit still needs that capacity.',
+    );
+    expect(uninstallOutput).toContain('A module that costs capacity is not refused for that reason.');
+    expect(uninstallOutput).toContain('A stored ship is still uninstalled only while you are docked at its station.');
+  });
+
+  test('faction credit commands say treasury credits work in space', () => {
+    const deposit = captureWriter();
+    expect(showCommandHelp('faction deposit_credits', deposit.writer)).toBe(true);
+    const depositOutput = deposit.stdout.join('\n');
+    expect(depositOutput).toContain(
+      'Faction treasury credits (item_id=credits) never auto-dock and work anywhere, including in space.',
+    );
+    expect(depositOutput).toContain('works anywhere, including in space');
+
+    const withdraw = captureWriter();
+    expect(showCommandHelp('faction withdraw_credits', withdraw.writer)).toBe(true);
+    const withdrawOutput = withdraw.stdout.join('\n');
+    expect(withdrawOutput).toContain(
+      'Faction treasury credits (item_id=credits) never auto-dock and work anywhere, including in space.',
+    );
+    expect(withdrawOutput).toContain('Withdrawals still need manage treasury.');
+    expect(withdrawOutput).toContain('requires manage_treasury');
   });
 
   test('storage loot help documents named module_id= cargo loot', () => {

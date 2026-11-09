@@ -54,7 +54,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_decline_invite: 'Decline a faction invitation',
   faction_delete_role: 'Delete a custom faction role',
   faction_delete_room: 'Delete a room from your faction common space.',
-  faction_deposit_credits: 'Transfer credits from your wallet to the faction treasury.',
+  faction_deposit_credits:
+    'Transfer credits from your wallet to the faction treasury. Faction treasury credits (item_id=credits) never auto-dock and work anywhere, including in space.',
   faction_edit: 'Update faction description, charter, colors, and ally-sharing toggles',
   faction_edit_role: 'Edit a custom faction role',
   faction_facility_list:
@@ -84,7 +85,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   faction_submit_trade_intel: 'Submit market price observations to your faction trade ledger.',
   faction_trade_intel_status: 'View faction trade intelligence coverage statistics',
   faction_visit_room: 'Visit a room in your faction common space and read its description.',
-  faction_withdraw_credits: 'Transfer credits from the faction treasury to your wallet.',
+  faction_withdraw_credits:
+    'Transfer credits from the faction treasury to your wallet. Faction treasury credits (item_id=credits) never auto-dock and work anywhere, including in space. Withdrawals still need manage treasury.',
   faction_withdraw_invite: 'Withdraw a pending invite you sent',
   faction_write_room: 'Create or update a room in your faction common space.',
   find_route:
@@ -136,7 +138,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_version: 'Get game version and release notes.',
   get_wrecks: 'List wrecks and jettison containers at the current POI',
   install_mod:
-    'Install a module on your ship. Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+    'Install a module on your ship. The module must be in cargo. You must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one. A module that reduces cargo capacity is refused with cargo_capacity_exceeded when the hold is over the reduced capacity. Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:
     'Dump cargo into a lootable container. At a POI, water, nitrogen, ammonia, and methane convert at 4 to 3, oxygen at 4 to 2, and coolant at 3 to 1 water ice; a partial batch is lost. Output is conversion.output_item_id and conversion.output_quantity, including 0. Matching ore settles back into the belt when the container despawns.',
   join_faction:
@@ -204,7 +206,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Decline a trade offered to you. Nothing moves, and the offerer is notified. Fails with trade_in_progress once the other side's accept is already committing — the trade will complete; do not retry trade_decline. Fails with trade_not_found if the trade is already gone; check get_trades.",
   trade_offer: 'Offer a trade or faction station sale to another player',
   uninstall_mod:
-    'Uninstall a module from your ship. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
+    'Uninstall a module from your ship. You must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one. In space the module must fit in cargo, measured against the hold after the module is off. A module that grants CPU, power, or cargo is refused with cpu_exceeded, power_exceeded, or cargo_capacity_exceeded while the rest of the fit still needs that capacity. A module that costs capacity is not refused for that reason. A stored ship is still uninstalled only while you are docked at its station. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   unload_drone: 'Return a drone from your bay back to cargo',
   use_item:
     'Use a consumable from cargo. Works in battle and mid-flight. While a boarding party is attached or still withdrawing, on your ship or on the ship you are boarding, emergency_warp_device (emergency jump device) refuses with boarding_locked. The emergency warp stabilizer and emergency cloak modules are skipped silently and do not report that lock. Flee makes no progress until the latch clears. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',

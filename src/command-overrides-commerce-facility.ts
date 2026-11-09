@@ -294,7 +294,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       credits: {
         type: 'integer',
         description:
-          'Credits to gift to another player, to donate to an empire from anywhere, to a station:<id> while docked there, or to a pirate:<crew> from anywhere. Not valid for fixer:tab. Pay the tab with item id credits and a quantity, not this field. Faction treasury deposits use item id credits and a quantity, not this field.',
+          'Credits to gift to another player, to donate to an empire from anywhere, to a station:<id> while docked there, or to a pirate:<crew> from anywhere. A credits-only gift to a player works from anywhere, including in space. An item gift still needs a dock at a station with storage. Not valid for fixer:tab. Pay the tab with item id credits and a quantity, not this field. Faction treasury deposits use item id credits and a quantity, not this field.',
       },
       target: {
         type: 'string',
@@ -360,7 +360,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     discoverWith: ['get_cargo', 'jettison'],
   },
   faction_deposit_credits: {
-    usage: '<amount>  (deposit credits to faction treasury)',
+    usage:
+      '<amount>  (deposit credits to faction treasury; item_id=credits never auto-docks and works anywhere, including in space)',
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/deposit',
     positionals: ['quantity'],
@@ -370,7 +371,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   faction_withdraw_credits: {
-    usage: '<amount>  (withdraw credits from faction treasury, requires manage_treasury)',
+    usage:
+      '<amount>  (withdraw credits from faction treasury; item_id=credits never auto-docks and works anywhere, including in space; requires manage_treasury)',
     category: 'Station storage',
     apiRoute: 'POST /api/v2/spacemolt_storage/withdraw',
     positionals: ['quantity'],
