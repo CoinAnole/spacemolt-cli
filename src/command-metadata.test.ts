@@ -3785,7 +3785,24 @@ describe('command metadata', () => {
     );
     expect(deposit?.schema?.item_id?.description).toContain('does not detect a starter hull');
     expect(deposit?.schema?.item_id?.description).not.toContain('boss flagship');
-    expect(deposit?.schema?.item_id?.description).not.toContain('carrier');
+    expect(deposit?.schema?.item_id?.description).toContain('carrier:<pilot name>');
+    expect(deposit?.schema?.item_id?.description).toContain("loads your active carrier's bay");
+    expect(deposit?.schema?.item_id?.description).toContain('a listed ship cannot be loaded into a bay or towed');
+    expect(deposit?.schema?.item_id?.description).toContain('stays in the bay under the new owner');
+    expect(deposit?.schema?.target?.description).toContain('carrier:<pilot name>');
+    expect(deposit?.schema?.target?.description).toContain('you keep ownership');
+    expect(deposit?.usage).toContain('carrier:<pilot name>');
+    expect(deposit?.usage).toContain('bay withdraw');
+    expect(deposit?.usage).toContain('in-bay gift');
+    expect(deposit?.description).toContain('target=self loads that ship into your active carrier');
+    expect(deposit?.description).toContain('non-carrier with a tow rig');
+    expect(deposit?.description).toContain('A listed ship in a bay or under tow cannot be bought.');
+    const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
+    expect(withdraw?.usage).toContain('carrier:<pilot name>');
+    expect(withdraw?.usage).toContain('release tow: <ship_id>');
+    expect(withdraw?.description).toContain('unloads the bay ship at the carrier');
+    expect(withdraw?.schema?.item_id?.description).toContain('carrier:<pilot name>');
+    expect(withdraw?.schema?.item_id?.description).toContain('A listed ship cannot be towed.');
     expect(deposit?.schema?.credits?.description).toContain('Not valid for fixer:tab.');
     expect(deposit?.schema?.credits?.description).not.toContain('Not valid for station: targets.');
     expect(deposit?.schema?.credits?.description).toContain('to a station:<id> while docked there');
@@ -5018,9 +5035,9 @@ describe('command metadata', () => {
 
   test('switch_ship, buy_listed_ship, and complete_mission help are curated descriptions', () => {
     const switchShip =
-      "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.";
+      "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. At a station, cargo from your current ship moves to station storage. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. Undocked at a faction-mate's carrier POI, switch_ship of your ship in the bay swaps hulls in one action: your current ship goes into the bay and the bay ship undocks. Each ship keeps its cargo, modules, and crew. No shipyard is required for that swap. The swap is refused in battle, in transit, with an aggression timer, while towing, when your current ship has passengers, or when the bay has no room for your current ship.";
     const buyListed =
-      "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first.";
+      "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. A listed ship in a bay or under tow cannot be bought.";
     const completeMission =
       'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.';
 
@@ -5063,6 +5080,16 @@ describe('command metadata', () => {
       expect(description).toContain("while docked at that ship's station");
       expect(description).not.toMatch(/storage withdraw[^.]*while docked/);
     }
+    expect(switchShip).toContain('At a station, cargo from your current ship moves to station storage.');
+    expect(switchShip).toContain('Each ship keeps its cargo, modules, and crew.');
+    expect(switchShip).toContain('in battle, in transit, with an aggression timer, while towing');
+    expect(switchShip).toContain('when your current ship has passengers');
+    expect(switchShip).toContain('when the bay has no room for your current ship');
+    expect(switchShip).not.toContain('bay_full');
+    expect(switchShip).not.toContain('passengers_aboard');
+    expect(buyListed).toContain('A listed ship in a bay or under tow cannot be bought.');
+    expect(COMMANDS.switch_ship?.usage).toContain('cargo moved to station storage');
+    expect(COMMANDS.switch_ship?.usage).toContain('each ship keeps its cargo');
     expect(COMMANDS.uninstall_mod?.usage).toBe(
       '<module_id> [ship_id=...]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
     );

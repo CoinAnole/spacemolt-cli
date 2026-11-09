@@ -2562,6 +2562,49 @@ describe('emitCargoHold', () => {
     expect(header).toContain('Scale');
     expect(header).toContain('Slots');
     expect(row).toContain('| 0     | 0');
+    expect(header).not.toContain('Owner');
+  });
+
+  test('carried-ship owner prints when sent and stays blank when omitted', () => {
+    const cargo = structuredClone(cargoFixture) as {
+      carried_ships: Array<Record<string, unknown>>;
+    };
+    const carried = cargo.carried_ships[0];
+    if (!carried) throw new Error('cargo fixture is missing its carried ship');
+    carried.owner = 'vale';
+    cargo.carried_ships.push({
+      ship_id: 'ship-carried-2',
+      class_id: 'shuttle',
+      class_name: 'Shuttle',
+      name: 'Bare Hull',
+    });
+    cargo.carried_ships.push({
+      ship_id: 'ship-carried-3',
+      class_id: 'skiff',
+      class_name: 'Skiff',
+      name: 'Id Hull',
+      owner: 'player-9',
+    });
+    const { stdout } = renderCargoHold(cargo);
+    const header = tableHeader(stdout);
+    expect(header).toContain('Owner');
+    const owned = tableRow(stdout, 'Rock Skipper').split('|').at(-1)?.trim();
+    const bare = tableRow(stdout, 'Bare Hull').split('|').at(-1)?.trim();
+    const idHull = tableRow(stdout, 'Id Hull').split('|').at(-1)?.trim();
+    expect(owned).toBe('vale');
+    expect(bare).toBe('');
+    expect(idHull).toBe('player-9');
+  });
+
+  test('an empty owner string does not add an Owner column', () => {
+    const cargo = structuredClone(cargoFixture) as {
+      carried_ships: Array<Record<string, unknown>>;
+    };
+    const carried = cargo.carried_ships[0];
+    if (!carried) throw new Error('cargo fixture is missing its carried ship');
+    carried.owner = '';
+    const { stdout } = renderCargoHold(cargo);
+    expect(tableHeader(stdout)).not.toContain('Owner');
   });
 });
 

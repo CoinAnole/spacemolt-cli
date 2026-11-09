@@ -381,6 +381,9 @@ export function emitCargoHold(result: Record<string, unknown>, options?: CargoHo
     if (carriedShips.some((row) => isRecord(row) && isStrictFiniteNumber(row.slots_used))) {
       columns.push(['Slots', ['slots_used']]);
     }
+    if (hasAnyField(carriedShips.filter(isRecord), ['owner'])) {
+      columns.push(['Owner', ['owner']]);
+    }
     printCompactTable('Carried Ships', carriedShips, columns);
   }
   if (options?.emptyItems === 'none') {

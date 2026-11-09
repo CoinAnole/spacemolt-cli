@@ -299,7 +299,8 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     apiRoute: 'POST /api/v2/spacemolt_ship/list_ships',
   },
   switch_ship: {
-    usage: '<ship_id>  (swap active ship, cargo moved to station storage)',
+    usage:
+      '<ship_id>  (at a station: swap active ship, cargo moved to station storage; undocked at a faction-mate carrier: swap with your ship in the bay, and each ship keeps its cargo)',
     category: 'Ship management',
     apiRoute: 'POST /api/v2/spacemolt_ship/switch_ship',
     positionals: ['ship_id'],
