@@ -613,6 +613,47 @@ function emitPassengersDelivered(player: unknown): void {
   emitLine(`Passengers delivered: ${text}`);
 }
 
+const SAFE_PASSAGE_GRANT_KEYS = [
+  'source',
+  'grantor_player_id',
+  'grantor_faction_id',
+  'system_id',
+  'granted_tick',
+  'until_tick',
+  'ref_id',
+] as const;
+
+function safePassageScalar(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.replaceAll(/[\r\n]+/g, ' ');
+  if (typeof value === 'bigint') return value.toLocaleString();
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
+  return undefined;
+}
+
+function formatSafePassageField(key: string, value: unknown): string | undefined {
+  const text = safePassageScalar(value);
+  if (text === undefined) return undefined;
+  return text === '' ? `${key}:` : `${key}: ${text}`;
+}
+
+function emitSafePassages(player: Record<string, unknown>): void {
+  if (!Array.isArray(player.safe_passages) || player.safe_passages.length === 0) return;
+  const lines: string[] = [];
+  for (const entry of player.safe_passages) {
+    if (!isRecord(entry)) continue;
+    const parts: string[] = [];
+    for (const key of SAFE_PASSAGE_GRANT_KEYS) {
+      if (!Object.hasOwn(entry, key)) continue;
+      const field = formatSafePassageField(key, entry[key]);
+      if (field !== undefined) parts.push(field);
+    }
+    if (parts.length) lines.push(parts.join(', '));
+  }
+  if (!lines.length) return;
+  emitLine(`\n${c.bright}Safe passages:${c.reset}`);
+  for (const line of lines) emitLine(`  ${line}`);
+}
+
 function cargoQuantityText(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
@@ -1393,6 +1434,7 @@ export const statusFormatters = [
       emitTradingRestriction(p);
       emitDetention(p);
       emitStandings(p);
+      if (isRecord(p)) emitSafePassages(p);
 
       emitLine(`\n${c.bright}Location:${c.reset}`);
       const shortLocation = resolveShortStatusLocation(r);

@@ -1329,6 +1329,34 @@ ${c.bright}Documentation:${c.reset}
 // Error Display
 // =============================================================================
 
+const SAFE_PASSAGE_DETAIL_KEYS = [
+  'grantor_id',
+  'faction_id',
+  'system_id',
+  'granted_tick',
+  'until_tick',
+  'source',
+] as const;
+
+function safePassageDetailText(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.replaceAll(/[\r\n]+/g, ' ');
+  if (typeof value === 'bigint') return value.toLocaleString();
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
+  return undefined;
+}
+
+function formatSafePassageDetailLines(details: unknown): string[] {
+  if (!isRecord(details)) return [];
+  const lines: string[] = [];
+  for (const key of SAFE_PASSAGE_DETAIL_KEYS) {
+    if (!Object.hasOwn(details, key)) continue;
+    const text = safePassageDetailText(details[key]);
+    if (text === undefined) continue;
+    lines.push(text === '' ? `${key}:` : `${key}: ${text}`);
+  }
+  return lines;
+}
+
 function formatRateLimitLine(meta: { limit?: string; scope?: string }): string | undefined {
   if (meta.limit && meta.scope) return `Limit: ${meta.limit} (${meta.scope})`;
   if (meta.limit) return `Limit: ${meta.limit}`;
@@ -1389,6 +1417,11 @@ export function displayError(
       for (const line of formatMissingMaterialsErrorLines(rows, colors)) {
         err(line);
       }
+    }
+  }
+  if (code === 'safe_passage') {
+    for (const line of formatSafePassageDetailLines(error.details)) {
+      err(`${colors.dim}${line}${colors.reset}`);
     }
   }
   if (!quiet) {

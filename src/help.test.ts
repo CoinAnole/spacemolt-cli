@@ -4287,6 +4287,131 @@ describe('help output branches', () => {
     }
   });
 
+  test('displayError prints safe_passage detail keys that are present and keeps an empty faction_id', () => {
+    const untilTick = 9007199254740993n;
+    const capture = captureWriter();
+    displayError(
+      'attack',
+      {
+        code: 'safe_passage',
+        message: 'The target holds a grant of safe passage that binds you.',
+        details: {
+          display_name: 'Nova',
+          source: 'toll',
+          until_tick: untilTick,
+          granted_tick: 0,
+          system_id: 'sol',
+          faction_id: '',
+          grantor_id: 'player-9',
+        },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    const lines = output.split('\n');
+    const detail = lines.filter((line) =>
+      /^(grantor_id|faction_id|system_id|granted_tick|until_tick|source):/.test(line),
+    );
+    expect(detail).toEqual([
+      'grantor_id: player-9',
+      'faction_id:',
+      'system_id: sol',
+      'granted_tick: 0',
+      `until_tick: ${untilTick.toLocaleString()}`,
+      'source: toll',
+    ]);
+    expect(output).toContain('Error [safe_passage]: The target holds a grant of safe passage that binds you.');
+    expect(lines.indexOf('grantor_id: player-9')).toBeGreaterThan(
+      lines.findIndex((line) => line.includes('Error [safe_passage]')),
+    );
+    expect(output).not.toContain('Nova');
+    expect(output).not.toContain('display_name');
+  });
+
+  test('displayError omits safe_passage keys that were not sent', () => {
+    const capture = captureWriter();
+    displayError(
+      'battle',
+      {
+        code: 'safe_passage',
+        message: 'Blocked.',
+        details: { source: 'robbery', system_id: 'vega', faction_id: null, grantor_id: { id: 'player-9' } },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain('source: robbery');
+    expect(output).toContain('system_id: vega');
+    expect(output).not.toContain('grantor_id');
+    expect(output).not.toContain('faction_id');
+    expect(output).not.toContain('granted_tick');
+    expect(output).not.toContain('until_tick');
+    expect(output).not.toContain('player-9');
+  });
+
+  test('displayError prints no safe_passage details without a details object', () => {
+    for (const details of [undefined, null, [], 'toll', 0] as const) {
+      const capture = captureWriter();
+      const error: Record<string, unknown> = { code: 'safe_passage', message: 'Blocked.' };
+      if (details !== undefined) error.details = details;
+      displayError('attack', error, { context: displayErrorContext(capture.writer) });
+      const output = capture.stderr.join('\n');
+      expect(output).toContain('Error [safe_passage]: Blocked.');
+      expect(output).not.toContain('grantor_id');
+      expect(output).not.toContain('faction_id');
+      expect(output).not.toContain('system_id');
+    }
+  });
+
+  test('displayError does not invent detail keys for hold refusal codes', () => {
+    for (const code of ['no_scrambler', 'target_not_holdable', 'already_held', 'hold_cooldown'] as const) {
+      const capture = captureWriter();
+      displayError(
+        'scan',
+        {
+          code,
+          message: 'Refused.',
+          details: {
+            grantor_id: 'player-9',
+            faction_id: '',
+            system_id: 'sol',
+            granted_tick: 1,
+            until_tick: 2,
+            source: 'toll',
+          },
+        },
+        { context: displayErrorContext(capture.writer) },
+      );
+      const output = capture.stderr.join('\n');
+      expect(output).toContain(`Error [${code}]: Refused.`);
+      expect(output).not.toContain('grantor_id');
+      expect(output).not.toContain('faction_id');
+      expect(output).not.toContain('system_id');
+      expect(output).not.toContain('granted_tick');
+      expect(output).not.toContain('until_tick');
+      expect(output).not.toContain('source:');
+      expect(output).not.toContain('player-9');
+    }
+  });
+
+  test('displayError quiet mode still prints safe_passage details', () => {
+    const capture = captureWriter();
+    displayError(
+      'attack',
+      {
+        code: 'safe_passage',
+        message: 'Blocked.',
+        details: { grantor_id: 'player-9', faction_id: '' },
+      },
+      { context: displayErrorContext(capture.writer, { quiet: true, plain: true }) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(capture.stdout).toEqual([]);
+    expect(output).toContain('grantor_id: player-9');
+    expect(output.split('\n')).toContain('faction_id:');
+    expect(output).not.toContain('Suggestion:');
+  });
+
   test('displayError action_pending without a wait prints suggestion and retryable, not Wait', () => {
     const capture = captureWriter();
     displayError(

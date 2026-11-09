@@ -7150,6 +7150,131 @@ test('register does not print unread_chat', () => {
   expect(stdout).not.toContain('You have 203 unread chat message(s).');
 });
 
+const safePassageGrantTick = 9007199254740993n;
+
+test.each([
+  'login',
+  'login_token',
+  'get_status',
+  'buy',
+] as const)('%s prints one safe-passage line per grant with the keys that arrived', (command) => {
+  const stdout = renderStatusTable(command, {
+    player: {
+      username: 'Marlowe',
+      empire: 'Terran',
+      credits: 1,
+      safe_passages: [
+        {
+          ref_id: 'trade-9',
+          until_tick: 1,
+          granted_tick: 0,
+          system_id: 'sol',
+          grantor_player_id: 'player-1',
+          source: 'toll',
+          grantor_name: 'Nova',
+        },
+        {
+          source: 'robbery',
+          grantor_player_id: 'player-2',
+          system_id: 'antares',
+          granted_tick: safePassageGrantTick,
+          until_tick: 40,
+        },
+        {
+          source: 'toll',
+          grantor_player_id: 'player-3',
+          grantor_faction_id: '',
+          system_id: '  vega  ',
+          granted_tick: 8,
+          until_tick: 9,
+          ref_id: 'trade-3',
+        },
+      ],
+    },
+  });
+  const grantLines = stdout.split('\n').filter((line) => line.startsWith('  source:'));
+  expect(stdout).toContain('=== Player Status ===');
+  expect(stdout.indexOf('Safe passages:')).toBeGreaterThan(stdout.indexOf('=== Player Status ==='));
+  expect(stdout.indexOf('Safe passages:')).toBeLessThan(stdout.indexOf('Location:'));
+  expect(grantLines).toEqual([
+    '  source: toll, grantor_player_id: player-1, system_id: sol, granted_tick: 0, until_tick: 1, ref_id: trade-9',
+    `  source: robbery, grantor_player_id: player-2, system_id: antares, granted_tick: ${safePassageGrantTick.toLocaleString()}, until_tick: 40`,
+    '  source: toll, grantor_player_id: player-3, grantor_faction_id:, system_id:   vega  , granted_tick: 8, until_tick: 9, ref_id: trade-3',
+  ]);
+  expect(stdout).not.toContain('Nova');
+  expect(stdout).not.toContain('grantor_name');
+  expect(grantLines[0]).not.toContain('grantor_faction_id');
+  expect(grantLines[1]).not.toContain('ref_id');
+});
+
+test('login prints nothing for an empty, omitted, or non-array safe_passages', () => {
+  for (const safePassages of [undefined, [], null, {}, 'toll', 0] as const) {
+    const player: Record<string, unknown> = { username: 'Marlowe' };
+    if (safePassages !== undefined) player.safe_passages = safePassages;
+    const stdout = renderStatusTable('login', { player });
+    expect(stdout).toContain('=== Player Status ===');
+    expect(stdout).not.toContain('Safe passages');
+    expect(stdout).not.toContain('grantor_player_id');
+  }
+});
+
+test('login skips unprintable safe-passage entries and does not cap or sort the list', () => {
+  const grants: unknown[] = [
+    'nope',
+    { until_tick: 1, source: 'robbery', grantor_player_id: 'late' },
+    null,
+    {},
+    { source: { kind: 'toll' } },
+  ];
+  for (let index = 0; index < 16; index += 1) {
+    grants.push({ source: 'toll', grantor_player_id: `p${index}`, until_tick: 100 - index });
+  }
+  const stdout = renderStatusTable('login', { player: { username: 'Marlowe', safe_passages: grants } });
+  const lines = stdout.split('\n').filter((line) => line.startsWith('  source:'));
+  expect(lines).toHaveLength(17);
+  expect(lines[0]).toBe('  source: robbery, grantor_player_id: late, until_tick: 1');
+  expect(lines[1]).toBe('  source: toll, grantor_player_id: p0, until_tick: 100');
+  expect(lines[16]).toBe('  source: toll, grantor_player_id: p15, until_tick: 85');
+  expect(stdout.indexOf('grantor_player_id: p0')).toBeLessThan(stdout.indexOf('grantor_player_id: p15'));
+  expect(stdout).not.toContain('kind');
+});
+
+test('login keeps one safe-passage line when a key contains a newline', () => {
+  const stdout = renderStatusTable('login', {
+    player: {
+      username: 'Marlowe',
+      safe_passages: [{ source: 'toll\nrobbery', grantor_player_id: 'player-1' }],
+    },
+  });
+  expect(stdout.split('\n')).toContain('  source: toll robbery, grantor_player_id: player-1');
+});
+
+test.each([
+  'get_state',
+  'get_player',
+  'get_status_summary',
+] as const)('%s does not print player.safe_passages', (command) => {
+  const stdout = renderStatusTable(command, {
+    player: {
+      username: 'Marlowe',
+      empire: 'Terran',
+      credits: 1,
+      safe_passages: [
+        {
+          source: 'toll',
+          grantor_player_id: 'player-1',
+          system_id: 'sol',
+          granted_tick: 1,
+          until_tick: 2,
+        },
+      ],
+    },
+  });
+  expect(stdout).not.toContain('Safe passages');
+  expect(stdout).not.toContain('grantor_player_id');
+  expect(stdout).not.toContain('player-1');
+});
+
 test('get_skills prints (MAX) for the max-level skill branch', () => {
   const fixture = structuredClone(skillsFixture);
   const mining: { level: number; max_level: number; next_level_xp?: number } = fixture.skills.mining;
