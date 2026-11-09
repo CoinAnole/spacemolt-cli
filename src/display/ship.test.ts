@@ -1151,6 +1151,42 @@ test('scrap_wreck prints wreck, storage, value, and expanded materials', () => {
   expect(stdout).not.toContain('=== Scrap Wreck ===');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('Action:');
+  expect(stdout).not.toContain('=== Lost ===');
+});
+
+test('scrap_wreck prints lost with the materials columns, including quantity 0', () => {
+  const fixture = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  fixture.details.lost = [
+    { item: 'scrap_metal', name: 'Scrap Metal', quantity: 0 },
+    { item: 'pulse_laser_i', name: 'Pulse Laser I', quantity: 2 },
+  ];
+  const stdout = renderScrapWreck(fixture).stdout.join('\n');
+  const lost = stdout.split('=== Lost ===')[1] ?? '';
+  const materials = stdout.split('=== Materials ===')[1]?.split('=== Lost ===')[0] ?? '';
+  expect(stdout).toContain('=== Lost ===');
+  expect(stdout.indexOf('=== Materials ===')).toBeLessThan(stdout.indexOf('=== Lost ==='));
+  expect(lost).toMatch(/Item\s+\|\s+Qty/);
+  expect(lost).toMatch(/Scrap Metal\s+\|\s+0/);
+  expect(lost).toMatch(/Pulse Laser I\s+\|\s+2/);
+  expect(lost).toContain('Scrapped wreck.');
+  expect(materials).not.toMatch(/\|\s+0/);
+  expect(stdout).not.toContain('Destination:');
+});
+
+test('scrap_wreck prints nothing when lost is omitted, empty, or not material rows', () => {
+  expect(renderScrapWreck(scrapWreckFixture).stdout.join('\n')).not.toContain('=== Lost ===');
+
+  const empty = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  empty.details.lost = [];
+  expect(renderScrapWreck(empty).stdout.join('\n')).not.toContain('=== Lost ===');
+
+  const nulled = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  nulled.details.lost = null;
+  expect(renderScrapWreck(nulled).stdout.join('\n')).not.toContain('=== Lost ===');
+
+  const junk = structuredClone(scrapWreckFixture) as { details: Record<string, unknown> };
+  junk.details.lost = ['not-a-record', 0, null];
+  expect(renderScrapWreck(junk).stdout.join('\n')).not.toContain('=== Lost ===');
 });
 
 test('scrap_wreck omits the materials table when materials is empty', () => {

@@ -183,14 +183,16 @@ function formatPaidVersusOffer(offer: number | bigint, paid: number | bigint): s
   return `Paid: ${formatCredits(paid)}`;
 }
 
-function printSalvageMaterials(value: unknown): void {
+const salvageMaterialColumns: Array<[string, string[]]> = [
+  ['Item', ['name', 'item']],
+  ['Qty', ['quantity']],
+];
+
+function printSalvageMaterials(value: unknown, title = 'Materials'): void {
   if (!Array.isArray(value)) return;
   const rows = value.filter(isRecord);
   if (!rows.length) return;
-  printCompactTable('Materials', rows, [
-    ['Item', ['name', 'item']],
-    ['Qty', ['quantity']],
-  ]);
+  printCompactTable(title, rows, salvageMaterialColumns);
 }
 
 function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
@@ -1062,6 +1064,7 @@ export const shipFormatters = [
       if (storedAt) emitLine(`Stored at: ${storedAt}`);
       if (totalValue !== undefined) emitLine(`Total value: ${totalValue}`);
       printSalvageMaterials(r.materials);
+      printSalvageMaterials(r.lost, 'Lost');
       if (message) emitLine(`${c.dim}${message}${c.reset}`);
       return true;
     },

@@ -167,7 +167,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Repair hull at a station, with kits, or on another ship (named target=). repaired is hull actually restored.',
   scrap_ship: 'Permanently destroy a stored ship you no longer want.',
   scrap_wreck:
-    "Scrap a towed wreck at a salvage yard or your faction's own player station. Recovers cargo and modules into station storage.",
+    "Scrap a towed wreck at a salvage yard or your faction's own player station, or cut a wreck in place with mode=field and id. Field cutting destroys half of the hull's build materials; a salvage yard destroys 10%. The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first. What does not fit is destroyed and listed in lost.",
   search_systems: 'Search for systems by name',
   self_destruct: 'Destroy your own ship',
   sell_wreck: 'Sell a towed wreck to an NPC salvage yard for credits. Leftover modules go to station storage.',

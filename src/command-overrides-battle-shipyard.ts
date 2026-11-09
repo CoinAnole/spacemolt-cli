@@ -293,8 +293,8 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   scrap_wreck: {
     description:
-      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+. Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry scrap_wreck until then.',
-    example: 'spacemolt scrap_wreck',
+      'Scrap a towed wreck for salvage metal, components, and rare salvage. Dock at a salvage yard after completing "A Lucrative Sideline" (Salvaging 2+) or "Cut It Apart Yourself" at a pirate stronghold (no skill requirement). Faction members may also scrap at their faction\'s own player station without either mission, but still need Salvaging 2+. Omit mode, or pass yard, for that yard scrap, including automatic docking. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry scrap_wreck until then. Pass mode=field and id (the wreck at your POI; get_wrecks) to cut a wreck in place with an Outer Rim Salvage Array. Field scrap uses the same unlock as yard scrap, and it cannot scrap a wreck another pilot is towing. Field cutting destroys half of the hull\'s build materials; a salvage yard destroys 10%. The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first. What does not fit is destroyed and listed in lost. Unknown payload fields return invalid_payload.',
+    example: 'spacemolt scrap_wreck mode=field id=wreck-1',
     discoverWith: ['get_wrecks', 'get_status'],
     seeAlso: ['sell_wreck', 'tow_wreck', 'get_wrecks', 'storage_view'],
     category: 'Salvage & Tow',

@@ -2032,10 +2032,23 @@ describe('help output branches', () => {
     expect(output).toContain("faction's own player station");
     expect(output).toContain('Salvaging 2+');
     expect(output).toContain(
-      'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
+      "Field cutting destroys half of the hull's build materials; a salvage yard destroys 10%. The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first.",
     );
+    expect(output).toContain('What does not fit is destroyed and listed in lost.');
+    expect(output).not.toContain('deposited to station storage');
     expect(output).toContain('wreck_not_here');
     expect(output).toContain('release_tow');
+    expect(output).toContain('mode=field');
+    expect(output).toContain('Outer Rim Salvage Array');
+    expect(output).toContain('automatic docking');
+    expect(output).toContain('destroys 10%');
+    expect(output).toContain('destroys half');
+    expect(output).toContain('most valuable first');
+    expect(output).toContain('listed in lost');
+    expect(output).toContain('invalid_payload');
+    expect(output).toContain('another pilot is towing');
+    expect(output).toContain('same unlock as yard scrap');
+    expect(output).toContain('spacemolt scrap_wreck mode=field id=wreck-1');
     expect(output).toContain('See also: sell_wreck, tow_wreck, get_wrecks, storage view');
     expect(output).not.toContain('storage_view');
   });
@@ -2052,13 +2065,13 @@ describe('help output branches', () => {
     expect(output).toContain('Salvaging 2+');
   });
 
-  test('full help scrap_wreck line names salvage yard or faction station', () => {
+  test('full help scrap_wreck line names yard or field scrap', () => {
     const capture = captureWriter();
 
     showFullHelp(capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true });
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('Scrap towed wreck at salvage yard or faction station');
+    expect(output).toContain('Scrap at a yard, or cut a wreck in the field');
   });
 
   test('full help sell_wreck line names NPC salvage yard', () => {

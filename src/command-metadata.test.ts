@@ -4974,9 +4974,25 @@ describe('command metadata', () => {
     expect(COMMANDS.scrap_wreck?.description).toContain('Salvaging 2+');
     expect(COMMANDS.scrap_wreck?.description).toContain('A Lucrative Sideline');
     expect(COMMANDS.scrap_wreck?.description).toContain(
-      'Remaining wreck cargo and modules are deposited to station storage and listed in the materials receipt.',
+      "Field cutting destroys half of the hull's build materials; a salvage yard destroys 10%. The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first.",
     );
+    expect(COMMANDS.scrap_wreck?.description).toContain('What does not fit is destroyed and listed in lost.');
+    expect(COMMANDS.scrap_wreck?.description).not.toContain('deposited to station storage');
+    expect(CURATED_COMMAND_DESCRIPTIONS.scrap_wreck).toContain(
+      'The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first.',
+    );
+    expect(CURATED_COMMAND_DESCRIPTIONS.scrap_wreck).not.toContain('station storage');
     expect(COMMANDS.scrap_wreck?.description).toContain('wreck_not_here');
+    expect(COMMANDS.scrap_wreck?.description).toContain('mode=field');
+    expect(COMMANDS.scrap_wreck?.description).toContain('Outer Rim Salvage Array');
+    expect(COMMANDS.scrap_wreck?.description).toContain('automatic docking');
+    expect(COMMANDS.scrap_wreck?.description).toContain('destroys 10%');
+    expect(COMMANDS.scrap_wreck?.description).toContain('destroys half');
+    expect(COMMANDS.scrap_wreck?.description).toContain('most valuable first');
+    expect(COMMANDS.scrap_wreck?.description).toContain('listed in lost');
+    expect(COMMANDS.scrap_wreck?.description).toContain('invalid_payload');
+    expect(COMMANDS.scrap_wreck?.description).toContain('another pilot is towing');
+    expect(COMMANDS.scrap_wreck?.example).toBe('spacemolt scrap_wreck mode=field id=wreck-1');
     expect(COMMANDS.scrap_wreck?.seeAlso).toEqual(['sell_wreck', 'tow_wreck', 'get_wrecks', 'storage_view']);
     expect(COMMANDS.scrap_wreck?.route).toEqual({ tool: 'spacemolt_salvage', action: 'scrap', method: 'POST' });
   });
