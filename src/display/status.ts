@@ -32,6 +32,7 @@ import {
   overCapacitySuffix,
   pirateCrewLabel,
   printCompactTable,
+  printItemTable,
 } from './helpers.ts';
 import { emitLeviathanContacts } from './leviathans.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
@@ -610,6 +611,47 @@ function emitPassengersDelivered(player: unknown): void {
   const text = formatIntegerText(player.stats.passengers_delivered);
   if (text === undefined) return;
   emitLine(`Passengers delivered: ${text}`);
+}
+
+function cargoQuantityText(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+function emitCargoScanUsage(result: Record<string, unknown>): void {
+  const used = nativeScanField(result, 'cargo_used');
+  const capacity = nativeScanField(result, 'cargo_capacity');
+  const usedText = cargoQuantityText(used);
+  const capacityText = cargoQuantityText(capacity);
+  if (usedText !== undefined && capacityText !== undefined) {
+    emitLine(`Used: ${usedText}/${capacityText}${overCapacitySuffix(used, capacity)}`);
+    return;
+  }
+  if (usedText !== undefined) emitLine(`Used: ${usedText}`);
+  else if (capacityText !== undefined) emitLine(`Capacity: ${capacityText}`);
+}
+
+function emitCargoScan(result: Record<string, unknown>, options?: { printSuccess?: boolean }): void {
+  if (nativeScanField(result, 'hold') === true) emitLine('Hold: true');
+  if (nativeScanField(result, 'hold_cancelled') === true) emitLine('Hold cancelled: true');
+  if (options?.printSuccess !== false && result.success === false) emitLine('Success: false');
+  const reason = nativeScanField(result, 'reason');
+  if (typeof reason === 'string' && reason !== '') emitLine(`Reason: ${reason}`);
+
+  const cargo = nativeScanField(result, 'cargo');
+  const items = Array.isArray(cargo) ? cargo.filter(isRecord) : [];
+  const hasItems = items.length > 0;
+  const emptyHold = result.success === true && !hasItems;
+  const hasUsage =
+    cargoQuantityText(nativeScanField(result, 'cargo_used')) !== undefined ||
+    cargoQuantityText(nativeScanField(result, 'cargo_capacity')) !== undefined;
+  if (!hasItems && !emptyHold && !hasUsage) return;
+
+  emitLine(`\n${c.bright}=== Cargo ===${c.reset}`);
+  emitCargoScanUsage(result);
+  if (hasItems) printItemTable(items, '  ', 'Cargo');
+  else if (emptyHold) emitLine('Empty hold.');
 }
 
 function emitScanRevealedInfo(result: Record<string, unknown>): void {
@@ -1743,6 +1785,7 @@ export const statusFormatters = [
         emitLeviathanContacts(nativeScanField(r, 'leviathans'), 'Leviathans');
         emitScanRevealedInfo(r);
         if (r.success === false) emitLine('Success: false');
+        if (nativeScanField(r, 'mode') === 'cargo') emitCargoScan(r, { printSuccess: false });
         return true;
       }
       if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) {
@@ -1778,6 +1821,7 @@ export const statusFormatters = [
         emitLine(`Ranch: ${r.brand_ranch}`);
       }
       emitScanRevealedInfo(r);
+      if (nativeScanField(r, 'mode') === 'cargo') emitCargoScan(r);
       return true;
     },
     { commands: ['scan'] },

@@ -615,6 +615,257 @@ test('non-string poi_id stays on the target scan branch and whitespace does not'
   expect(whitespace).not.toContain('Ship:');
 });
 
+test('cargo scan prints the hold table, capacity, and used space', () => {
+  const stdout = renderScan({
+    target_id: 'player-2',
+    username: 'Ibis',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    scan_power: 12,
+    credits: 500,
+    cargo_capacity: 40,
+    cargo_used: 8,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+  });
+
+  expect(stdout).toContain('=== Scan Result ===');
+  expect(stdout).toContain('Target: Ibis (player-2)');
+  expect(stdout).toContain('=== Cargo ===');
+  expect(stdout).toContain('Used: 8/40');
+  expect(stdout).toContain('Cargo (1):');
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).toContain('iron_ore');
+  expect(stdout).toContain('|   4 |');
+  expect(stdout).toContain('|         2');
+  expect(stdout).not.toContain('Credits');
+  expect(stdout).not.toContain('500');
+  expect(stdout).not.toContain('Empty hold.');
+  expect(stdout).not.toContain('Hold:');
+  expect(stdout).not.toContain('Hold cancelled:');
+  expect(stdout).not.toContain('Success:');
+  expect(stdout).not.toContain('Reason:');
+  expect(stdout).not.toContain('Scan power:');
+  expect(stdout).not.toContain('ticks');
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout.indexOf('Target: Ibis (player-2)')).toBeLessThan(stdout.indexOf('=== Cargo ==='));
+  expect(stdout.indexOf('Used: 8/40')).toBeLessThan(stdout.indexOf('Cargo (1):'));
+});
+
+test('cargo scan prints hold and hold cancelled only when true', () => {
+  const base = {
+    target_id: 'player-2',
+    username: 'Ibis',
+    success: true,
+    revealed_info: [] as string[],
+    mode: 'cargo',
+    cargo_capacity: 40,
+    cargo_used: 8,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+  };
+  const both = renderScan({ ...base, hold: true, hold_cancelled: true });
+  expect(both).toContain('Hold: true');
+  expect(both).toContain('Hold cancelled: true');
+  expect(both).not.toContain('ticks');
+  expect(both.indexOf('Hold: true')).toBeLessThan(both.indexOf('Hold cancelled: true'));
+  expect(both.indexOf('Hold cancelled: true')).toBeLessThan(both.indexOf('=== Cargo ==='));
+
+  for (const flag of [false, undefined, 'true', 1]) {
+    const stdout = renderScan({ ...base, hold: flag, hold_cancelled: flag });
+    expect(stdout).not.toContain('Hold:');
+    expect(stdout).not.toContain('Hold cancelled:');
+    expect(stdout).toContain('Iron Ore');
+  }
+});
+
+test('successful cargo scan with no cargo prints an empty hold', () => {
+  const omitted = renderScan({
+    target_id: 'player-2',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    cargo_capacity: 40,
+  });
+  expect(omitted).toContain('Target: player-2');
+  expect(omitted).toContain('=== Cargo ===');
+  expect(omitted).toContain('Capacity: 40');
+  expect(omitted).toContain('Empty hold.');
+  expect(omitted).not.toContain('Used:');
+  expect(omitted).not.toContain('Cargo (0):');
+  expect(omitted).not.toContain('(Empty)');
+  expect(omitted).not.toContain('Credits');
+  expect(omitted.indexOf('Capacity: 40')).toBeLessThan(omitted.indexOf('Empty hold.'));
+
+  const empty = renderScan({
+    target_id: 'player-2',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    cargo: [],
+    cargo_used: 0,
+    cargo_capacity: 0,
+  });
+  expect(empty).toContain('Used: 0/0');
+  expect(empty).toContain('Empty hold.');
+  expect(empty).not.toContain('Cargo (0):');
+});
+
+test('failed cargo scan prints reason as sent and does not invent an empty hold', () => {
+  for (const reason of ['evaded', 'target_left', 'target_lost', 'scanner_left'] as const) {
+    const stdout = renderScan({
+      target_id: 'player-2',
+      username: 'Ibis',
+      success: false,
+      revealed_info: [],
+      mode: 'cargo',
+      reason,
+      credits: 500,
+    });
+    expect(stdout).toContain('Target: Ibis (player-2)');
+    expect(stdout).toContain('Success: false');
+    expect(stdout).toContain(`Reason: ${reason}`);
+    expect(stdout).not.toContain('=== Cargo ===');
+    expect(stdout).not.toContain('Empty hold.');
+    expect(stdout).not.toContain('Credits');
+    expect(stdout).not.toContain('500');
+    expect(stdout).not.toContain('ticks');
+    expect(stdout.split('Success: false')).toHaveLength(2);
+  }
+
+  const spaced = renderScan({
+    target_id: 'player-2',
+    success: false,
+    revealed_info: [],
+    mode: 'cargo',
+    reason: ' evaded ',
+  });
+  expect(spaced).toContain('Reason:  evaded ');
+  expect(spaced).not.toContain('Empty hold.');
+
+  const noReason = renderScan({
+    target_id: 'player-2',
+    success: false,
+    revealed_info: [],
+    mode: 'cargo',
+    reason: '',
+  });
+  expect(noReason).toContain('Success: false');
+  expect(noReason).not.toContain('Reason:');
+  expect(noReason).not.toContain('Empty hold.');
+
+  const numericReason = renderScan({
+    target_id: 'player-2',
+    success: false,
+    revealed_info: [],
+    mode: 'cargo',
+    reason: 1,
+  });
+  expect(numericReason).not.toContain('Reason:');
+});
+
+test('failed cargo scan still prints sent cargo and a true hold', () => {
+  const stdout = renderScan({
+    target_id: 'player-2',
+    success: false,
+    revealed_info: [],
+    mode: 'cargo',
+    reason: 'target_lost',
+    hold: true,
+    hold_cancelled: false,
+    cargo_capacity: 40,
+    cargo_used: 8,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+  });
+  expect(stdout).toContain('Hold: true');
+  expect(stdout).not.toContain('Hold cancelled:');
+  expect(stdout).toContain('Success: false');
+  expect(stdout).toContain('Reason: target_lost');
+  expect(stdout).toContain('Used: 8/40');
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).not.toContain('Empty hold.');
+});
+
+test('cargo scan reads details cargo, not the player ship or credits', () => {
+  const stdout = renderScan({
+    credits: 999,
+    player: { credits: 999, username: 'Self' },
+    ship: {
+      cargo_used: 1,
+      cargo_capacity: 2,
+      cargo: [{ item_id: 'ore_gold', name: 'Gold', quantity: 9, size: 1 }],
+    },
+    location: { poi_id: 'sol_earth', poi_name: 'Earth', system_id: 'sol' },
+    details: {
+      target_id: 'player-2',
+      username: 'Ibis',
+      success: true,
+      revealed_info: [],
+      mode: 'cargo',
+      cargo_capacity: 40,
+      cargo_used: 8,
+      cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+    },
+  });
+
+  expect(stdout).toContain('Target: Ibis (player-2)');
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).toContain('Used: 8/40');
+  expect(stdout).not.toContain('Gold');
+  expect(stdout).not.toContain('ore_gold');
+  expect(stdout).not.toContain('Credits');
+  expect(stdout).not.toContain('999');
+  expect(stdout).not.toContain('POI:');
+  expect(stdout).not.toContain('Earth');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('a non-cargo scan does not print a planted cargo hold', () => {
+  const stdout = renderScan({
+    ...structuredClone(scanFixture),
+    cargo_capacity: 40,
+    cargo_used: 8,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+    hold: true,
+    hold_cancelled: true,
+    reason: 'evaded',
+    credits: 500,
+  });
+  expect(stdout).toContain('Target: Ibis');
+  expect(stdout).not.toContain('=== Cargo ===');
+  expect(stdout).not.toContain('Iron Ore');
+  expect(stdout).not.toContain('Empty hold.');
+  expect(stdout).not.toContain('Hold:');
+  expect(stdout).not.toContain('Reason:');
+  expect(stdout).not.toContain('Credits');
+  expect(stdout).not.toContain('Success:');
+});
+
+test('cargo scan flags used space over capacity and omits a missing side', () => {
+  const over = renderScan({
+    target_id: 'player-2',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    cargo_used: 50,
+    cargo_capacity: 40,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+  });
+  expect(over).toContain('Used: 50/40 (over capacity)');
+
+  const usedOnly = renderScan({
+    target_id: 'player-2',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    cargo_used: 8,
+    cargo: [{ item_id: 'iron_ore', name: 'Iron Ore', quantity: 4, size: 2 }],
+  });
+  expect(usedOnly).toContain('Used: 8');
+  expect(usedOnly).not.toContain('Used: 8/');
+  expect(usedOnly).not.toContain('Capacity:');
+  expect(usedOnly).not.toContain('?');
+});
+
 test('get_status shows towing ship and release hint when towing_ship_id is set', () => {
   const rendered = renderStructuredResult(
     'get_status',

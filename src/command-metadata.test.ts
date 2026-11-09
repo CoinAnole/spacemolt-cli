@@ -715,6 +715,15 @@ describe('command metadata', () => {
     expect(help).toContain('Branded');
     expect(help).toContain('the ranch');
     expect(help).toContain('See hunt');
+    expect(config?.description).toContain('mode=cargo');
+    expect(config?.description).toContain('over 3 ticks');
+    expect(config?.description).toContain('never returns credits');
+    expect(config?.description).toContain('holds the target for 5 ticks');
+    expect(config?.description).toContain('prints an empty hold');
+    expect(config?.description).toContain('does not invent an empty hold');
+    expect(help).toContain('mode=cargo');
+    expect(help).toContain('over 3 ticks');
+    expect(help).toContain('5 ticks');
   });
 
   test('dock help names station_under_attack and faction-station join rules', () => {
