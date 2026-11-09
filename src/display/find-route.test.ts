@@ -42,6 +42,7 @@ const DOCUMENTED_NOT_FOUND = [
   'Estimated fuel: 0',
   'Fuel available: 0',
   'Cargo used: 0',
+  'Steps: 0',
   'No route found',
 ].join('\n');
 
@@ -346,13 +347,22 @@ describe('find_route formatter', () => {
     expect(cells(rowByText(stdout, 'Route', 'Sol'))[3]).toBe('(invalid)');
   });
 
-  test('prints the documented missing route without a hop table', () => {
+  test('prints the documented missing route as not found with Steps: 0 and no hop table', () => {
+    expect(documentedMissingRouteFixture.found).toBe(false);
+    expect(documentedMissingRouteFixture.route).toEqual([]);
     const rendered = render(documentedMissingRouteFixture);
     expect(rendered.success).toBe(true);
     expect(rendered.stdout.join('\n')).toBe(DOCUMENTED_NOT_FOUND);
-    expect(rendered.stdout.join('\n')).not.toContain('Steps:');
+    expect(rendered.stdout).toContain('Steps: 0');
     expect(rendered.stdout.join('\n')).not.toContain('=== Route ===');
     expect(rendered.stdout.join('\n')).not.toContain('(None)');
+  });
+
+  test('prints an older null route as not found without a steps line', () => {
+    const stdout = stdoutOf({ ...documentedMissingRouteFixture, route: null });
+    expect(stdout).toBe(DOCUMENTED_NOT_FOUND.replace('\nSteps: 0', ''));
+    expect(stdout).not.toContain('Steps:');
+    expect(stdout).not.toContain('=== Route ===');
   });
 
   test('dims the server message in color mode', () => {

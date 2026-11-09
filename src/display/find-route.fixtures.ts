@@ -50,7 +50,7 @@ export const findRouteHighValueFixture: Record<string, unknown> = {
 
 export const documentedMissingRouteFixture: Record<string, unknown> = {
   found: false,
-  route: null,
+  route: [],
   total_jumps: 0,
   target_system: 'proxima',
   fuel_per_jump: 0,
