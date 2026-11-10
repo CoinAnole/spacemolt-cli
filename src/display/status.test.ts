@@ -6229,6 +6229,38 @@ test('get_state prints finite ship speed', () => {
   expect(stdout).toContain('Speed: 12');
 });
 
+test('get_status and get_state print refit available yes or no and skip an omitted key', () => {
+  for (const command of ['get_status', 'get_state'] as const) {
+    const hull = command === 'get_status' ? '  Hull: 90/100' : 'Hull: 90/100';
+    for (const [value, label] of [
+      [true, 'yes'],
+      [false, 'no'],
+    ] as const) {
+      const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+      fixture.ship.refit_available = value;
+      const stdout = renderStructuredResult(command, fixture, options, context).stdout.join('\n');
+      const line = command === 'get_status' ? `  Refit available: ${label}` : `Refit available: ${label}`;
+      expect(stdout).toContain(line);
+      expect(stdout.indexOf(line)).toBeLessThan(stdout.indexOf(hull));
+      expect(stdout).not.toContain('Minimum speed');
+      expect(stdout.split('Refit available:').length - 1).toBe(1);
+    }
+
+    const omitted = renderStructuredResult(command, structuredClone(getStatusFixture), options, context).stdout.join(
+      '\n',
+    );
+    expect(omitted).toContain(hull);
+    expect(omitted).not.toContain('Refit available:');
+
+    for (const value of [null, 'false', 0, 1]) {
+      const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+      fixture.ship.refit_available = value;
+      const stdout = renderStructuredResult(command, fixture, options, context).stdout.join('\n');
+      expect(stdout).not.toContain('Refit available:');
+    }
+  }
+});
+
 test('get_state prints ship location when the string is non-empty', () => {
   const fixture = structuredClone(getStateSnapshotFixture) as { ship: Record<string, unknown> };
   fixture.ship.location = 'outer-ring';

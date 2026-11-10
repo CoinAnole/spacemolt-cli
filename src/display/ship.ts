@@ -511,6 +511,12 @@ function emitFieldWorkshop(ship: Record<string, unknown>): void {
   if (pauseReason) emitLine(`Pause reason: ${pauseReason}`);
 }
 
+// Schema calls an omitted key false. Do not print that as no.
+export function emitRefitAvailable(ship: Record<string, unknown>, indent = ''): void {
+  if (typeof ship.refit_available !== 'boolean') return;
+  emitLine(`${indent}Refit available: ${ship.refit_available ? 'yes' : 'no'}`);
+}
+
 export function emitDroneBay(droneBay: unknown): boolean {
   if (!isRecord(droneBay)) return false;
   emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
@@ -722,6 +728,7 @@ export const shipFormatters = [
       if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
       const remoteLocation = nonEmptyString(ship.location);
       if (remoteLocation) emitLine(`Location: ${remoteLocation}`);
+      emitRefitAvailable(ship);
       emitLine(`Hull: ${ship.hull ?? '?'}/${ship.max_hull ?? '?'}`);
       emitLine(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);
       emitLine(`Armor: ${ship.armor ?? 0}`);

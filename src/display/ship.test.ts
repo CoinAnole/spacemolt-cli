@@ -738,6 +738,40 @@ test('get_state does not synthesize a field workshop block when the key is absen
   expect(stdout).not.toContain('Queued jobs:');
   expect(stdout).not.toContain('Reserved cargo:');
   expect(stdout).not.toContain('Pause reason:');
+  expect(stdout).not.toContain('Refit available:');
+});
+
+test('get_ship prints refit available yes or no and skips an omitted or non-boolean key', () => {
+  for (const [value, label] of [
+    [true, 'yes'],
+    [false, 'no'],
+  ] as const) {
+    const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+    fixture.ship.refit_available = value;
+    fixture.ship.location = 'Parked at Nova Terra';
+    const stdout = renderShip(fixture).stdout.join('\n');
+    const line = `Refit available: ${label}`;
+    expect(stdout).toContain(line);
+    expect(stdout.indexOf('Location: Parked at Nova Terra')).toBeLessThan(stdout.indexOf(line));
+    expect(stdout.indexOf(line)).toBeLessThan(stdout.indexOf('Hull: 420/420'));
+    expect(stdout).not.toContain('Minimum speed');
+    expect(stdout.split(line).length - 1).toBe(1);
+  }
+
+  const omitted = renderShip(shipFixture).stdout.join('\n');
+  expect(omitted).not.toContain('Refit available:');
+  expect(omitted).toContain('Hull: 420/420');
+
+  for (const value of [null, 'true', 'false', 0, 1, '']) {
+    const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+    fixture.ship.refit_available = value;
+    const stdout = renderShip(fixture).stdout.join('\n');
+    expect(stdout).not.toContain('Refit available:');
+  }
+
+  const root = structuredClone(shipFixture) as Record<string, unknown>;
+  root.refit_available = true;
+  expect(renderShip(root).stdout.join('\n')).not.toContain('Refit available:');
 });
 
 test('get_ship keeps module stats off the table', () => {

@@ -6879,7 +6879,7 @@ describe('command metadata', () => {
 
   test('refit_ship help documents a shipyard reset that returns modules and cargo', () => {
     const description =
-      'Dock at a shipyard and reset the active ship to the current class definition. Hull stats reset and the class default loadout is installed. Installed modules and all cargo go to station storage; they are not destroyed. Free. Irreversible. A response message of already_current means the ship already matches current class stats and the default-loadout version, and nothing is applied. To restore your own fit, withdraw a returned module from station storage, then install_mod.';
+      'Dock at a shipyard and reset the active ship to the current class definition. Hull stats reset and the class default loadout is installed. Installed modules and all cargo go to station storage; they are not destroyed. Free. Irreversible. Your ship reports refit_available true when a refit would apply, so check it before you look for a shipyard. A response message of already_current means the ship already matches current class stats and the default-loadout version, and nothing is applied. To restore your own fit, withdraw a returned module from station storage, then install_mod.';
     const seeAlso = ['get_ship', 'storage_view', 'storage_withdraw', 'install_mod'];
     const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/refit_ship']?.summary ?? '';
     const config = COMMANDS.refit_ship;

@@ -803,6 +803,8 @@ describe('help output branches', () => {
     expect(output).toContain('not destroyed');
     expect(output).toContain('Free.');
     expect(output).toContain('Irreversible.');
+    expect(output).toContain('refit_available true when a refit would apply');
+    expect(output).toContain('check it before you look for a shipyard');
     expect(output).toContain('response message of already_current');
     expect(output).toContain('default-loadout version');
     expect(output).toContain('nothing is applied');
