@@ -963,6 +963,11 @@ describe('help output branches', () => {
     expect(output).toContain('one charge spent by each loaded mining gun on a successful ore extraction');
     expect(description).toContain('mining.ammo_consumed');
     expect(description).toContain('gameserver 0.647.0');
+    expect(output).toContain('crafting.lost');
+    expect(output).toContain('one entry per input');
+    expect(output).toContain('no extra data columns');
+    expect(description).toContain('crafting.lost');
+    expect(description).toContain('gameserver 0.678.0');
     expect(output).toContain('longer than 80 characters');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');

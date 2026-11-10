@@ -30,7 +30,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   complete_mission:
     'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.',
   completed_missions: 'List all missions you have completed',
-  craft: 'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (storage/faction; cargo for packages).',
+  craft:
+    'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (docked storage or faction; cargo for package recipes; undocked field workshop uses cargo).',
   create_buy_order:
     'Place a buy offer on the station exchange. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
   create_faction: 'Create a new faction',
