@@ -2108,7 +2108,22 @@ describe('command metadata', () => {
     expect(commission?.schema?.bare_hull?.type).toBe('boolean');
     expect(commission?.schema?.source_missing_materials?.type).toBe('boolean');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).toBe(
-      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station at a tier-four faction yard; ship modules and piloting do not apply, and the arguments are unchanged.",
+      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station: faction-funded at a tier-four faction yard with fund_from_faction=true, or player-funded at that empire's capital in any normal payment mode. The capital order needs faction membership and ManageBases and reserves the one mobile-base slot. bare_hull does not apply to mobile bases. Ship modules and piloting do not apply, and the arguments are unchanged.",
+    );
+    expect(commission?.description).toContain('fund_from_faction=true still applies');
+    expect(commission?.description).toContain("player-funded at that empire's capital");
+    expect(commission?.description).toContain('any normal payment mode');
+    expect(commission?.description).toContain('faction membership and ManageBases');
+    expect(commission?.description).toContain("the faction's one mobile-base slot");
+    expect(commission?.description).toContain('appears next to the capital and belongs to the faction');
+    expect(commission?.description).toContain('bare_hull does not apply to mobile bases');
+    expect(commission?.description).toContain('Those hull ids are examples, not a client allowlist');
+    expect(commission?.description).not.toContain('does not name');
+    expect(commission?.description).not.toContain('route description');
+    const membersOnly = commissionDescription.split('Mobile bases stay members-only').length - 1;
+    expect(membersOnly).toBe(1);
+    expect(commissionDescription.indexOf('Mobile bases stay members-only.')).toBeLessThan(
+      commissionDescription.indexOf('A catalog ship whose entry has mobile_base'),
     );
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).not.toBe(commission?.description);
 
@@ -2136,6 +2151,10 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
     expect(commissionHelp).toContain('Piloting still applies to flyable hulls');
     expect(commissionHelp).toContain('do not apply to those mobile-base blueprints');
+    expect(commissionHelp).toContain("player-funded at that empire's capital");
+    expect(commissionHelp).toContain('bare_hull does not apply to mobile bases');
+    expect(commissionHelp).toContain('Those hull ids are examples, not a client allowlist');
+    expect(commissionHelp).not.toContain('does not name');
     expect(commissionHelp).not.toContain('Piloting, shipyard tier, and materials still apply.');
     expect(commissionHelp).not.toContain('`');
     expect(commissionHelp).toMatch(/Arguments:\n {2}ship_class, provide_materials\n/);
@@ -2272,8 +2291,11 @@ describe('command metadata', () => {
     );
     expect(config?.description).not.toContain('`');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).toBe(
-      'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource.',
+      "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot.",
     );
+    expect(config?.description).toContain("reserve the faction's mobile-base slot");
+    expect(config?.description).toContain('A refusal is the error the server returns');
+    expect(config?.description).not.toContain('mobile_base_slot');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).not.toBe(config?.description);
     expect(config?.example).toBe('spacemolt commission_quote viper source_missing_materials=true');
     expect(config?.seeAlso).toEqual(['commission_ship', 'commission_status']);
@@ -2289,11 +2311,38 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt commission_quote viper source_missing_materials=true');
     expect(help).toContain('The same ship_class quotes a mobile-base blueprint');
     expect(help).toContain('it is not the jump resource');
+    expect(help).toContain("reserve the faction's mobile-base slot");
+    expect(help).toContain('A refusal is the error the server returns');
     expect(help).not.toContain('`');
     expect(help).toContain('Default quotes a fitted hull');
     expect(help).toContain('faction yards do not market-source missing materials');
     expect(help).not.toContain('royalty');
     expect(help).not.toContain('provide_materials');
+  });
+
+  test('cancel_commission help names a capital mobile-base cancel without error-registry details', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.cancel_commission;
+    expect(config?.description).toContain('ManageBases member of the bound faction');
+    expect(config?.description).toContain('refund still goes to the player who placed it');
+    expect(config?.description).toContain('refunded_to names that player');
+    expect(config?.description).toContain('faction name whose treasury received the refund');
+    expect(config?.description).toContain("credits_total is the caller's own wallet");
+    expect(config?.description).toContain('only when refunded_to is the caller');
+    expect(config?.description).toContain('not_cancellable');
+    expect(config?.description).toContain('not_yours');
+    expect(config?.description).not.toContain('retry');
+    expect(config?.description).not.toContain('details');
+    expect(config?.usage).toBe('<commission_id>');
+    expect(config?.args).toEqual(['commission_id']);
+    expect(config?.schema?.id?.type).toBe('string');
+    expect(Object.keys(config?.schema ?? {})).toEqual(['id']);
+    expect(CURATED_COMMAND_DESCRIPTIONS.cancel_commission).toBe(config?.description);
+
+    const help = captureHelp('cancel_commission');
+    expect(help).toContain('not_cancellable');
+    expect(help).toContain('not_yours');
+    expect(help).toContain('<commission_id>');
+    expect(help).not.toContain('`');
   });
 
   test('full help shipyard notes fitted default and partial sourcing', () => {

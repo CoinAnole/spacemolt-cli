@@ -960,6 +960,72 @@ function formatSupplyCommission(r: Record<string, unknown>): boolean {
   return true;
 }
 
+/** Print a finite number or bigint as sent, including 0. Do not group or add a unit. */
+function exactSentCount(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+const CANCEL_COMMISSION_KEYS = [
+  'message',
+  'refund',
+  'refunded_to',
+  'credits_total',
+  'materials_returned',
+  'materials_note',
+] as const;
+
+function hasCancelCommissionField(result: Record<string, unknown>): boolean {
+  return CANCEL_COMMISSION_KEYS.some((key) => Object.hasOwn(result, key));
+}
+
+/** Cargo columns are name, item id, and quantity. Size is not a column. Empty or omitted prints nothing. */
+function cancelCommissionMaterialRows(value: unknown): Array<Record<string, string>> | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const rows: Array<Record<string, string>> = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    rows.push({
+      name: typeof entry.name === 'string' ? entry.name : '',
+      item_id: typeof entry.item_id === 'string' ? entry.item_id : '',
+      quantity: exactSentCount(entry.quantity) ?? '',
+    });
+  }
+  return rows.length > 0 ? rows : undefined;
+}
+
+function formatCancelCommission(result: Record<string, unknown>): boolean {
+  if (!hasCancelCommissionField(result)) return false;
+
+  // Message and refunded_to print as sent. Do not compare refunded_to to the caller.
+  if (typeof result.message === 'string' && result.message.length > 0) emitLine(result.message);
+  const refund = exactSentCount(result.refund);
+  if (refund !== undefined) emitLine(`Refund: ${refund}`);
+  if (typeof result.refunded_to === 'string') emitLine(`Refunded to: ${result.refunded_to}`);
+  const credits = exactSentCount(result.credits_total);
+  if (credits !== undefined) emitLine(`Your credits: ${credits}`);
+
+  const materials = cancelCommissionMaterialRows(result.materials_returned);
+  if (materials) {
+    printCompactTable(
+      'Materials returned',
+      materials,
+      [
+        ['Name', ['name']],
+        ['Item ID', ['item_id']],
+        ['Quantity', ['quantity']],
+      ],
+      { maxCellWidth: 120 },
+    );
+  }
+
+  if (typeof result.materials_note === 'string' && result.materials_note.length > 0) {
+    emitLine(`Materials note: ${result.materials_note}`);
+  }
+  return true;
+}
+
 function formatCommissionQuote(r: Record<string, unknown>): boolean {
   if (!hasAnyField(r, ['ship_class', 'credits_only_total', 'yard_margin'])) {
     return false;
@@ -1488,6 +1554,8 @@ export const marketFormatters = [
   namedFormatter('supply_commission', ['commission_id', 'materials'], formatSupplyCommission, {
     commands: ['supply_commission'],
   }),
+
+  formatter(formatCancelCommission, { commands: ['cancel_commission'] }),
 
   formatter(
     (r) => {

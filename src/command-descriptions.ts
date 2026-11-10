@@ -9,7 +9,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   buy_insurance: 'Purchase ship insurance',
   buy_listed_ship:
     "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. A listed ship in a bay or under tow cannot be bought.",
-  cancel_commission: 'Cancel a pending or in-progress ship commission',
+  cancel_commission:
+    "Cancel a pending or in-progress ship commission. A ManageBases member of the bound faction can cancel a capital mobile-base order. The refund still goes to the player who placed it. refunded_to names that player, or, for a faction-funded commission, the faction name whose treasury received the refund. credits_total is the caller's own wallet after the cancel. It includes the refund only when refunded_to is the caller. A finished mobile base returns not_cancellable. Other players get not_yours.",
   cancel_order:
     'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.',
   cancel_ship_listing: 'Remove your ship listing from the exchange',
@@ -23,9 +24,9 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   cloak:
     'Toggle the cloaking device. You can toggle it mid-jump, mid-travel, and during a Pathfinder drift. An engaged cloak burns 1 fuel per tick. You cannot engage a cloak during a battle (in_battle). Attacking or engaging drops an active cloak.',
   commission_quote:
-    'Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource.',
+    "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot.",
   commission_ship:
-    "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station at a tier-four faction yard; ship modules and piloting do not apply, and the arguments are unchanged.",
+    "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station: faction-funded at a tier-four faction yard with fund_from_faction=true, or player-funded at that empire's capital in any normal payment mode. The capital order needs faction membership and ManageBases and reserves the one mobile-base slot. bare_hull does not apply to mobile bases. Ship modules and piloting do not apply, and the arguments are unchanged.",
   commission_status: 'Check the status of your ship commissions',
   complete_mission:
     'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.',

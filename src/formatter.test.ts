@@ -5357,6 +5357,99 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('formats a cancel_commission receipt without deciding who received the refund', () => {
+    const { stdout, stderr } = captureStructuredOutput('cancel_commission', {
+      details: {
+        message: '  Commission cancelled.  ',
+        refund: 0,
+        refunded_to: 'Voidborn Collective',
+        credits_total: 0,
+        materials_returned: [
+          { name: 'Hull Plate', item_id: 'steel_plate', quantity: 0, size: 4 },
+          { item_id: 'circuit_board', quantity: 12 },
+        ],
+        materials_note: 'Returned to station storage.',
+      },
+      player: { username: 'caller', credits: 99999 },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('  Commission cancelled.  ');
+    expect(stdout).toContain('Refund: 0');
+    expect(stdout).toContain('Refunded to: Voidborn Collective');
+    expect(stdout).toContain('Your credits: 0');
+    expect(stdout).not.toContain('99999');
+    expect(stdout).not.toContain('caller');
+    expect(stdout).not.toContain('received');
+    expect(stdout).toContain('Name');
+    expect(stdout).toContain('Item ID');
+    expect(stdout).toContain('Quantity');
+    expect(stdout).toMatch(/Hull Plate\s+\|\s+steel_plate\s+\|\s+0/);
+    expect(stdout).toMatch(/\|\s+circuit_board\s+\|\s+12/);
+    expect(stdout).not.toContain('Unit Size');
+    expect(stdout).toContain('Materials note: Returned to station storage.');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('cancel_commission omits an empty materials array and an omitted note', () => {
+    const omitted = captureStructuredOutput('cancel_commission', {
+      details: {
+        message: 'Cancelled.',
+        refund: 7500n,
+        refunded_to: '',
+        credits_total: 12500n,
+      },
+    });
+    expect(omitted.stderr).toBe('');
+    expect(omitted.stdout).toContain('Cancelled.');
+    expect(omitted.stdout).toContain('Refund: 7500');
+    expect(omitted.stdout).toContain('Refunded to: ');
+    expect(omitted.stdout).toContain('Your credits: 12500');
+    expect(omitted.stdout).not.toContain('Materials returned');
+    expect(omitted.stdout).not.toContain('Materials note');
+    expect(omitted.stdout).not.toContain('(None)');
+    expect(omitted.stdout).not.toContain('=== Response ===');
+
+    const empty = captureStructuredOutput('cancel_commission', {
+      details: {
+        message: 'Cancelled.',
+        refund: 1,
+        refunded_to: 'pilot',
+        credits_total: 2,
+        materials_returned: [],
+        materials_note: '',
+      },
+    });
+    expect(empty.stderr).toBe('');
+    expect(empty.stdout).not.toContain('Materials returned');
+    expect(empty.stdout).not.toContain('Materials note');
+    expect(empty.stdout).not.toContain('(None)');
+    expect(empty.stdout).not.toContain('item(s)');
+
+    const blank = captureStructuredOutput('cancel_commission', {
+      details: { materials_returned: [] },
+    });
+    expect(blank.stderr).toBe('');
+    expect(blank.stdout).not.toContain('Materials returned');
+    expect(blank.stdout).not.toContain('item(s)');
+    expect(blank.stdout).not.toContain('=== Response ===');
+
+    const note = captureStructuredOutput('cancel_commission', {
+      details: {
+        refund: 3,
+        credits_total: 3,
+        materials_note: '  keep spaces  ',
+        materials_returned: [{ name: 1, item_id: 'ore', quantity: null }, 'nope'],
+      },
+    });
+    expect(note.stderr).toBe('');
+    expect(note.stdout).toContain('Materials note:   keep spaces  ');
+    expect(note.stdout).toContain('ore');
+    expect(note.stdout).not.toContain('nope');
+    expect(note.stdout).not.toContain('null');
+    expect(note.stdout).not.toContain('=== Response ===');
+  });
+
   test('formats a full 19-key commission_ship details receipt', () => {
     const { stdout, stderr } = captureStructuredOutput('commission_ship', {
       details: commissionShipDetailsFixture,
