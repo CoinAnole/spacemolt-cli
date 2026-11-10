@@ -2459,6 +2459,21 @@ describe('command metadata', () => {
     expect(help).not.toContain('Plasma Cannon');
   });
 
+  test('list, scrap, and sell-to-order help name the field_jobs_queued refusal', () => {
+    const refusal = 'A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.';
+    for (const command of ['list_ship_for_sale', 'scrap_ship', 'sell_ship_to_order'] as const) {
+      const config = BUNDLED_COMMAND_REGISTRY.commands[command];
+      expect(config?.description).toContain(refusal);
+      expect(captureHelp(command)).toContain(refusal);
+    }
+    const craft = BUNDLED_COMMAND_REGISTRY.commands.craft;
+    expect(craft?.description).toContain(
+      'You cannot sell, list, gift, donate, scrap, or garage a ship with queued field jobs: cancel them first.',
+    );
+    expect(craft?.description).not.toContain('field_jobs_queued');
+    expect(captureHelp('craft')).not.toContain('field_jobs_queued');
+  });
+
   test('recycle help documents queued lossy reverse production', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.recycle;
     expect(config?.route).toEqual({

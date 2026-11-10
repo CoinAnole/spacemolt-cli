@@ -145,7 +145,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   join_faction:
     "Join a faction via invitation. You must have a pending invite. While you fight in a battle against one of that faction's stations, join_faction returns own_faction_station. Leave the battle first, then retry.",
   leave_faction: 'Leave your faction',
-  list_ship_for_sale: 'List a stored ship for sale on the exchange',
+  list_ship_for_sale:
+    'List a stored ship for sale on the exchange. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.',
   list_ships:
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
@@ -168,7 +169,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Reload one weapon or mining gun magazine, or up to 50 with weapons=JSON, in one tick. Ammo names inside the array resolve; weapon instance ids do not. Other battle commands do not cost a tick.',
   repair:
     'Repair hull at a station, with kits, or on another ship (named target=). repaired is hull actually restored.',
-  scrap_ship: 'Permanently destroy a stored ship you no longer want.',
+  scrap_ship:
+    'Permanently destroy a stored ship you no longer want. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.',
   scrap_wreck:
     "Scrap a towed wreck at a salvage yard or your faction's own player station, or cut a wreck in place with mode=field and id. Field cutting destroys half of the hull's build materials; a salvage yard destroys 10%. The rest, plus cargo and modules still aboard, goes into your cargo, most valuable first. What does not fit is destroyed and listed in lost.",
   search_systems: 'Search for systems by name',
@@ -179,7 +181,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   set_colors: 'Set your ship colors',
   set_drone_name: 'Set or clear a display name for a drone.',
   place_ship_buy_order: 'Place a standing buy order for a ship class at this station',
-  sell_ship_to_order: 'Sell a stored ship directly into a buy order at this station',
+  sell_ship_to_order:
+    'Sell a stored ship directly into a buy order at this station. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.',
   set_home_base: 'Set your home station for respawning',
   set_status: 'Set your status message and clan tag',
   storage: 'Run station and faction storage actions.',

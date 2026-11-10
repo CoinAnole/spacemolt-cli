@@ -556,6 +556,34 @@ describe('accounting_pending', () => {
   });
 });
 
+describe('field_jobs_queued', () => {
+  test('is not retryable, is not an auth error, and points at craft and get_ship', () => {
+    expect(ERROR_REGISTRY.field_jobs_queued?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.field_jobs_queued?.auth).toBe(false);
+    expect(isRetryableError('field_jobs_queued')).toBe(false);
+    expect(isAuthError('field_jobs_queued')).toBe(false);
+    expect(isKnownErrorCode('field_jobs_queued')).toBe(true);
+    expect(ERROR_CODES).toContain('field_jobs_queued');
+    expect(ERROR_REGISTRY.field_jobs_queued?.message).toBe('This ship has queued field workshop jobs.');
+    expect(ERROR_REGISTRY.field_jobs_queued?.commandSuggestions).toBeUndefined();
+
+    const suggestion = getErrorSuggestion('field_jobs_queued');
+    expect(suggestion).toBe(
+      'Cancel that ship\'s field jobs first with "spacemolt craft job_id=<job_id>". Run "spacemolt craft" to list job IDs, and "spacemolt get_ship" to see the field workshop.',
+    );
+    expect(suggestion).toContain('spacemolt craft job_id=<job_id>');
+    expect(suggestion).toContain('spacemolt get_ship');
+    expect(suggestion).not.toContain('gift');
+    expect(suggestion).not.toContain('donate');
+    expect(suggestion).not.toContain('garage');
+    expect(suggestion).not.toContain('This error may be retryable');
+    for (const command of ['list_ship_for_sale', 'scrap_ship', 'sell_ship_to_order', 'craft', 'storage deposit']) {
+      expect(getErrorSuggestion('field_jobs_queued', command)).toBe(suggestion);
+    }
+    expect(getRelatedCommands('field_jobs_queued')).toEqual(['craft', 'get_ship']);
+  });
+});
+
 describe('target_cloaked', () => {
   test('is no longer a known code', () => {
     expect(ERROR_REGISTRY.target_cloaked).toBeUndefined();

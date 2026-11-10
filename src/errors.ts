@@ -636,6 +636,15 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     auth: false,
     relatedCommands: ['get_action_log'],
   },
+  field_jobs_queued: {
+    code: 'field_jobs_queued',
+    message: 'This ship has queued field workshop jobs.',
+    suggestion:
+      'Cancel that ship\'s field jobs first with "spacemolt craft job_id=<job_id>". Run "spacemolt craft" to list job IDs, and "spacemolt get_ship" to see the field workshop.',
+    retryable: false,
+    auth: false,
+    relatedCommands: ['craft', 'get_ship'],
+  },
 };
 
 export const ERROR_CODES = Object.keys(ERROR_REGISTRY);
