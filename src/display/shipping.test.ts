@@ -505,29 +505,141 @@ test('preserves the complete mutation envelope when a shipping formatter decline
   expect(JSON.parse(stdout.slice(stdout.indexOf('{')))).toEqual(fixture);
 });
 
-test('renders listing eligibility beside reasons and preserves zero and false values', () => {
+test('renders freight-list hazmat and warning and ignores removed eligibility fields', () => {
   const stdout = output('shipping_list', {
     action: 'list',
     page: 2,
     per_page: 20,
     total: 21,
     shipments: [
-      { contract: { ...contract, id: 'eligible-1', base_reward: 0 }, eligible: true },
       {
-        contract: { ...contract, id: 'blocked-1', failure_debt: 500 },
-        eligible: false,
+        contract: { ...contract, id: 'hazmat-1', base_reward: 0, requires_hazmat: true },
+        eligible: true,
         reason: 'Outstanding freight debt blocks acceptance.',
+      },
+      {
+        contract: { ...contract, id: 'plain-1', failure_debt: 500, requires_hazmat: false },
+        eligible: false,
+        warning: 'no lead-lined hold',
+      },
+      {
+        contract: {
+          ...contract,
+          id: 'omitted-1',
+          failure_debt: 500,
+          origin_base_id: 'alpha_port',
+          destination_base_id: 'beta_port',
+        },
       },
     ],
   });
 
   expect(stdout).toContain('=== Freight Contracts ===');
-  expect(stdout).toContain('page 2, 2 of 21');
-  expect(stdout).toMatch(/Eligible\s+\|\s+Reason/);
+  expect(stdout).toContain('page 2, 3 of 21');
+  expect(stdout).toMatch(/Hazmat\s+\|\s+Warning/);
+  expect(stdout).not.toMatch(/\bEligible\b/);
+  expect(stdout).not.toMatch(/\bReason\b/);
   expect(stdout).toContain('0 cr');
+  expect(stdout).toContain('yes');
   expect(stdout).toContain('no');
-  expect(stdout).toContain('Outstanding freight debt blocks acceptance.');
+  expect(stdout).toContain('no lead-lined hold');
+  expect(stdout).not.toContain('Outstanding freight debt blocks acceptance.');
+  const omitted = stdout.split('\n').find((line) => line.includes('omitted-1'));
+  expect(omitted).toBeDefined();
+  expect(omitted).not.toContain('yes');
+  expect(omitted).not.toContain('no');
+  expect(omitted).not.toContain('no lead-lined hold');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('shipping_list omits Hazmat and Warning when no row sends them', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [
+      { contract: { ...contract, id: 'shipment-page-blank' }, warning: '   ' },
+      { contract: { ...contract, id: 'shipment-page-empty' }, warning: '' },
+      { contract: { ...contract, id: 'shipment-page-number' }, warning: 0 },
+    ],
+  });
+
+  expect(stdout).not.toMatch(/\bHazmat\b/);
+  expect(stdout).not.toMatch(/\bWarning\b/);
+  expect(stdout).not.toMatch(/\bEligible\b/);
+  expect(stdout).not.toMatch(/\bReason\b/);
+});
+
+test('shipping_list keeps Hazmat when requires_hazmat is false and omits Warning', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [{ contract: { ...contract, id: 'shipment-clear-1', requires_hazmat: false } }],
+  });
+
+  expect(stdout).toMatch(/\bHazmat\b/);
+  expect(stdout).toContain('no');
+  expect(stdout).not.toContain('yes');
+  expect(stdout).not.toMatch(/\bWarning\b/);
+});
+
+test('shipping_list shows a blank Hazmat cell when the key is present but not a boolean', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [
+      {
+        contract: {
+          ...contract,
+          id: 'shipment-odd-1',
+          origin_base_id: 'alpha_port',
+          destination_base_id: 'beta_port',
+          requires_hazmat: 'true',
+        },
+      },
+    ],
+  });
+
+  expect(stdout).toMatch(/\bHazmat\b/);
+  expect(stdout).not.toContain('yes');
+  expect(stdout).not.toContain('no');
+  expect(stdout).not.toContain('true');
+});
+
+test('freight quote prints Requires hazmat for true and false and omits a missing key', () => {
+  const yes = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', requires_hazmat: true },
+  });
+  const no = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', requires_hazmat: false },
+  });
+  const omitted = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1' },
+  });
+  const odd = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', requires_hazmat: 'true' },
+  });
+
+  expect(yes).toContain('Requires hazmat: yes');
+  expect(no).toContain('Requires hazmat: no');
+  expect(omitted).not.toContain('Requires hazmat');
+  expect(odd).not.toContain('Requires hazmat');
+});
+
+test('freight contract detail prints Requires hazmat for true and false and omits a missing key', () => {
+  const yes = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, requires_hazmat: true },
+  });
+  const no = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, requires_hazmat: false },
+  });
+  const omitted = output('shipping_get', { action: 'get', contract });
+
+  expect(yes).toContain('Requires hazmat: yes');
+  expect(no).toContain('Requires hazmat: no');
+  expect(omitted).not.toContain('Requires hazmat');
 });
 
 test('missing freight-list page prints page ? when total is omitted', () => {

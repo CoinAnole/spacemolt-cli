@@ -24,6 +24,11 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
+function presentString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  return value.trim() ? value : undefined;
+}
+
 function formatActor(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const kind = typeof value.kind === 'string' && value.kind.trim() ? value.kind : undefined;
@@ -78,6 +83,7 @@ function renderQuote(result: Record<string, unknown>): boolean {
   emitField('Covered value', quote.covered_value, formatCredits);
   emitField('Insurance selected', quote.insurance_selected, formatBoolean);
   emitField('Insurable', quote.insurable, formatBoolean);
+  emitField('Requires hazmat', quote.requires_hazmat, formatBoolean);
   emitField('Risk band', quote.risk_band);
   emitField('Required carrier tier', quote.required_carrier_tier);
   emitField('Reserved exposure', quote.reserved_exposure, formatCredits);
@@ -139,6 +145,7 @@ function renderContract(contract: Record<string, unknown>, title: string, compac
   emitField('Speed bonus escrow', contract.speed_bonus_escrow, formatCredits);
   emitField('Policy status', contract.policy_status);
   emitField('Insurable', contract.insurable, formatBoolean);
+  emitField('Requires hazmat', contract.requires_hazmat, formatBoolean);
   emitField('Risk band', contract.risk_band);
   emitField('Premium', contract.premium, formatCredits);
   emitField('Covered value', contract.covered_value, formatCredits);
@@ -184,9 +191,14 @@ function renderShippingList(result: Record<string, unknown>): boolean {
   }
 
   const rows: Array<Record<string, unknown>> = [];
+  let hazmatSent = false;
+  let warningSent = false;
   for (const listing of shipments) {
     if (!isRecord(listing.contract)) continue;
     const shipment = listing.contract;
+    if (Object.hasOwn(shipment, 'requires_hazmat')) hazmatSent = true;
+    const warning = presentString(listing.warning);
+    if (warning !== undefined) warningSent = true;
     rows.push({
       id: text(shipment.id),
       status: text(shipment.status),
@@ -195,27 +207,24 @@ function renderShippingList(result: Record<string, unknown>): boolean {
       service: text(shipment.service_level),
       reward: formatCredits(shipment.base_reward),
       liability: formatCredits(shipment.failure_debt),
-      eligible: formatBoolean(listing.eligible),
-      reason: text(listing.reason),
+      hazmat: formatBoolean(shipment.requires_hazmat),
+      warning,
     });
   }
 
-  printCompactTable(
-    'Listings',
-    rows,
-    [
-      ['ID', ['id']],
-      ['Status', ['status']],
-      ['Package', ['package']],
-      ['Route', ['route']],
-      ['Service', ['service']],
-      ['Reward', ['reward']],
-      ['Liability', ['liability']],
-      ['Eligible', ['eligible']],
-      ['Reason', ['reason']],
-    ],
-    { maxCellWidth: 56 },
-  );
+  const columns: Array<[string, string[]]> = [
+    ['ID', ['id']],
+    ['Status', ['status']],
+    ['Package', ['package']],
+    ['Route', ['route']],
+    ['Service', ['service']],
+    ['Reward', ['reward']],
+    ['Liability', ['liability']],
+  ];
+  if (hazmatSent) columns.push(['Hazmat', ['hazmat']]);
+  if (warningSent) columns.push(['Warning', ['warning']]);
+
+  printCompactTable('Listings', rows, columns, { maxCellWidth: 56 });
   return true;
 }
 

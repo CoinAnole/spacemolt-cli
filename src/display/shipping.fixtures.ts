@@ -223,7 +223,6 @@ export const shippingListFixture = {
   shipments: [
     {
       contract: shipmentContract({ id: 'shipment-eligible-1', base_reward: 9000, reward_escrow: 9000 }),
-      eligible: true,
     },
     {
       contract: shipmentContract({
@@ -242,8 +241,6 @@ export const shippingListFixture = {
         premium: 1200,
         covered_value: 65000,
       }),
-      eligible: false,
-      reason: 'Single-package liability exceeds the licensed carrier limit.',
     },
   ],
   page: 1,

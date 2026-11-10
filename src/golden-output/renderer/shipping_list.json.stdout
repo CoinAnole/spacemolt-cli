@@ -31,8 +31,7 @@
         "policy_status": "none",
         "insurable": false,
         "risk_band": "unpriced"
-      },
-      "eligible": true
+      }
     },
     {
       "contract": {
@@ -66,9 +65,7 @@
         "risk_band": "trusted",
         "premium": 1200,
         "covered_value": 65000
-      },
-      "eligible": false,
-      "reason": "Single-package liability exceeds the licensed carrier limit."
+      }
     }
   ],
   "page": 1,
