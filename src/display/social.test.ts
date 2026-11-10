@@ -2120,6 +2120,259 @@ test('truncates an order id longer than 80 characters', () => {
   expect(cell).not.toBe(raw);
 });
 
+function roundsEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 901,
+    created_at: '2026-11-01T12:00:00.000Z',
+    event_type: 'skill.level_up',
+    category: 'skill',
+    summary: 'Loaded rounds returned.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
+test('prints action-log item_id and quantity from data, including an explicit 0', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      roundsEntry({ item_id: 'ammo_kinetic', quantity: 0, item_name: 'Kinetic Rounds' }),
+      roundsEntry({ item_id: 'ammo_siege', quantity: 1500 }, { id: 902, summary: 'Second battery returned rounds.' }),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Item ID');
+  expect(columns).toContain('Quantity');
+  expect(columns.indexOf('Quantity')).toBe(columns.indexOf('Item ID') + 1);
+  expect(columns.indexOf('Item ID')).toBeGreaterThan(columns.indexOf('Event'));
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Item ID')).toBe('ammo_kinetic');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+  expect(actionLogCell(stdout, 'Second battery', 'Item ID')).toBe('ammo_siege');
+  expect(actionLogCell(stdout, 'Second battery', 'Quantity')).toBe('1,500');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Event')).toBe('skill.level_up');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'ID')).toBe('901');
+  expect(stdout).not.toContain('Kinetic Rounds');
+  expect(columns).not.toContain('Ammo');
+  expect(columns).not.toContain('Destination');
+  expect(columns).not.toContain('Name');
+  expect(stdout).not.toContain('item_id_display');
+  expect(stdout).not.toContain('quantity_display');
+});
+
+test('prints action-log item_id and quantity from the entry when data omits them', () => {
+  const stdout = renderActionLog(actionLogPage([roundsEntry(undefined, { item_id: 'ammo_kinetic', quantity: 0 })]));
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Item ID')).toBe('ammo_kinetic');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Event')).toBe('skill.level_up');
+});
+
+test('prefers entry item_id and quantity over data except for null and empty string', () => {
+  const entryWins = renderActionLog(
+    actionLogPage([roundsEntry({ item_id: 'from_data', quantity: 4 }, { item_id: 'from_entry', quantity: 0 })]),
+  );
+  expect(actionLogCell(entryWins, 'Loaded rounds returned.', 'Item ID')).toBe('from_entry');
+  expect(actionLogCell(entryWins, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+
+  const emptyFallsThrough = renderActionLog(
+    actionLogPage([roundsEntry({ item_id: 'from_data', quantity: 4 }, { item_id: '', quantity: '' })]),
+  );
+  expect(actionLogCell(emptyFallsThrough, 'Loaded rounds returned.', 'Item ID')).toBe('from_data');
+  expect(actionLogCell(emptyFallsThrough, 'Loaded rounds returned.', 'Quantity')).toBe('4');
+
+  const nullFallsThrough = renderActionLog(
+    actionLogPage([roundsEntry({ item_id: 'from_data', quantity: 4 }, { item_id: null, quantity: null })]),
+  );
+  expect(actionLogCell(nullFallsThrough, 'Loaded rounds returned.', 'Item ID')).toBe('from_data');
+  expect(actionLogCell(nullFallsThrough, 'Loaded rounds returned.', 'Quantity')).toBe('4');
+
+  const whitespaceBlocks = renderActionLog(
+    actionLogPage([roundsEntry({ item_id: 'from_data', quantity: 4 }, { item_id: '   ', quantity: '   ' })]),
+  );
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Item ID');
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Quantity');
+  expect(whitespaceBlocks).not.toContain('from_data');
+});
+
+test('omits Item ID and Quantity independently when a row does not send that key', () => {
+  const itemOnly = renderActionLog(actionLogPage([roundsEntry({ item_id: 'ammo_kinetic' })]));
+  expect(actionLogHeaderColumns(itemOnly)).toContain('Item ID');
+  expect(actionLogHeaderColumns(itemOnly)).not.toContain('Quantity');
+
+  const quantityOnly = renderActionLog(actionLogPage([roundsEntry({ quantity: 0 })]));
+  expect(actionLogHeaderColumns(quantityOnly)).not.toContain('Item ID');
+  expect(actionLogHeaderColumns(quantityOnly)).toContain('Quantity');
+  expect(actionLogCell(quantityOnly, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+
+  const mixed = renderActionLog(
+    actionLogPage([
+      roundsEntry({ item_id: 'ammo_kinetic', quantity: 12 }),
+      roundsEntry(undefined, { id: 902, summary: 'No round fields.' }),
+      roundsEntry({ quantity: 0 }, { id: 903, summary: 'Quantity only.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(mixed)).toContain('Item ID');
+  expect(actionLogHeaderColumns(mixed)).toContain('Quantity');
+  expect(actionLogCell(mixed, 'No round fields.', 'Item ID')).toBe('');
+  expect(actionLogCell(mixed, 'No round fields.', 'Quantity')).toBe('');
+  expect(actionLogCell(mixed, 'Quantity only.', 'Item ID')).toBe('');
+  expect(actionLogCell(mixed, 'Quantity only.', 'Quantity')).toBe('0');
+  expect(actionLogCell(mixed, 'Loaded rounds returned.', 'Quantity')).toBe('12');
+});
+
+test('omits Item ID and Quantity when no action-log row sends them', () => {
+  for (const fixture of [
+    actionLogFixture,
+    actionLogCursorFixture,
+    actionLogPersonnelCaptureFixture,
+    actionLogFactionRefuelFixture,
+    actionLogFreightEscrowFixture,
+    actionLogPirateDestroyedFixture,
+  ]) {
+    const columns = actionLogHeaderColumns(renderActionLog(structuredClone(fixture)));
+    expect(columns).not.toContain('Item ID');
+    expect(columns).not.toContain('Quantity');
+  }
+
+  const absent = renderActionLog(actionLogPage([roundsEntry(undefined), roundsEntry({})]));
+  expect(actionLogHeaderColumns(absent)).not.toContain('Item ID');
+  expect(actionLogHeaderColumns(absent)).not.toContain('Quantity');
+  expect(absent).toContain('Loaded rounds returned.');
+});
+
+test('prints action-log quantity 0 for bigint and digit strings and skips values that are not a quantity', () => {
+  const printed: Array<{ quantity: unknown; expected: string }> = [
+    { quantity: 0n, expected: '0' },
+    { quantity: 9007199254740993n, expected: 9007199254740993n.toLocaleString() },
+    { quantity: '0', expected: '0' },
+    { quantity: '  12  ', expected: '12' },
+    { quantity: 1.5, expected: (1.5).toLocaleString() },
+  ];
+  for (const { quantity, expected } of printed) {
+    const stdout = renderActionLog(actionLogPage([roundsEntry({ item_id: 'ammo_kinetic', quantity })]));
+    expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Quantity'), String(quantity)).toBe(expected);
+    expect(stdout, String(quantity)).not.toContain('9007199254740992');
+  }
+
+  const junk: unknown[] = [
+    null,
+    '',
+    '   ',
+    'nope',
+    '1.5',
+    true,
+    false,
+    {},
+    [],
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number('9007199254740993'),
+  ];
+  for (const quantity of junk) {
+    const label = typeof quantity === 'bigint' ? `${quantity}n` : JSON.stringify(quantity);
+    const stdout = renderActionLog(actionLogPage([roundsEntry({ quantity })]));
+    expect(actionLogHeaderColumns(stdout), label).not.toContain('Quantity');
+    expect(stdout, label).not.toContain('[object Object]');
+    expect(stdout, label).not.toContain('9007199254740992');
+    expect(stdout, label).not.toContain('9007199254740993');
+    expect(stdout, label).not.toContain('NaN');
+    expect(stdout, label).not.toContain('Infinity');
+  }
+});
+
+test('does not parse item_id or quantity out of the action-log summary', () => {
+  const summary = 'Returned item_id=ammo_kinetic quantity=12';
+  const stdout = renderActionLog(actionLogPage([roundsEntry(undefined, { summary })]));
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Item ID');
+  expect(actionLogHeaderColumns(stdout)).not.toContain('Quantity');
+  expect(stdout).toContain(summary);
+});
+
+test('drops poisoned item and quantity display fields unless the sent keys qualify', () => {
+  const poisonOnly = renderActionLog(
+    actionLogPage([roundsEntry(undefined, { item_id_display: 'poison', quantity_display: 'poison' })]),
+  );
+  expect(actionLogHeaderColumns(poisonOnly)).not.toContain('Item ID');
+  expect(actionLogHeaderColumns(poisonOnly)).not.toContain('Quantity');
+  expect(poisonOnly).not.toContain('poison');
+
+  const withKeys = renderActionLog(
+    actionLogPage([
+      roundsEntry(
+        { item_id: 'ammo_kinetic', quantity: 0 },
+        { item_id_display: 'poison-item', quantity_display: 'poison-qty' },
+      ),
+    ]),
+  );
+  expect(actionLogCell(withKeys, 'Loaded rounds returned.', 'Item ID')).toBe('ammo_kinetic');
+  expect(actionLogCell(withKeys, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+  expect(withKeys).not.toContain('poison');
+});
+
+test('trims an action-log item id and keeps quantity beside a sibling without those keys', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      roundsEntry({ item_id: '  ammo_kinetic  \nignored', quantity: 0 }),
+      pirateEntry({ credits_earned: 1500 }),
+    ]),
+  );
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Item ID')).toBe('ammo_kinetic');
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+  expect(actionLogCell(stdout, 'Corsair', 'Item ID')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Quantity')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
+  expect(stdout).not.toContain('ignored');
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns.indexOf('Quantity')).toBeGreaterThan(columns.indexOf('Credits'));
+});
+
+test('keeps action-log item_id and quantity on json, yaml, structured, and compact output', () => {
+  const fixture = actionLogPage([
+    roundsEntry({ item_id: 'ammo_kinetic', quantity: 0, message: 'DETAIL_MESSAGE_TOKEN' }),
+  ]);
+  const cases = [
+    { ...options, format: 'json' as const },
+    { ...options, format: 'yaml' as const },
+    { ...options, structured: true },
+    { ...options, format: 'json' as const, compact: true },
+  ];
+  for (const renderOptions of cases) {
+    const rendered = renderStructuredResult('get_action_log', fixture, renderOptions, context);
+    expect(rendered.success).toBe(true);
+    const stdout = rendered.stdout.join('\n');
+    expect(stdout).not.toContain('item_id_display');
+    expect(stdout).not.toContain('quantity_display');
+    expect(stdout).not.toContain('Item ID');
+    expect(stdout).not.toContain('Quantity');
+    expect(stdout).toContain('DETAIL_MESSAGE_TOKEN');
+    if (renderOptions.format === 'yaml') {
+      expect(stdout).toContain('item_id: ammo_kinetic');
+      expect(stdout).toContain('quantity: 0');
+    } else {
+      const parsed = JSON.parse(stdout) as {
+        entries: Array<{ data: { item_id?: unknown; quantity?: unknown; message?: unknown } }>;
+      };
+      expect(parsed.entries[0]?.data.item_id).toBe('ammo_kinetic');
+      expect(parsed.entries[0]?.data.quantity).toBe(0);
+      expect(parsed.entries[0]?.data.message).toBe('DETAIL_MESSAGE_TOKEN');
+    }
+  }
+  const human = renderActionLog(fixture);
+  expect(actionLogCell(human, 'Loaded rounds returned.', 'Item ID')).toBe('ammo_kinetic');
+  expect(actionLogCell(human, 'Loaded rounds returned.', 'Quantity')).toBe('0');
+  expect(human).not.toContain('DETAIL_MESSAGE_TOKEN');
+});
+
+test('truncates an action-log item id longer than 80 characters', () => {
+  const raw = `ammo_${'k'.repeat(80)}`;
+  const stdout = renderActionLog(actionLogPage([roundsEntry({ item_id: raw, quantity: 1 })]));
+  const cell = actionLogCell(stdout, 'Loaded rounds returned.', 'Item ID');
+  expect(cell).toBe(`${raw.slice(0, 77)}...`);
+  expect(cell).not.toBe(raw);
+  expect(actionLogCell(stdout, 'Loaded rounds returned.', 'Quantity')).toBe('1');
+});
+
 test('renders shipping.claim_paid station paid and shortfall from action-log data', () => {
   const stdout = renderActionLog(structuredClone(actionLogFreightEscrowFixture));
   expect(actionLogHeaderColumns(stdout)).toEqual([

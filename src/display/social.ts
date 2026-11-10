@@ -345,6 +345,20 @@ function formatActionLogOrderId(value: unknown): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
+function formatActionLogItemId(value: unknown): string | undefined {
+  return formatActionLogOrderId(value);
+}
+
+function formatActionLogQuantity(value: unknown): string | undefined {
+  const grouped = formatActionLogGroupedInteger(value);
+  if (grouped !== undefined) return grouped;
+  // Unsafe integers are omitted; toLocaleString would round them.
+  if (typeof value === 'number' && Number.isFinite(value) && !Number.isInteger(value)) {
+    return value.toLocaleString();
+  }
+  return undefined;
+}
+
 function formatYesFlags(flags: Array<[string, unknown]>): string | undefined {
   const parts = flags.filter(([, value]) => value === true).map(([label]) => label);
   return parts.length ? parts.join(' ') : undefined;
@@ -1559,6 +1573,8 @@ export const socialFormatters = [
         const directSuppliedDisplay = missionCompleted ? formatYesBlank(scalarFrom('direct_supplied')) : undefined;
         const exchangeFill = eventType === 'trading.exchange_fill';
         const orderDisplay = exchangeFill ? formatActionLogOrderId(scalarFrom('order_id')) : undefined;
+        const itemIdDisplay = formatActionLogItemId(scalarFrom('item_id'));
+        const quantityDisplay = formatActionLogQuantity(scalarFrom('quantity'));
         const row: Record<string, unknown> = {
           ...entry,
           timestamp_preview: formatTimestampPreview(entry.created_at ?? entry.timestamp),
@@ -1601,6 +1617,10 @@ export const socialFormatters = [
         if (directSuppliedDisplay !== undefined) row.direct_supplied_display = directSuppliedDisplay;
         delete row.order_display;
         if (orderDisplay !== undefined) row.order_display = orderDisplay;
+        delete row.item_id_display;
+        delete row.quantity_display;
+        if (itemIdDisplay !== undefined) row.item_id_display = itemIdDisplay;
+        if (quantityDisplay !== undefined) row.quantity_display = quantityDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1648,6 +1668,8 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['insurance_voided_display', 'insurance_voided'])) {
         columns.push(['Insurance', ['insurance_voided_display', 'insurance_voided']]);
       }
+      if (hasAnyField(rows, ['item_id_display'])) columns.push(['Item ID', ['item_id_display']]);
+      if (hasAnyField(rows, ['quantity_display'])) columns.push(['Quantity', ['quantity_display']]);
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);
