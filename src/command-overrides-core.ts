@@ -361,6 +361,15 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
       target: 'id',
     },
   },
+  fit_preview: {
+    usage:
+      'modules=<JSON array of module type ids>  (not a positional; one id per fitted module; repeat an id to fit two; [] previews an empty ship)',
+    example: 'spacemolt fit_preview modules=\'["pulse_laser_i","shield_booster_i","mining_laser_i"]\'',
+    seeAlso: ['install_mod', 'uninstall_mod', 'get_ship'],
+    category: 'Ship management',
+    apiRoute: 'POST /api/v2/spacemolt_ship/fit_preview',
+    positionals: [],
+  },
   install_mod: {
     usage: '<module_id>  (module must be in cargo, use get_cargo to see)',
     category: 'Ship management',

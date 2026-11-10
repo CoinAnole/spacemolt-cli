@@ -4,6 +4,7 @@ import { combatFormatters } from './combat.ts';
 import { empireFormatters } from './empire.ts';
 import { factionAchievementFormatters } from './faction-achievements.ts';
 import { findRouteFormatters } from './find-route.ts';
+import { fitPreviewFormatters } from './fit-preview.ts';
 import { genericFormatters } from './generic.ts';
 import type { ResultFormatter } from './helpers.ts';
 import { inspectFormatters } from './inspect.ts';
@@ -30,6 +31,7 @@ export const resultFormatters: ResultFormatter[] = [
   ...notificationFormatters,
   ...passengerFormatters,
   ...shipFormatters,
+  ...fitPreviewFormatters,
   ...lootFormatters,
   ...jettisonFormatters,
   ...prizeFormatters,

@@ -138,6 +138,8 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_trades: 'View pending trade offers',
   get_version: 'Get game version and release notes.',
   get_wrecks: 'List wrecks and jettison containers at the current POI',
+  fit_preview:
+    'Preview a planned module fit for the active ship. Pass modules as a JSON array of module type ids, one id per fitted module, repeated to fit two of the same type. [] previews an empty ship. It works anywhere. The command fits nothing, buys nothing, and moves nothing. Run the steps yourself, one per tick, in order. Cargo is checked against the hold as it is now, so keep room for modules the steps move through cargo. A temporary step unfits a kept module that a later step fits again. no_safe_order means the modules fit but no order reaches the fit.',
   install_mod:
     'Install a module on your ship. The module must be in cargo. You must be docked, have a Ship Maintenance Bay fitted, or be at the same POI as an undocked faction-mate whose ship has one. A module that reduces cargo capacity is refused with cargo_capacity_exceeded when the hold is over the reduced capacity. Skills do not gate fitting a module you own. Slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit. When envelope missions is present, table output prints the Active Missions table, including partial progress. An omitted missions key prints nothing.',
   jettison:

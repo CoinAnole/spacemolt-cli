@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  applyPayloadTransforms,
   convertPayloadTypes,
   getArgNames,
   normalizeParsedPayload,
@@ -4866,6 +4867,7 @@ describe('command metadata', () => {
       'shipping_pay_debt',
       'shipping_profile',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_recruit_personnel).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_treat_personnel).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_transfer_personnel).toBeUndefined();
@@ -7029,6 +7031,96 @@ describe('command metadata', () => {
       expect(description).not.toContain('joins the fight');
       expect(description).not.toContain('dogpile');
       expect(description).not.toContain('flees');
+    }
+  });
+
+  test('fit_preview help is a read-only JSON modules array beside install_mod', () => {
+    const description =
+      'Preview a planned module fit for the active ship. Pass modules as a JSON array of module type ids, one id per fitted module, repeated to fit two of the same type. [] previews an empty ship. It works anywhere. The command fits nothing, buys nothing, and moves nothing. Run the steps yourself, one per tick, in order. Cargo is checked against the hold as it is now, so keep room for modules the steps move through cargo. A temporary step unfits a kept module that a later step fits again. no_safe_order means the modules fit but no order reaches the fit.';
+    const usage =
+      'modules=<JSON array of module type ids>  (not a positional; one id per fitted module; repeat an id to fit two; [] previews an empty ship)';
+    const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/fit_preview']?.summary ?? '';
+    const config = COMMANDS.fit_preview;
+
+    expect(CORE_COMMAND_OVERRIDES.fit_preview?.description).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.fit_preview?.positionals).toEqual([]);
+    expect(CORE_COMMAND_OVERRIDES.fit_preview?.arrayFields).toBeUndefined();
+    expect(CORE_COMMAND_OVERRIDES.fit_preview?.apiRoute).toBe('POST /api/v2/spacemolt_ship/fit_preview');
+    expect(CORE_COMMAND_OVERRIDES.fit_preview?.seeAlso).toEqual(['install_mod', 'uninstall_mod', 'get_ship']);
+    expect(Object.keys(CORE_COMMAND_OVERRIDES).indexOf('fit_preview')).toBe(
+      Object.keys(CORE_COMMAND_OVERRIDES).indexOf('install_mod') - 1,
+    );
+
+    expect(CURATED_COMMAND_DESCRIPTIONS.fit_preview).toBe(description);
+    expect(config?.description).toBe(description);
+    expect(config?.usage).toBe(usage);
+    expect(config?.args).toEqual([]);
+    expect(config?.required).toEqual(['modules']);
+    expect(config?.arrayFields).toBeUndefined();
+    expect(config?.schema?.modules?.type).toBe('array');
+    expect(config?.schema?.modules?.positionalIndex).toBeUndefined();
+    expect(config?.route).toEqual({ tool: 'spacemolt_ship', action: 'fit_preview', method: 'POST' });
+    expect(config?.category).toBe('Ship management');
+    expect(config?.example).toBe(
+      `spacemolt fit_preview modules='["pulse_laser_i","shield_booster_i","mining_laser_i"]'`,
+    );
+    expect(generatedSummary).toBe('Preview a planned module fit: stats, fit errors, and a safe install order');
+    expect(generatedSummary).not.toBe(description);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.fit_preview?.route).toEqual(config?.route);
+
+    for (const related of config?.seeAlso ?? []) {
+      expect(registryHasRelatedCommand(related), `fit_preview related command "${related}"`).toBe(true);
+    }
+
+    const help = captureHelp('fit_preview');
+    expect(help).toContain(description);
+    expect(help).toContain(usage);
+    expect(help).toContain('fits nothing, buys nothing, and moves nothing');
+    expect(help).toContain('one per tick, in order');
+    expect(help).toContain('hold as it is now');
+    expect(help).toContain('temporary step unfits a kept module');
+    expect(help).toContain('no_safe_order means the modules fit but no order reaches the fit');
+    expect(help).toContain('not a positional');
+    expect(help).toContain('modules=...');
+    expect(help).toContain('--modules ...');
+    expect(help).not.toContain('<modules>');
+    expect(help).not.toContain('arrayFields');
+
+    const json = parseArgs(['fit_preview', 'modules=["pulse_laser_i","pulse_laser_i"]'], {
+      registry: internalCommandRegistry,
+    });
+    expect(json.ok).toBe(true);
+    if (json.ok) {
+      expect(convertPayloadTypes(normalizeParsedPayload('fit_preview', json.payload), 'fit_preview')).toEqual({
+        modules: ['pulse_laser_i', 'pulse_laser_i'],
+      });
+    }
+
+    const empty = parseArgs(['fit_preview', 'modules=[]'], { registry: internalCommandRegistry });
+    expect(empty.ok).toBe(true);
+    if (empty.ok) {
+      expect(convertPayloadTypes(normalizeParsedPayload('fit_preview', empty.payload), 'fit_preview')).toEqual({
+        modules: [],
+      });
+    }
+
+    const comma = parseArgs(['fit_preview', 'modules=pulse_laser_i,shield_booster_i'], {
+      registry: internalCommandRegistry,
+    });
+    expect(comma.ok).toBe(true);
+    if (comma.ok) {
+      const typed = convertPayloadTypes(normalizeParsedPayload('fit_preview', comma.payload), 'fit_preview');
+      expect(applyPayloadTransforms('fit_preview', typed)).toEqual({
+        modules: 'pulse_laser_i,shield_booster_i',
+      });
+    }
+
+    const positional = parseArgs(['fit_preview', 'pulse_laser_i'], { registry: internalCommandRegistry });
+    expect(positional.ok).toBe(false);
+    if (!positional.ok) {
+      expect(positional.errors.some((error) => error.field === 'id')).toBe(true);
+      expect(positional.errors.some((error) => error.field === 'modules')).toBe(false);
     }
   });
 });

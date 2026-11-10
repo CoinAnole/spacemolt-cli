@@ -1,0 +1,38 @@
+Ship: ship-active
+Valid: no
+
+=== Issues ===
+
+  code         | message        
+  -------------+----------------
+  cpu_exceeded | Need 4 more CPU
+max_hull: 80
+max_shield: 40
+shield_recharge: 2
+armor: 10
+speed: 12
+max_fuel: 100
+cargo_capacity: 50
+cargo_used: 0
+cpu_capacity: 20
+cpu_used: 24
+power_capacity: 15
+power_used: 9
+weapon_slots: 2
+weapon_slots_used: 1
+defense_slots: 1
+defense_slots_used: 1
+utility_slots: 2
+utility_slots_used: 0
+effective_crew_capacity: 3
+effective_marine_capacity: 1
+crew: 2
+marines: 0
+
+=== Steps ===
+
+  action        | module_id      | type_id          | name             | Temporary
+  --------------+----------------+------------------+------------------+----------
+  uninstall_mod | mod-instance-1 | shield_booster_i | Shield Booster I | yes      
+  uninstall_mod | mod-instance-2 | cargo_expander_i | Cargo Expander I | no       
+  install_mod   | pulse_laser_i  | pulse_laser_i    | Pulse Laser I    |          

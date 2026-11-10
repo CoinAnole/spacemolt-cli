@@ -2279,6 +2279,7 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('arena status');
     expect(generatedSection).toContain('shipping_accept');
     expect(generatedSection).toContain('battle_self_destruct');
+    expect(generatedSection).not.toContain('ship_fit_preview');
     expect(generatedSection).not.toContain('ship_recruit_personnel');
     expect(generatedSection).not.toContain('ship_treat_personnel');
     expect(generatedSection).not.toContain('ship_transfer_personnel');

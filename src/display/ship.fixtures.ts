@@ -945,6 +945,60 @@ export const listShipsFixture = {
   ],
 };
 
+export const fitPreviewStatsFixture = {
+  max_hull: 80,
+  max_shield: 40,
+  shield_recharge: 2,
+  armor: 10,
+  speed: 12,
+  max_fuel: 100,
+  cargo_capacity: 50,
+  cargo_used: 0,
+  cpu_capacity: 20,
+  cpu_used: 24,
+  power_capacity: 15,
+  power_used: 9,
+  weapon_slots: 2,
+  weapon_slots_used: 1,
+  defense_slots: 1,
+  defense_slots_used: 1,
+  utility_slots: 2,
+  utility_slots_used: 0,
+  effective_crew_capacity: 3,
+  effective_marine_capacity: 1,
+  crew: 2,
+  marines: 0,
+};
+
+export const fitPreviewFixture = {
+  ship_id: 'ship-active',
+  valid: false,
+  issues: [{ code: 'cpu_exceeded', message: 'Need 4 more CPU' }],
+  stats: fitPreviewStatsFixture,
+  steps: [
+    {
+      action: 'uninstall_mod',
+      module_id: 'mod-instance-1',
+      type_id: 'shield_booster_i',
+      name: 'Shield Booster I',
+      temporary: true,
+    },
+    {
+      action: 'uninstall_mod',
+      module_id: 'mod-instance-2',
+      type_id: 'cargo_expander_i',
+      name: 'Cargo Expander I',
+      temporary: false,
+    },
+    {
+      action: 'install_mod',
+      module_id: 'pulse_laser_i',
+      type_id: 'pulse_laser_i',
+      name: 'Pulse Laser I',
+    },
+  ],
+};
+
 export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo: { command: 'get_cargo', fixture: cargoFixture },
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
@@ -987,4 +1041,5 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_drone: { command: 'get_drone', fixture: droneFixture },
   list_ships: { command: 'list_ships', fixture: listShipsFixture },
   faction_garages: { command: 'faction_garages', fixture: factionGaragesFixture },
+  fit_preview: { command: 'fit_preview', fixture: fitPreviewFixture, schemaTarget: 'structuredContent' },
 };
