@@ -700,6 +700,22 @@ export const supplyCommissionFixture = {
   ],
 };
 
+// player.credits stays off the receipt. credits_total is the only wallet line.
+export const cancelCommissionFixture = {
+  details: {
+    message: '  Commission cancelled.  ',
+    refund: 0,
+    refunded_to: 'Voidborn Collective',
+    credits_total: 0,
+    materials_returned: [
+      { name: 'Hull Plate', item_id: 'steel_plate', quantity: 0, size: 4 },
+      { item_id: 'circuit_board', quantity: 12 },
+    ],
+    materials_note: 'Returned to station storage.',
+  },
+  player: { username: 'caller', credits: 99999 },
+};
+
 export const insuranceQuoteFixture = {
   message: 'Quote calculated from galaxy-wide loss statistics.',
   notice: 'Recent deaths dominate pricing.',
@@ -920,6 +936,11 @@ export const marketHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     schemaTarget: 'details',
   },
   supply_commission: { command: 'supply_commission', fixture: supplyCommissionFixture, schemaTarget: 'details' },
+  cancel_commission: {
+    command: 'cancel_commission',
+    fixture: cancelCommissionFixture,
+    schemaTarget: 'details',
+  },
   get_insurance_quote: { command: 'get_insurance_quote', fixture: insuranceQuoteFixture },
   view_insurance: { command: 'view_insurance', fixture: viewInsuranceFixture },
   // gifts: [] is the human Gifts: none lock; messages: [] is schema parity only and stays unprinted.

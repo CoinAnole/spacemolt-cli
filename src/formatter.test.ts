@@ -87,6 +87,7 @@ import {
 import { resultFormatters } from './display/formatters';
 import {
   analyzeMarketFixture,
+  cancelCommissionFixture,
   commissionQuoteCreditsOnlyFixture,
   commissionQuoteFixture,
   commissionShipCreditsOnlyFixture,
@@ -5359,20 +5360,7 @@ describe('structuredContent formatters', () => {
   });
 
   test('formats a cancel_commission receipt without deciding who received the refund', () => {
-    const { stdout, stderr } = captureStructuredOutput('cancel_commission', {
-      details: {
-        message: '  Commission cancelled.  ',
-        refund: 0,
-        refunded_to: 'Voidborn Collective',
-        credits_total: 0,
-        materials_returned: [
-          { name: 'Hull Plate', item_id: 'steel_plate', quantity: 0, size: 4 },
-          { item_id: 'circuit_board', quantity: 12 },
-        ],
-        materials_note: 'Returned to station storage.',
-      },
-      player: { username: 'caller', credits: 99999 },
-    });
+    const { stdout, stderr } = captureStructuredOutput('cancel_commission', cancelCommissionFixture);
 
     expect(stderr).toBe('');
     expect(stdout).toContain('  Commission cancelled.  ');
