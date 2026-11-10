@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_chat_history` help says DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's `sender_id` as `target_id`. Omit `target_id` for the whole DM inbox and for station notices. `sender_id` is not a request field (gameserver 0.679.0).
+
 - `get_action_log` prints Item ID and Quantity when an entry or its `data` sends `item_id` or `quantity`, including an explicit 0. An omitted key stays blank, and each column is omitted when no row sends it. The item id prints as sent and is not the entry id. No ammunition name, storage destination, or event type is added. Those keys are not added to the facility upgrade response (gameserver 0.677.5).
 
 - `shipping_list` drops Eligible and Reason. It prints Hazmat as yes or no from `contract.requires_hazmat` when that key is a boolean, including false. An omitted key leaves the cell blank, and the column is omitted when no row sends the key. It prints Warning from `listing.warning` when that value is a non-empty string. An omitted or empty warning prints nothing, and the column is omitted when no row sends one. `shipping_quote` and freight contract detail print `Requires hazmat:` as yes or no when `requires_hazmat` is a boolean, including false. An omitted key prints nothing. `eligible_as` stays a request filter (gameserver 0.675.0).

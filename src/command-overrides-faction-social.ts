@@ -23,13 +23,20 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     usage:
       '<channel> [limit] [before] [target_id=...]  (channels: local, system, faction, private, emergency; emergency is read-only MAYDAY history)',
     description:
-      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0).',
+      "Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0). DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's sender_id as target_id (gameserver 0.679.0).",
     example:
       'spacemolt get_chat_history local 20; spacemolt get_chat_history emergency; spacemolt get_chat_history private',
     seeAlso: ['chat'],
     category: 'Chat - rest captures remaining args as content',
     apiRoute: 'POST /api/v2/spacemolt_social/get_chat_history',
     positionals: ['channel', 'limit', 'before'],
+    schemaExtensions: {
+      // Generated field text still says only a player id or username.
+      target_id: {
+        description:
+          'For one private conversation: a player name or id, or the sender_id of an NPC authority such as the Interstellar Revenue Service. Omit it to get your whole DM inbox: every private message across all conversations, newest-first, so you can discover who has messaged you.',
+      },
+    },
   },
   create_faction: {
     usage: '<name> <tag>  (tag is 4 characters)',

@@ -1211,13 +1211,18 @@ describe('command metadata', () => {
     expect(config.schema?.target?.enum).toEqual(['system', 'local', 'faction', 'private', 'emergency']);
     expect(Object.keys(config.schema ?? {}).sort()).toEqual(['after', 'before', 'limit', 'target', 'target_id']);
     expect(config.schema?.target_id?.description).toBe(
+      'For one private conversation: a player name or id, or the sender_id of an NPC authority such as the Interstellar Revenue Service. Omit it to get your whole DM inbox: every private message across all conversations, newest-first, so you can discover who has messaged you.',
+    );
+    expect(config.schema?.target_id?.description).not.toBe(
       GENERATED_API_ROUTES['POST /api/v2/spacemolt_social/get_chat_history']?.schema?.target_id?.description,
     );
+    expect(config.schema?.sender_id).toBeUndefined();
+    expect(config.args).not.toContain('sender_id');
     expect(FACTION_SOCIAL_COMMAND_OVERRIDES.get_chat_history?.positionals).toEqual(['channel', 'limit', 'before']);
     expect(CURATED_COMMAND_DESCRIPTIONS.get_chat_history).toBeUndefined();
 
     expect(config.description).toBe(
-      'Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0).',
+      "Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0). DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's sender_id as target_id (gameserver 0.679.0).",
     );
     expect(config.description).not.toContain('channel=private');
     expect(config.description).toContain('emergency');
@@ -1285,7 +1290,12 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt get_chat_history local 20; spacemolt get_chat_history emergency');
     expect(help).toContain('get_chat_history private');
     expect(help).toContain('gameserver 0.626.0');
+    expect(help).toContain('gameserver 0.679.0');
+    expect(help).toContain("message's sender_id as target_id");
+    expect(help).toContain('sender_id of an NPC authority such as the Interstellar Revenue Service');
+    expect(help).toContain('omit target_id');
     expect(help).toContain('whole DM inbox');
+    expect(help).not.toContain('sender_id=');
     expect(help).toContain('target (system|local|faction|private|emergency)');
     expect(help).toContain('Chat channel to get history for');
     expect(help).toContain('See also: chat');
