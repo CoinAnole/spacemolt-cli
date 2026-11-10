@@ -1112,8 +1112,15 @@ describe('help output branches', () => {
     expect(output).toContain("a boss's stolen flagship can be sent to any pirate stronghold from any station");
     expect(output).not.toContain("a stronghold's own stolen flagship can be sent home from any station");
     expect(output).toContain(
-      "A boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home",
+      "While a boss's own flagship is away from his crew, he flies a rival boss's stolen flagship if it is his strongest ship, and otherwise keeps it in his hangar",
     );
+    expect(output).toContain('Away includes a rival crew holding his ship, not only a player.');
+    expect(output).toContain('When his own flagship is home, he scraps the gifted rival flagship.');
+    expect(output).toContain('A weaker gift is not scrapped.');
+    expect(output).toContain('A hangar hold stays joined_fleet.');
+    expect(output).toContain('Flying it stays boss_ship.');
+    expect(output).not.toContain('while a player holds his own');
+    expect(output).not.toContain('scraps it at once');
     expect(output).toContain('voids its insurance');
     expect(output).toContain('An omitted flagship_bounty is not zero.');
     expect(output).toContain('joined_fleet');

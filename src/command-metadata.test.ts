@@ -3770,8 +3770,15 @@ describe('command metadata', () => {
       "a boss's stolen flagship can be sent to any pirate stronghold from any station",
     );
     expect(deposit?.description).toContain(
-      "A boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home",
+      "While a boss's own flagship is away from his crew, he flies a rival boss's stolen flagship if it is his strongest ship, and otherwise keeps it in his hangar",
     );
+    expect(deposit?.description).toContain('Away includes a rival crew holding his ship, not only a player.');
+    expect(deposit?.description).toContain('When his own flagship is home, he scraps the gifted rival flagship.');
+    expect(deposit?.description).toContain('A weaker gift is not scrapped.');
+    expect(deposit?.description).toContain('A hangar hold stays joined_fleet.');
+    expect(deposit?.description).toContain('Flying it stays boss_ship.');
+    expect(deposit?.description).not.toContain('while a player holds his own');
+    expect(deposit?.description).not.toContain('scraps it at once');
     expect(deposit?.description).toContain('does not detect a flagship');
     expect(deposit?.description).toContain(
       "disposition is scrapped (broken down for parts), refitted (rebuilt to the crew's own design and added to its fleet), joined_fleet (a pirate-built hull added to its fleet as it is), or boss_ship (the boss flies it in person now or as soon as the boss is free)",

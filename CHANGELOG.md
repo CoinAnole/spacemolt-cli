@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `storage deposit` help says that while a boss's own flagship is away from his crew, he flies a rival boss's stolen flagship if it is his strongest ship, and otherwise keeps it in his hangar. Away includes a rival crew holding his ship, not only a player. When his own flagship is home, he scraps the gifted rival flagship. A weaker gift is not scrapped. A hangar hold stays `joined_fleet`. Flying it stays `boss_ship`. No strength field is added, and the CLI does not decide which ship is stronger (gameserver 0.677.1).
+
 - `get_chat_history` help says DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's `sender_id` as `target_id`. Omit `target_id` for the whole DM inbox and for station notices. `sender_id` is not a request field (gameserver 0.679.0).
 
 - `get_action_log` prints Item ID and Quantity when an entry or its `data` sends `item_id` or `quantity`, including an explicit 0. An omitted key stays blank, and each column is omitted when no row sends it. The item id prints as sent and is not the entry id. No ammunition name, storage destination, or event type is added. Those keys are not added to the facility upgrade response (gameserver 0.677.5).
