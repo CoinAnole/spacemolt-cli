@@ -608,6 +608,138 @@ test('get_ship flags only over-capacity ratios', () => {
   expect(stdout).not.toContain('Power: 23/75 (over capacity)');
 });
 
+function shipWithWorkshop(fieldWorkshop: unknown, cargo?: { used: number; capacity: number }) {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  if (cargo) {
+    fixture.ship.cargo_used = cargo.used;
+    fixture.ship.cargo_capacity = cargo.capacity;
+  }
+  if (fieldWorkshop === undefined) delete fixture.ship.field_workshop;
+  else fixture.ship.field_workshop = fieldWorkshop;
+  return fixture;
+}
+
+function cargoLine(stdout: string): string {
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Cargo:'));
+  expect(line).toBeDefined();
+  return line ?? '';
+}
+
+test('get_ship prints field workshop state, zero counts, and pause reason as sent', () => {
+  const stdout = renderShip(
+    shipWithWorkshop(
+      { state: 'paused', queued_jobs: 0, reserved_cargo: 0, pause_reason: 'cargo_full' },
+      { used: 12, capacity: 60 },
+    ),
+  ).stdout.join('\n');
+  expect(cargoLine(stdout)).toBe('Cargo: 12/60');
+  expect(stdout).toContain('=== Field Workshop ===');
+  expect(stdout).toContain('State: paused');
+  expect(stdout).toContain('Queued jobs: 0');
+  expect(stdout).toContain('Reserved cargo: 0');
+  expect(stdout).toContain('Pause reason: cargo_full');
+  expect(stdout).not.toContain('Free cargo');
+  expect(stdout).not.toContain('Free space');
+  expect(stdout.indexOf('=== Field Workshop ===')).toBeGreaterThan(stdout.indexOf('Cargo: 12/60'));
+  expect(stdout.indexOf('CPU:')).toBeGreaterThan(stdout.indexOf('Pause reason: cargo_full'));
+});
+
+test('get_ship prints an unknown field workshop state and whitespace pause reason as sent', () => {
+  const stdout = renderShip(
+    shipWithWorkshop({
+      state: 'holding',
+      queued_jobs: 2,
+      reserved_cargo: 8,
+      pause_reason: ' docked ',
+    }),
+  ).stdout.join('\n');
+  expect(stdout).toContain('State: holding');
+  expect(stdout).toContain('Queued jobs: 2');
+  expect(stdout).toContain('Reserved cargo: 8');
+  expect(stdout).toContain('Pause reason:  docked ');
+  expect(stdout).not.toContain('State: paused');
+  expect(stdout).not.toContain('State: idle');
+});
+
+test('get_ship omits an omitted or empty field workshop pause reason and does not invent state', () => {
+  const omitted = renderShip(shipWithWorkshop({ state: 'idle', queued_jobs: 0, reserved_cargo: 0 })).stdout.join('\n');
+  expect(omitted).toContain('State: idle');
+  expect(omitted).toContain('Queued jobs: 0');
+  expect(omitted).toContain('Reserved cargo: 0');
+  expect(omitted).not.toContain('Pause reason:');
+
+  const empty = renderShip(
+    shipWithWorkshop({ state: 'running', queued_jobs: 1, reserved_cargo: 4, pause_reason: '' }),
+  ).stdout.join('\n');
+  expect(empty).toContain('State: running');
+  expect(empty).not.toContain('Pause reason:');
+
+  const missing = renderShip(shipWithWorkshop({ queued_jobs: 0, reserved_cargo: 0 })).stdout.join('\n');
+  expect(missing).toContain('=== Field Workshop ===');
+  expect(missing).toContain('Queued jobs: 0');
+  expect(missing).toContain('Reserved cargo: 0');
+  expect(missing).not.toContain('State:');
+  expect(missing).not.toContain('idle');
+  expect(missing).not.toContain('Pause reason:');
+});
+
+test('get_ship omits field workshop when the key is absent or not a record', () => {
+  for (const fieldWorkshop of [undefined, null, [], 'paused', 0]) {
+    const stdout = renderShip(shipWithWorkshop(fieldWorkshop)).stdout.join('\n');
+    expect(stdout).not.toContain('Field Workshop');
+    expect(stdout).not.toContain('Queued jobs:');
+    expect(stdout).not.toContain('Reserved cargo:');
+    expect(stdout).not.toContain('Pause reason:');
+  }
+  const root = structuredClone(shipFixture) as Record<string, unknown>;
+  root.field_workshop = { state: 'running', queued_jobs: 1, reserved_cargo: 1 };
+  const stdout = renderShip(root).stdout.join('\n');
+  expect(stdout).not.toContain('Field Workshop');
+});
+
+test('get_ship does not coerce non-numeric field workshop counts into zero', () => {
+  const stdout = renderShip(shipWithWorkshop({ state: 'running', queued_jobs: '0', reserved_cargo: null })).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('State: running');
+  expect(stdout).not.toContain('Queued jobs:');
+  expect(stdout).not.toContain('Reserved cargo:');
+});
+
+test('get_state does not synthesize a field workshop block when the key is absent', () => {
+  const rendered = renderStructuredResult(
+    'get_state',
+    {
+      player: { username: 'Marlowe' },
+      ship: {
+        name: 'Deep Survey',
+        id: 'ship-1',
+        hull: 1,
+        max_hull: 2,
+        shield: 0,
+        max_shield: 1,
+        armor: 0,
+        fuel: 1,
+        max_fuel: 2,
+        cargo_used: 12,
+        cargo_capacity: 60,
+        cpu_used: 1,
+        cpu_capacity: 2,
+        power_used: 1,
+        power_capacity: 2,
+      },
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('Cargo: 12/60');
+  expect(stdout).not.toContain('Field Workshop');
+  expect(stdout).not.toContain('Queued jobs:');
+  expect(stdout).not.toContain('Reserved cargo:');
+  expect(stdout).not.toContain('Pause reason:');
+});
+
 test('get_ship keeps module stats off the table', () => {
   const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
   const expander = fixture.modules[0];

@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_ship` prints a Field Workshop block when `ship.field_workshop` is a record: `state` as sent, `queued_jobs` including 0, and `reserved_cargo` including 0. A non-empty `pause_reason` prints as sent. An omitted `pause_reason` prints nothing. An omitted `field_workshop` prints nothing. Reserved cargo is not added to the `Cargo:` line, and free space is not computed. `get_state` does not print the block when the key is absent (gameserver 0.678.0).
+
 - `switch_ship` usage says an undocked bay swap keeps each ship's cargo, modules, and crew. `storage deposit` help says a gifted ship that is not in a carrier bay stays parked where it is. A ship in a bay still stays in the bay under the new owner (gameserver 0.671.0).
 
 - A `hold_update` notification prints the hold. `started` and `ended` name the event. Any other `event` prints as sent. The holder and target print as name and id when both arrive. `source` and `reason` print as sent, including `scan` and `scan_over`. A non-empty `message` prints. `trade_id` prints when sent. `start_tick` prints when it is a number, including 0. An omitted key prints nothing (gameserver 0.670.0).

@@ -491,6 +491,26 @@ export function emitInstalledModules(
   return true;
 }
 
+function formatFieldWorkshopCount(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+// get_ship only. Omitted on other ships and in state deltas. Not part of Cargo.
+function emitFieldWorkshop(ship: Record<string, unknown>): void {
+  if (!isRecord(ship.field_workshop)) return;
+  const workshop = ship.field_workshop;
+  emitLine(`\n${c.bright}=== Field Workshop ===${c.reset}`);
+  if (typeof workshop.state === 'string') emitLine(`State: ${workshop.state}`);
+  const queued = formatFieldWorkshopCount(workshop.queued_jobs);
+  if (queued !== undefined) emitLine(`Queued jobs: ${queued}`);
+  const reserved = formatFieldWorkshopCount(workshop.reserved_cargo);
+  if (reserved !== undefined) emitLine(`Reserved cargo: ${reserved}`);
+  const pauseReason = nonEmptyString(workshop.pause_reason);
+  if (pauseReason) emitLine(`Pause reason: ${pauseReason}`);
+}
+
 export function emitDroneBay(droneBay: unknown): boolean {
   if (!isRecord(droneBay)) return false;
   emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
@@ -709,6 +729,7 @@ export const shipFormatters = [
       emitLine(
         `Cargo: ${ship.cargo_used ?? '?'}/${ship.cargo_capacity ?? '?'}${overCapacitySuffix(ship.cargo_used, ship.cargo_capacity)}`,
       );
+      emitFieldWorkshop(ship);
       emitLine(
         `CPU: ${ship.cpu_used ?? '?'}/${ship.cpu_capacity ?? '?'}${overCapacitySuffix(ship.cpu_used, ship.cpu_capacity)}`,
       );
