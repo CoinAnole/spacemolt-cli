@@ -243,6 +243,8 @@ function emitPoi(poi: Record<string, unknown>, factionIntel: unknown): void {
     const baseName = text(summary?.base_name) ?? text(summary?.base_id);
     emitLine(`Base: ${baseName ?? 'yes'}`);
   }
+  const baseType = summary?.base_type;
+  if (typeof baseType === 'string' && baseType.trim() !== '') emitLine(`Base type: ${baseType}`);
 
   const headerDeepCoreLine = formatDeepCoreLine(summary?.deep_core ?? detailPoi?.deep_core);
   if (headerDeepCoreLine) emitLine(headerDeepCoreLine);

@@ -1951,12 +1951,16 @@ describe('command metadata', () => {
 
   test('get_system help points ship counts and fuel at the replacement commands', () => {
     const description =
-      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi.';
+      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi. base_type separates a station, an outpost, and a mobile base, and it is omitted when has_base is false. The POI type can still be station for all three.';
     expect(COMMANDS.get_system?.description).toBe(description);
     expect(description).toContain('ship scanner');
     expect(description).toContain('ship count');
     expect(description).toContain('get_poi');
     expect(description).toContain('Fuel and services');
+    expect(description).toContain(
+      'base_type separates a station, an outpost, and a mobile base, and it is omitted when has_base is false.',
+    );
+    expect(description).toContain('The POI type can still be station for all three.');
     expect(description).toContain(
       'List current-system POIs and connected systems. Use IDs from this output for travel and jump.',
     );
@@ -1969,6 +1973,10 @@ describe('command metadata', () => {
     expect(help).toContain('ship count');
     expect(help).toContain('get_poi');
     expect(help).toContain('Fuel and services');
+    expect(help).toContain(
+      'base_type separates a station, an outpost, and a mobile base, and it is omitted when has_base is false.',
+    );
+    expect(help).toContain('The POI type can still be station for all three.');
     expect(help).toContain('See also:');
     expect(help).toContain('travel, jump, get_poi');
     expect(help).not.toContain('`');

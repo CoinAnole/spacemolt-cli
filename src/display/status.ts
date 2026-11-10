@@ -562,6 +562,15 @@ function formatShipCountSuffix(poi: Record<string, unknown>): string {
   return ` ${c.cyan}(${count} ships)${c.reset}`;
 }
 
+function formatSystemPoiBaseBracket(poi: Record<string, unknown>): string {
+  const baseType = poi.base_type;
+  if (typeof baseType === 'string' && baseType.trim() !== '') {
+    return ` ${c.green}[${baseType}]${c.reset}`;
+  }
+  if (poi.has_base === true) return ` ${c.green}[station]${c.reset}`;
+  return '';
+}
+
 function formatGalacticPosition(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   if (value.x === undefined || value.y === undefined) return undefined;
@@ -1633,7 +1642,7 @@ export const statusFormatters = [
           emitLine(`  - ${poi}`);
           continue;
         }
-        const base = poi.has_base ? ` ${c.green}[station]${c.reset}` : '';
+        const base = formatSystemPoiBaseBracket(poi);
         emitLine(`  - ${formatSystemPoiName(poi)}${base}${formatShipCountSuffix(poi)}  ${c.dim}${poi.id}${c.reset}`);
       }
 
@@ -1651,7 +1660,7 @@ export const statusFormatters = [
       const currentPoi = isRecord(r.poi) ? r.poi : undefined;
       if (currentPoi) {
         emitLine(
-          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}${formatShipCountSuffix(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
+          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}${formatSystemPoiBaseBracket(currentPoi)}${formatShipCountSuffix(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
         );
       }
       return true;

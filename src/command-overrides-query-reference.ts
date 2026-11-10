@@ -32,7 +32,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_system: {
     description:
-      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi.',
+      'List current-system POIs and connected systems. Use IDs from this output for travel and jump. Each POI includes a ship count when your ship has a ship scanner: other uncloaked players (online, offline, and docked), pirates, empire NPCs, and leviathans. Your own ship and wildlife are not counted. It is a count, not a roster; ships at your POI are on get_nearby. Fuel and services are on get_poi. base_type separates a station, an outpost, and a mobile base, and it is omitted when has_base is false. The POI type can still be station for all three.',
     example: 'spacemolt get_system',
     seeAlso: ['travel', 'jump', 'get_poi'],
     category: 'Query commands',

@@ -5648,6 +5648,99 @@ test('omits the Base line for a summary base_id of 0', () => {
   expect(stdout).not.toContain('Base: 0');
 });
 
+test('prints Base type as sent when summary.base_type is a non-empty string', () => {
+  for (const baseType of ['station', 'outpost', 'mobile_base', ' relay ']) {
+    const stdout = renderStructuredResult(
+      'inspect',
+      {
+        id: 'earth_orbit',
+        kind: 'poi',
+        poi: {
+          summary: {
+            id: 'earth_orbit',
+            name: 'Earth Orbit',
+            base_name: 'Earth Station',
+            has_base: true,
+            base_type: baseType,
+          },
+        },
+      },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout.split('\n')).toContain('Base: Earth Station');
+    expect(stdout.split('\n')).toContain(`Base type: ${baseType}`);
+  }
+});
+
+test('omits Base type when summary.base_type is omitted, empty, or not a string', () => {
+  const omitted = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          has_base: true,
+        },
+        detail: { poi: { base_type: 'outpost' } },
+      },
+      faction_poi_intel: { base_type: 'mobile_base', base_name: 'Intel Outpost' },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted.split('\n')).toContain('Base: yes');
+  expect(omitted.split('\n')).toContain('Base: Intel Outpost');
+  expect(omitted).not.toContain('Base type:');
+
+  for (const baseType of ['', '   ', 1, null, false]) {
+    const stdout = renderStructuredResult(
+      'inspect',
+      {
+        id: 'main_belt',
+        kind: 'poi',
+        poi: {
+          summary: {
+            id: 'main_belt',
+            name: 'Main Belt',
+            has_base: true,
+            base_type: baseType,
+          },
+        },
+      },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout.split('\n')).toContain('Base: yes');
+    expect(stdout).not.toContain('Base type:');
+  }
+});
+
+test('prints Base type without inferring it when the Base name line is absent', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'main_belt',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'main_belt',
+          name: 'Main Belt',
+          has_base: false,
+          base_type: 'outpost',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout.split('\n')).toContain('Base type: outpost');
+  expect(stdout.split('\n').some((line) => line.startsWith('Base:'))).toBe(false);
+});
+
 test('renders base inspect results with station defences', () => {
   const rendered = renderStructuredResult(
     'inspect',

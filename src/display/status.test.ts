@@ -4361,6 +4361,125 @@ test('get_system current POI uses its own ship_count', () => {
   expect(listOut).toContain('Earth (planet) [garden] [station] (2 ships)  sol_earth');
 });
 
+function withPoiBaseType(
+  fixture: typeof systemInfoFixture,
+  listValue: unknown | undefined,
+  currentValue: unknown | undefined,
+  listHasBase?: unknown,
+  currentHasBase?: unknown,
+) {
+  const next = structuredClone(fixture);
+  const poi = next.system.pois[0] as Record<string, unknown>;
+  if (listValue === undefined) delete poi.base_type;
+  else poi.base_type = listValue;
+  if (listHasBase !== undefined) poi.has_base = listHasBase;
+  const current = next.poi as Record<string, unknown>;
+  if (currentValue === undefined) delete current.base_type;
+  else current.base_type = currentValue;
+  if (currentHasBase !== undefined) current.has_base = currentHasBase;
+  return next;
+}
+
+test('get_system prints base_type in the bracket and keeps type and ship count', () => {
+  for (const baseType of ['station', 'outpost', 'mobile_base']) {
+    const fixture = withPoiBaseType(systemInfoFixture, baseType, baseType);
+    (fixture.system.pois[0] as Record<string, unknown>).ship_count = 2;
+    (fixture.poi as Record<string, unknown>).ship_count = 4;
+    const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+    expect(stdout).toContain(`Earth (planet) [garden] [${baseType}] (2 ships)  sol_earth`);
+    expect(stdout).toContain(`Current POI: Earth (planet) [garden] [${baseType}] (4 ships)  sol_earth`);
+    expect(stdout).not.toContain(`[${baseType}] [${baseType}]`);
+    expect(stdout).not.toContain('[station] [station]');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('get_system does not add [station] when base_type is present', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiBaseType(systemInfoFixture, 'outpost', 'mobile_base'),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Earth (planet) [garden] [outpost]  sol_earth');
+  expect(stdout).not.toContain('[station]');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] [mobile_base]  sol_earth');
+  expect(stdout).toContain('(planet)');
+});
+
+test('get_system keeps [station] when base_type is omitted and has_base is true', () => {
+  const listOnly = withPoiBaseType(systemInfoFixture, undefined, undefined, true, undefined);
+  const listOut = renderStructuredResult('get_system', listOnly, options, context).stdout.join('\n');
+  expect(listOut).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(listOut).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+  expect(listOut).not.toMatch(/Current POI:.*\[station\]/);
+
+  const currentOnly = withPoiBaseType(systemInfoFixture, undefined, undefined, false, true);
+  (currentOnly.system.pois[0] as Record<string, unknown>).type = 'station';
+  const currentOut = renderStructuredResult('get_system', currentOnly, options, context).stdout.join('\n');
+  expect(currentOut).toContain('Earth (station) [garden]  sol_earth');
+  expect(currentOut).not.toMatch(/- Earth \(station\).*\[station\]/);
+  expect(currentOut).toContain('Current POI: Earth (planet) [garden] [station]  sol_earth');
+});
+
+test('get_system prints no base bracket when base_type is omitted and has_base is not true', () => {
+  const omitted = structuredClone(systemInfoFixture);
+  delete (omitted.system.pois[0] as Record<string, unknown>).has_base;
+  const omittedOut = renderStructuredResult('get_system', omitted, options, context).stdout.join('\n');
+  expect(omittedOut).toContain('Earth (planet) [garden]  sol_earth');
+  expect(omittedOut).not.toContain('[station]');
+  expect(omittedOut).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+
+  for (const value of [false, 0, 'true', null]) {
+    const stdout = renderStructuredResult(
+      'get_system',
+      withPoiBaseType(systemInfoFixture, undefined, undefined, value, value),
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('Earth (planet) [garden]  sol_earth');
+    expect(stdout).not.toContain('[station]');
+    expect(stdout).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+  }
+});
+
+test('get_system treats an empty base_type as omitted and prints unknown tokens as sent', () => {
+  for (const value of ['', '  \n\t', 1, null]) {
+    const stdout = renderStructuredResult(
+      'get_system',
+      withPoiBaseType(systemInfoFixture, value, value, true, true),
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
+    expect(stdout).toContain('Current POI: Earth (planet) [garden] [station]  sol_earth');
+    expect(stdout).not.toContain('[1]');
+    expect(stdout).not.toContain('[]');
+  }
+
+  const sent = renderStructuredResult(
+    'get_system',
+    withPoiBaseType(systemInfoFixture, ' relay ', 'relay', false, false),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(sent).toContain('Earth (planet) [garden] [ relay ]  sol_earth');
+  expect(sent).toContain('Current POI: Earth (planet) [garden] [relay]  sol_earth');
+  expect(sent).not.toContain('[station]');
+});
+
+test('get_system does not treat poi type station as a base bracket', () => {
+  const fixture = withPoiBaseType(systemInfoFixture, undefined, undefined, false, false);
+  (fixture.system.pois[0] as Record<string, unknown>).type = 'station';
+  (fixture.poi as Record<string, unknown>).type = 'station';
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Earth (station) [garden]  sol_earth');
+  expect(stdout).toContain('Current POI: Earth (station) [garden]  sol_earth');
+  expect(stdout).not.toContain('[station]');
+  expect(stdout).not.toContain('[outpost]');
+  expect(stdout).not.toContain('[mobile_base]');
+});
+
 function agentsHeader(stdout: string): string | undefined {
   return stdout.split('\n').find((line) => line.includes('|') && line.includes('Name') && line.includes('Combat'));
 }
