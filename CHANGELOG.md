@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `switch_ship` usage says an undocked bay swap keeps each ship's cargo, modules, and crew. `storage deposit` help says a gifted ship that is not in a carrier bay stays parked where it is. A ship in a bay still stays in the bay under the new owner (gameserver 0.671.0).
+
 - A `hold_update` notification prints the hold. `started` and `ended` name the event. Any other `event` prints as sent. The holder and target print as name and id when both arrive. `source` and `reason` print as sent, including `scan` and `scan_over`. A non-empty `message` prints. `trade_id` prints when sent. `start_tick` prints when it is a number, including 0. An omitted key prints nothing (gameserver 0.670.0).
 
 - `station_in_battle` suggests waiting until the battle ends, then retrying. The suggestion does not read `details` and does not add a retry field. Disbanding a faction, dismantling an outpost, and selling a station return this code while that station is in a battle (gameserver 0.661.0).

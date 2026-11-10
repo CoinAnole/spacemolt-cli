@@ -3874,6 +3874,10 @@ describe('command metadata', () => {
     expect(deposit?.description).toContain('target=self loads that ship into your active carrier');
     expect(deposit?.description).toContain('non-carrier with a tow rig');
     expect(deposit?.description).toContain('A listed ship in a bay or under tow cannot be bought.');
+    expect(deposit?.description).toContain(
+      'target=<player_name> on a deposit gifts the ship (gift_ship). A ship that is not in a carrier bay stays parked where it is.',
+    );
+    expect(deposit?.description).not.toContain('gift_ship); it stays parked where it is');
     const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
     expect(withdraw?.usage).toContain('carrier:<pilot name>');
     expect(withdraw?.usage).toContain('release tow: <ship_id>');
@@ -5177,7 +5181,7 @@ describe('command metadata', () => {
     expect(switchShip).not.toContain('passengers_aboard');
     expect(buyListed).toContain('A listed ship in a bay or under tow cannot be bought.');
     expect(COMMANDS.switch_ship?.usage).toContain('cargo moved to station storage');
-    expect(COMMANDS.switch_ship?.usage).toContain('each ship keeps its cargo');
+    expect(COMMANDS.switch_ship?.usage).toContain('each ship keeps its cargo, modules, and crew');
     expect(COMMANDS.uninstall_mod?.usage).toBe(
       '<module_id> [ship_id=...]  (omit ship_id for the active ship; stored ship while docked at its station; use get_ship to see installed modules)',
     );
