@@ -29,7 +29,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station: faction-funded at a tier-four faction yard with fund_from_faction=true, or player-funded at that empire's capital in any normal payment mode. The capital order needs faction membership and ManageBases and reserves the one mobile-base slot. bare_hull does not apply to mobile bases. Ship modules and piloting do not apply, and the arguments are unchanged.",
   commission_status: 'Check the status of your ship commissions',
   complete_mission:
-    'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.',
+    'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then. An empire mission can include piloting in skill_xp_gained. A faction-posted mission does not.',
   completed_missions: 'List all missions you have completed',
   craft:
     'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (docked storage or faction; cargo for package recipes; undocked field workshop uses cargo).',

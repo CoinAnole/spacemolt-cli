@@ -646,7 +646,7 @@ describe('command metadata', () => {
     expect(config?.args).toEqual(['id', 'quantity']);
     expect(config?.usage).toBe('[id] [quantity] [target=player|fleet]  (named target= only)');
     expect(config?.description).toBe(
-      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification.',
+      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification. piloting_xp on a ship-to-ship repair is 1 per 10 hull repaired (rounded down) × the piloting XP per action of your active ship tier (tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12). It is omitted for every other repair source and when less than 10 hull was repaired. An omitted key is not a sent 0.',
     );
     expect(config?.example).toBe(
       'spacemolt repair; spacemolt repair quantity=3; spacemolt repair target=Alice quantity=2; spacemolt repair id=hull_patch quantity=2',
@@ -675,6 +675,11 @@ describe('command metadata', () => {
     const help = captureHelp('refuel');
     expect(help).toContain('station credit refuel fills to full');
     expect(help).toContain('quantity applies only to fuel cells and transfers');
+    expect(help).toContain('25 × the piloting XP per action of your active ship tier');
+    expect(help).toContain('tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12');
+    expect(help).toContain('Each target pays once per UTC day');
+    expect(help).toContain('A station refuel and a same-day repeat target omit piloting_xp');
+    expect(help).toContain('An omitted key is not a sent 0');
   });
 
   test('scan help documents optional area sweeps', () => {
@@ -957,6 +962,14 @@ describe('command metadata', () => {
     );
     expect(help).toContain('Table output prints the server survey_power as Survey power.');
     expect(help).toContain('Scanning scales the total by 1% per level.');
+    expect(config?.description).toContain(
+      'The skill map can include piloting for a newly revealed POI and, with level 2 faction intel, for a faction ore reading more than a day old.',
+    );
+    expect(config?.description).not.toContain('tier 1:');
+    expect(config?.description).not.toContain('20 + 20');
+    expect(help).toContain('newly revealed POI');
+    expect(help).toContain('level 2 faction intel');
+    expect(help).toContain('faction ore reading more than a day old');
   });
 
   test('get_active_missions help names post-action reprints including complete_mission', () => {
@@ -5063,6 +5076,15 @@ describe('command metadata', () => {
       expect(cmd.schema?.shipment_id?.type).toBe('string');
     }
     expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_track?.schema?.limit?.type).toBe('integer');
+    const deliverHelp = BUNDLED_COMMAND_REGISTRY.commands.shipping_deliver?.description ?? '';
+    expect(deliverHelp).toContain('(20 + 20 × contract.route_hops)');
+    expect(deliverHelp).toContain('tier 1: 1, tier 2: 2, tier 3: 4, tier 4: 7, tier 5: 12');
+    expect(deliverHelp).toContain('paid on time or late');
+    expect(deliverHelp).toContain(
+      'Return, cancel, and a self-shipment (contract.reputation_eligible false) omit piloting_xp',
+    );
+    expect(deliverHelp).toContain('piloting already at its maximum');
+    expect(deliverHelp).toContain('An omitted key is not a sent 0');
     const shippingQuote = BUNDLED_COMMAND_REGISTRY.commands.shipping_quote;
     if (!shippingQuote) throw new Error('shipping_quote command missing');
     expect(shippingQuote).toMatchObject({
@@ -5256,7 +5278,7 @@ describe('command metadata', () => {
     const buyListed =
       "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. A listed ship in a bay or under tow cannot be bought.";
     const completeMission =
-      'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then.';
+      'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then. An empire mission can include piloting in skill_xp_gained. A faction-posted mission does not.';
 
     expect(CORE_COMMAND_OVERRIDES.switch_ship?.description).toBeUndefined();
     expect(CURATED_COMMAND_DESCRIPTIONS.switch_ship).toBe(switchShip);

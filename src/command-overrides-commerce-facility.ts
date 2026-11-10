@@ -209,7 +209,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_deliver: {
     usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
-    description: 'Deliver freight at the destination by shipment_id or by the sealed package_id in your hold.',
+    description:
+      'Deliver freight at the destination by shipment_id or by the sealed package_id in your hold. piloting_xp is (20 + 20 × contract.route_hops) × the piloting XP per action of the active ship tier (tier 1: 1, tier 2: 2, tier 3: 4, tier 4: 7, tier 5: 12), paid on time or late. Return, cancel, and a self-shipment (contract.reputation_eligible false) omit piloting_xp, and so does piloting already at its maximum. An omitted key is not a sent 0.',
     example: 'spacemolt shipping_deliver package_id=package-relief-1',
     category: 'Missions',
     discoverWith: ['shipping_active', 'get_cargo'],

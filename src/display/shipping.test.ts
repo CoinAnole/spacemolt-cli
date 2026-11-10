@@ -1631,3 +1631,47 @@ test('freight quote appraisal line with basis and no confidence prints the basis
   expect(basisLine).toContain('completed-fill VWAP');
   expect(basisLine).not.toContain('/');
 });
+
+test('freight settlement prints Piloting XP for a finite number or bigint, including 0', () => {
+  const positive = output('shipping_deliver', settlementEnvelope('deliver', { piloting_xp: 140 }));
+  expect(positive).toContain('Piloting XP: 140');
+  expect(positive).not.toContain('Piloting XP: 1,140');
+
+  const zero = output('shipping_deliver', settlementEnvelope('deliver', { piloting_xp: 0 }));
+  expect(zero).toContain('Piloting XP: 0');
+
+  const returned = output('shipping_return', settlementEnvelope('return', { piloting_xp: 0 }));
+  expect(returned).toContain('=== Freight Returned ===');
+  expect(returned).toContain('Piloting XP: 0');
+
+  const canceled = output('shipping_cancel', settlementEnvelope('cancel', { piloting_xp: 9007199254740993n }));
+  expect(canceled).toContain('Piloting XP: 9007199254740993');
+  expect(canceled).not.toContain('9,007,199,254,740,993');
+});
+
+test('freight settlement omits Piloting XP when the key is absent and does not derive it', () => {
+  for (const command of ['shipping_deliver', 'shipping_return', 'shipping_cancel'] as const) {
+    const action = command.slice('shipping_'.length) as 'deliver' | 'return' | 'cancel';
+    const stdout = output(command, settlementEnvelope(action));
+    expect(stdout).not.toContain('Piloting XP');
+  }
+
+  const hops = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered', route_hops: 6, reputation_eligible: false },
+      carrier_payout: 15000,
+    },
+    player: { credits: 10 },
+    ship: {},
+    cargo: [],
+  });
+  expect(hops).toContain('=== Freight Delivered ===');
+  expect(hops).not.toContain('Piloting XP');
+
+  for (const piloting_xp of [Number.NaN, Number.POSITIVE_INFINITY, '140', null, true] as const) {
+    const stdout = output('shipping_deliver', settlementEnvelope('deliver', { piloting_xp }));
+    expect(stdout).not.toContain('Piloting XP');
+    expect(stdout).not.toContain('NaN');
+  }
+});

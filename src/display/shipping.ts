@@ -24,6 +24,13 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
+// Omitted piloting_xp is not 0. Print only a finite number or bigint.
+function formatPilotingXp(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
 function presentString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   return value.trim() ? value : undefined;
@@ -484,6 +491,7 @@ function renderSettlement(result: Record<string, unknown>, command: string | und
   emitField('Debt created', result.debt_created, formatCredits);
   emitField('Late delivery', result.late, formatBoolean);
   emitField('Terminal reason', result.contract.terminal_reason);
+  emitField('Piloting XP', result.piloting_xp, formatPilotingXp);
   return true;
 }
 

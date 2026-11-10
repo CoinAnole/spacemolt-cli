@@ -748,6 +748,7 @@ test('survey_system skips a null skill XP entry and prints the other gain', () =
   );
 
   expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: piloting +4');
+  expect(stdout).not.toContain('Piloting XP:');
   expect(stdout).not.toContain('scanning');
   expect(stdout).not.toContain('+null');
 });

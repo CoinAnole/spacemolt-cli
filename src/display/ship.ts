@@ -538,6 +538,18 @@ function isStrictFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+// Omitted piloting_xp is not 0. Print only a finite number or bigint.
+function formatPilotingXp(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+function emitPilotingXp(value: unknown): void {
+  const text = formatPilotingXp(value);
+  if (text !== undefined) emitLine(`Piloting XP: ${text}`);
+}
+
 function isBulkReloadDetails(r: Record<string, unknown>): boolean {
   if (r.mode === 'bulk') return true;
   // Results is the batch even when mode is omitted. Summary is not required.
@@ -895,6 +907,7 @@ export const shipFormatters = [
         emitLine(`Total spent: ${formatCredits(totalSpent)}${unitText}`);
       }
 
+      emitPilotingXp(r.piloting_xp);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },
@@ -913,6 +926,7 @@ export const shipFormatters = [
 
       const members = Array.isArray(r.members) ? r.members.filter(isRecord) : undefined;
       if (members !== undefined) {
+        emitPilotingXp(r.piloting_xp);
         if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
         if (members.length) {
           const rows = members.map(projectFleetHullRow);
@@ -948,6 +962,7 @@ export const shipFormatters = [
       const cost = formatOptionalCredits(r.cost);
       if (cost !== undefined) emitLine(`Cost: ${cost}`);
 
+      emitPilotingXp(r.piloting_xp);
       if (r.message) emitLine(`${c.dim}${r.message}${c.reset}`);
       return true;
     },

@@ -408,7 +408,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[fuel_cell_id [cell_count] | target=player|fleet quantity=units]  (station credit refuel fills to full; quantity applies only to fuel cells and transfers)',
     description:
-      'Refuel from a station, fuel cell, or tanker ship. A station credit refuel fills to full and ignores quantity.',
+      'Refuel from a station, fuel cell, or tanker ship. A station credit refuel fills to full and ignores quantity. piloting_xp on a ship-to-ship refuel is 25 × the piloting XP per action of your active ship tier (tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12). Each target pays once per UTC day. A station refuel and a same-day repeat target omit piloting_xp. An omitted key is not a sent 0.',
     example: 'spacemolt refuel',
     discoverWith: ['get_status', 'get_cargo'],
     seeAlso: ['dock', 'get_status'],
@@ -419,7 +419,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   repair: {
     usage: '[id] [quantity] [target=player|fleet]  (named target= only)',
     description:
-      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification.',
+      'Repair hull at a station (credits), in space with repair kits, or on another ship at the same POI (Repair Arm + kits, named target=). target=fleet lists fleet hull and does not repair. repaired is hull actually restored, not kits requested; kits consumed are unchanged. The other pilot receives a repaired_by notification. piloting_xp on a ship-to-ship repair is 1 per 10 hull repaired (rounded down) × the piloting XP per action of your active ship tier (tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12). It is omitted for every other repair source and when less than 10 hull was repaired. An omitted key is not a sent 0.',
     example:
       'spacemolt repair; spacemolt repair quantity=3; spacemolt repair target=Alice quantity=2; spacemolt repair id=hull_patch quantity=2',
     discoverWith: ['get_status', 'get_ship', 'get_nearby'],

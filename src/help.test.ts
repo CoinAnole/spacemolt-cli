@@ -1740,6 +1740,10 @@ describe('help output branches', () => {
     expect(output).toContain('package_id');
     expect(output).toContain('spacemolt shipping_deliver [package_id=...] [shipment_id=...]  (provide exactly one)');
     expect(output).toContain('spacemolt shipping_deliver package_id=package-relief-1');
+    expect(output).toContain('(20 + 20 × contract.route_hops)');
+    expect(output).toContain(
+      'Return, cancel, and a self-shipment (contract.reputation_eligible false) omit piloting_xp',
+    );
     expect(output).toContain('Server help:');
     expect(output).toContain('spacemolt server-help shipping_deliver');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
@@ -2232,6 +2236,10 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('wreck_not_here');
     expect(output).toContain('release_tow');
+    expect(output).toContain('An empire mission can include piloting in skill_xp_gained');
+    expect(output).toContain('A faction-posted mission does not');
+    expect(output).not.toContain('tier 1:');
+    expect(output).not.toContain('20 + 20');
   });
 
   test('full help get_ship line names current or remote owned/faction-garage ship fit', () => {

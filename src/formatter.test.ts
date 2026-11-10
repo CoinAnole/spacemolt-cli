@@ -4490,6 +4490,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Items received: food_rations x5, repair_patch x1');
     expect(stdout).toContain('Reputation changes: solarian +3, pirate_voss -1, voidborn 0');
     expect(stdout).toContain('Skill XP: piloting +25, hauling +10');
+    expect(stdout).not.toContain('Piloting XP:');
     expect(stdout.indexOf('Items received:')).toBeLessThan(stdout.indexOf('Reputation changes:'));
     expect(stdout.indexOf('Reputation changes:')).toBeLessThan(stdout.indexOf('Skill XP:'));
     expect(stdout).toContain('Next: mission-refinery-check');

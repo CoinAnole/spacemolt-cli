@@ -2804,3 +2804,107 @@ test('get_drone parent script branch prints scan belt', () => {
   ).stdout.join('\n');
   expect(stdout).toContain('scan belt');
 });
+
+test('refuel prints Piloting XP for a finite number or bigint, including 0', () => {
+  const positive = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'ship_transfer', piloting_xp: 25, message: 'Transferred fuel.' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(positive).toContain('Piloting XP: 25');
+  expect(positive.indexOf('Piloting XP:')).toBeLessThan(positive.indexOf('Transferred fuel.'));
+
+  const zero = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'station', piloting_xp: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Piloting XP: 0');
+
+  const negativeZero = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'ship_transfer', piloting_xp: -0 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(negativeZero).toContain('Piloting XP: 0');
+  expect(negativeZero).not.toContain('Piloting XP: -0');
+
+  const fraction = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'ship_transfer', piloting_xp: 1.5 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(fraction).toContain('Piloting XP: 1.5');
+
+  const big = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'ship_transfer', piloting_xp: 9007199254740993n },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(big).toContain('Piloting XP: 9007199254740993');
+  expect(big).not.toContain('9,007,199,254,740,993');
+});
+
+test('refuel omits Piloting XP when the key is absent or not a finite number', () => {
+  const omitted = renderStructuredResult(
+    'refuel',
+    { action: 'refuel', source: 'ship_transfer', fuel: 10 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).not.toContain('Piloting XP');
+
+  for (const piloting_xp of [Number.NaN, Number.POSITIVE_INFINITY, '25', null, true] as const) {
+    const stdout = renderStructuredResult(
+      'refuel',
+      { action: 'refuel', source: 'ship_transfer', piloting_xp },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('Piloting XP');
+  }
+});
+
+test('repair prints Piloting XP for a finite number or bigint, including 0', () => {
+  const positive = renderRepair({
+    action: 'repair',
+    source: 'kits',
+    repaired: 80,
+    piloting_xp: 4,
+    message: 'Hull repaired.',
+  });
+  const stdout = positive.stdout.join('\n');
+  expect(stdout).toContain('Hull restored: 80');
+  expect(stdout).toContain('Piloting XP: 4');
+  expect(stdout.indexOf('Piloting XP:')).toBeLessThan(stdout.indexOf('Hull repaired.'));
+
+  const zero = renderRepair({ action: 'repair', source: 'station', piloting_xp: 0 }).stdout.join('\n');
+  expect(zero).toContain('Piloting XP: 0');
+
+  const big = renderRepair({ action: 'repair', source: 'kits', piloting_xp: 9007199254740993n }).stdout.join('\n');
+  expect(big).toContain('Piloting XP: 9007199254740993');
+});
+
+test('repair omits Piloting XP when the key is absent and does not derive it from hull', () => {
+  const omitted = renderRepair({ action: 'repair', source: 'kits', repaired: 80 }).stdout.join('\n');
+  expect(omitted).toContain('Hull restored: 80');
+  expect(omitted).not.toContain('Piloting XP');
+
+  const fleet = renderRepair({ ...repairFleetFixture, repaired: 40 }).stdout.join('\n');
+  expect(fleet).toContain('=== Fleet Hull ===');
+  expect(fleet).not.toContain('Piloting XP');
+
+  const fleetPaid = renderRepair({ ...repairFleetFixture, piloting_xp: 7 }).stdout.join('\n');
+  expect(fleetPaid).toContain('Piloting XP: 7');
+  expect(fleetPaid).toContain('=== Fleet Hull ===');
+
+  for (const piloting_xp of [Number.NaN, '4', null] as const) {
+    const stdout = renderRepair({ action: 'repair', source: 'kits', piloting_xp }).stdout.join('\n');
+    expect(stdout).not.toContain('Piloting XP');
+  }
+});
