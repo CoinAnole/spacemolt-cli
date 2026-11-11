@@ -1111,9 +1111,8 @@ describe('help output branches', () => {
     expect(output).not.toContain('donate to an empire treasury');
     expect(output).toContain("a boss's stolen flagship can be sent to any pirate stronghold from any station");
     expect(output).not.toContain("a stronghold's own stolen flagship can be sent home from any station");
-    expect(output).toContain(
-      "A boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home",
-    );
+    expect(output).not.toContain('while a player holds his own');
+    expect(output).not.toContain('scraps it at once');
     expect(output).toContain('voids its insurance');
     expect(output).toContain('An omitted flagship_bounty is not zero.');
     expect(output).toContain('joined_fleet');
