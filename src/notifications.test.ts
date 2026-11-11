@@ -11116,6 +11116,102 @@ describe('notification formatting', () => {
       expect(JSON.stringify(preview)).not.toContain('System agents');
     });
 
+    test('a repeater-only update is not zero changed or departed', () => {
+      const changed = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_cloudbank',
+          system_id: 'sol',
+          tick: 901700,
+          repeaters_changed: [
+            {
+              repeater_id: 'rep-sliver-1',
+              name: 'Repeater Sliver',
+              ship_class: 'sliver',
+              hull: 0,
+              max_hull: 40,
+              shield: 0,
+              max_shield: 12,
+              in_battle: false,
+              id: 'not-this',
+            },
+          ],
+        },
+      });
+      expect(changed.headline).toContain('1 changed, 0 departed');
+      expect(changed.details).toEqual(['Repeaters — changed 1: Repeater Sliver [rep-sliver-1]']);
+      expect(changed.details[0]).not.toContain('not-this');
+      expect(changed.details[0]).not.toContain('loot');
+
+      const departed = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_cloudbank',
+          system_id: 'sol',
+          tick: 901701,
+          repeaters_departed: ['rep-old-1'],
+        },
+      });
+      expect(departed.headline).toContain('0 changed, 1 departed');
+      expect(departed.details).toEqual(['Repeaters — departed 1: rep-old-1']);
+    });
+
+    test('omitted or empty repeater keys count as none', () => {
+      const omitted = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: { poi_id: 'sol_earth', system_id: 'sol', tick: 1 },
+      });
+      expect(omitted.headline).toContain('0 changed, 0 departed');
+      expect(omitted.details).toEqual([]);
+
+      const empty = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 1,
+          repeaters_changed: [],
+          repeaters_departed: [],
+        },
+      });
+      expect(empty.headline).toContain('0 changed, 0 departed');
+      expect(empty.details).toEqual([]);
+
+      const malformed = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_earth',
+          system_id: 'sol',
+          tick: 1,
+          repeaters_changed: { nested: true },
+          repeaters_departed: 'rep-old-1',
+        },
+      });
+      expect(malformed.headline).toContain('0 changed, 0 departed');
+      expect(malformed.details).toEqual([]);
+      expectNoNestedJsonDump(JSON.stringify(malformed));
+    });
+
+    test('repeater lines sit with the other contact domains', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'observation_update',
+        data: {
+          poi_id: 'sol_belt',
+          system_id: 'sol',
+          tick: 42,
+          pirates_changed: [{ pirate_id: 'p1', name: 'Corsair' }],
+          prizes_changed: [{ prize_id: 'prize-1', ship_name: 'Dust', status: 'available' }],
+          repeaters_changed: [{ repeater_id: 'rep-1', name: 'Repeater Spire' }],
+        },
+      });
+      expect(preview.headline).toContain('3 changed, 0 departed');
+      expect(preview.details).toEqual([
+        'Pirates — changed 1: Corsair [p1]',
+        'Prizes — changed 1: Dust [prize-1] (available)',
+        'Repeaters — changed 1: Repeater Spire [rep-1]',
+      ]);
+    });
+
     test('ignores stale system_changed without headlining system agents', () => {
       const preview = formatNotificationPreview({
         msg_type: 'observation_update',

@@ -7917,3 +7917,178 @@ test('get_poi prints nothing for an omitted interaction and skips an empty comma
   expect(notAnObject).not.toContain('Interaction:');
   expect(notAnObject).not.toContain('interact_poi');
 });
+
+const repeaterQuiet = {
+  repeater_id: 'rep-sliver-1',
+  name: 'Repeater Sliver',
+  ship_class: 'sliver',
+  hull: 0,
+  max_hull: 40,
+  shield: 0,
+  max_shield: 12,
+  in_battle: false,
+};
+const repeaterFighting = {
+  repeater_id: 'rep-pane-2',
+  name: 'Repeater Pane',
+  ship_class: 'pane',
+  hull: 80,
+  max_hull: 80,
+  shield: 20,
+  max_shield: 20,
+  in_battle: true,
+};
+const repeaterQuietLine = '  Repeater Sliver (sliver) - hull 0/40 - shield 0/12 - in battle no [rep-sliver-1]';
+const repeaterFightingLine = '  Repeater Pane (pane) - hull 80/80 - shield 20/20 - in battle yes [rep-pane-2]';
+
+test('get_nearby prints repeaters with an explicit 0 and yes or no', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    prizes: [{ prize_id: 'prize-1', ship_name: 'Dust', ship_class: 'skiff', status: 'available' }],
+    prize_count: 1,
+    repeaters: [repeaterQuiet, repeaterFighting],
+    repeater_count: 2,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).toContain('Repeaters (2):');
+  expect(stdout).toContain(repeaterQuietLine);
+  expect(stdout).toContain(repeaterFightingLine);
+  expect(stdout.indexOf(repeaterFightingLine)).toBeGreaterThan(stdout.indexOf(repeaterQuietLine));
+  expect(stdout.indexOf('Repeaters (2):')).toBeGreaterThan(stdout.indexOf('Prizes (1):'));
+  expect(stdout).not.toContain('... and');
+  expect(stdout).not.toContain('loot');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_nearby uses a larger finite repeater_count and says the list is shorter', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    repeaters: [repeaterQuiet],
+    repeater_count: 4,
+  });
+
+  expect(stdout).toContain('Repeaters (4):');
+  expect(stdout).toContain(repeaterQuietLine);
+  expect(stdout).toContain('... and 3 more');
+});
+
+test('get_nearby keeps listed repeaters when repeater_count is smaller or not a finite total', () => {
+  const smaller = renderNearbyTable('get_nearby', {
+    nearby: [],
+    repeaters: [repeaterQuiet, repeaterFighting],
+    repeater_count: 1,
+  });
+  expect(smaller).toContain('Repeaters (2):');
+  expect(smaller).not.toContain('Repeaters (1):');
+  expect(smaller).toContain(repeaterQuietLine);
+  expect(smaller).toContain(repeaterFightingLine);
+  expect(smaller).not.toContain('... and');
+
+  for (const repeater_count of ['4', Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+    const stdout = renderNearbyTable('get_nearby', {
+      nearby: [],
+      repeaters: [repeaterQuiet],
+      repeater_count,
+    });
+    expect(stdout).toContain('Repeaters (1):');
+    expect(stdout).not.toContain('Repeaters (4)');
+    expect(stdout).not.toContain('Repeaters (-1)');
+    expect(stdout).not.toContain('... and');
+  }
+});
+
+test('get_nearby prints a positive repeater_count when repeaters is not an array', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    repeater_count: 3,
+    repeaters: 'not-an-array',
+  });
+
+  expect(stdout).toContain('Repeaters (3):');
+  expect(stdout).toContain('... and 3 more');
+  expect(stdout).not.toContain('[');
+});
+
+test('get_nearby stays quiet when repeaters is empty and repeater_count is 0', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    repeaters: [],
+    repeater_count: 0,
+  });
+
+  expectNearbyFormatterEngaged(stdout);
+  expect(stdout).not.toContain('Repeaters');
+});
+
+test('get_nearby prints listed repeaters when repeater_count is omitted', () => {
+  const stdout = renderNearbyTable('get_nearby', {
+    nearby: [],
+    repeaters: [repeaterQuiet],
+  });
+
+  expect(stdout).toContain('Repeaters (1):');
+  expect(stdout).toContain(repeaterQuietLine);
+  expect(stdout).not.toContain('... and');
+});
+
+test('subscribe_observation prints repeaters only when the array is non-empty', () => {
+  const present = renderNearbyTable('subscribe_observation', {
+    nearby: [],
+    repeaters: [repeaterQuiet, repeaterFighting],
+  });
+  expect(present).toContain('Repeaters (2):');
+  expect(present).toContain(repeaterQuietLine);
+  expect(present).toContain(repeaterFightingLine);
+  expect(present).not.toContain('... and');
+
+  const empty = renderNearbyTable('subscribe_observation', { nearby: [], repeaters: [] });
+  expectNearbyFormatterEngaged(empty);
+  expect(empty).not.toContain('Repeaters');
+
+  const omitted = renderNearbyTable('subscribe_observation', { nearby: [] });
+  expect(omitted).not.toContain('Repeaters');
+});
+
+test('location snapshot prints nearby_repeaters and skips an omitted or empty array', () => {
+  const withRepeaters = structuredClone(getLocationFixture) as {
+    location: { nearby_repeaters?: unknown };
+  };
+  withRepeaters.location.nearby_repeaters = [repeaterQuiet];
+  const printed = renderStructuredResult('get_location', withRepeaters, options, context).stdout.join('\n');
+  expect(printed).toContain('Nearby Repeaters (1):');
+  expect(printed).toContain(repeaterQuietLine);
+  expect(printed.indexOf('Nearby Repeaters')).toBeGreaterThan(printed.indexOf('Nearby Pirates'));
+  expect(printed.indexOf('Nearby NPCs')).toBeGreaterThan(printed.indexOf('Nearby Repeaters'));
+  expect(printed).not.toContain('... and');
+  expect(printed).not.toContain('loot');
+
+  const empty = structuredClone(getLocationFixture) as { location: { nearby_repeaters?: unknown } };
+  empty.location.nearby_repeaters = [];
+  const emptyOut = renderStructuredResult('get_location', empty, options, context).stdout.join('\n');
+  expect(emptyOut).not.toContain('Repeaters');
+
+  const omitted = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).not.toContain('Repeaters');
+});
+
+test('get_state location snapshot prints nearby_repeaters and get_status does not', () => {
+  const state = structuredClone(getStateSnapshotFixture) as { location: { nearby_repeaters?: unknown } };
+  state.location.nearby_repeaters = [repeaterFighting];
+  const stateOut = renderStructuredResult('get_state', state, options, context).stdout.join('\n');
+  expect(stateOut).toContain('Nearby Repeaters (1):');
+  expect(stateOut).toContain(repeaterFightingLine);
+  expect(stateOut.indexOf('Nearby Repeaters')).toBeGreaterThan(stateOut.indexOf('Nearby Leviathans'));
+  expect(stateOut.indexOf('Nearby Empire NPCs')).toBeGreaterThan(stateOut.indexOf('Nearby Repeaters'));
+
+  const status = structuredClone(getStatusFixture) as { location: { nearby_repeaters?: unknown } };
+  status.location.nearby_repeaters = [repeaterQuiet, repeaterFighting];
+  const statusOut = renderStructuredResult('get_status', status, options, context).stdout.join('\n');
+  expect(statusOut).not.toContain('Repeaters');
+  expect(statusOut).not.toContain('rep-sliver-1');
+});

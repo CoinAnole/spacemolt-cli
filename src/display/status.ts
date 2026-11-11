@@ -40,6 +40,7 @@ import { emitLeviathanContacts } from './leviathans.ts';
 import { emitPassengerColumns } from './passenger.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
 import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
+import { emitRepeaterSection } from './repeaters.ts';
 import {
   emitFactionScanContacts,
   emitFactionScanHeader,
@@ -1138,6 +1139,7 @@ export function emitLocationSnapshot(
     }
   }
   emitLeviathanContacts(loc.nearby_leviathans, 'Nearby Leviathans');
+  emitRepeaterSection(loc.nearby_repeaters, undefined, 'Nearby Repeaters');
   if (empireNpcRows) {
     const npcRows = Array.isArray(loc.nearby_empire_npcs) ? loc.nearby_empire_npcs.filter(isRecord) : [];
     const rawCount = loc.nearby_empire_npc_count;
@@ -1977,6 +1979,7 @@ export const statusFormatters = [
         prizes,
         prizeCount: typeof r.prize_count === 'number' ? r.prize_count : prizes.length,
       });
+      emitRepeaterSection(r.repeaters, r.repeater_count, 'Repeaters');
       if (commandNameEquals(command, 'subscribe_observation')) {
         const shipCounts = formatShipCountsLine(r.ship_counts);
         if (shipCounts !== undefined) emitLine(shipCounts);

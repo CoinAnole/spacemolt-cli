@@ -2490,7 +2490,8 @@ type ObservationIdentityDomain =
   | 'creature'
   | 'cloaked contact'
   | 'arena NPC'
-  | 'prize';
+  | 'prize'
+  | 'repeater';
 
 function observationText(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -2514,7 +2515,9 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
         ? (['name', 'species'] as const)
         : domain === 'prize'
           ? (['ship_name', 'name'] as const)
-          : (['name', 'ship_name'] as const);
+          : domain === 'repeater'
+            ? (['name'] as const)
+            : (['name', 'ship_name'] as const);
   const idKeys =
     domain === 'nearby player'
       ? (['player_id', 'id'] as const)
@@ -2526,7 +2529,9 @@ function observationIdentity(record: Record<string, unknown>, domain: Observatio
             ? (['creature_id', 'id'] as const)
             : domain === 'prize'
               ? (['prize_id', 'id'] as const)
-              : (['target_id', 'player_id', 'id'] as const);
+              : domain === 'repeater'
+                ? (['repeater_id'] as const)
+                : (['target_id', 'player_id', 'id'] as const);
   const name = nameKeys.map((key) => observationText(record[key])).find(Boolean);
   const id = idKeys.map((key) => observationText(record[key])).find(Boolean);
   let identity = name && id && name !== id ? `${name} [${id}]` : (name ?? id ?? domain);
@@ -2608,6 +2613,8 @@ function previewObservationUpdate(
   const creaturesDeparted = observationDepartures(data.creatures_departed);
   const prizesChanged = records(data.prizes_changed);
   const prizesDeparted = observationDepartures(data.prizes_departed);
+  const repeatersChanged = records(data.repeaters_changed);
+  const repeatersDeparted = observationDepartures(data.repeaters_departed);
   const cloakedResolved = records(data.cloaked_resolved);
   const cloakedLost = observationDepartures(data.cloaked_lost);
 
@@ -2618,6 +2625,7 @@ function previewObservationUpdate(
     empireNpcsChanged.length +
     creaturesChanged.length +
     prizesChanged.length +
+    repeatersChanged.length +
     cloakedResolved.length;
   const departedCount =
     nearbyDeparted.length +
@@ -2626,6 +2634,7 @@ function previewObservationUpdate(
     empireNpcsDeparted.length +
     creaturesDeparted.length +
     prizesDeparted.length +
+    repeatersDeparted.length +
     cloakedLost.length;
 
   const poi = observationText(data.poi_id) ?? 'current POI';
@@ -2643,6 +2652,7 @@ function previewObservationUpdate(
     observationDomainDetail('Empire NPCs', 'empire NPC', empireNpcsChanged, empireNpcsDeparted, options),
     observationDomainDetail('Creatures', 'creature', creaturesChanged, creaturesDeparted, options),
     observationDomainDetail('Prizes', 'prize', prizesChanged, prizesDeparted, options),
+    observationDomainDetail('Repeaters', 'repeater', repeatersChanged, repeatersDeparted, options),
     observationDomainDetail('Cloaked contacts', 'cloaked contact', cloakedResolved, cloakedLost, options),
   ].filter((detail): detail is string => detail !== undefined);
 

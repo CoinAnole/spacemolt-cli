@@ -1654,6 +1654,15 @@ describe('command metadata', () => {
     expect(nearby?.description).toContain('creature_count');
     expect(nearby?.description).toContain('branded livestock');
     expect(nearby?.description).toContain('already includes the faction tag');
+    expect(nearby?.description).toContain('frontier repeaters');
+    expect(nearby?.description).toContain('repeater_count');
+    expect(nearby?.description).toContain('repeater_id');
+    expect(nearby?.description).toContain('in battle as yes or no');
+    expect(nearby?.description).toContain('mines at the place where they sit');
+    expect(nearby?.description).toContain('every unit in the system turns on that pilot');
+    expect(nearby?.description).toContain('Monoliths at the Threshold');
+    expect(nearby?.description).toContain('seam glass or Repeater parts');
+    expect(nearby?.description).not.toContain('loot');
     expect(nearby?.description).not.toContain('`');
     expect(nearby?.seeAlso).toEqual(expect.arrayContaining(['scan', 'hunt', 'attack', 'claim_prize']));
     const help = captureHelp('get_nearby');
@@ -1665,6 +1674,8 @@ describe('command metadata', () => {
     expect(help).toContain('already includes the faction tag');
     expect(help).toContain('primary_color');
     expect(help).toContain('secondary_color');
+    expect(help).toContain('seam glass or Repeater parts');
+    expect(help).toContain('Monoliths at the Threshold');
     expect(help).not.toContain('captor_kind');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).toContain('intact prizes');
     expect(CURATED_COMMAND_DESCRIPTIONS.get_nearby).not.toContain('Get other players');
