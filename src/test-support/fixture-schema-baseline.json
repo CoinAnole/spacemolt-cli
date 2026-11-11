@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.687.0",
+  "generatedAtGameserver": "v0.689.0",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -89,6 +89,9 @@
     "get_active_missions|get_active_missions|required-missing|missions.active[1].accepted_at",
     "get_active_missions|get_active_missions|required-missing|missions.active[1].percent_complete",
     "get_active_missions|get_active_missions|required-missing|missions.active[1].rewards.credits",
+    "get_base_jump_gate|get_base|extra-in-fixture|base.gate",
+    "get_base_jump_gate|get_base|required-missing|base.contraband_items",
+    "get_base_jump_gate|get_base|required-missing|base.contraband_mode",
     "get_base_repairs|get_base|required-missing|base.contraband_items",
     "get_base_repairs|get_base|required-missing|base.contraband_mode",
     "get_base_sovereign_mint_inputs|get_base|required-missing|base.contraband_items",
