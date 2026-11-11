@@ -2421,6 +2421,7 @@ export const socialFormatters = [
       emitOptionalLine('Status', r.status);
       emitOptionalLine('Total Ticks', r.total_ticks);
       if (r.has_more !== undefined) emitLine(`Has More: ${formatYesNo(r.has_more) ?? r.has_more}`);
+      if (entries?.some((entry) => isRecord(entry) && entry.private === true)) emitLine('Private: yes');
       const labels = battleLabels(battleRulesetFromLogEntries(entries ?? []));
       if (labels.note) emitLine(labels.note);
 

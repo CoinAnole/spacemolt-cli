@@ -7500,6 +7500,53 @@ test('get_battle_log prints Has More: yes when has_more is true', () => {
   expect(stdout).not.toContain('Has More: no');
 });
 
+test('get_battle_log prints Private: yes once when any entry sets private true', () => {
+  const stdout = renderBattleLog({
+    battle_id: 'battle-private',
+    status: 'completed',
+    total_ticks: 2,
+    has_more: false,
+    entries: [
+      { tick: 0, private: true },
+      { tick: 1, attacks: [{ attacker_id: 'a', target_id: 'b', hit_success: false }] },
+    ],
+  });
+  const ticks = battleLogTicksSection(stdout);
+
+  expect(stdout).toContain('Private: yes');
+  expect(stdout.match(/Private:/g)).toEqual(['Private:']);
+  expect(stdout.indexOf('=== Battle Log ===')).toBeLessThan(stdout.indexOf('Private: yes'));
+  expect(stdout.indexOf('Has More: no')).toBeLessThan(stdout.indexOf('Private: yes'));
+  expect(stdout.indexOf('Private: yes')).toBeLessThan(stdout.indexOf('=== Ticks ==='));
+  expect(ticks).toMatch(/^\s*0\s*\|/m);
+  expect(ticks).toMatch(/^\s*1\s*\|/m);
+  expect(stdout).not.toContain('Private: no');
+});
+
+test('get_battle_log omits Private when private is omitted or not true', () => {
+  const omitted = renderBattleLog({
+    battle_id: 'battle-public',
+    status: 'completed',
+    total_ticks: 1,
+    has_more: false,
+    entries: [{ tick: 4 }],
+  });
+  expect(omitted).not.toContain('Private:');
+  expect(battleLogTicksSection(omitted)).toMatch(/^\s*4\s*\|/m);
+
+  for (const privateValue of [false, 'true', 1, null]) {
+    const stdout = renderBattleLog({
+      battle_id: 'battle-not-private',
+      status: 'completed',
+      total_ticks: 1,
+      has_more: false,
+      entries: [{ tick: 5, private: privateValue }],
+    });
+    expect(stdout).not.toContain('Private:');
+    expect(battleLogTicksSection(stdout)).toMatch(/^\s*5\s*\|/m);
+  }
+});
+
 test('get_battle_log blanks tick Damage when bigint final_damage sits beside a finite final_damage', () => {
   const stdout = renderBattleLog({
     battle_id: 'battle-bigint-damage',
@@ -9293,6 +9340,23 @@ test('list_battles prefers system_name and formats Top with missing username or 
   });
   expect(listBattlesCell(idOnly, 'sys-id', 'System')).toBe('sol');
   expect(listBattlesCell(idOnly, 'sys-id', 'Top')).toBe('? (12)');
+});
+
+test('list_battles keeps a row that sends private true', () => {
+  const stdout = renderListBattles({
+    battles: [
+      { battle_id: 'frontier-battle', status: 'completed', private: true },
+      { battle_id: 'public-battle', status: 'completed' },
+    ],
+    has_more: false,
+    total: 2,
+  });
+
+  expect(stdout).toContain('Public battles: 2 of 2');
+  expect(stdout).toContain('frontier-battle');
+  expect(stdout).toContain('public-battle');
+  expect(listBattlesColumns(stdout)).not.toContain('Private');
+  expect(stdout).not.toContain('Private:');
 });
 
 test('list_battles prints station yes or no and omits the column when the key is absent', () => {
