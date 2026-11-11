@@ -1812,23 +1812,6 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     ).toEqual({ event_type: ['a', 'b'] });
   });
 
-  test('agentlogs - category and message required; severity defaults to info', () => {
-    const { payload } = parseOk(['agentlogs', 'navigation', 'jumped to new system']);
-    expect(payload.category).toBe('navigation');
-    expect(payload.message).toBe('jumped to new system');
-    expect(payload.severity).toBeUndefined();
-    expect(validateRequiredArgs('agentlogs', payload)).toBeNull();
-
-    const dryRun = createDryRunResponse('agentlogs', normalizeParsedPayload('agentlogs', payload));
-    expect(dryRun.structuredContent).toMatchObject({
-      payload: {
-        category: 'navigation',
-        message: 'jumped to new system',
-        severity: 'info',
-      },
-    });
-  });
-
   test('get_map with system_id', () => {
     const { payload } = parseOk(['get_map', 'sol']);
     expect(payload.system_id).toBe('sol');
@@ -2604,14 +2587,6 @@ describe('validateRequiredArgs', () => {
     const { payload } = parseOk(['buy', '--payload-json', '{"item_id":"ore_iron","quantity":9007199254740993}']);
     expect(payload.quantity).toBe(9007199254740993n);
     expect(String(payload.quantity)).not.toBe('9007199254740992');
-  });
-
-  test('agentlogs requires category and message; severity defaults to info', () => {
-    expect(validateRequiredArgs('agentlogs', {})).toBe('category');
-    expect(validateRequiredArgs('agentlogs', { category: 'nav' })).toBe('message');
-    // severity is OpenAPI-required but curated defaults fill severity=info at request time
-    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped' })).toBeNull();
-    expect(validateRequiredArgs('agentlogs', { category: 'nav', message: 'jumped', severity: 'warn' })).toBeNull();
   });
 
   test('faction_post_mission uses generated required fields', () => {

@@ -85,7 +85,6 @@ const COMMAND_GROUPS: CommandGroup[] = [
       'Drones',
       'Salvage & Tow',
       'Citizenship',
-      'Agent logging',
       'Petition (empire messages)',
       'P2P Trading',
       'Taxes',

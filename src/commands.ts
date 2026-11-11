@@ -75,7 +75,7 @@ export function schemaFieldForKey(
   return schema[canonical] || schema[key];
 }
 
-export const SINGLE_ENDPOINT_TOOLS = new Set(['agentlogs', 'session', 'spacemolt_catalog']);
+export const SINGLE_ENDPOINT_TOOLS = new Set(['session', 'spacemolt_catalog']);
 
 export type CommandOverride = {
   /** Standard path from the server OpenAPI (POST /api/v2/...). Mutually exclusive with `route`. */

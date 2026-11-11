@@ -44,7 +44,6 @@ describe('client.ts source integrity', () => {
 
   test('all new v0.8.0 commands are present', () => {
     const newCommands = [
-      'agentlogs',
       'completed_missions',
       'distress_signal',
       'get_action_log',
@@ -83,6 +82,8 @@ describe('client.ts source integrity', () => {
       // dual name removed; single curated command is faction_build
       'faction_facility_build',
       'repair_module',
+      // gameserver 0.686.0 removed the disabled POST /api/v2/agentlogs endpoint
+      'agentlogs',
     ];
     for (const cmd of removedCommands) {
       expect(COMMANDS[cmd]).toBeUndefined();
