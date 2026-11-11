@@ -2466,6 +2466,9 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('cannot be redirected');
     expect(config?.description).toContain('Docked ordinary production');
     expect(config?.description).toContain('a field-workshop hull can craft hand-craftable recipes');
+    expect(config?.description).toContain(
+      'A recipe with requires_unlock true fails with recipe_locked until a mission grants the recipe.',
+    );
     expect(config?.description).toContain('source and deliver_to must be omitted or cargo');
     expect(config?.description).toContain(
       'Facility-only recipes, package recipes, package_ids, output_package_label, and facility_id are refused there',
@@ -2492,6 +2495,9 @@ describe('command metadata', () => {
     expect(config?.schema?.source?.description).toContain('Package recipes also accept cargo');
     expect(config?.schema?.source?.description).toContain('Undocked on a field-workshop hull');
     expect(help).toContain('field-workshop hull');
+    expect(help).toContain(
+      'A recipe with requires_unlock true fails with recipe_locked until a mission grants the recipe.',
+    );
     expect(help).toContain('crafting.lost');
     expect(help).toContain('escrow');
     expect(help).toContain('dry_run');
@@ -2622,6 +2628,10 @@ describe('command metadata', () => {
     expect(help).not.toContain('Default routing prefers your own recycler');
     expect(help).not.toContain('globally fastest or cheapest');
     expect(help).toContain('Queue a recycling job');
+    expect(config?.description).toContain('A recipe with no_recycle true cannot be reversed.');
+    expect(config?.description).toContain('An omitted or false no_recycle can be reversed.');
+    expect(help).toContain('A recipe with no_recycle true cannot be reversed.');
+    expect(help).toContain('An omitted or false no_recycle can be reversed.');
     expect(help).toContain('source=storage|faction|faction:<bucket>');
     expect(help).toContain('deliver_to=storage|faction|faction:<bucket>');
     expect(help).toContain('feedstock');

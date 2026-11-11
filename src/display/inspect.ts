@@ -1,6 +1,7 @@
 import {
   catalogSkillTableColumns,
   classifyRecipeVenue,
+  emitCatalogFlag,
   emitCatalogItemDetail,
   emitCatalogModuleDetail,
   emitCatalogShipDetail,
@@ -381,6 +382,8 @@ function emitCatalogRecipeDetail(recipe: Record<string, unknown>, catalog: Recor
   emitLine(`Venue: ${venue}`);
   const handCraftable = formatCatalogYesNo(recipe.hand_craftable);
   if (handCraftable) emitLine(`Hand-craftable: ${handCraftable}`);
+  emitCatalogFlag('No recycle', recipe.no_recycle);
+  emitCatalogFlag('Requires unlock', recipe.requires_unlock);
   if (venue !== 'ship passive' && venue !== 'no venue') {
     const producedBy =
       formatProducedByFacilities(catalog.produced_by_facilities) ??

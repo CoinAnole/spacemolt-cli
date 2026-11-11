@@ -3220,6 +3220,59 @@ test('inspect dump hand_craftable true prints Hand-craftable yes and extra facil
   expect(stdout).toContain('Produced by: ore_refinery');
 });
 
+test('inspect catalog recipe prints No recycle and Requires unlock only when true', () => {
+  const base = {
+    id: 'locked_plate',
+    name: 'Locked Plate',
+    category: 'refining',
+    crafting_time: 3,
+    hand_craftable: true,
+  };
+  const yes = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [{ ...base, no_recycle: true, requires_unlock: true }],
+    },
+    'locked_plate',
+  );
+  expect(yes).toContain('No recycle: yes');
+  expect(yes).toContain('Requires unlock: yes');
+  expect(yes.indexOf('Hand-craftable: yes')).toBeLessThan(yes.indexOf('No recycle: yes'));
+  expect(yes.indexOf('No recycle: yes')).toBeLessThan(yes.indexOf('Requires unlock: yes'));
+
+  const onlyRecycle = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [{ ...base, no_recycle: true }],
+    },
+    'locked_plate',
+  );
+  expect(onlyRecycle).toContain('No recycle: yes');
+  expect(onlyRecycle).not.toContain('Requires unlock:');
+
+  const onlyUnlock = renderCatalogInspect(
+    {
+      type: 'recipes',
+      recipes: [{ ...base, no_recycle: false, requires_unlock: true }],
+    },
+    'locked_plate',
+  );
+  expect(onlyUnlock).toContain('Requires unlock: yes');
+  expect(onlyUnlock).not.toContain('No recycle:');
+
+  for (const flags of [{}, { no_recycle: false, requires_unlock: false }, { no_recycle: 'true', requires_unlock: 1 }]) {
+    const stdout = renderCatalogInspect(
+      {
+        type: 'recipes',
+        recipes: [{ ...base, ...flags }],
+      },
+      'locked_plate',
+    );
+    expect(stdout).not.toContain('No recycle:');
+    expect(stdout).not.toContain('Requires unlock:');
+  }
+});
+
 test('inspect catalog recipe prefers catalog produced_by_facilities over dump ids', () => {
   const stdout = renderCatalogInspect(
     {
