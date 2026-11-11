@@ -1,10 +1,5 @@
 import { SpaceMoltClient } from './api.ts';
-import {
-  type CliRuntimeContext,
-  createDefaultCliRuntimeContext,
-  withCliWriter,
-  withResolvedConfig,
-} from './cli-context.ts';
+import { type CliRuntimeContext, createDefaultCliRuntimeContext, withCliWriter } from './cli-context.ts';
 import {
   type CommandError,
   type CommandHandler,
@@ -245,7 +240,20 @@ async function runInvocationWithContext(
       fuzzyIds,
     },
   };
-  const resolvedContext = withResolvedConfig(context, config);
+  const resolvedContext = {
+    ...(context ?? createDefaultCliRuntimeContext()),
+    config,
+    output: {
+      ...(context?.output ?? {}),
+      json: config.jsonOutput,
+      jsonOutput: config.jsonOutput,
+      debug: config.debug,
+      quiet: config.quiet,
+      plain: config.plain,
+      format: config.format,
+      compact: config.compact,
+    },
+  };
   const cachedGeneratedRoutes = deps.loadCachedGeneratedRoutes(
     deps.defaultOpenApiCacheDir(resolvedContext.env as NodeJS.ProcessEnv),
   );

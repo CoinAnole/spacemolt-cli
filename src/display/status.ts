@@ -1396,13 +1396,9 @@ function emitLoginUnreadChat(result: Record<string, unknown>, command: string | 
   for (const line of lines) emitLine(line);
 }
 
-function sentText(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
 function missionOfferLabel(mission: Record<string, unknown>): string | undefined {
-  const title = sentText(mission.title);
-  const id = sentText(mission.mission_id);
+  const title = usableLabel(mission.title);
+  const id = usableLabel(mission.mission_id);
   if (title && id && title !== id) return `${title} (${id})`;
   return title ?? id;
 }
@@ -1439,14 +1435,14 @@ function emitBoardedPassengers(value: unknown): boolean {
 function emitPoiInteraction(value: unknown): void {
   if (!isRecord(value)) return;
   const command = value.command;
-  if (typeof command === 'string' && command.length > 0) emitLine(`Interaction: ${command}`);
-  const message = sentText(value.message);
+  if (usableLabel(command)) emitLine(`Interaction: ${command}`);
+  const message = usableLabel(value.message);
   if (message) emitLine(message);
   emitMissionOffer(value.mission, false);
 }
 
 function emitCompleteMission(r: Record<string, unknown>): boolean {
-  const hasCredits = r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '';
+  const hasCredits = rowsHaveValue([r], ['credits_earned']);
   const hasIdentity = Boolean(r.mission_id && r.message);
   if (!hasCredits && !hasIdentity) return false;
 
@@ -1474,12 +1470,12 @@ function emitCompleteMission(r: Record<string, unknown>): boolean {
 
 function emitInteractPoi(r: Record<string, unknown>): boolean {
   let printed = false;
-  const message = sentText(r.message);
+  const message = usableLabel(r.message);
   if (message) {
     emitLine(message);
     printed = true;
   }
-  const poiId = sentText(r.poi_id);
+  const poiId = usableLabel(r.poi_id);
   if (poiId) {
     emitLine(`POI: ${poiId}`);
     printed = true;

@@ -602,6 +602,12 @@ describe('battleLogAttackRows', () => {
     expect(battleLogAttackRows([{ tick: 0, attacks: [{ hit_success: false }] }])[0]?.defense).toBe('');
   });
 
+  test('a weaponless attack with hit_success false, hit_chance 0, and hit_roll 0 prints chance 0% roll 0', () => {
+    expect(
+      battleLogAttackRows([{ tick: 0, attacks: [{ hit_success: false, hit_chance: 0, hit_roll: 0 }] }])[0]?.defense,
+    ).toBe('chance 0% roll 0');
+  });
+
   test('falls back to attack-level percents and labels when components are empty', () => {
     const attack = {
       attacker_id: 'player-1',
@@ -690,6 +696,24 @@ describe('battleLogAttackRows', () => {
     ]);
   });
 
+  test('tick 0 and battle_tick 9 keeps the row tick at 0', () => {
+    const rows = battleLogAttackRows([
+      {
+        tick: 0,
+        battle_tick: 9,
+        attacks: [
+          {
+            attacker_id: 'player-1',
+            target_id: 'pirate-1',
+            shield_damage: 50,
+            hull_damage: 10,
+          },
+        ],
+      },
+    ]);
+    expect(rows[0]?.tick).toBe(0);
+  });
+
   test('missing hit_success still expands defense_components', () => {
     const rows = battleLogAttackRows([
       {
@@ -722,6 +746,14 @@ describe('battleLogAttackRows', () => {
     expect(rows).toHaveLength(2);
     expect(rows[1]?.tick).toBe(1);
     expect(rows[1]?.hit).toBe('miss');
+  });
+
+  test('the second entry with no tick and battle_tick 0 has row tick 0', () => {
+    const rows = battleLogAttackRows([
+      { tick: 7, attacks: [{ hit_success: false }] },
+      { battle_tick: 0, attacks: [{ hit_success: false }] },
+    ]);
+    expect(rows[1]?.tick).toBe(0);
   });
 
   test('skips non-record entries and empty attacks', () => {

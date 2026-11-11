@@ -223,7 +223,6 @@ export function hazardLabelParts(value: unknown): { type?: string; severity?: st
   };
 }
 
-/** `type severity` when both keys are present. A partial or omitted hazard is undefined. */
 export function formatHazardTypeSeverity(value: unknown): string | undefined {
   const { type, severity } = hazardLabelParts(value);
   if (type === undefined || severity === undefined) return undefined;
@@ -692,7 +691,7 @@ export function emitFoundGateSite(result: Record<string, unknown>): boolean {
   if (fee !== undefined) lines.push(`Fee paid: ${fee}`);
   const access = gateYesNo(result.public_access);
   if (access) lines.push(`Public access: ${access}`);
-  if (typeof result.hint === 'string' && result.hint !== '') lines.push(`Hint: ${result.hint}`);
+  if (nonEmptyString(result.hint)) lines.push(`Hint: ${result.hint}`);
   if (lines.length === 0) return false;
   emitLine(`\n${c.bright}=== Gate Site Founded ===${c.reset}`);
   for (const line of lines) emitLine(line);

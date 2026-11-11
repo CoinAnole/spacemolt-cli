@@ -6040,8 +6040,19 @@ describe('notification formatting', () => {
     expect(formatActionResultDetails({ action: 'mine', item_name: 'Iron Ore', quantity: 0 })).toBe('mine 0× Iron Ore');
   });
 
+  test('formatActionResultDetails prints an item with no quantity', () => {
+    const details = formatActionResultDetails({ action: 'mine', item_name: 'Iron Ore' });
+    expect(details).toBe('mine Iron Ore');
+    expect(details).not.toContain('×');
+  });
+
   test('formatActionResultDetails prints cargo_remaining 0', () => {
     expect(formatActionResultDetails({ cargo_remaining: 0 })).toBe('cargo_remaining=0');
+  });
+
+  test('formatActionResultDetails prints storage_total including 0', () => {
+    expect(formatActionResultDetails({ storage_total: 0 })).toBe('storage_total=0');
+    expect(formatActionResultDetails({ storage_total: 3 })).toBe('storage_total=3');
   });
 
   test.each([

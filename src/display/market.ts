@@ -999,7 +999,7 @@ function formatCancelCommission(result: Record<string, unknown>): boolean {
   if (!hasCancelCommissionField(result)) return false;
 
   // Message and refunded_to print as sent. Do not compare refunded_to to the caller.
-  if (typeof result.message === 'string' && result.message.length > 0) emitLine(result.message);
+  if (typeof result.message === 'string' && hasNonEmptyBaseId(result.message)) emitLine(result.message);
   const refund = exactSentCount(result.refund);
   if (refund !== undefined) emitLine(`Refund: ${refund}`);
   if (typeof result.refunded_to === 'string') emitLine(`Refunded to: ${result.refunded_to}`);
@@ -1020,7 +1020,7 @@ function formatCancelCommission(result: Record<string, unknown>): boolean {
     );
   }
 
-  if (typeof result.materials_note === 'string' && result.materials_note.length > 0) {
+  if (typeof result.materials_note === 'string' && hasNonEmptyBaseId(result.materials_note)) {
     emitLine(`Materials note: ${result.materials_note}`);
   }
   return true;
@@ -1407,7 +1407,7 @@ export const marketFormatters = [
         // Omitted deposits_blocked is false in the schema. Do not print that as no.
         const depositsBlocked = formatYesNoBoolean(r.deposits_blocked);
         if (depositsBlocked !== undefined) emitLine(`Deposits blocked: ${depositsBlocked}`);
-        if (typeof r.deposits_blocked_reason === 'string' && r.deposits_blocked_reason !== '') {
+        if (typeof r.deposits_blocked_reason === 'string' && hasNonEmptyBaseId(r.deposits_blocked_reason)) {
           emitLine(`Deposits blocked reason: ${r.deposits_blocked_reason}`);
         }
       }

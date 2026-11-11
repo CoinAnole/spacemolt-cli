@@ -106,23 +106,6 @@ export function createDefaultCliRuntimeContext(config?: SpaceMoltConfig): CliRun
   };
 }
 
-export function withResolvedConfig(context: CliRuntimeContext | undefined, config: SpaceMoltConfig): CliRuntimeContext {
-  return {
-    ...(context ?? createDefaultCliRuntimeContext()),
-    config,
-    output: {
-      ...(context?.output ?? {}),
-      json: config.jsonOutput,
-      jsonOutput: config.jsonOutput,
-      debug: config.debug,
-      quiet: config.quiet,
-      plain: config.plain,
-      format: config.format,
-      compact: config.compact,
-    },
-  };
-}
-
 export async function withCliWriter<T>(writer: CliWriter, fn: () => Promise<T> | T): Promise<T> {
   const restore = installCliWriter(writer);
   try {

@@ -120,6 +120,20 @@ describe('notification presentation', () => {
     expect((summary?.data as { first_tick?: number } | undefined)?.first_tick).toBe(901237);
   });
 
+  test('job_ids on one routine crafting notification count only non-empty ids', () => {
+    const progress = {
+      type: 'crafting',
+      msg_type: 'crafting_progress',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: { tick: 901237, job_ids: ['job-a', ''], message: 'Crafting steel plate.' },
+    };
+
+    const presented = presentNotifications([progress]);
+    const summary = presented.notifications[0];
+
+    expect((summary?.data as { jobs?: number } | undefined)?.jobs).toBe(1);
+  });
+
   test('summarizes OpenAPI-shaped incomplete crafting updates as routine progress', () => {
     const updateA = {
       type: 'crafting',

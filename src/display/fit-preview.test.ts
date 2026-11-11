@@ -146,3 +146,68 @@ test('fit_preview formatting does not run for another command', () => {
   expect(stdout).not.toContain('Valid:');
   expect(stdout).toContain('=== Response ===');
 });
+
+test('fit_preview prints a bigint armor stat', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    stats: { ...fitPreviewStatsFixture, armor: 9007199254740993n },
+  });
+  expect(stdout).toContain('armor: 9007199254740993');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('fit_preview prints negative zero speed as 0', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    stats: { ...fitPreviewStatsFixture, speed: -0 },
+  });
+  expect(stdout).toContain('speed: 0');
+  expect(stdout).not.toContain('speed: -0');
+});
+
+test('fit_preview declines a non-finite speed stat', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    stats: { ...fitPreviewStatsFixture, speed: Number.NaN },
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview prints Valid and skips an undefined speed value', () => {
+  const stats = { ...fitPreviewStatsFixture } as Record<string, unknown>;
+  stats.speed = undefined;
+  const stdout = renderFitPreview({ ...fitPreviewFixture, stats });
+  expect(stdout).toContain('Valid:');
+  expect(stdout).not.toContain('speed');
+});
+
+test('fit_preview declines when issues are omitted', () => {
+  const fixture = { ...fitPreviewFixture };
+  delete (fixture as { issues?: unknown }).issues;
+  const stdout = renderFitPreview(fixture);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a non-boolean valid value', () => {
+  const stdout = renderFitPreview({ ...fitPreviewFixture, valid: 'yes' });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a non-string ship_id', () => {
+  const stdout = renderFitPreview({ ...fitPreviewFixture, ship_id: 7 });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview prints an issue code when its message is omitted', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: [{ code: 'cpu_exceeded' }],
+  });
+  expect(stdout).toContain('cpu_exceeded');
+  expect(stdout).toContain('Valid:');
+  expect(stdout).not.toContain('Need 4 more CPU');
+});

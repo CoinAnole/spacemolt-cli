@@ -4661,6 +4661,15 @@ test('faction_info prints a commission without a mobile base snapshot', () => {
   expect(stdout).not.toContain('Escrow');
 });
 
+test('faction_info prints a bare mobile base commission line when commission_id is not a string', () => {
+  const fixture = factionInfoWithRent();
+  fixture.mobile_base_commission = { commission_id: 0, archetype_id: 'civitas' };
+  const stdout = renderFactionInfo(fixture);
+  expect(stdout.split('\n')).toContain('Mobile base commission:');
+  expect(stdout).toContain('Archetype: civitas');
+  expect(stdout).not.toContain('Mobile base commission: 0');
+});
+
 test('faction_profile prints Earned without a slash or with an unknown earned', () => {
   const earnedOnly = renderCommand('faction_profile', {
     name: 'Drift Matrix',
@@ -5314,6 +5323,15 @@ test('faction get_mobile_base prints an empty system and zero ticks when those k
   expect(stdout).toContain('Started tick: 0');
   expect(stdout).toContain('Complete tick: 0');
   expect(stdout).not.toContain('System: sol');
+});
+
+test('faction get_mobile_base omits Started tick when state_started_tick is not an integer', () => {
+  const fixture = structuredClone(factionGetMobileBaseFixture);
+  const state = fixture.mobile_base as Record<string, unknown>;
+  state.state_started_tick = 1.5;
+  const stdout = renderCommand('faction_get_mobile_base', fixture);
+  expect(stdout).toContain('=== Faction Mobile Base: Civitas ===');
+  expect(stdout).not.toContain('Started tick:');
 });
 
 test('faction jump_mobile_base does not print an alias-copied pilot system', () => {

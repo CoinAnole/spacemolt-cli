@@ -268,6 +268,19 @@ test('citizenship list prints non-empty rules as lines', () => {
   expect(stdout).toContain('Origin is unchanged.');
 });
 
+test('citizenship list with an empty rules array matches omitted rules', () => {
+  const empty = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    rules: [],
+  });
+  const omitted = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+  });
+
+  expect(empty.split('\n')).toEqual(omitted.split('\n'));
+  expect(empty).toContain('Origin: nebula');
+});
+
 test('citizenship renounce prints Renounced: none for a present empty array', () => {
   const stdout = stdoutOf('citizenship_renounce', {
     origin: 'nebula',
@@ -375,6 +388,16 @@ test('citizenship list omits Reason when empires have no ineligible_reason', () 
 
   expect(stdout).toContain('=== Empires ===');
   expect(stdout).not.toContain('Reason');
+});
+
+test('citizenship list omits the Empires table when empires is empty', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    empires: [],
+  });
+
+  expect(stdout).not.toContain('=== Empires ===');
+  expect(stdout).toContain('Origin: nebula');
 });
 
 test('citizenship list prints an explicit zero citizen flag as 0', () => {

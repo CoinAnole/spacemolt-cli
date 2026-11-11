@@ -363,10 +363,6 @@ function formatActionLogOrderId(value: unknown): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
-function formatActionLogItemId(value: unknown): string | undefined {
-  return formatActionLogOrderId(value);
-}
-
 function formatActionLogQuantity(value: unknown): string | undefined {
   const grouped = formatActionLogGroupedInteger(value);
   if (grouped !== undefined) return grouped;
@@ -1591,7 +1587,7 @@ export const socialFormatters = [
         const directSuppliedDisplay = missionCompleted ? formatYesBlank(scalarFrom('direct_supplied')) : undefined;
         const exchangeFill = eventType === 'trading.exchange_fill';
         const orderDisplay = exchangeFill ? formatActionLogOrderId(scalarFrom('order_id')) : undefined;
-        const itemIdDisplay = formatActionLogItemId(scalarFrom('item_id'));
+        const itemIdDisplay = formatActionLogOrderId(scalarFrom('item_id'));
         const quantityDisplay = formatActionLogQuantity(scalarFrom('quantity'));
         const row: Record<string, unknown> = {
           ...entry,

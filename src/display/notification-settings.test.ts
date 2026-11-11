@@ -266,6 +266,25 @@ test('prints the plural remaining line when remaining is 2', () => {
   expect(stdout).toContain('2 more notifications remaining.');
 });
 
+test('omits the remaining line when remaining is a string', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+    remaining: '2',
+  });
+
+  expect(stdout).toContain('count 1');
+  expect(stdout).not.toContain('more notification');
+});
+
 test('a numeric unix-second notification timestamp prints the UTC second preview', () => {
   const timestamp = 1779562779;
   const stdout = stdoutOf('get_notifications', {

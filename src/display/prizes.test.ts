@@ -544,3 +544,67 @@ test('string prizeCount 4 with one prize row prints Prizes (1): and not Prizes (
   expect(stdout).toContain('Prizes (1):');
   expect(stdout).not.toContain('Prizes (4):');
 });
+
+test('nearby prize without actor_id omits Actor', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Actor');
+});
+
+test('nearby prize without hull fields omits Hull', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ prize_id: 'prize-1' }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Hull');
+});
+
+test('prize recovery without ship name or class omits Ship', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Ship');
+});
+
+test('prize recovery without destination_base_id omits Destination', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Destination');
+});
+
+test('prize recovery without crew fields omits Crew', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Crew');
+});
+
+test('prize recovery without hull fields omits Hull', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Hull');
+});
+
+test('prize recovery without transit_arrival_tick omits Arrival', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Arrival');
+});
+
+test('prize recovery without wait_reason omits Wait', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitPrizeRecoveries([{ prize_id: 'prize-1' }]), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('prize-1');
+  expect(stdout).not.toContain('Wait');
+});

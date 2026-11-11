@@ -3925,7 +3925,7 @@ function resolveOptions(options?: NotificationPreviewOptions): ResolvedPreviewOp
 }
 
 function safeScalar(value: unknown): string | number | boolean | undefined {
-  if (typeof value === 'string') return value.trim() ? value : undefined;
+  if (typeof value === 'string') return nonEmptyString(value) ? value : undefined;
   if (typeof value === 'boolean') return value;
   return finiteNumber(value);
 }

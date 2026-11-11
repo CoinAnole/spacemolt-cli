@@ -34,7 +34,6 @@ function formatStatText(value: unknown): string | undefined {
   return undefined;
 }
 
-/** undefined = key absent. null = present but not a string. */
 function readStringField(record: Record<string, unknown>, key: string): string | undefined | null {
   if (!Object.hasOwn(record, key)) return undefined;
   const value = record[key];

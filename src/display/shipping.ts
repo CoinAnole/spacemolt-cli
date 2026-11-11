@@ -38,14 +38,14 @@ function presentString(value: unknown): string | undefined {
 
 function formatActor(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
-  const kind = typeof value.kind === 'string' && value.kind.trim() ? value.kind : undefined;
-  const id = typeof value.id === 'string' && value.id.trim() ? value.id : undefined;
+  const kind = presentString(value.kind);
+  const id = presentString(value.id);
   return kind && id ? `${kind}:${id}` : undefined;
 }
 
 function formatRoute(origin: unknown, destination: unknown): string | undefined {
-  const from = typeof origin === 'string' && origin.trim() ? origin : undefined;
-  const to = typeof destination === 'string' && destination.trim() ? destination : undefined;
+  const from = presentString(origin);
+  const to = presentString(destination);
   return from && to ? `${from} -> ${to}` : undefined;
 }
 

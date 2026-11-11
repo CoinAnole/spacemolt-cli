@@ -194,6 +194,16 @@ test('scan omits Description when the lore string is already in revealed_info', 
   expect(stdout.split(String(description)).length - 1).toBe(1);
 });
 
+test('scan omits Description when revealed_info is an object containing the lore', () => {
+  const fixture = structuredClone(scanCreatureFixture) as Record<string, unknown>;
+  const description = fixture.description;
+  fixture.revealed_info = { lore: description };
+  const stdout = renderStructuredResult('scan', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).not.toContain(`Description: ${description}`);
+  expect(stdout).toContain(`  lore: ${description}`);
+});
+
 test('scan formatter declines a malformed shape without a target identity', () => {
   const malformed = { revealed_info: ['Species: Ember Grazer'] };
   const rendered = renderStructuredResult('scan', malformed, options, context);
@@ -7881,6 +7891,17 @@ test('scan object revealed_info prints 0 and skips nested records', () => {
   expect(stdout).toContain('  hull: 0');
   expect(stdout).toContain('  note: visible');
   expect(stdout).not.toContain('nested_skip');
+});
+
+test('scan object revealed_info skips array values', () => {
+  const stdout = renderScan({
+    target_id: 'poi-1',
+    revealed_info: { hull: 0, note: 'visible', array_skip: ['hidden-item'] },
+  });
+  expect(stdout).toContain('  hull: 0');
+  expect(stdout).toContain('  note: visible');
+  expect(stdout).not.toContain('array_skip');
+  expect(stdout).not.toContain('hidden-item');
 });
 
 test('view_completed_mission string dialog prints the dialog line', () => {

@@ -134,6 +134,15 @@ test('renders tax estimate exemption, bounties, guidance, and weekly statement',
   expect(stdout).toContain('Market sales: 30,000 cr');
 });
 
+test('omits Preview when the weekly statement preview field is absent', () => {
+  const fixture = structuredClone(taxEstimateFixture);
+  delete (fixture.latest_statement as { preview?: unknown }).preview;
+  const stdout = renderStructuredResult('get_tax_estimate', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Latest Weekly Statement ===');
+  expect(stdout).not.toContain('Preview:');
+});
+
 test('renders inactivity exempt true', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',

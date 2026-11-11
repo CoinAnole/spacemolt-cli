@@ -783,7 +783,6 @@ export const shipFormatters = [
     { commands: ['get_ship'], shapeFallback: true },
   ),
 
-  // Station info
   namedFormatter(
     'base',
     ['base', 'services'],

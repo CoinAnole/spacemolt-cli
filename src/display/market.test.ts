@@ -423,6 +423,23 @@ test('sell quantity-only auto-listed prints Auto-listed: 4 without an @ price', 
   expect(stdout).not.toContain('@');
 });
 
+test('sell with an empty auto-listed order_id prints Auto-listed: 4 and omits Order ID', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      auto_listed: { quantity: 4, order_id: '' },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Auto-listed: 4');
+  expect(stdout).not.toContain('Order ID');
+});
+
 test('sell auto-listed price_each 0 prints Auto-listed: 4 @ 0 cr', () => {
   const stdout = renderStructuredResult(
     'sell',
@@ -1725,6 +1742,54 @@ test('a get_insurance_quote with no factors prints the quote heading and omits R
 
   expect(stdout).toContain('=== Insurance Quote ===');
   expect(stdout).not.toContain('Risk Factors');
+});
+
+test('get_insurance_quote with risk_score 0 prints Risk score: 0 and not the raw response', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        risk_score: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Risk score: 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_insurance_quote with premium 0 prints Premium: 0 cr and not the raw response', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        premium: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Premium: 0 cr');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_insurance_quote with expires_in 0 prints Expires in: 0 and not the raw response', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        expires_in: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Expires in: 0');
+  expect(stdout).not.toContain('=== Response ===');
 });
 
 test('ship buy order with being_built false prints Building: no', () => {

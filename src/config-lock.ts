@@ -30,17 +30,13 @@ function isErrno(error: unknown, code: string): boolean {
   return error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === code;
 }
 
-function mintLockToken(): LockToken {
-  return `${process.pid} ${Date.now().toString(16)}${Math.random().toString(16).slice(2)}\n` as LockToken;
-}
-
 /**
  * Creates `target` and writes a token no other publish can repeat.
  * `undefined` means the name is already there. A failed write leaves the file:
  * it is empty or partial, and the next look treats it as a body with no pid.
  */
 function publishFresh(target: string): LockToken | undefined {
-  const token = mintLockToken();
+  const token = `${process.pid} ${Date.now().toString(16)}${Math.random().toString(16).slice(2)}\n` as LockToken;
   let fd: number;
   try {
     fd = fs.openSync(target, 'wx', LOCK_MODE);

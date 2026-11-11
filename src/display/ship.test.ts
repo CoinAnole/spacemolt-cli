@@ -914,6 +914,14 @@ test('get_ship does not flag per-module CPU or Power', () => {
   expect(laser).toMatch(/\|\s*3\s*\|\s*8\s*\|/);
 });
 
+test('get_ship drone bay prints 0 and ? for omitted counters', () => {
+  const fixture = structuredClone(shipFixture) as Record<string, unknown>;
+  fixture.drone_bay = { bay_count: 0 };
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Bay: 0  Capacity: ?  Deployed: ?');
+  expect(stdout).toContain('Bandwidth: ?/?');
+});
+
 test('get_cargo flags used over capacity without inventing available', () => {
   const stdout = renderStructuredResult(
     'get_cargo',
@@ -2791,6 +2799,17 @@ test('get_base empty facilities array prints Facilities: 0', () => {
   fixture.base.facilities = [];
   const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Facilities: 0');
+});
+
+test('get_base prints the condition string and satisfaction 0 when condition_text is absent', () => {
+  const fixture = structuredClone(baseFixture) as Record<string, unknown> & {
+    condition: Record<string, unknown>;
+  };
+  delete fixture.condition.condition_text;
+  fixture.condition.condition = 'strained';
+  fixture.condition.satisfaction_pct = 0;
+  const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Condition: strained (0% satisfaction)');
 });
 
 test('get_drone omits Script when script is absent', () => {
