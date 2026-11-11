@@ -6131,3 +6131,216 @@ describe('schema-clean mission fixer fixtures', () => {
     expect(stdout).not.toContain('Mission accepted.');
   });
 });
+
+describe('locked mission hints and missions with no deadline', () => {
+  const boardMission = {
+    mission_id: 'board_job',
+    title: 'Board Job',
+    type: 'courier',
+    difficulty: 1,
+    expires_in_ticks: 12,
+    description: 'Deliver the crate.',
+  };
+
+  test('get_missions prints locked hints after the board and skips an omitted or empty list', () => {
+    const stdout = renderPlain('get_missions', {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      missions: [boardMission],
+      locked_missions: [
+        {
+          title: 'Hidden Contract',
+          still_requires: [
+            {
+              mission: {
+                mission_id: 'earlier_zulu',
+                title: 'Earlier Zulu',
+                base_id: 'old_yard',
+                system_id: 'veiled_reach',
+              },
+              next_step: {
+                mission_id: 'first_brief',
+                title: 'First Brief',
+                base_name: 'First Step Memorial Station',
+                base_id: 'memorial_station',
+                system_name: 'First Step',
+                system_id: 'first_step',
+              },
+            },
+            {
+              mission: { mission_id: 'second_req', title: 'Second Requirement' },
+              next_step: { mission_id: 'second_req', title: 'Second Requirement' },
+            },
+          ],
+        },
+        {
+          still_requires: [
+            {
+              mission: { mission_id: 'other_chain', title: 'Other Chain', base_name: 'Yard' },
+              next_step: { mission_id: 'other_next', title: 'Other Next', system_name: 'Sol' },
+            },
+          ],
+        },
+      ],
+    });
+    expect(stdout.indexOf('=== Missions ===')).toBeLessThan(stdout.indexOf('Locked missions:'));
+    expect(stdout.indexOf('Deliver the crate.')).toBeLessThan(stdout.indexOf('Locked missions:'));
+    expect(stdout).toContain(`Locked missions:
+  Earlier Zulu (earlier_zulu)
+    Station: old_yard
+    System: veiled_reach
+    Next: First Brief (first_brief)
+      Station: First Step Memorial Station (memorial_station)
+      System: First Step (first_step)
+  Second Requirement (second_req)
+    Next: Second Requirement (second_req)
+  Other Chain (other_chain)
+    Station: Yard
+    Next: Other Next (other_next)
+      System: Sol`);
+    expect(stdout).not.toContain('Hidden Contract');
+
+    const omitted = renderPlain('get_missions', {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      missions: [boardMission],
+    });
+    const empty = renderPlain('get_missions', {
+      base_id: 'earth_station',
+      base_name: 'Earth Station',
+      missions: [boardMission],
+      locked_missions: [],
+    });
+    expect(omitted).not.toContain('Locked missions');
+    expect(empty).not.toContain('Locked missions');
+    expect(empty).toContain('=== Missions ===');
+  });
+
+  test('active rows print Expires as none only when no_expiry is true', () => {
+    const none = renderPlain('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-open',
+            title: 'Open Ended',
+            type: 'survey',
+            difficulty: 1,
+            expires_in_ticks: 0,
+            no_expiry: true,
+            description: 'No deadline.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const zero = renderPlain('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-due',
+            title: 'Due Now',
+            type: 'survey',
+            difficulty: 1,
+            expires_in_ticks: 0,
+            description: 'Deadline is zero.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const noneRow = none.split('\n').find((line) => line.includes('Open Ended'));
+    const zeroRow = zero.split('\n').find((line) => line.includes('Due Now'));
+    expect(noneRow).toContain('none');
+    expect(noneRow).not.toMatch(/\|\s*0\s*$/);
+    expect(zeroRow).toMatch(/\|\s*0\s*$/);
+    expect(zero).not.toContain('none');
+  });
+
+  test('accept receipt omits an empty expires_at when no_expiry is true', () => {
+    const deadline = renderPlain('accept_mission', {
+      mission_id: 'mission-haul',
+      title: 'Haul Samples',
+      type: 'courier',
+      expires_at: '2026-10-18T18:00:00Z',
+      message: 'Mission accepted.',
+    });
+    const none = renderPlain('accept_mission', {
+      mission_id: 'mission-haul',
+      title: 'Haul Samples',
+      type: 'courier',
+      expires_at: '',
+      no_expiry: true,
+      message: 'Mission accepted.',
+    });
+    const blank = renderPlain('accept_mission', {
+      mission_id: 'mission-haul',
+      title: 'Haul Samples',
+      type: 'courier',
+      expires_at: '   ',
+      no_expiry: true,
+      message: 'Mission accepted.',
+    });
+    expect(deadline).toContain('Expires At: 2026-10-18T18:00:00Z');
+    expect(deadline).toContain('Mission accepted.');
+    expect(none).toContain('Mission accepted.');
+    expect(none).not.toContain('Expires At');
+    expect(blank).not.toContain('Expires At');
+  });
+
+  test('accept envelope uses the active-mission deadline and does not print an empty expires_at', () => {
+    const stdout = renderPlain('accept_mission', {
+      details: {
+        mission_id: 'mission-haul',
+        title: 'Haul Samples',
+        type: 'courier',
+        expires_at: '',
+        no_expiry: true,
+        message: 'Mission accepted.',
+      },
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-haul',
+            title: 'Haul Samples',
+            type: 'courier',
+            difficulty: 2,
+            expires_in_ticks: 0,
+            no_expiry: true,
+            description: 'Deliver the sealed samples.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const kept = renderPlain('accept_mission', {
+      details: {
+        mission_id: 'mission-haul',
+        title: 'Haul Samples',
+        type: 'courier',
+        expires_at: '2026-10-18T18:00:00Z',
+        message: 'Mission accepted.',
+      },
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-haul',
+            title: 'Haul Samples',
+            type: 'courier',
+            difficulty: 2,
+            expires_in_ticks: 0,
+            description: 'Deliver the sealed samples.',
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const row = stdout.split('\n').find((line) => line.includes('Haul Samples') && line.includes('|'));
+    const keptRow = kept.split('\n').find((line) => line.includes('Haul Samples') && line.includes('|'));
+    expect(row).toContain('none');
+    expect(stdout).not.toContain('Expires At');
+    expect(stdout).not.toContain('Mission accepted.');
+    expect(keptRow).toMatch(/\|\s*0\s*$/);
+    expect(kept).not.toContain('Expires At');
+    expect(kept).not.toContain('2026-10-18T18:00:00Z');
+  });
+});

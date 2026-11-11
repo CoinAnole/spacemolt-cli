@@ -1148,6 +1148,9 @@ describe('command metadata', () => {
     expect(config.description).toContain('docked or not');
     expect(config.description).toContain('First claim wins');
     expect(config.description).toContain('Faction postings pay only the first pilot to complete them.');
+    expect(config.description).toContain(
+      'A missing prerequisite is mission_not_available, and the server message names each missing mission and the next step.',
+    );
     expect(config.description).toContain('5-mission');
     expect(config.description).toContain('30 minutes');
     expect(config.description).toContain('3 hours');
@@ -1191,6 +1194,8 @@ describe('command metadata', () => {
     expect(help).toContain('docked or not');
     expect(help).toContain('First claim wins');
     expect(help).toContain('Faction postings pay only the first pilot to complete them.');
+    expect(help).toContain('mission_not_available');
+    expect(help).toContain('names each missing mission and the next step');
     expect(help).toContain('5-mission');
     expect(help).toContain('30 minutes');
     expect(help).toContain('3 hours');

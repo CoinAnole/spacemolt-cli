@@ -762,6 +762,12 @@ function presentCount(value: unknown): string | undefined {
   return formatCount(value) ?? String(value);
 }
 
+function isEmptyNoExpiryDeadline(record: Record<string, unknown>, key: string, value: unknown): boolean {
+  if (record.no_expiry !== true || key !== 'expires_at') return false;
+  if (value === undefined || value === null) return true;
+  return typeof value === 'string' && value.trim() === '';
+}
+
 function stationGiftStation(result: Record<string, unknown>): string | undefined {
   for (const value of [result.recipient, result.target]) {
     const text = scalarText(value);
@@ -990,6 +996,58 @@ function usableStationToken(value: unknown): string | undefined {
   return text === '' ? undefined : text;
 }
 
+function missionPointerText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function missionPointerLabel(pointer: Record<string, unknown>): string | undefined {
+  const title = missionPointerText(pointer.title);
+  const id = missionPointerText(pointer.mission_id);
+  if (title && id && title !== id) return `${title} (${id})`;
+  return title ?? id;
+}
+
+function missionPointerPlace(pointer: Record<string, unknown>, nameKey: string, idKey: string): string | undefined {
+  const name = missionPointerText(pointer[nameKey]);
+  const id = missionPointerText(pointer[idKey]);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+function appendMissionPointerPlaces(lines: string[], pointer: Record<string, unknown>, indent: string): void {
+  const station = missionPointerPlace(pointer, 'base_name', 'base_id');
+  if (station) lines.push(`${indent}Station: ${station}`);
+  const system = missionPointerPlace(pointer, 'system_name', 'system_id');
+  if (system) lines.push(`${indent}System: ${system}`);
+}
+
+function appendMissionPointerLines(lines: string[], pointer: unknown, indent: string, prefix = ''): void {
+  if (!isRecord(pointer)) return;
+  const label = missionPointerLabel(pointer);
+  if (label) lines.push(`${indent}${prefix}${label}`);
+  appendMissionPointerPlaces(lines, pointer, `${indent}  `);
+}
+
+function emitLockedMissions(locked: unknown): void {
+  if (!Array.isArray(locked) || locked.length === 0) return;
+  const blocks: string[][] = [];
+  for (const hint of locked) {
+    if (!isRecord(hint) || !Array.isArray(hint.still_requires)) continue;
+    const lines: string[] = [];
+    for (const row of hint.still_requires) {
+      if (!isRecord(row)) continue;
+      appendMissionPointerLines(lines, row.mission, '  ');
+      appendMissionPointerLines(lines, row.next_step, '    ', 'Next: ');
+    }
+    if (lines.length) blocks.push(lines);
+  }
+  if (!blocks.length) return;
+  emitLine(`\n${c.bright}Locked missions:${c.reset}`);
+  for (const lines of blocks) {
+    for (const line of lines) emitLine(line);
+  }
+}
+
 function missionBoardStationLine(result: Record<string, unknown>): string | undefined {
   const name = usableStationToken(result.base_name);
   const id = usableStationToken(result.base_id);
@@ -1052,6 +1110,8 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
     objectives_summary: objectivesSummary(mission.objectives),
     rewards_summary: summarizeRewards(mission.rewards),
     community_summary: summarizeCommunityStatus(mission),
+    // no_expiry true is not a countdown, even when expires_in_ticks is 0. Omitted keeps that count.
+    expires_display: mission.no_expiry === true ? 'none' : undefined,
     ...missionLedgerDisplays(mission),
   }));
 
@@ -1062,7 +1122,7 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
     ['Difficulty', ['difficulty']],
     ['Objectives', ['objectives_summary']],
     ['Rewards', ['rewards_summary']],
-    ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
+    ['Expires', ['expires_display', 'expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
   ];
   insertOptionalColumn(columns, rows, 'Community', ['community_summary'], 'Type');
   if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
@@ -1474,12 +1534,16 @@ export const genericFormatters = [
   ),
 
   formatter(
-    (result) =>
-      emitMissionsBoard(result, () => {
+    (result) => {
+      const printed = emitMissionsBoard(result, () => {
         const station = missionBoardStationLine(result);
         if (station) emitLine(`Station: ${station}`);
         emitFixerAccount(result.fixer, station !== undefined);
-      }),
+      });
+      if (!printed) return false;
+      emitLockedMissions(result.locked_missions);
+      return true;
+    },
     { commands: ['get_missions'] },
   ),
 
@@ -1820,6 +1884,7 @@ export const genericFormatters = [
       const entries = Object.entries(r).filter(([key, value]) => {
         if (depositFixer && key === 'fixer') return false;
         if (depositGoodwill && key === 'goodwill') return false;
+        if (isEmptyNoExpiryDeadline(r, key, value)) return false;
         return presentCount(value) !== undefined && !isAliasCopiedDumpKey(r, key);
       });
       const isStorageTransfer =
