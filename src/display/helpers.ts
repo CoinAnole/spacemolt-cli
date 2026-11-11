@@ -572,11 +572,130 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
   emitIdList('Allowed factions', result.allowed_factions);
   emitIdList('Banned players', result.banned_players, playerIdWithUsername);
   emitServiceAccess(result.service_access);
+  emitStationJumpGate(result.gate);
 
   if (typeof result.message === 'string') {
     const message = result.message.trim();
     if (message !== '') emitLine(`${c.dim}${message}${c.reset}`);
   }
+  return true;
+}
+
+function formatGateInteger(value: unknown): string | undefined {
+  return formatExactGroupedInteger(value);
+}
+
+function printableGateText(value: unknown): string | undefined {
+  return isPrintableId(value) ? value : undefined;
+}
+
+function gateYesNo(value: unknown): 'yes' | 'no' | undefined {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return undefined;
+}
+
+function gateMaterialLines(value: unknown): string[] | undefined {
+  if (!isRecord(value)) return undefined;
+  const lines: string[] = [];
+  for (const [itemId, quantity] of Object.entries(value)) {
+    if (!isPrintableId(itemId)) continue;
+    const text = formatGateInteger(quantity);
+    if (text === undefined) continue;
+    lines.push(`${itemId} ${text}`);
+  }
+  return lines.length ? lines : undefined;
+}
+
+/** Station info. An omitted or empty gate prints nothing. No upkeep list beyond phase_materials_left. */
+export function emitStationJumpGate(gate: unknown): boolean {
+  if (!isRecord(gate)) return false;
+  const lines: string[] = [];
+  const farName = printableGateText(gate.far_system_name);
+  const farId = printableGateText(gate.far_system_id);
+  if (farName && farId) lines.push(`  Far system: ${farName} (${farId})`);
+  else if (farName || farId) lines.push(`  Far system: ${farName ?? farId}`);
+
+  const online = gateYesNo(gate.online);
+  if (online) lines.push(`  Online: ${online}`);
+  const factionOnly = gateYesNo(gate.faction_only);
+  if (factionOnly) lines.push(`  Faction only: ${factionOnly}`);
+  const toll = formatGateInteger(gate.toll);
+  if (toll !== undefined) lines.push(`  Toll: ${toll}`);
+  const built = gateYesNo(gate.built);
+  if (built) lines.push(`  Built: ${built}`);
+  const partnerBuilt = gateYesNo(gate.partner_built);
+  if (partnerBuilt) lines.push(`  Partner built: ${partnerBuilt}`);
+  const partner = printableGateText(gate.partner_base_id);
+  if (partner) lines.push(`  Partner base id: ${partner}`);
+
+  const phase = formatGateInteger(gate.phase);
+  if (phase !== undefined) {
+    lines.push(`  Phase: ${phase}`);
+    const phaseName = printableGateText(gate.phase_name);
+    if (phaseName) lines.push(`  Phase name: ${phaseName}`);
+    const phasesTotal = formatGateInteger(gate.phases_total);
+    if (phasesTotal !== undefined) lines.push(`  Phases total: ${phasesTotal}`);
+    const cyclesDone = formatGateInteger(gate.phase_cycles_done);
+    if (cyclesDone !== undefined) lines.push(`  Cycles done: ${cyclesDone}`);
+    const cycles = formatGateInteger(gate.phase_cycles);
+    if (cycles !== undefined) lines.push(`  Cycles: ${cycles}`);
+    const labor = formatGateInteger(gate.phase_labor_per_cycle);
+    if (labor !== undefined) lines.push(`  Labor per cycle: ${labor}`);
+    const materials = gateMaterialLines(gate.phase_materials_left);
+    if (materials) {
+      lines.push('  Materials left:');
+      for (const line of materials) lines.push(`    ${line}`);
+    }
+  }
+
+  if (gate.built === true) {
+    const entangler = formatGateInteger(gate.entangler_due_in_cycles);
+    if (entangler !== undefined) lines.push(`  Entangler due: ${entangler}`);
+    const covered = formatGateInteger(gate.upkeep_cycles_covered);
+    if (covered !== undefined) lines.push(`  Upkeep cycles covered: ${covered}`);
+  }
+
+  if (lines.length === 0) return false;
+  emitLine('Jump gate:');
+  for (const line of lines) emitLine(line);
+  return true;
+}
+
+/** get_base only. Name or id, online, and toll. Construction stays on station info. */
+export function emitGetBaseJumpGate(base: unknown): boolean {
+  if (!isRecord(base) || !isRecord(base.gate)) return false;
+  const gate = base.gate;
+  const far = printableGateText(gate.far_system_name) ?? printableGateText(gate.far_system_id);
+  const parts: string[] = [];
+  if (far) parts.push(far);
+  const online = gateYesNo(gate.online);
+  if (online) parts.push(`online ${online}`);
+  const toll = formatGateInteger(gate.toll);
+  if (toll !== undefined) parts.push(`toll ${toll}`);
+  if (parts.length === 0) return false;
+  emitLine(`Jump gate: ${parts.join(', ')}`);
+  return true;
+}
+
+export function emitFoundGateSite(result: Record<string, unknown>): boolean {
+  const lines: string[] = [];
+  const baseId = printableGateText(result.base_id);
+  if (baseId) lines.push(`Base ID: ${baseId}`);
+  const name = printableGateText(result.name);
+  if (name) lines.push(`Name: ${name}`);
+  const poi = printableGateText(result.poi_id);
+  if (poi) lines.push(`POI: ${poi}`);
+  const system = printableGateText(result.system_id);
+  if (system) lines.push(`System: ${system}`);
+  const fee = formatGateInteger(result.fee_paid);
+  if (fee !== undefined) lines.push(`Fee paid: ${fee}`);
+  const access = gateYesNo(result.public_access);
+  if (access) lines.push(`Public access: ${access}`);
+  if (typeof result.hint === 'string' && result.hint !== '') lines.push(`Hint: ${result.hint}`);
+  if (lines.length === 0) return false;
+  emitLine(`\n${c.bright}=== Gate Site Founded ===${c.reset}`);
+  for (const line of lines) emitLine(line);
   return true;
 }
 

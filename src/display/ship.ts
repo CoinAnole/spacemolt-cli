@@ -4,7 +4,10 @@ import { joinStringIds } from './catalog-detail.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import {
   c,
+  commandNameEquals,
   emitCreditBalance,
+  emitFoundGateSite,
+  emitGetBaseJumpGate,
   emitLine,
   emitLines,
   emitPirateRecovery,
@@ -794,6 +797,7 @@ export const shipFormatters = [
       if (base.poi_id) emitLine(`POI: ${base.poi_id}`);
       emitLine(`Empire: ${base.empire || 'None'}`);
       if (base.faction_id) emitLine(`Faction: ${base.faction_id}`);
+      emitGetBaseJumpGate(base);
       emitStationContrabandPolicy(base);
       emitStationDefences(base);
       if (base.fuel !== undefined || base.max_fuel !== undefined)
@@ -840,6 +844,18 @@ export const shipFormatters = [
     commands: ['station_info'],
     shapeFallback: false,
   }),
+
+  namedFormatter(
+    'found_gate_site',
+    ['base_id', 'fee_paid', 'public_access'],
+    (r, command) => {
+      if (!commandNameEquals(command, 'found_gate_site')) return false;
+      return emitFoundGateSite(r);
+    },
+    {
+      commands: ['found_gate_site'],
+    },
+  ),
 
   formatter(
     (r) => {

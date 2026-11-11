@@ -1382,6 +1382,16 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseOk(['build_outpost', 'Aurora Cache']).payload).toEqual({
       name: 'Aurora Cache',
     });
+    expect(parseOk(['found_gate_site', 'Long Reach', 'vega']).payload).toEqual({
+      name: 'Long Reach',
+      far_system: 'vega',
+    });
+    expect(parseOk(['set_gate_access', 'allies']).payload).toEqual({ access: 'allies' });
+    expect(convertPayloadTypes(parseOk(['set_toll', '0']).payload, 'set_toll')).toEqual({ price: 0 });
+    expect(convertPayloadTypes(parseOk(['set_toll', '1000001']).payload, 'set_toll')).toEqual({ price: 1000001 });
+    expect(validatePayloadAgainstSchema('set_toll', { price: 1000001 })).toEqual([]);
+    expect(validatePayloadAgainstSchema('set_gate_access', { access: 'allies' })).toEqual([]);
+    expect(validatePayloadAgainstSchema('found_gate_site', { name: 'Long Reach', far_system: 'vega' })).toEqual([]);
     expect(parseOk(['dismantle_outpost']).payload).toEqual({});
     expect(parseOk(['buy_ship_license', 'solarian_frigate']).payload).toEqual({
       ship_class: 'solarian_frigate',

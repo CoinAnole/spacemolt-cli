@@ -843,6 +843,60 @@ export const stationInfoContrabandScalarsFixture = {
   public_access: false,
 };
 
+export const buildingJumpGate = {
+  built: false,
+  faction_only: true,
+  far_system_id: 'vega',
+  far_system_name: 'Vega Reach',
+  online: false,
+  partner_base_id: 'gate_far',
+  partner_built: false,
+  phase: 2,
+  phase_cycles: 150,
+  phase_cycles_done: 0,
+  phase_labor_per_cycle: 0,
+  phase_materials_left: {
+    ore_iron: 0,
+    serviced_quantum_entangler: 1,
+  },
+  phase_name: 'Anchors',
+  phases_total: 4,
+  toll: 0,
+};
+
+export const builtJumpGate = {
+  built: true,
+  entangler_due_in_cycles: 0,
+  faction_only: false,
+  far_system_id: 'vega',
+  far_system_name: 'Vega Reach',
+  online: true,
+  partner_built: true,
+  phases_total: 4,
+  toll: 1000000,
+  upkeep_cycles_covered: 0,
+};
+
+export const stationInfoJumpGateFixture = {
+  ...stationInfoContrabandFixture,
+  gate: buildingJumpGate,
+};
+
+export const stationInfoJumpGateBuiltFixture = {
+  ...stationInfoContrabandScalarsFixture,
+  gate: builtJumpGate,
+};
+
+export const foundGateSiteFixture = {
+  base_id: 'gate_long_reach',
+  fee_paid: 0,
+  hint: 'Found the far end from Vega.',
+  name: 'Long Reach',
+  poi_id: 'poi_lawless_1',
+  public_access: false,
+  system_id: 'sol',
+};
+
 export const shipFixtureCases = {
   cargo: { command: 'get_cargo', fixture: cargoFixture },
   ship: { command: 'get_ship', fixture: shipFixture },
@@ -1010,8 +1064,25 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_ship_remote: { command: 'get_ship', fixture: shipRemoteFixture },
   get_base: { command: 'get_base', fixture: baseFixture },
   get_base_contraband_custom: { command: 'get_base', fixture: baseContrabandCustomFixture },
+  get_base_jump_gate: {
+    command: 'get_base',
+    fixture: {
+      ...baseFixture,
+      base: {
+        ...baseFixture.base,
+        gate: {
+          far_system_id: 'vega',
+          online: true,
+          toll: 0,
+        },
+      },
+    },
+  },
   station_info_contraband: { command: 'station_info', fixture: stationInfoContrabandFixture },
   station_info_contraband_scalars: { command: 'station_info', fixture: stationInfoContrabandScalarsFixture },
+  station_info_jump_gate: { command: 'station_info', fixture: stationInfoJumpGateFixture },
+  station_info_jump_gate_built: { command: 'station_info', fixture: stationInfoJumpGateBuiltFixture },
+  found_gate_site: { command: 'found_gate_site', fixture: foundGateSiteFixture, schemaTarget: 'details' },
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },
   get_base_sovereign_mint_inputs: { command: 'get_base', fixture: baseSovereignMintInputsFixture },
   get_base_sovereign_mint_internal: { command: 'get_base', fixture: baseSovereignMintInternalFixture },

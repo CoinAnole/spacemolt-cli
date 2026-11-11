@@ -5,9 +5,11 @@ import { renderStructuredResult } from './index.ts';
 import { formatCrewRatio } from './personnel.ts';
 import {
   baseFixture,
+  buildingJumpGate,
   cargoFixture,
   cargoOverCapacityFixture,
   factionGaragesFixture,
+  foundGateSiteFixture,
   listShipsFixture,
   reloadBulkFixture,
   reloadBulkMixedFixture,
@@ -23,6 +25,9 @@ import {
   shipFixture,
   shipIncapacitatedFixture,
   shipOverCapacityFixture,
+  stationInfoContrabandFixture,
+  stationInfoJumpGateBuiltFixture,
+  stationInfoJumpGateFixture,
   treatPersonnelFixture,
   wrecksFixture,
 } from './ship.fixtures.ts';
@@ -2907,4 +2912,159 @@ test('repair omits Piloting XP when the key is absent and does not derive it fro
     const stdout = renderRepair({ action: 'repair', source: 'kits', piloting_xp }).stdout.join('\n');
     expect(stdout).not.toContain('Piloting XP');
   }
+});
+
+test('found_gate_site prints the founding receipt and skips omitted keys', () => {
+  const full = renderStructuredResult('found_gate_site', structuredClone(foundGateSiteFixture), options, context);
+  const stdout = full.stdout.join('\n');
+  expect(stdout).toContain('=== Gate Site Founded ===');
+  expect(stdout).toContain('Base ID: gate_long_reach');
+  expect(stdout).toContain('Name: Long Reach');
+  expect(stdout).toContain('POI: poi_lawless_1');
+  expect(stdout).toContain('System: sol');
+  expect(stdout).toContain('Fee paid: 0');
+  expect(stdout).toContain('Public access: no');
+  expect(stdout).toContain('Hint: Found the far end from Vega.');
+  expect(stdout).not.toContain('Jump gate');
+  expect(stdout).not.toContain('=== Response ===');
+
+  const partial = renderStructuredResult(
+    'found_gate_site',
+    {
+      base_id: 'gate_1',
+      fee_paid: 2500000,
+      hint: '',
+      public_access: true,
+      gate: { far_system_name: 'Vega Reach', online: true, toll: 0 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(partial).toContain(`Fee paid: ${(2500000).toLocaleString()}`);
+  expect(partial).toContain('Public access: yes');
+  expect(partial).not.toContain('Name:');
+  expect(partial).not.toContain('POI:');
+  expect(partial).not.toContain('System:');
+  expect(partial).not.toContain('Hint:');
+  expect(partial).not.toContain('Jump gate');
+});
+
+test('station info prints a jump gate block and omits an absent gate', () => {
+  const building = renderStructuredResult(
+    'station_info',
+    structuredClone(stationInfoJumpGateFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(building).toContain('Jump gate:');
+  expect(building).toContain('Far system: Vega Reach (vega)');
+  expect(building).toContain('Online: no');
+  expect(building).toContain('Faction only: yes');
+  expect(building).toContain('Toll: 0');
+  expect(building).toContain('Built: no');
+  expect(building).toContain('Partner built: no');
+  expect(building).toContain('Partner base id: gate_far');
+  expect(building).toContain('Phase: 2');
+  expect(building).toContain('Phase name: Anchors');
+  expect(building).toContain('Phases total: 4');
+  expect(building).toContain('Cycles done: 0');
+  expect(building).toContain('Cycles: 150');
+  expect(building).toContain('Labor per cycle: 0');
+  expect(building).toContain('Materials left:');
+  expect(building).toContain('ore_iron 0');
+  expect(building).toContain('serviced_quantum_entangler 1');
+  expect(building).not.toContain('Entangler due');
+  expect(building).not.toContain('Upkeep cycles covered');
+
+  const built = renderStructuredResult(
+    'station_info',
+    structuredClone(stationInfoJumpGateBuiltFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(built).toContain('Online: yes');
+  expect(built).toContain('Faction only: no');
+  expect(built).toContain('Built: yes');
+  expect(built).toContain(`Toll: ${(1000000).toLocaleString()}`);
+  expect(built).toContain('Entangler due: 0');
+  expect(built).toContain('Upkeep cycles covered: 0');
+  expect(built).not.toContain('Partner base id');
+  expect(built).not.toContain('Phase:');
+  expect(built).not.toContain('Phases total');
+  expect(built).not.toContain('Materials left');
+
+  const quiet = renderStructuredResult(
+    'station_info',
+    structuredClone(stationInfoContrabandFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(quiet).not.toContain('Jump gate');
+
+  const emptyMaterials = renderStructuredResult(
+    'station_info',
+    {
+      ...stationInfoContrabandFixture,
+      gate: {
+        ...buildingJumpGate,
+        phase_materials_left: {},
+        entangler_due_in_cycles: 0,
+        upkeep_cycles_covered: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(emptyMaterials).not.toContain('Materials left');
+  expect(emptyMaterials).not.toContain('Entangler due');
+  expect(emptyMaterials).not.toContain('Upkeep cycles covered');
+
+  const emptyGate = renderStructuredResult(
+    'station_info',
+    { ...stationInfoContrabandFixture, gate: {} },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(emptyGate).not.toContain('Jump gate');
+});
+
+test('get_base prints one jump gate line and does not treat every outpost as a gate', () => {
+  const plain = renderStructuredResult('get_base', structuredClone(baseFixture), options, context).stdout.join('\n');
+  expect(plain).not.toContain('Jump gate');
+
+  const gated = renderStructuredResult(
+    'get_base',
+    {
+      ...baseFixture,
+      base: {
+        ...baseFixture.base,
+        gate: { far_system_id: 'far_system_zz', far_system_name: 'Far Haven', online: false, toll: 0 },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(gated).toContain('Jump gate: Far Haven, online no, toll 0');
+  expect(gated).not.toContain('far_system_zz');
+  expect(gated).not.toContain('Phase:');
+  expect(gated).not.toContain('Entangler due');
+
+  const idOnly = renderStructuredResult(
+    'get_base',
+    {
+      ...baseFixture,
+      base: { ...baseFixture.base, gate: { far_system_id: 'vega', online: true, toll: 0 } },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(idOnly).toContain('Jump gate: vega, online yes, toll 0');
+
+  const unnamed = renderStructuredResult(
+    'get_base',
+    { ...baseFixture, base: { ...baseFixture.base, gate: {} } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(unnamed).not.toContain('Jump gate');
 });

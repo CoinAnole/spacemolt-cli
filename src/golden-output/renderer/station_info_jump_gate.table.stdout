@@ -1,0 +1,35 @@
+
+=== Station Config: Aurora Freeport ===
+Base ID: aurora_freeport
+Description: A lawless trade hub.
+Public access: no
+Outsider facilities: no
+Auto-buy fuel: yes
+Market fee: 250 bps
+Refuel price: 3 credits
+Repair price: 4 credits/hull
+Contraband mode: custom
+Contraband items: ore_copper, ore_iron
+Allowed players: (none)
+Allowed factions: allied_faction
+Banned players: pirate_one
+Service access:
+  market: allies
+  repair: faction
+Jump gate:
+  Far system: Vega Reach (vega)
+  Online: no
+  Faction only: yes
+  Toll: 0
+  Built: no
+  Partner built: no
+  Partner base id: gate_far
+  Phase: 2
+  Phase name: Anchors
+  Phases total: 4
+  Cycles done: 0
+  Cycles: 150
+  Labor per cycle: 0
+  Materials left:
+    ore_iron 0
+    serviced_quantum_entangler 1

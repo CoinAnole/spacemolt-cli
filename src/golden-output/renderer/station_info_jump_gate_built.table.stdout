@@ -1,0 +1,17 @@
+
+=== Station Config: Aurora Freeport ===
+Base ID: aurora_freeport
+Public access: no
+Outsider facilities: no
+Auto-buy fuel: yes
+Contraband mode: custom
+Contraband items: ore_copper, ore_iron
+Jump gate:
+  Far system: Vega Reach (vega)
+  Online: yes
+  Faction only: no
+  Toll: 1,000,000
+  Built: yes
+  Partner built: yes
+  Entangler due: 0
+  Upkeep cycles covered: 0

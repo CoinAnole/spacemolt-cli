@@ -621,6 +621,17 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/deploy_outpost',
     positionals: ['name'],
   },
+  found_gate_site: {
+    usage: '<name> <far_system>',
+    description:
+      'Found one end of a jump gate at the current point of interest in lawless space. The site is a members-only faction outpost. It requires the gate method, membership with ManageBases, and an undocked ship at a point of interest that can host a station and has no base. Both ends must be lawless, far_system must be charted, no lane may already join the two systems, and they must be at most 1235 GU apart. The founding fee is 2,500,000 credits per end, taken from the faction treasury first, then the wallet. The faction may have one unfinished pair. The gate cannot be dismantled.',
+    example: 'spacemolt found_gate_site "Long Reach" vega',
+    discoverWith: ['get_poi', 'get_system'],
+    seeAlso: ['station_info', 'set_gate_access', 'set_toll'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/found_gate_site',
+    positionals: ['name', 'far_system'],
+  },
   dismantle_outpost: {
     // Omit `usage` entirely — do NOT set usage: ''.
     // help.ts returns config.usage whenever defined; '' suppresses generated usage
@@ -1011,12 +1022,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_info: {
     description:
-      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules.",
+      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules. When gate is an object, table output prints a Jump gate block: far system name and id, online, faction only, toll including 0, built, partner built, and partner base id when sent. While phase is a number it prints phase, phase name, phases total, cycles done, cycles, labor per cycle including 0, and materials left as item id and quantity including 0. An empty or omitted materials object prints nothing. When built is true, entangler due and upkeep cycles covered print when those keys are numbers, including 0. An omitted gate prints nothing.",
     example: 'spacemolt station_info',
     discoverWith: ['get_status', 'get_base'],
     seeAlso: [
       'build_base',
       'build_outpost',
+      'found_gate_site',
+      'set_gate_access',
+      'set_toll',
       'station_set_name',
       'station_set_auto_buy_fuel',
       'station_set_contraband',
@@ -1125,6 +1139,40 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Station management',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_repair_price',
     positionals: ['price'],
+  },
+  set_gate_access: {
+    usage: '<access>',
+    description:
+      'Set who may cross the jump gate end you are docked at. Applies to both ends and needs ManageBases. There is no station id argument. The operation text names public and faction. public lets any pilot cross, paying the toll. faction admits only your faction. The schema enum is public, allies, and faction.',
+    example: 'spacemolt set_gate_access public',
+    discoverWith: ['station_info'],
+    seeAlso: ['station_info', 'set_toll', 'found_gate_site'],
+    category: 'Station management',
+    apiRoute: 'POST /api/v2/spacemolt_facility/set_gate_access',
+    positionals: ['access'],
+    schemaExtensions: {
+      access: {
+        description:
+          'Who may cross this jump gate. The operation text names public and faction. The schema enum is public, allies, and faction. Applies to both ends of the docked gate.',
+      },
+    },
+  },
+  set_toll: {
+    usage: '<price>',
+    description:
+      'Set the credits per ship charged to pilots outside the faction at the jump gate end you are docked at. 0 is free and 1000000 is the maximum. The toll is paid into the faction treasury and applies to both ends. Needs ManageBases. There is no station id argument.',
+    example: 'spacemolt set_toll 0',
+    discoverWith: ['station_info'],
+    seeAlso: ['station_info', 'set_gate_access', 'found_gate_site'],
+    category: 'Station management',
+    apiRoute: 'POST /api/v2/spacemolt_facility/set_toll',
+    positionals: ['price'],
+    schemaExtensions: {
+      price: {
+        description:
+          'Credits per ship for pilots outside the faction. 0 is free and 1000000 is the maximum. Paid into the faction treasury. Applies to both ends of the docked gate.',
+      },
+    },
   },
   station_set_contraband: {
     usage: '<contraband_items>',

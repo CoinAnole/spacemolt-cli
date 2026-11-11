@@ -3891,6 +3891,82 @@ describe('command metadata', () => {
     expect(deployHelp).not.toContain('founding_fee=');
   });
 
+  test('jump gate commands are curated and do not check distance, fee, or toll bounds', () => {
+    const found = COMMANDS.found_gate_site;
+    expect(found?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'found_gate_site',
+      method: 'POST',
+    });
+    expect(found?.usage).toBe('<name> <far_system>');
+    expect(getArgNames(found ?? {})).toEqual(['name', 'far_system']);
+    expect(found?.schema?.name).toBeDefined();
+    expect(found?.schema?.far_system).toBeDefined();
+    expect(found?.schema?.distance).toBeUndefined();
+    expect(found?.schema?.fee).toBeUndefined();
+    expect(found?.description).toContain('current point of interest in lawless space');
+    expect(found?.description).toContain('ManageBases');
+    expect(found?.description).toContain('1235 GU');
+    expect(found?.description).toContain('2,500,000 credits per end');
+    expect(found?.description).toContain('faction treasury first, then the wallet');
+    expect(found?.description).toContain('one unfinished pair');
+    expect(found?.description).toContain('cannot be dismantled');
+    expect(found?.description).not.toContain('`');
+    const foundHelp = captureHelp('found_gate_site');
+    expect(foundHelp).toContain('<name> <far_system>');
+    expect(foundHelp).toContain('1235 GU');
+    expect(foundHelp).toContain('cannot be dismantled');
+    expect(foundHelp).not.toContain('`');
+
+    const access = COMMANDS.set_gate_access;
+    expect(access?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'set_gate_access',
+      method: 'POST',
+    });
+    expect(getArgNames(access ?? {})).toEqual(['access']);
+    expect(access?.schema?.access?.enum).toEqual(['public', 'allies', 'faction']);
+    expect(access?.schema?.station_id).toBeUndefined();
+    expect(access?.description).toContain('operation text names public and faction');
+    expect(access?.description).toContain('schema enum is public, allies, and faction');
+    expect(access?.description).toContain('no station id argument');
+    expect(access?.description).not.toContain('`');
+    const accessHelp = captureHelp('set_gate_access');
+    expect(accessHelp).toContain('access (public|allies|faction)');
+    expect(accessHelp).toContain('operation text names public and faction');
+    expect(accessHelp).not.toContain('station_id');
+
+    const toll = COMMANDS.set_toll;
+    expect(toll?.route).toEqual({
+      tool: 'spacemolt_facility',
+      action: 'set_toll',
+      method: 'POST',
+    });
+    expect(getArgNames(toll ?? {})).toEqual(['price']);
+    expect(toll?.schema?.price?.minimum).toBeUndefined();
+    expect(toll?.schema?.price?.maximum).toBeUndefined();
+    expect(toll?.schema?.station_id).toBeUndefined();
+    expect(toll?.description).toContain('0 is free');
+    expect(toll?.description).toContain('1000000 is the maximum');
+    expect(toll?.description).toContain('no station id argument');
+    expect(toll?.description).not.toContain('`');
+    const tollHelp = captureHelp('set_toll');
+    expect(tollHelp).toContain('0 is free');
+    expect(tollHelp).toContain('1000000 is the maximum');
+    expect(tollHelp).not.toContain('station_id');
+
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_found_gate_site).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_found_gate_site).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_set_gate_access).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_set_gate_access).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_set_toll).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_set_toll).toBeUndefined();
+
+    expect(COMMANDS.station_info?.description).toContain('Jump gate block');
+    expect(COMMANDS.get_base?.description).toContain('one Jump gate line');
+    expect(COMMANDS.get_base?.description).toContain('An outpost without gate is not a gate');
+  });
+
   test('storage deposit/withdraw help documents auto-docking, fleets, special targets, and ship towing', () => {
     const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
     const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;
