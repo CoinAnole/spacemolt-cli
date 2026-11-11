@@ -4469,6 +4469,108 @@ test('get_system treats an empty base_type as omitted and prints unknown tokens 
   expect(sent).not.toContain('[station]');
 });
 
+function withPoiHazard(
+  fixture: typeof systemInfoFixture,
+  listValue: unknown | undefined,
+  currentValue: unknown | undefined,
+) {
+  const next = structuredClone(fixture);
+  const poi = next.system.pois[0] as Record<string, unknown>;
+  if (listValue === undefined) delete poi.hazard;
+  else poi.hazard = listValue;
+  const current = next.poi as Record<string, unknown>;
+  if (currentValue === undefined) delete current.hazard;
+  else current.hazard = currentValue;
+  return next;
+}
+
+test('get_system prints hazard type and severity on the POI that sent both', () => {
+  const hazard = { type: 'charged_seam', severity: 0 };
+  const fixture = withPoiHazard(systemInfoFixture, hazard, { type: 'scar_dust', severity: 4 });
+  (fixture.system.pois[0] as Record<string, unknown>).ship_count = 2;
+  (fixture.poi as Record<string, unknown>).ship_count = 4;
+  (fixture.system.pois[0] as Record<string, unknown>).base_type = 'outpost';
+  const stdout = renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Earth (planet) [garden] [outpost] (2 ships) Hazard: charged_seam 0  sol_earth');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] (4 ships) Hazard: scar_dust 4  sol_earth');
+  expect(stdout).not.toContain('low');
+  expect(stdout).not.toContain('lethal');
+  expect(stdout).not.toContain('1%');
+  expect(stdout).not.toContain('shield');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_system keeps hazard on the POI that sent it', () => {
+  const listOnly = withPoiHazard(systemInfoFixture, { type: 'radiation', severity: 2 }, undefined);
+  const listOut = renderStructuredResult('get_system', listOnly, options, context).stdout.join('\n');
+  expect(listOut).toContain('Earth (planet) [garden] [station] Hazard: radiation 2  sol_earth');
+  expect(listOut).toContain('Current POI: Earth (planet) [garden]  sol_earth');
+  expect(listOut).not.toMatch(/Current POI:.*Hazard:/);
+
+  const currentOnly = withPoiHazard(systemInfoFixture, undefined, { type: 'debris', severity: 1 });
+  const currentOut = renderStructuredResult('get_system', currentOnly, options, context).stdout.join('\n');
+  expect(currentOut).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(currentOut).not.toMatch(/- Earth \(planet\).*Hazard:/);
+  expect(currentOut).toContain('Current POI: Earth (planet) [garden] Hazard: debris 1  sol_earth');
+});
+
+test('get_system prints nothing for an omitted or partial hazard', () => {
+  const omitted = renderStructuredResult(
+    'get_system',
+    structuredClone(systemInfoFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(omitted).not.toContain('Hazard:');
+
+  for (const value of [
+    undefined,
+    null,
+    'radiation',
+    [],
+    { type: 'radiation' },
+    { severity: 2 },
+    { type: ' ', severity: 2 },
+    { type: 'radiation', severity: '' },
+    { type: 'radiation', severity: '   ' },
+    { type: 1, severity: 2 },
+  ]) {
+    const stdout = renderStructuredResult(
+      'get_system',
+      withPoiHazard(systemInfoFixture, value, value),
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('Hazard:');
+    expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
+    expect(stdout).toContain('(planet)');
+  }
+});
+
+test('get_system prints a string severity as sent', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiHazard(systemInfoFixture, { type: 'radiation', severity: '2' }, { type: 'debris', severity: 'high' }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Earth (planet) [garden] [station] Hazard: radiation 2  sol_earth');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] Hazard: debris high  sol_earth');
+});
+
+test('get_system prints an unknown hazard type as sent', () => {
+  const stdout = renderStructuredResult(
+    'get_system',
+    withPoiHazard(systemInfoFixture, { type: ' gravity_well ', severity: 3 }, { type: 'gravity_well', severity: 3 }),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Hazard:  gravity_well  3');
+  expect(stdout).toContain('Current POI: Earth (planet) [garden] Hazard: gravity_well 3  sol_earth');
+  expect(stdout).toContain('[station]');
+});
+
 test('get_system does not treat poi type station as a base bracket', () => {
   const fixture = withPoiBaseType(systemInfoFixture, undefined, undefined, false, false);
   (fixture.system.pois[0] as Record<string, unknown>).type = 'station';
@@ -5700,6 +5802,58 @@ const schemaJumpDetails = {
   navigation_xp: 1,
 };
 
+test('location snapshot prints Hazard from poi_hazard and omits a partial key', () => {
+  const location = {
+    system_id: 'sol',
+    system_name: 'Sol',
+    poi_id: 'sol_belt',
+    poi_name: 'Belt',
+    poi_type: 'asteroid',
+    docked_at: 'belt_outpost',
+    poi_hazard: { type: 'ion_storm', severity: 1 },
+  };
+  const located = renderStructuredResult('get_location', { location }, options, context).stdout.join('\n');
+  expect(located).toContain('POI: Belt (asteroid)');
+  expect(located).toContain('Hazard: ion_storm 1');
+  expect(located.indexOf('POI: Belt (asteroid)')).toBeLessThan(located.indexOf('Hazard: ion_storm 1'));
+  expect(located.indexOf('Hazard: ion_storm 1')).toBeLessThan(located.indexOf('Docked at:'));
+  expect(located).not.toContain('low');
+  expect(located).not.toContain('shield');
+  expect(located).not.toContain('=== Response ===');
+
+  const stated = renderStructuredResult('get_state', { location }, options, context).stdout.join('\n');
+  expect(stated).toContain('=== Location ===');
+  expect(stated).toContain('Hazard: ion_storm 1');
+
+  const status = renderStructuredResult(
+    'get_status',
+    { player: { username: 'Ada' }, location },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(status).toContain('Location:');
+  expect(status).not.toContain('Hazard:');
+
+  for (const poi_hazard of [undefined, null, { type: 'radiation' }, { severity: 0 }, 'ion_storm']) {
+    const stdout = renderStructuredResult(
+      'get_location',
+      { location: { ...location, poi_hazard } },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).not.toContain('Hazard:');
+    expect(stdout).toContain('POI: Belt (asteroid)');
+  }
+
+  const zero = renderStructuredResult(
+    'get_location',
+    { location: { ...location, poi_hazard: { type: 'radiation', severity: 0 } } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Hazard: radiation 0');
+});
+
 test('travel arrival prints every online player, the truncated line, and offline collapsed', () => {
   const players = Array.from({ length: 11 }, (_, index) => ({
     username: `Pilot-${String(index + 1).padStart(2, '0')}`,
@@ -5888,6 +6042,79 @@ test('schema jump and pathfinder bodies do not print an unknown signature line',
   });
   expect(locationOnly).toContain('Arrived at Procyon A');
   expect(locationOnly).not.toContain(UNKNOWN_SIGNATURE_LINE);
+});
+
+test('travel and jump arrival lines print poi_hazard and ignore a partial object', () => {
+  const travel = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: [],
+      poi_hazard: { type: 'tidal_shear', severity: 3 },
+    },
+  });
+  expect(travel.indexOf('Arrived at Earth')).toBeLessThan(travel.indexOf('Hazard: tidal_shear 3'));
+  expect(travel.indexOf('Hazard: tidal_shear 3')).toBeLessThan(travel.indexOf('(No other players here)'));
+  expect(travel).not.toContain('moderate');
+  expect(travel).not.toContain('8%');
+  expect(travel).not.toContain('[object Object]');
+
+  const fromLocation = renderArrival('jump', {
+    details: schemaJumpDetails,
+    location: {
+      poi_id: 'procyon_a',
+      poi_name: 'Procyon A',
+      nearby_players: [{ username: 'Ibis' }],
+      poi_hazard: { type: 'debris', severity: 2 },
+    },
+  });
+  expect(fromLocation).toContain('Arrived at Procyon A');
+  expect(fromLocation).toContain('Hazard: debris 2');
+  expect(fromLocation).not.toContain('=== Jumped ===');
+
+  const detailsWin = renderArrival('jump', {
+    details: {
+      ...schemaJumpDetails,
+      poi: 'Procyon A',
+      poi_id: 'procyon_a',
+      online_players: [],
+      poi_hazard: { type: 'radiation', severity: 4 },
+    },
+    location: {
+      poi_hazard: { type: 'debris', severity: 1 },
+      nearby_players: [],
+    },
+  });
+  expect(detailsWin).toContain('Hazard: radiation 4');
+  expect(detailsWin).not.toContain('Hazard: debris 1');
+
+  const scalar = renderArrival('jump', {
+    details: { ...schemaJumpDetails, poi_hazard: { type: 'ion_storm', severity: 1 } },
+  });
+  expect(scalar).toContain('=== Jumped ===');
+  expect(scalar).toContain('Hazard: ion_storm 1');
+  expect(scalar).not.toContain('=== Response ===');
+  expect(scalar).not.toContain('[object Object]');
+  expect(scalar.indexOf('=== Jumped ===')).toBeLessThan(scalar.indexOf('Hazard: ion_storm 1'));
+
+  const partial = renderArrival('jump', {
+    details: { ...schemaJumpDetails, poi_hazard: { type: 'debris' } },
+  });
+  expect(partial).toContain('=== Jumped ===');
+  expect(partial).not.toContain('Hazard:');
+  expect(partial).not.toContain('[object Object]');
+
+  const omitted = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: [{ username: 'Ibis' }],
+    },
+  });
+  expect(omitted).toContain('Arrived at Earth');
+  expect(omitted).not.toContain('Hazard:');
 });
 
 test('a jump body that already matches arrival prints details.unknown_signature', () => {

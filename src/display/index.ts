@@ -427,7 +427,7 @@ function displayStructuredResultInternal(
   }
 
   const viewModel = normalizeStructuredResultForDisplay(result);
-  const detailsViewModel = postActionDetailsViewModel(viewModel);
+  const detailsViewModel = postActionDetailsViewModel(viewModel, command);
 
   if (!isQuiet(options, context)) {
     if (viewModel.auto_docked)
@@ -567,13 +567,19 @@ function emitMutationDockState(
   if (line) emitLine(line);
 }
 
-function postActionDetailsViewModel(viewModel: Record<string, unknown>): Record<string, unknown> | undefined {
+function postActionDetailsViewModel(
+  viewModel: Record<string, unknown>,
+  command: string,
+): Record<string, unknown> | undefined {
   const details = viewModel.details;
   if (!isRecord(details)) return undefined;
 
   const actionViewModel = structuredClone(details);
   rememberOriginalDetailKeys(actionViewModel);
   addLocationAliases(actionViewModel, viewModel.location);
+  if ((commandNameEquals(command, 'travel') || commandNameEquals(command, 'jump')) && isRecord(viewModel.location)) {
+    copyIfMissing(actionViewModel, 'poi_hazard', viewModel.location.poi_hazard);
+  }
   addShipAliases(actionViewModel, viewModel.ship);
   return actionViewModel;
 }

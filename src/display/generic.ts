@@ -24,6 +24,7 @@ import {
   finiteNumber,
   firstArray,
   formatFacilityMaintenanceUpkeep,
+  formatHazardTypeSeverity,
   formatIntegerText,
   formatter,
   isRecord,
@@ -1881,9 +1882,11 @@ export const genericFormatters = [
       const depositFixer = commandNameEquals(command, 'storage_deposit') && isRecord(r.fixer) ? r.fixer : undefined;
       const depositGoodwill =
         commandNameEquals(command, 'storage_deposit') && isRecord(r.goodwill) ? r.goodwill : undefined;
+      const travelOrJump = commandNameEquals(command, 'travel') || commandNameEquals(command, 'jump');
       const entries = Object.entries(r).filter(([key, value]) => {
         if (depositFixer && key === 'fixer') return false;
         if (depositGoodwill && key === 'goodwill') return false;
+        if (travelOrJump && key === 'poi_hazard' && isRecord(value)) return false;
         if (isEmptyNoExpiryDeadline(r, key, value)) return false;
         return presentCount(value) !== undefined && !isAliasCopiedDumpKey(r, key);
       });
@@ -1900,6 +1903,10 @@ export const genericFormatters = [
       if (!hasActionMarker) return false;
 
       emitLine(`\n${c.bright}=== ${titleForScalarAction(r.action ?? command)} ===${c.reset}`);
+      if (travelOrJump) {
+        const hazard = formatHazardTypeSeverity(r.poi_hazard);
+        if (hazard !== undefined) emitLine(`${c.cyan}Hazard:${c.reset} ${hazard}`);
+      }
       for (const [key, value] of entries) {
         if (Array.isArray(value)) {
           emitLine(`${labelForScalarKey(key)}: ${value.length} item(s)`);

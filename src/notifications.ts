@@ -103,6 +103,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
       return c.red;
     case 'TRADE':
     case 'FILL':
+    case 'HAZARD':
     case 'HOLD':
     case 'SCANNED':
     case 'PILOTLESS':

@@ -2,7 +2,7 @@ import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatCreatureBrandSuffix } from './display/creatures.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
 import { activeMissionProgressEntries, isV2MissionsEnvelope } from './display/generic.ts';
-import { formatIntegerText } from './display/helpers.ts';
+import { formatIntegerText, hazardLabelParts } from './display/helpers.ts';
 import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
 import {
   formatMissingMaterialsPreview,
@@ -3289,6 +3289,38 @@ function previewRanchPoached(
   return { ...preview, severity: 'warning' };
 }
 
+function sentPreviewLine(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const line = value.split(/\r?\n/, 1)[0] ?? '';
+  return line.trim() === '' ? undefined : line;
+}
+
+function previewHazardWarning(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const message = sentPreviewLine(data.message);
+  const details: string[] = [];
+  const poiName = sentPreviewLine(data.poi_name);
+  if (poiName !== undefined) details.push(`POI: ${poiName}`);
+  const hazard = hazardLabelParts(data.hazard);
+  const hazardParts = [hazard.type, hazard.severity].filter((part): part is string => part !== undefined);
+  if (hazardParts.length) details.push(`Hazard: ${hazardParts.join(' ')}`);
+  const hull = formatIntegerText(data.hull);
+  if (hull !== undefined) details.push(`Hull: ${hull}`);
+  const maxHull = formatIntegerText(data.max_hull);
+  if (maxHull !== undefined) details.push(`Max hull: ${maxHull}`);
+  const dose = formatIntegerText(data.dose_pct);
+  if (dose !== undefined) details.push(`Dose: ${dose}%`);
+
+  const headline = message ?? 'Hazard warning';
+  const preview = details.length
+    ? detailPreview('HAZARD', headline, details, options)
+    : headlinePreview('HAZARD', headline, options);
+  return { ...preview, severity: 'warning' };
+}
+
 function previewHoldUpdate(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3752,6 +3784,8 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   // 0.599.0 support channel; coarse type is system
   refueled_by: previewRefueledBy,
   repaired_by: previewRepairedBy,
+  // OpenAPI Notification_hazard_warning. message, poi name, hazard, hull, and dose print as sent.
+  hazard_warning: previewHazardWarning,
   // OpenAPI Notification_hold_update. source and reason print as sent, including scan and scan_over.
   hold_update: previewHoldUpdate,
 };

@@ -202,6 +202,34 @@ export function formatDeepCoreMark(value: unknown): string {
   return value === true ? ` ${c.cyan}[deep core]${c.reset}` : '';
 }
 
+function hazardTypeText(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  return value;
+}
+
+function hazardSeverityText(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.trim() === '' ? undefined : value;
+  return formatIntegerText(value);
+}
+
+/** Present hazard keys only. An omitted type or severity is left out. */
+export function hazardLabelParts(value: unknown): { type?: string; severity?: string } {
+  if (!isRecord(value)) return {};
+  const type = hazardTypeText(value.type);
+  const severity = hazardSeverityText(value.severity);
+  return {
+    ...(type !== undefined ? { type } : {}),
+    ...(severity !== undefined ? { severity } : {}),
+  };
+}
+
+/** `type severity` when both keys are present. A partial or omitted hazard is undefined. */
+export function formatHazardTypeSeverity(value: unknown): string | undefined {
+  const { type, severity } = hazardLabelParts(value);
+  if (type === undefined || severity === undefined) return undefined;
+  return `${type} ${severity}`;
+}
+
 export function emitResourceInfoLines(resources: unknown, options: { indent?: string; heading?: boolean } = {}): void {
   const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
   if (!rows.length) return;

@@ -992,6 +992,27 @@ describe('notification formatting', () => {
       ],
     },
     {
+      msgType: 'hazard_warning',
+      data: {
+        poi_id: 'sol_scar',
+        poi_name: 'Scar Belt',
+        hazard: { type: 'scar_dust', severity: 4 },
+        hull: 25,
+        max_hull: 100,
+        dose_pct: 25,
+        message: 'Leave or the hull is lost.',
+      },
+      snippets: [
+        '[HAZARD]',
+        'Leave or the hull is lost.',
+        'POI: Scar Belt',
+        'Hazard: scar_dust 4',
+        'Hull: 25',
+        'Max hull: 100',
+        'Dose: 25%',
+      ],
+    },
+    {
       msgType: 'hold_update',
       data: {
         event: 'started',
@@ -11678,6 +11699,88 @@ describe('notification formatting', () => {
       expect(output).not.toContain('get_faction_mobile_base');
       expect(output).not.toContain('Use: get_mobile_base');
       expect(output).not.toContain('{');
+    });
+  });
+
+  describe('hazard_warning preview', () => {
+    test('prints the message, POI name, hazard, hull, and dose including 0', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hazard_warning',
+        data: {
+          poi_id: 'sol_scar',
+          poi_name: 'Scar Belt',
+          hazard: { type: 'radiation', severity: 0 },
+          hull: 0,
+          max_hull: 0,
+          dose_pct: 0,
+          message: 'Hull is empty.',
+        },
+      });
+      expect(preview.tag).toBe('HAZARD');
+      expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe('Hull is empty.');
+      expect(preview.details).toEqual(['POI: Scar Belt', 'Hazard: radiation 0', 'Hull: 0', 'Max hull: 0', 'Dose: 0%']);
+      const output = stripAnsi(
+        formatNotification({
+          type: 'system',
+          msg_type: 'hazard_warning',
+          timestamp: '2026-05-18T12:00:00.000Z',
+          data: {
+            poi_id: 'sol_scar',
+            poi_name: 'Scar Belt',
+            hazard: { type: 'radiation', severity: 0 },
+            hull: 0,
+            max_hull: 0,
+            dose_pct: 0,
+            message: 'Hull is empty.',
+          },
+        }).join('\n'),
+      );
+      expect(output).not.toContain('sol_scar');
+      expect(output).not.toContain('shield');
+      expect(output).not.toContain('resistance');
+      expect(output).not.toContain('doses');
+      expect(output).not.toContain('lethal');
+    });
+
+    test('prints each present key and skips an omitted one', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hazard_warning',
+        data: {
+          poi_name: 'Vent',
+          hazard: { severity: 2 },
+          max_hull: 80,
+          message: 'Leave.\nNow',
+        },
+      });
+      expect(preview.headline).toBe('Leave.');
+      expect(preview.details).toEqual(['POI: Vent', 'Hazard: 2', 'Max hull: 80']);
+      expect(preview.details.join(' ')).not.toContain('Hull:');
+      expect(preview.details.join(' ')).not.toContain('Dose:');
+      expect(preview.headline).not.toContain('Now');
+    });
+
+    test('an empty bag does not invent hull, dose, or a shield', () => {
+      const preview = formatNotificationPreview({ msg_type: 'hazard_warning', data: {} });
+      expect(preview.headline).toBe('Hazard warning');
+      expect(preview.details).toEqual([]);
+      expect(JSON.stringify(preview)).not.toContain('shield');
+      expect(JSON.stringify(preview)).not.toContain('resistance');
+    });
+
+    test('a non-number hull and a blank message print nothing for those keys', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hazard_warning',
+        data: {
+          poi_name: ' ',
+          hazard: { type: 'debris' },
+          hull: '0',
+          dose_pct: '8',
+          message: ' ',
+        },
+      });
+      expect(preview.headline).toBe('Hazard warning');
+      expect(preview.details).toEqual(['Hazard: debris']);
     });
   });
 

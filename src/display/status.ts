@@ -22,6 +22,7 @@ import {
   emitStationIds,
   formatDeepCoreLine,
   formatDeepCoreMark,
+  formatHazardTypeSeverity,
   formatIntegerText,
   formatLiveryName,
   formatPlayer,
@@ -622,6 +623,16 @@ function formatShipCountSuffix(poi: Record<string, unknown>): string {
   return ` ${c.cyan}(${count} ships)${c.reset}`;
 }
 
+function formatSystemPoiHazard(poi: Record<string, unknown>): string {
+  const hazard = formatHazardTypeSeverity(poi.hazard);
+  if (hazard === undefined) return '';
+  return ` ${c.yellow}Hazard: ${hazard}${c.reset}`;
+}
+
+function formatSystemPoiLine(poi: Record<string, unknown>): string {
+  return `${formatSystemPoiName(poi)}${formatSystemPoiBaseBracket(poi)}${formatShipCountSuffix(poi)}${formatSystemPoiHazard(poi)}`;
+}
+
 function formatSystemPoiBaseBracket(poi: Record<string, unknown>): string {
   const baseType = poi.base_type;
   if (typeof baseType === 'string' && baseType.trim() !== '') {
@@ -1092,6 +1103,8 @@ export function emitLocationSnapshot(
     const typeText = loc.poi_type ? ` (${loc.poi_type})` : loc.poi_id && loc.poi_name ? ` (${loc.poi_id})` : '';
     emitLine(`${c.cyan}POI:${c.reset} ${loc.poi_name ?? loc.poi_id}${typeText}`);
   }
+  const poiHazard = formatHazardTypeSeverity(loc.poi_hazard);
+  if (poiHazard !== undefined) emitLine(`${c.cyan}Hazard:${c.reset} ${poiHazard}`);
   if (loc.docked_at) {
     emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
   }
@@ -1801,8 +1814,7 @@ export const statusFormatters = [
           emitLine(`  - ${poi}`);
           continue;
         }
-        const base = formatSystemPoiBaseBracket(poi);
-        emitLine(`  - ${formatSystemPoiName(poi)}${base}${formatShipCountSuffix(poi)}  ${c.dim}${poi.id}${c.reset}`);
+        emitLine(`  - ${formatSystemPoiLine(poi)}  ${c.dim}${poi.id}${c.reset}`);
       }
 
       const connections = sys.connections as Array<Record<string, unknown> | string>;
@@ -1819,7 +1831,7 @@ export const statusFormatters = [
       const currentPoi = isRecord(r.poi) ? r.poi : undefined;
       if (currentPoi) {
         emitLine(
-          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiName(currentPoi)}${formatSystemPoiBaseBracket(currentPoi)}${formatShipCountSuffix(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
+          `\n${c.bright}Current POI:${c.reset} ${formatSystemPoiLine(currentPoi)}  ${c.dim}${currentPoi.id}${c.reset}`,
         );
       }
       return true;
@@ -2121,6 +2133,8 @@ export const statusFormatters = [
     (r) => {
       if (!r.poi_id || !Array.isArray(r.online_players)) return false;
       emitLine(`\n${c.green}Arrived at ${c.bright}${r.poi || r.poi_id}${c.reset}`);
+      const arrivalHazard = formatHazardTypeSeverity(r.poi_hazard);
+      if (arrivalHazard !== undefined) emitLine(`${c.cyan}Hazard:${c.reset} ${arrivalHazard}`);
       emitUnknownSignatureHint(r);
       const players = r.online_players as Array<Record<string, unknown>>;
       const count = (r.online_players_count as number) || players.length;
