@@ -2940,6 +2940,44 @@ function fitArrivalHeadline(lead: string, facts: string, max: number): string {
   return `${lead.slice(0, budget - 1)}…${suffix}`;
 }
 
+/** First line of destination_name. Blank and non-strings stay omitted. */
+function transitDestinationName(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const line = firstLine(value);
+  return line || undefined;
+}
+
+function transitDestinationId(data: Record<string, unknown>): string | undefined {
+  const destination = safeScalar(data.destination);
+  return destination !== undefined ? String(destination) : undefined;
+}
+
+/** Transit-start ok label. An omitted destination_name keeps the id. */
+function transitDestinationLabel(data: Record<string, unknown>): string | undefined {
+  const id = transitDestinationId(data);
+  const name = transitDestinationName(data.destination_name);
+  if (name === undefined) return id;
+  return formatNameId(name, id);
+}
+
+/** Beside an existing message. Do not rewrite a message that already contains the name. */
+function transitDestinationDetail(headline: string, data: Record<string, unknown>): string | undefined {
+  const id = transitDestinationId(data);
+  const name = transitDestinationName(data.destination_name);
+  if (name === undefined) {
+    if (id !== undefined && !headline.includes(id)) return `→ ${id}`;
+    return undefined;
+  }
+  const nameShown = textHasFact(headline, name);
+  if (id === undefined || id === name) return nameShown ? undefined : `→ ${name}`;
+  const idShown = textHasFact(headline, id);
+  if (nameShown && idShown) return undefined;
+  if (nameShown) return `→ ${id}`;
+  if (idShown) return `→ ${name}`;
+  const label = formatNameId(name, id);
+  return label !== undefined ? `→ ${label}` : undefined;
+}
+
 function arrivalOkHeadline(
   action: string,
   data: Record<string, unknown>,
@@ -2982,18 +3020,17 @@ function previewOk(
     case 'fleet_travel':
     case 'fleet_jump': {
       tag = 'FLEET';
-      const destination = safeScalar(data.destination);
       const arrival = safeScalar(data.arrival_tick);
       if (!headline) {
         const verb = action === 'fleet_jump' ? 'Fleet jumping' : 'Fleet traveling';
         const parts = [verb];
+        const destination = transitDestinationLabel(data);
         if (destination !== undefined) parts.push(`→ ${destination}`);
         if (arrival !== undefined) parts.push(`(arrival tick ${arrival})`);
         headline = parts.join(' ');
       } else {
-        if (destination !== undefined && !headline.includes(String(destination))) {
-          details.push(`→ ${destination}`);
-        }
+        const destination = transitDestinationDetail(headline, data);
+        if (destination !== undefined) details.push(destination);
         if (arrival !== undefined && !headline.includes(String(arrival))) {
           details.push(`arrival tick ${arrival}`);
         }
@@ -3011,9 +3048,14 @@ function previewOk(
       }
       const identity = fleetDockIdentity(data);
       if (identity && !headline.includes(identity)) details.push(identity);
-      const destination = safeScalar(data.destination);
-      if (destination !== undefined && !headline.includes(String(destination))) {
-        details.push(`→ ${destination}`);
+      if (action === 'travel' || action === 'jump') {
+        const destination = transitDestinationDetail(headline, data);
+        if (destination !== undefined) details.push(destination);
+      } else {
+        const destination = safeScalar(data.destination);
+        if (destination !== undefined && !headline.includes(String(destination))) {
+          details.push(`→ ${destination}`);
+        }
       }
       break;
     }

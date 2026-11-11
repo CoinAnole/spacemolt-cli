@@ -3694,6 +3694,266 @@ describe('notification formatting', () => {
       expect(residualPreview.headline).not.toBe(actionPreview.headline);
     });
 
+    describe('destination_name on transit-start ok pushes', () => {
+      test('fleet travel and fleet jump headlines show the name and a different id', () => {
+        const travel = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            destination: 'alfirk_belt',
+            destination_name: 'Alfirk Belt',
+            arrival_tick: 900,
+          }),
+        );
+        expect(travel.tag).toBe('FLEET');
+        expect(travel.headline).toBe('Fleet traveling → Alfirk Belt (alfirk_belt) (arrival tick 900)');
+        expect(travel.details).toEqual([]);
+
+        const jump = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            destination: 'lacaille_9352',
+            destination_name: 'Lacaille 9352',
+            arrival_tick: 900,
+          }),
+        );
+        expect(jump.headline).toBe('Fleet jumping → Lacaille 9352 (lacaille_9352) (arrival tick 900)');
+        expect(jump.details).toEqual([]);
+      });
+
+      test('a message that does not contain the name gains the name and id as a detail', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Your fleet has departed.',
+            destination: 'alfirk_belt',
+            destination_name: 'Alfirk Belt',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe('Your fleet has departed.');
+        expect(preview.details).toEqual(['→ Alfirk Belt (alfirk_belt)', 'arrival tick 900']);
+      });
+
+      test('a message that already contains the name is not replaced', () => {
+        const message = 'Your fleet has departed for Alfirk Belt.';
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            message,
+            destination: 'lacaille_9352',
+            destination_name: 'Alfirk Belt',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe(message);
+        expect(preview.details).toEqual(['→ lacaille_9352', 'arrival tick 900']);
+      });
+
+      test('a message that already contains the name and the id gains neither again', () => {
+        const message = 'Traveling to Alfirk Belt (alfirk_belt), arrival tick 900.';
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message,
+            destination: 'alfirk_belt',
+            destination_name: 'Alfirk Belt',
+            arrival_tick: 900,
+          }),
+        );
+        expect(preview.headline).toBe(message);
+        expect(preview.details).toEqual([]);
+      });
+
+      test('a message that already contains the id still shows the name', () => {
+        const message = 'Departed for alfirk_belt.';
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message,
+            destination: 'alfirk_belt',
+            destination_name: 'Alfirk Belt',
+          }),
+        );
+        expect(preview.headline).toBe(message);
+        expect(preview.details).toEqual(['→ Alfirk Belt']);
+      });
+
+      test('equal name and id stay a single token, and a name alone is enough', () => {
+        const same = formatNotificationPreview(
+          note('ok', { action: 'fleet_travel', destination: 'Alfirk', destination_name: 'Alfirk', arrival_tick: 900 }),
+        );
+        expect(same.headline).toBe('Fleet traveling → Alfirk (arrival tick 900)');
+
+        const nameOnly = formatNotificationPreview(
+          note('ok', { action: 'fleet_jump', destination_name: 'Lacaille 9352', arrival_tick: 900 }),
+        );
+        expect(nameOnly.headline).toBe('Fleet jumping → Lacaille 9352 (arrival tick 900)');
+      });
+
+      test('omitted, blank, or non-string destination_name keeps the id text', () => {
+        const omitted = formatNotificationPreview(
+          note('ok', { action: 'fleet_travel', destination: 'Alfirk', arrival_tick: 900 }),
+        );
+        expect(omitted.headline).toBe('Fleet traveling → Alfirk (arrival tick 900)');
+
+        const blank = formatNotificationPreview(
+          note('ok', { action: 'fleet_travel', destination: 'Alfirk', destination_name: '   ', arrival_tick: 900 }),
+        );
+        expect(blank.headline).toBe('Fleet traveling → Alfirk (arrival tick 900)');
+
+        const objectName = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            destination: 'Alfirk',
+            destination_name: { name: 'Alfirk Belt' },
+            arrival_tick: 900,
+          }),
+        );
+        expect(objectName.headline).toBe('Fleet jumping → Alfirk (arrival tick 900)');
+        expect(objectName.headline).not.toContain('Alfirk Belt');
+        expect(objectName.headline).not.toContain('{');
+      });
+
+      test('a longer word that starts with the name does not count as already containing it', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Solar route locked.',
+            destination: 'Sol',
+            destination_name: 'Sol',
+          }),
+        );
+        expect(preview.headline).toBe('Solar route locked.');
+        expect(preview.details).toEqual(['→ Sol']);
+      });
+
+      test('an id already inside a longer token still suppresses the id-only detail', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Heading to AlfirkStation.',
+            destination: 'Alfirk',
+          }),
+        );
+        expect(preview.headline).toBe('Heading to AlfirkStation.');
+        expect(preview.details).toEqual([]);
+      });
+
+      test('travel and jump ok pushes show the name and keep a different id', () => {
+        const travel = formatNotificationPreview(
+          note('ok', { action: 'travel', destination: 'sol_earth', destination_name: 'Earth' }),
+        );
+        expect(travel.tag).toBe('OK');
+        expect(travel.headline).toBe('travel');
+        expect(travel.details).toEqual(['→ Earth (sol_earth)']);
+        expect(tableMessageFromPreview(travel)).toBe('travel; → Earth (sol_earth)');
+
+        const jump = formatNotificationPreview(
+          note('ok', {
+            action: 'Jump',
+            message: 'Jump started.',
+            destination: 'lacaille_9352',
+            destination_name: 'Lacaille 9352',
+          }),
+        );
+        expect(jump.headline).toBe('Jump started.');
+        expect(jump.details).toEqual(['→ Lacaille 9352 (lacaille_9352)']);
+      });
+
+      test('a travel message that already contains the name is not replaced', () => {
+        const message = 'Traveling to Earth.';
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'travel',
+            message,
+            destination: 'sol_earth',
+            destination_name: 'Earth',
+          }),
+        );
+        expect(preview.headline).toBe(message);
+        expect(preview.details).toEqual(['→ sol_earth']);
+      });
+
+      test('arrived, jumped, dock, undock, and other ok actions ignore destination_name', () => {
+        const arrived = formatNotificationPreview(
+          note('ok', {
+            action: 'arrived',
+            poi: 'Earth',
+            poi_id: 'sol_earth',
+            destination: 'sol_earth',
+            destination_name: 'Should Not Appear',
+          }),
+        );
+        expect(arrived.headline).toBe('Arrived; POI Earth (sol_earth)');
+        expect(arrived.headline).not.toContain('Should Not Appear');
+        expect(arrived.details).toEqual([]);
+
+        const jumped = formatNotificationPreview(
+          note('ok', {
+            action: 'jumped',
+            system: 'Alpha Centauri',
+            system_id: 'alpha_centauri',
+            destination: 'alpha_centauri',
+            destination_name: 'Should Not Appear',
+          }),
+        );
+        expect(jumped.headline).toBe('Jumped; system Alpha Centauri (alpha_centauri)');
+        expect(jumped.headline).not.toContain('Should Not Appear');
+
+        const dock = formatNotificationPreview(
+          note('ok', { action: 'dock', destination: 'earth_station', destination_name: 'Earth Station' }),
+        );
+        expect(dock.headline).toBe('dock');
+        expect(dock.details).toEqual(['→ earth_station']);
+        expect(dock.details.join('\n')).not.toContain('Earth Station');
+
+        const undock = formatNotificationPreview(
+          note('ok', { action: 'undock', destination: 'earth_station', destination_name: 'Earth Station' }),
+        );
+        expect(undock.headline).toBe('undock');
+        expect(undock.details).toEqual(['→ earth_station']);
+
+        const other = formatNotificationPreview(
+          note('ok', {
+            action: 'ack',
+            message: 'Command accepted.',
+            destination: 'Alfirk',
+            destination_name: 'Alfirk Belt',
+          }),
+        );
+        expect(other.headline).toBe('Command accepted.');
+        expect(other.details).toEqual(['→ Alfirk']);
+        expect(other.details.join('\n')).not.toContain('Alfirk Belt');
+      });
+
+      test('a system jump progress line does not read destination_name', () => {
+        const preview = formatNotificationPreview(
+          note('system', {
+            action: 'jump',
+            destination: 'lacaille_9352',
+            destination_name: 'Lacaille 9352',
+            arrival_tick: 1433950,
+          }),
+        );
+        expect(preview.tag).toBe('SYSTEM');
+        expect(preview.headline).toBe('jump → lacaille_9352 (arrival tick 1433950)');
+        expect(preview.headline).not.toContain('Lacaille 9352');
+      });
+
+      test('a newline in destination_name keeps only the first line', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            destination: 'alfirk_belt',
+            destination_name: 'Alfirk Belt\nextra',
+          }),
+        );
+        expect(preview.headline).toBe('Fleet traveling → Alfirk Belt (alfirk_belt)');
+        expect(preview.headline).not.toContain('extra');
+        expect(preview.headline).not.toContain('\n');
+      });
+    });
+
     test('no diagnostic tokens and no Use: get_status on documented fleet ok actions', () => {
       const payloads: Record<string, unknown>[] = [
         { ...openApiDock },
@@ -3705,6 +3965,14 @@ describe('notification formatting', () => {
         { action: 'fleet_travel', message: 'Your fleet has departed.', destination: 'Alfirk' },
         { action: 'fleet_jump', destination: 'Alfirk', arrival_tick: 900 },
         { action: 'fleet_jump', message: 'Your fleet is jumping.', arrival_tick: 900 },
+        { action: 'fleet_travel', destination: 'alfirk_belt', destination_name: 'Alfirk Belt', arrival_tick: 900 },
+        {
+          action: 'fleet_jump',
+          message: 'Your fleet is jumping.',
+          destination: 'lacaille_9352',
+          destination_name: { name: 'Lacaille 9352' },
+        },
+        { action: 'travel', destination: 'sol_earth', destination_name: 'Earth' },
         { action: 'ack' },
         { message: 'All good.' },
         {},
