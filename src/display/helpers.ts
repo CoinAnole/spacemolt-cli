@@ -483,7 +483,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
     if (text !== undefined) emitLine(`${label}: ${text} ${suffix}`);
   }
 
-  function emitIdList(label: string, value: unknown): void {
+  function emitIdList(label: string, value: unknown, labelId?: (id: string) => string): void {
     if (!Array.isArray(value)) return;
     if (value.length === 0) {
       emitLine(`${label}: (none)`);
@@ -491,7 +491,16 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
     }
     const ids = printableIds(value);
     if (ids === undefined) return;
-    emitLine(`${label}: ${ids.join(', ')}`);
+    emitLine(`${label}: ${(labelId ? ids.map(labelId) : ids).join(', ')}`);
+  }
+
+  // Keyed by player id. Append a printable username; never replace or drop the id.
+  function playerIdWithUsername(id: string): string {
+    const usernames = result.player_usernames;
+    if (!isRecord(usernames) || !Object.hasOwn(usernames, id)) return id;
+    const name = usernames[id];
+    if (!isPrintableId(name)) return id;
+    return `${id} (${name})`;
   }
 
   function emitServiceAccess(value: unknown): void {
@@ -531,9 +540,9 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
   emitSafeIntegerLine('Refuel price', result.refuel_price_each, 'credits');
   emitSafeIntegerLine('Repair price', result.repair_price_per_hull, 'credits/hull');
   emitStationContrabandPolicy(result);
-  emitIdList('Allowed players', result.allowed_players);
+  emitIdList('Allowed players', result.allowed_players, playerIdWithUsername);
   emitIdList('Allowed factions', result.allowed_factions);
-  emitIdList('Banned players', result.banned_players);
+  emitIdList('Banned players', result.banned_players, playerIdWithUsername);
   emitServiceAccess(result.service_access);
 
   if (typeof result.message === 'string') {

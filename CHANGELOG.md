@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `station info` appends a username in parentheses after an allowed or banned player id when `player_usernames` has a non-empty printable string for that id (`pilot_one (Ada)`), as sent. An id with no key stays the id. An omitted `player_usernames` leaves every id as it is. An empty string, a non-string, a blank name, or a name with a line break is not appended. The id is not replaced by the name, and an id with no name is not dropped (gameserver 0.686.0).
+
 - `storage view` prints `Deposits blocked:` as yes or no when `action` is `view_faction_storage` or `target` is `faction` and `deposits_blocked` is a boolean, including false. An omitted key prints nothing and is not treated as no. When `deposits_blocked_reason` is a non-empty string, it prints as sent on `Deposits blocked reason:`. An omitted or empty reason prints nothing. The receipt does not expand `dismantling` or `no_storage_facility` into a sentence. Help says `dismantling` means the faction storage facility here is being dismantled, and `no_storage_facility` means the faction has no storage facility here and listed items are left from an earlier one. View and withdraw still work. The client does not refuse `storage withdraw` when deposits are blocked (gameserver 0.686.0).
 
 - `faction info` prints a Ship licenses table when `ship_licenses` is a non-empty array, in array order: ship name, class id, empire, and acquired time as sent. An omitted or empty array prints nothing. Omission is not an empty table. A royalty is not computed (gameserver 0.686.0).

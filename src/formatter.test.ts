@@ -10637,6 +10637,64 @@ describe('structuredContent formatters', () => {
     expect(notArray.stdout).not.toContain('Allowed players:');
   });
 
+  test('station info appends a username after an allowed or banned player id', () => {
+    const named = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: ['pilot_one', 'pilot_gone', 'pilot_same'],
+      banned_players: ['pirate_one', 'pirate_gone'],
+      player_usernames: {
+        pilot_one: 'Ada Lovelace',
+        pilot_same: 'pilot_same',
+        pirate_one: 'Black',
+        allied_faction: 'Should Not Annotate Factions',
+        stranger: 'Not Listed',
+      },
+    });
+    expect(named.stderr).toBe('');
+    expect(named.stdout).toContain('Allowed players: pilot_one (Ada Lovelace), pilot_gone, pilot_same (pilot_same)');
+    expect(named.stdout).toContain('Banned players: pirate_one (Black), pirate_gone');
+    expect(named.stdout).toContain('Allowed factions: allied_faction');
+    expect(named.stdout).not.toContain('Should Not Annotate Factions');
+    expect(named.stdout).not.toContain('Not Listed');
+    expect(named.stdout).not.toContain('Ada Lovelace (pilot_one)');
+
+    const omitted = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: ['pilot_one'],
+      banned_players: ['pirate_one'],
+    });
+    expect(omitted.stdout).toContain('Allowed players: pilot_one');
+    expect(omitted.stdout).toContain('Banned players: pirate_one');
+    expect(omitted.stdout).not.toContain('pilot_one (');
+
+    const unusable = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: ['pilot_blank', 'pilot_space', 'pilot_break', 'pilot_num', 'pilot_ok'],
+      banned_players: [],
+      player_usernames: {
+        pilot_blank: '',
+        pilot_space: '   ',
+        pilot_break: 'bad\nname',
+        pilot_num: 4,
+        pilot_ok: 'Ok',
+      },
+    });
+    expect(unusable.stdout).toContain(
+      'Allowed players: pilot_blank, pilot_space, pilot_break, pilot_num, pilot_ok (Ok)',
+    );
+    expect(unusable.stdout).toContain('Banned players: (none)');
+    expect(unusable.stdout).not.toContain('bad');
+    expect(unusable.stdout).not.toContain('\nname');
+
+    const notObject = captureStructuredOutput('station_info', {
+      ...stationInfoContrabandFixture,
+      allowed_players: ['pilot_one'],
+      player_usernames: 'Ada',
+    });
+    expect(notObject.stdout).toContain('Allowed players: pilot_one');
+    expect(notObject.stdout).not.toContain('(Ada)');
+  });
+
   test('station info prints zero fees and skips non-integers', () => {
     const zero = captureStructuredOutput('station_info', {
       ...stationInfoContrabandScalarsFixture,
