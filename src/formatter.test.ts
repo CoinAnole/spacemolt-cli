@@ -1470,6 +1470,57 @@ describe('structuredContent output mode precedence', () => {
     );
   });
 
+  test('storage view prints a faction deposit block from action or target and skips an omitted key', async () => {
+    const blocked = await captureRenderedOutput(
+      {
+        structuredContent: {
+          action: 'view_faction_storage',
+          base_id: 'earth_station',
+          items: [{ item_id: 'fuel_cell', item_name: 'Fuel Cell', quantity: 1, size: 1 }],
+          deposits_blocked: true,
+          deposits_blocked_reason: 'dismantling',
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: {} },
+    );
+    expect(blocked.exitCode).toBe(0);
+    expect(blocked.stderr).toBe('');
+    expect(blocked.stdout).toContain('Deposits blocked: yes');
+    expect(blocked.stdout).toContain('Deposits blocked reason: dismantling');
+    expect(blocked.stdout).not.toContain('being dismantled');
+
+    const omitted = await captureRenderedOutput(
+      {
+        structuredContent: {
+          action: 'view_faction_storage',
+          base_id: 'earth_station',
+          items: [],
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction' } },
+    );
+    expect(omitted.exitCode).toBe(0);
+    expect(omitted.stdout).toContain('=== Faction Storage at earth_station ===');
+    expect(omitted.stdout).not.toContain('Deposits blocked');
+
+    const explicitNo = await captureRenderedOutput(
+      {
+        structuredContent: {
+          base_id: 'earth_station',
+          items: [],
+          deposits_blocked: false,
+        },
+      },
+      {},
+      { command: 'storage_view', displayCommand: 'storage view', payload: { target: 'faction' } },
+    );
+    expect(explicitNo.exitCode).toBe(0);
+    expect(explicitNo.stdout).toContain('Deposits blocked: no');
+    expect(explicitNo.stdout).not.toContain('Deposits blocked reason:');
+  });
+
   test('storage view empty gifts array prints Gifts: none and skips messages', async () => {
     const { stdout, stderr, exitCode } = await captureRenderedOutput(
       { structuredContent: { ...storageFixture, gifts: [], messages: [] } },

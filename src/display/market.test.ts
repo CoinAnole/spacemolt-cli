@@ -2434,6 +2434,153 @@ test('faction storage credits 0 prints Faction credits: 0', () => {
   expect(stdout).toContain('Faction credits: 0');
 });
 
+test('faction storage prints deposits blocked yes and the reason as sent', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      credits: 10,
+      faction_fuel_reserve: 1,
+      faction_fuel_capacity: 2,
+      deposits_blocked: true,
+      deposits_blocked_reason: 'dismantling',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Deposits blocked: yes');
+  expect(stdout).toContain('Deposits blocked reason: dismantling');
+  expect(stdout).not.toContain('being dismantled');
+  expect(stdout.indexOf('Deposits blocked: yes')).toBeGreaterThan(stdout.indexOf('Faction credits: 10'));
+  expect(stdout.indexOf('Fuel bunker: 1 / 2 units')).toBeGreaterThan(
+    stdout.indexOf('Deposits blocked reason: dismantling'),
+  );
+});
+
+test('faction storage prints deposits blocked no and skips an empty reason', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      deposits_blocked: false,
+      deposits_blocked_reason: '',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Deposits blocked: no');
+  expect(stdout).not.toContain('Deposits blocked reason:');
+
+  const locationsOnly = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      items: [],
+      locations: [],
+      deposits_blocked: false,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(locationsOnly).toContain('=== Storage Locations ===');
+  expect(locationsOnly).toContain('Deposits blocked: no');
+});
+
+test('faction storage omits an absent deposits blocked key and still prints a sent reason', () => {
+  const omitted = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      credits: 1,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('Faction credits: 1');
+  expect(omitted).not.toContain('Deposits blocked');
+
+  const reasonOnly = renderStructuredResult(
+    'storage_view',
+    {
+      action: 'view_faction_storage',
+      base_id: 'earth_station',
+      items: [],
+      deposits_blocked_reason: ' no_storage_facility ',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(reasonOnly).toContain('Deposits blocked reason:  no_storage_facility ');
+  expect(reasonOnly).not.toContain('Deposits blocked: no');
+  expect(reasonOnly).not.toContain('Deposits blocked: yes');
+  expect(reasonOnly).not.toContain('no storage facility here');
+});
+
+test('view_faction_storage action prints deposits blocked without a faction target', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      action: 'view_faction_storage',
+      target: 'self',
+      base_id: 'earth_station',
+      items: [],
+      credits: 4,
+      deposits_blocked: true,
+      deposits_blocked_reason: 'no_storage_facility',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Storage at earth_station ===');
+  expect(stdout).not.toContain('Faction credits:');
+  expect(stdout).toContain('Deposits blocked: yes');
+  expect(stdout).toContain('Deposits blocked reason: no_storage_facility');
+});
+
+test('personal storage does not print a deposit block', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      action: 'view_storage',
+      target: 'self',
+      base_id: 'earth_station',
+      items: [],
+      deposits_blocked: true,
+      deposits_blocked_reason: 'dismantling',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Deposits blocked');
+});
+
+test('faction storage ignores a non-boolean deposits blocked value', () => {
+  const stdout = renderStructuredResult(
+    'storage_view',
+    {
+      target: 'faction',
+      base_id: 'earth_station',
+      items: [],
+      deposits_blocked: 'true',
+      deposits_blocked_reason: 1,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('Deposits blocked');
+});
+
 test('one-item view_market buy price 0 prints 0 cr', () => {
   const stdout = renderStructuredResult(
     'view_market',

@@ -786,7 +786,7 @@ describe('command metadata', () => {
     if (!config) throw new Error('storage_view command is missing from COMMANDS');
 
     expect(config.description).toBe(
-      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0).',
+      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0). When faction storage at this station refuses deposits, view and withdraw still work. deposits_blocked_reason is dismantling when the faction storage facility here is being dismantled, or no_storage_facility when the faction has no storage facility here and listed items are left from an earlier one (gameserver 0.686.0).',
     );
     expect(config.usage).toBe(
       '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]  (station_id: station base ID or station POI ID)',
@@ -804,6 +804,11 @@ describe('command metadata', () => {
     expect(help).toContain('This view no longer includes messages.');
     expect(help).toContain(
       'Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0).',
+    );
+    expect(help).toContain('view and withdraw still work');
+    expect(help).toContain('dismantling when the faction storage facility here is being dismantled');
+    expect(help).toContain(
+      'no_storage_facility when the faction has no storage facility here and listed items are left from an earlier one',
     );
     expect(help).toContain('spacemolt storage view target=faction');
     expect(help).toContain('See also: storage deposit, storage withdraw, get_cargo, get_chat_history');

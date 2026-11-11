@@ -1403,6 +1403,14 @@ export const marketFormatters = [
         const credits = finiteNumber(r.credits);
         emitLine(`Faction credits: ${credits === undefined ? r.credits : credits.toLocaleString()}`);
       }
+      if (r.action === 'view_faction_storage' || isFactionStorage) {
+        // Omitted deposits_blocked is false in the schema. Do not print that as no.
+        const depositsBlocked = formatYesNoBoolean(r.deposits_blocked);
+        if (depositsBlocked !== undefined) emitLine(`Deposits blocked: ${depositsBlocked}`);
+        if (typeof r.deposits_blocked_reason === 'string' && r.deposits_blocked_reason !== '') {
+          emitLine(`Deposits blocked reason: ${r.deposits_blocked_reason}`);
+        }
+      }
       if (isFactionStorage && hasAnyField(r, ['faction_fuel_reserve', 'faction_fuel_capacity'])) {
         emitLine(`Fuel bunker: ${factionFuelReserve ?? '?'} / ${factionFuelCapacity ?? '?'} units\n`);
       }
