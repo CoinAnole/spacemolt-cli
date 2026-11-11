@@ -1956,6 +1956,58 @@ function previewFactionInvite(
   );
 }
 
+function factionMembershipHeadline(prefix: string, parts: readonly string[]): string {
+  return parts.length > 0 ? `${prefix}: ${parts.join(', ')}` : prefix;
+}
+
+function previewFactionKick(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const name = sentPreviewLine(data.faction_name);
+  const actor = sentPreviewLine(data.kicked_by);
+  let headline = 'Kicked from your faction';
+  if (name !== undefined && actor !== undefined) headline = `Kicked from ${name} by ${actor}`;
+  else if (name !== undefined) headline = `Kicked from ${name}`;
+  else if (actor !== undefined) headline = `Kicked by ${actor}`;
+  return { ...headlinePreview('FACTION', headline, options), severity: 'danger' };
+}
+
+function previewFactionPromote(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const name = sentPreviewLine(data.faction_name);
+  const oldRole = sentPreviewLine(data.old_role);
+  const newRole = sentPreviewLine(data.new_role);
+  const actor = sentPreviewLine(data.promoted_by);
+  const parts: string[] = [];
+  if (name !== undefined) parts.push(name);
+  if (oldRole !== undefined && newRole !== undefined) parts.push(`${oldRole} → ${newRole}`);
+  else if (newRole !== undefined) parts.push(`now ${newRole}`);
+  else if (oldRole !== undefined) parts.push(`was ${oldRole}`);
+  if (actor !== undefined) parts.push(`by ${actor}`);
+  return { ...headlinePreview('FACTION', factionMembershipHeadline('Role changed', parts), options), severity: 'info' };
+}
+
+function previewFactionWithdrawInvite(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const identity = formatNameId(sentPreviewLine(data.faction_name), sentPreviewLine(data.faction_id));
+  const actor = sentPreviewLine(data.withdrawn_by);
+  const parts: string[] = [];
+  if (identity !== undefined) parts.push(identity);
+  if (actor !== undefined) parts.push(`by ${actor}`);
+  return {
+    ...headlinePreview('FACTION', factionMembershipHeadline('Invite withdrawn', parts), options),
+    severity: 'warning',
+  };
+}
+
 function preferDiplomacyMessage(data: Record<string, unknown>, synthesized: string): string {
   const message = safeScalar(data.message);
   return message !== undefined ? firstLine(String(message)) : synthesized;
@@ -3331,6 +3383,59 @@ function previewHazardWarning(
   return { ...preview, severity: 'warning' };
 }
 
+function previewPathfinderStorm(
+  data: Record<string, unknown>,
+  _notification: NormalizedNotification,
+  options: ResolvedPreviewOptions,
+): NotificationPreview {
+  const deflected = data.deflected === true ? true : data.deflected === false ? false : undefined;
+  const sent = sentPreviewLine(data.message);
+  const raw =
+    sent ??
+    (deflected === true
+      ? 'Storm deflected your heading'
+      : deflected === false
+        ? 'Storm buffeted the ship; heading held'
+        : 'Pathfinder storm');
+  const severity: NotificationSeverity = deflected === false ? 'info' : 'warning';
+  const deflectedTrueDetail = 'Deflected: true; Use: get_location';
+  const useGetLocation = 'Use: get_location';
+  const candidate = deflected === true ? deflectedTrueDetail : deflected === false ? 'Deflected: false' : undefined;
+
+  const previewFor = (headline: string, details: string[]): NotificationPreview => {
+    const preview =
+      details.length > 0
+        ? detailPreview('STORM', headline, details, options)
+        : headlinePreview('STORM', headline, options);
+    return { ...preview, severity };
+  };
+
+  if (candidate === undefined || options.maxDetails <= 0) return previewFor(raw, []);
+
+  const budget = options.maxLineLength;
+  const sep = '; ';
+  if (candidate.length > TABLE_DETAIL_FOLD_LIMIT || candidate.length > budget) return previewFor(raw, [candidate]);
+
+  const budgetDetail = (detail: string): { headline: string; details: string[]; kept?: string } => {
+    const maxHeadline = budget - sep.length - detail.length;
+    if (maxHeadline <= 1) return { headline: truncateToBudget(detail, budget), details: [detail] };
+    const kept = truncateToBudget(raw, maxHeadline);
+    if (kept.includes(detail)) return { headline: raw, details: [] };
+    return { headline: kept, details: [detail], kept };
+  };
+
+  let fitted = budgetDetail(candidate);
+  if (
+    fitted.kept !== undefined &&
+    deflected === true &&
+    fitted.kept.includes('Deflected: true') &&
+    !fitted.kept.includes(useGetLocation)
+  ) {
+    fitted = budgetDetail(useGetLocation);
+  }
+  return previewFor(fitted.headline, fitted.details);
+}
+
 function previewHoldUpdate(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3732,6 +3837,9 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   friend_online: previewFriendOnline,
   friend_offline: previewFriendOffline,
   faction_invite: previewFactionInvite,
+  faction_kick: previewFactionKick,
+  faction_promote: previewFactionPromote,
+  faction_withdraw_invite: previewFactionWithdrawInvite,
   faction_mobile_base_update: previewFactionMobileBaseUpdate,
   faction_war_declared: previewFactionWarDeclared,
   faction_peace_proposal: previewFactionPeaceProposal,
@@ -3796,6 +3904,7 @@ const PREVIEW_HANDLERS: Record<string, PreviewHandler> = {
   repaired_by: previewRepairedBy,
   // OpenAPI Notification_hazard_warning. message, poi name, hazard, hull, and dose print as sent.
   hazard_warning: previewHazardWarning,
+  pathfinder_storm: previewPathfinderStorm,
   // OpenAPI Notification_hold_update. source and reason print as sent, including scan and scan_over.
   hold_update: previewHoldUpdate,
 };

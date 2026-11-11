@@ -105,6 +105,7 @@ function previewTagColor(tag: string, c: NotificationColors): string {
     case 'FILL':
     case 'HAZARD':
     case 'HOLD':
+    case 'STORM':
     case 'SCANNED':
     case 'PILOTLESS':
     case 'QUEUE':

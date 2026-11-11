@@ -485,6 +485,11 @@ describe('notification formatting', () => {
       snippets: ['[FACTION]', 'Wardens', 'join_faction faction_id=fac_1', 'faction decline_invite faction_id=fac_1'],
     },
     {
+      msgType: 'faction_kick',
+      data: { faction_name: 'Wardens', kicked_by: 'Ada' },
+      snippets: ['[FACTION]', 'Kicked from Wardens by Ada'],
+    },
+    {
       msgType: 'faction_mobile_base_update',
       data: {
         event: 'jump_arrived',
@@ -518,6 +523,11 @@ describe('notification formatting', () => {
       ],
     },
     {
+      msgType: 'faction_promote',
+      data: { faction_name: 'Wardens', old_role: 'member', new_role: 'officer', promoted_by: 'Ada' },
+      snippets: ['[FACTION]', 'Role changed: Wardens, member → officer, by Ada'],
+    },
+    {
       msgType: 'faction_war_declared',
       data: {
         aggressor_faction_id: 'fac_raiders',
@@ -528,6 +538,11 @@ describe('notification formatting', () => {
         reason: 'territory',
       },
       snippets: ['[WAR]', 'Raiders declared war on Wardens.', 'Reason: territory'],
+    },
+    {
+      msgType: 'faction_withdraw_invite',
+      data: { faction_id: 'fac_1', faction_name: 'Wardens', withdrawn_by: 'Ada' },
+      snippets: ['[FACTION]', 'Invite withdrawn: Wardens (fac_1), by Ada'],
     },
     {
       msgType: 'facility_reclaimed',
@@ -730,6 +745,11 @@ describe('notification formatting', () => {
       msgType: 'passenger_stranded',
       data: {},
       snippets: ['[STRANDED]', 'Carrier lost — you were stranded'],
+    },
+    {
+      msgType: 'pathfinder_storm',
+      data: { deflected: true, message: 'Pushed off the plotted bearing.' },
+      snippets: ['[STORM]', 'Pushed off the plotted bearing.', 'Deflected: true; Use: get_location'],
     },
     {
       msgType: 'personnel_update',
@@ -11939,6 +11959,648 @@ describe('notification formatting', () => {
     });
   });
 
+  describe('faction_kick preview', () => {
+    function note(data: Record<string, unknown> = {}): {
+      type: 'system';
+      msg_type: 'faction_kick';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return { type: 'system', msg_type: 'faction_kick', timestamp: '2026-09-07T12:00:00.000Z', data };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    const rows: Array<{ name: string; data: Record<string, unknown>; headline: string; absent?: string[] }> = [
+      {
+        name: 'name and kicker',
+        data: { faction_name: 'Wardens', kicked_by: 'Ada' },
+        headline: 'Kicked from Wardens by Ada',
+      },
+      { name: 'name only', data: { faction_name: 'Wardens' }, headline: 'Kicked from Wardens' },
+      { name: 'kicker only', data: { kicked_by: 'Ada' }, headline: 'Kicked by Ada' },
+      { name: 'empty bag', data: {}, headline: 'Kicked from your faction' },
+      {
+        name: 'first line only',
+        data: { faction_name: 'Wardens\nextra', kicked_by: '  ' },
+        headline: 'Kicked from Wardens',
+        absent: ['extra'],
+      },
+      {
+        name: 'internal spaces',
+        data: { faction_name: 'War  dens', kicked_by: 'Ada' },
+        headline: 'Kicked from War  dens by Ada',
+      },
+      {
+        name: 'leading and trailing spaces',
+        data: { faction_name: ' Wardens ', kicked_by: 'Ada' },
+        headline: 'Kicked from  Wardens  by Ada',
+      },
+      {
+        name: 'non-strings',
+        data: { faction_name: 0, kicked_by: { name: 'Ada' } },
+        headline: 'Kicked from your faction',
+        absent: ['0', 'Ada', '[object Object]'],
+      },
+      {
+        name: 'stray message and faction id',
+        data: { message: 'Removed.', faction_id: 'fac_1' },
+        headline: 'Kicked from your faction',
+        absent: ['Removed', 'fac_1'],
+      },
+    ];
+
+    test('registers a never-null handler', () => {
+      expect(hasPreviewHandler('faction_kick')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('faction_kick');
+    });
+
+    test.each(rows)('$name', ({ data, headline, absent }) => {
+      const notification = note(data);
+      const preview = formatNotificationPreview(notification);
+      const text = previewText(preview);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const at120 = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+
+      expect(preview.tag).toBe('FACTION');
+      expect(preview.severity).toBe('danger');
+      expect(preview.headline).toBe(headline);
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.details).toEqual([]);
+      expect(text).not.toContain('{');
+      expect(text).not.toContain('Use:');
+      expect(text).not.toContain('join_faction');
+      expect(text).not.toContain('get_status');
+      expect(text).not.toContain('faction_id=');
+      expect(output).toContain('[FACTION]');
+      expect(output).toContain(headline);
+      expect(output).not.toContain('{');
+      expect(output).not.toContain('Use:');
+      expect(message).toBe(at120.headline);
+      expect(message).toBe(tableMessageFromPreview(at120));
+      expect(message).not.toBe('FACTION');
+      for (const token of absent ?? []) {
+        expect(text).not.toContain(token);
+        expect(JSON.stringify(preview)).not.toContain(token);
+      }
+      expectNoDiagnosticTokens(text);
+      expectNoDiagnosticTokens(output);
+      expectNoNestedJsonDump(text);
+      expectNoNestedJsonDump(output);
+    });
+
+    test('truncates the full headline to the line budget', () => {
+      const preview = formatNotificationPreview(note({ faction_name: 'Wardens', kicked_by: 'Ada' }), {
+        maxLineLength: 24,
+      });
+      expect(preview.headline).toHaveLength(24);
+      expect(preview.headline.endsWith('…')).toBe(true);
+      expect(preview.headline).not.toContain('...');
+    });
+
+    test('magenta faction tag does not turn danger into red', () => {
+      for (const data of [{}, { faction_name: 'Wardens', kicked_by: 'Ada' }]) {
+        const colored = formatNotification(note(data)).join('\n');
+        expect(colored).toContain('\x1b[35m[FACTION]');
+        expect(colored).not.toContain('\x1b[31m[FACTION]');
+        const plain = formatNotification(note(data), { plain: true }).join('\n');
+        expect(plain).toContain('[FACTION]');
+        expect(plain).not.toContain('\x1b[');
+      }
+    });
+  });
+
+  describe('faction_promote preview', () => {
+    function note(data: Record<string, unknown> = {}): {
+      type: 'system';
+      msg_type: 'faction_promote';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return { type: 'system', msg_type: 'faction_promote', timestamp: '2026-09-07T12:00:00.000Z', data };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    const rows: Array<{ name: string; data: Record<string, unknown>; headline: string; absent?: string[] }> = [
+      {
+        name: 'full bag',
+        data: { faction_name: 'Wardens', old_role: 'member', new_role: 'officer', promoted_by: 'Ada' },
+        headline: 'Role changed: Wardens, member → officer, by Ada',
+      },
+      {
+        name: 'leader role',
+        data: { faction_name: 'Wardens', old_role: 'officer', new_role: 'leader', promoted_by: 'Ada' },
+        headline: 'Role changed: Wardens, officer → leader, by Ada',
+      },
+      {
+        name: 'equal roles',
+        data: { old_role: 'recruit', new_role: 'recruit' },
+        headline: 'Role changed: recruit → recruit',
+      },
+      { name: 'new role only', data: { new_role: 'officer' }, headline: 'Role changed: now officer' },
+      { name: 'old role only', data: { old_role: 'member' }, headline: 'Role changed: was member' },
+      { name: 'name only', data: { faction_name: 'Wardens' }, headline: 'Role changed: Wardens' },
+      { name: 'actor only', data: { promoted_by: 'Ada' }, headline: 'Role changed: by Ada' },
+      { name: 'empty bag', data: {}, headline: 'Role changed' },
+      {
+        name: 'string zero role',
+        data: { old_role: '0', new_role: 'officer' },
+        headline: 'Role changed: 0 → officer',
+      },
+      {
+        name: 'non-strings',
+        data: { old_role: 0, new_role: { id: 'leader' }, promoted_by: null },
+        headline: 'Role changed',
+        absent: ['0', 'leader', '[object Object]'],
+      },
+      {
+        name: 'first line of old role',
+        data: { old_role: 'officer\nleader', new_role: 'member' },
+        headline: 'Role changed: officer → member',
+        absent: ['leader'],
+      },
+      {
+        name: 'spaces around old role',
+        data: { old_role: ' officer ', new_role: 'member' },
+        headline: 'Role changed:  officer  → member',
+      },
+    ];
+
+    test('registers a never-null handler', () => {
+      expect(hasPreviewHandler('faction_promote')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('faction_promote');
+    });
+
+    test.each(rows)('$name', ({ data, headline, absent }) => {
+      const notification = note(data);
+      const preview = formatNotificationPreview(notification);
+      const text = previewText(preview);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const at120 = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+
+      expect(preview.tag).toBe('FACTION');
+      expect(preview.severity).toBe('info');
+      expect(preview.headline).toBe(headline);
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.details).toEqual([]);
+      expect(preview.details.some((line) => line.startsWith('Role:'))).toBe(false);
+      expect(text).not.toContain('{');
+      expect(text).not.toContain('Use:');
+      expect(text).not.toMatch(/promoted/i);
+      expect(text).not.toMatch(/demoted/i);
+      expect(output).toContain('[FACTION]');
+      expect(output).toContain(headline);
+      expect(output).not.toContain('Use:');
+      expect(output).not.toMatch(/promoted/i);
+      expect(output).not.toMatch(/demoted/i);
+      expect(message).toBe(at120.headline);
+      expect(message).toBe(tableMessageFromPreview(at120));
+      expect(message).not.toBe('FACTION');
+      for (const token of absent ?? []) {
+        expect(text).not.toContain(token);
+        expect(JSON.stringify(preview)).not.toContain(token);
+      }
+      expectNoDiagnosticTokens(text);
+      expectNoDiagnosticTokens(output);
+      expectNoNestedJsonDump(text);
+      expectNoNestedJsonDump(output);
+    });
+
+    test('magenta faction tag does not follow severity', () => {
+      for (const data of [{}, { new_role: 'leader' }, { new_role: 'recruit' }]) {
+        const colored = formatNotification(note(data)).join('\n');
+        expect(colored).toContain('\x1b[35m[FACTION]');
+        expect(colored).not.toContain('\x1b[31m[FACTION]');
+        const plain = formatNotification(note(data), { plain: true }).join('\n');
+        expect(plain).toContain('[FACTION]');
+        expect(plain).not.toContain('\x1b[');
+      }
+    });
+  });
+
+  describe('faction_withdraw_invite preview', () => {
+    function note(data: Record<string, unknown> = {}): {
+      type: 'system';
+      msg_type: 'faction_withdraw_invite';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return { type: 'system', msg_type: 'faction_withdraw_invite', timestamp: '2026-09-07T12:00:00.000Z', data };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    const rows: Array<{ name: string; data: Record<string, unknown>; headline: string; absent?: string[] }> = [
+      {
+        name: 'full bag',
+        data: { faction_name: 'Wardens', faction_id: 'fac_1', withdrawn_by: 'Ada' },
+        headline: 'Invite withdrawn: Wardens (fac_1), by Ada',
+      },
+      { name: 'name only', data: { faction_name: 'Wardens' }, headline: 'Invite withdrawn: Wardens' },
+      { name: 'id only', data: { faction_id: 'fac_1' }, headline: 'Invite withdrawn: fac_1' },
+      { name: 'actor only', data: { withdrawn_by: 'Ada' }, headline: 'Invite withdrawn: by Ada' },
+      {
+        name: 'name equals id',
+        data: { faction_name: 'Wardens', faction_id: 'Wardens' },
+        headline: 'Invite withdrawn: Wardens',
+        absent: ['Wardens (Wardens)'],
+      },
+      { name: 'empty bag', data: {}, headline: 'Invite withdrawn' },
+      {
+        name: 'first line and blank id',
+        data: { faction_name: 'Wardens\nextra', faction_id: '  ', withdrawn_by: 'Ada' },
+        headline: 'Invite withdrawn: Wardens, by Ada',
+        absent: ['extra'],
+      },
+      {
+        name: 'spaces around name',
+        data: { faction_name: ' Wardens ', faction_id: 'fac_1', withdrawn_by: 'Ada' },
+        headline: 'Invite withdrawn:  Wardens  (fac_1), by Ada',
+      },
+      {
+        name: 'numeric id',
+        data: { faction_id: 0 },
+        headline: 'Invite withdrawn',
+        absent: ['0'],
+      },
+    ];
+
+    test('registers a never-null handler', () => {
+      expect(hasPreviewHandler('faction_withdraw_invite')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('faction_withdraw_invite');
+    });
+
+    test.each(rows)('$name', ({ data, headline, absent }) => {
+      const notification = note(data);
+      const preview = formatNotificationPreview(notification);
+      const text = previewText(preview);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const at120 = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+
+      expect(preview.tag).toBe('FACTION');
+      expect(preview.severity).toBe('warning');
+      expect(preview.headline).toBe(headline);
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.details).toEqual([]);
+      expect(text).not.toContain('{');
+      expect(text).not.toContain('Use:');
+      expect(text).not.toContain('join_faction');
+      expect(text).not.toContain('decline_invite');
+      expect(text).not.toContain('accept_invite');
+      expect(text).not.toContain('faction_id=');
+      expect(output).toContain('[FACTION]');
+      expect(output).toContain(headline);
+      expect(output).not.toContain('Use:');
+      expect(output).not.toContain('join_faction');
+      expect(output).not.toContain('decline_invite');
+      expect(output).not.toContain('accept_invite');
+      expect(message).toBe(at120.headline);
+      expect(message).toBe(tableMessageFromPreview(at120));
+      expect(message).not.toBe('FACTION');
+      for (const token of absent ?? []) {
+        expect(text).not.toContain(token);
+        expect(JSON.stringify(preview)).not.toContain(token);
+      }
+      expectNoDiagnosticTokens(text);
+      expectNoDiagnosticTokens(output);
+      expectNoNestedJsonDump(text);
+      expectNoNestedJsonDump(output);
+    });
+
+    test('magenta faction tag does not follow severity', () => {
+      const data = { faction_name: 'Wardens', faction_id: 'fac_1', withdrawn_by: 'Ada' };
+      const colored = formatNotification(note(data)).join('\n');
+      expect(colored).toContain('\x1b[35m[FACTION]');
+      expect(colored).not.toContain('\x1b[31m[FACTION]');
+      const plain = formatNotification(note(data), { plain: true }).join('\n');
+      expect(plain).toContain('[FACTION]');
+      expect(plain).not.toContain('\x1b[');
+    });
+  });
+
+  describe('pathfinder_storm preview', () => {
+    const deflectedTrue = 'Deflected: true; Use: get_location';
+    const deflectedFalse = 'Deflected: false';
+
+    function note(data: Record<string, unknown> = {}): {
+      type: 'system';
+      msg_type: 'pathfinder_storm';
+      timestamp: string;
+      data: Record<string, unknown>;
+    } {
+      return { type: 'system', msg_type: 'pathfinder_storm', timestamp: '2026-09-07T12:00:00.000Z', data };
+    }
+
+    function previewText(preview: { headline: string; details: string[] }): string {
+      return `${preview.headline}\n${preview.details.join('\n')}`;
+    }
+
+    const rows: Array<{
+      name: string;
+      data: Record<string, unknown>;
+      severity: 'warning' | 'info';
+      headline: string;
+      details: string[];
+      absent?: string[];
+    }> = [
+      {
+        name: 'deflected message',
+        data: { deflected: true, message: 'Pushed off the plotted bearing.' },
+        severity: 'warning',
+        headline: 'Pushed off the plotted bearing.',
+        details: [deflectedTrue],
+      },
+      {
+        name: 'held message',
+        data: { deflected: false, message: 'Heading held.' },
+        severity: 'info',
+        headline: 'Heading held.',
+        details: [deflectedFalse],
+      },
+      {
+        name: 'deflected without message',
+        data: { deflected: true },
+        severity: 'warning',
+        headline: 'Storm deflected your heading',
+        details: [deflectedTrue],
+      },
+      {
+        name: 'held without message',
+        data: { deflected: false },
+        severity: 'info',
+        headline: 'Storm buffeted the ship; heading held',
+        details: [deflectedFalse],
+      },
+      {
+        name: 'empty bag',
+        data: {},
+        severity: 'warning',
+        headline: 'Pathfinder storm',
+        details: [],
+      },
+      {
+        name: 'first line of message',
+        data: { message: 'Pushed.\nReplot now.', deflected: true },
+        severity: 'warning',
+        headline: 'Pushed.',
+        details: [deflectedTrue],
+        absent: ['Replot now.'],
+      },
+      {
+        name: 'message is the deflected prefix',
+        data: { message: 'Deflected: true', deflected: true },
+        severity: 'warning',
+        headline: 'Deflected: true',
+        details: ['Use: get_location'],
+      },
+      {
+        name: 'message is the full detail',
+        data: { message: 'Deflected: true; Use: get_location', deflected: true },
+        severity: 'warning',
+        headline: 'Deflected: true; Use: get_location',
+        details: [],
+      },
+      {
+        name: 'leading space on message',
+        data: { message: ' Pushed.', deflected: true },
+        severity: 'warning',
+        headline: ' Pushed.',
+        details: [deflectedTrue],
+      },
+      {
+        name: 'string zero message',
+        data: { message: '0', deflected: false },
+        severity: 'info',
+        headline: '0',
+        details: [deflectedFalse],
+      },
+      {
+        name: 'string true is not a boolean',
+        data: { deflected: 'true', message: 'Storm.' },
+        severity: 'warning',
+        headline: 'Storm.',
+        details: [],
+        absent: ['Deflected'],
+      },
+      {
+        name: 'numeric one is not a boolean',
+        data: { deflected: 1 },
+        severity: 'warning',
+        headline: 'Pathfinder storm',
+        details: [],
+        absent: ['Deflected'],
+      },
+      {
+        name: 'string false is not a boolean',
+        data: { deflected: 'false' },
+        severity: 'warning',
+        headline: 'Pathfinder storm',
+        details: [],
+        absent: ['Deflected', 'heading held'],
+      },
+      {
+        name: 'blank first line falls back',
+        data: { message: '  \nStorm.', deflected: false },
+        severity: 'info',
+        headline: 'Storm buffeted the ship; heading held',
+        details: [deflectedFalse],
+        absent: ['Storm.'],
+      },
+      {
+        name: 'extra hull and poi are omitted',
+        data: { deflected: false, message: 'Ok.', hull: 10, poi_name: 'Scar' },
+        severity: 'info',
+        headline: 'Ok.',
+        details: [deflectedFalse],
+        absent: ['hull', 'Scar'],
+      },
+    ];
+
+    test('registers a never-null handler', () => {
+      expect(hasPreviewHandler('pathfinder_storm')).toBe(true);
+      expect(NOTIFICATION_TYPES).toContain('pathfinder_storm');
+    });
+
+    test.each(rows)('$name', ({ data, severity, headline, details, absent }) => {
+      const notification = note(data);
+      const preview = formatNotificationPreview(notification);
+      const text = previewText(preview);
+      const output = stripAnsi(formatNotification(notification).join('\n'));
+      const at120 = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+
+      expect(preview.tag).toBe('STORM');
+      expect(preview.severity).toBe(severity);
+      expect(preview.headline).toBe(headline);
+      expect(preview.headline).not.toBe('notification');
+      expect(preview.details).toEqual(details);
+      expect(text).not.toContain('{');
+      expect(output).toContain('[STORM]');
+      expect(output).toContain(headline);
+      expect(message).toBe(tableMessageFromPreview(at120));
+      expect(message).not.toBe('STORM');
+      expect(message).not.toContain('[STORM]');
+      if (!text.includes('get_location')) {
+        expect(text).not.toContain('get_location');
+        expect(output).not.toContain('get_location');
+      }
+      for (const token of ['jump', 'fuel', 'transit_bearing', 'transit_x', 'transit_y', 'hull', 'dose']) {
+        expect(text).not.toContain(token);
+        expect(output).not.toContain(token);
+      }
+      for (const token of absent ?? []) {
+        expect(text).not.toContain(token);
+        expect(JSON.stringify(preview)).not.toContain(token);
+      }
+      expectNoDiagnosticTokens(text);
+      expectNoDiagnosticTokens(output);
+      expectNoNestedJsonDump(text);
+      expectNoNestedJsonDump(output);
+    });
+
+    test('K13: folded message keeps Use: get_location and is not the tag', () => {
+      const notification = note({ deflected: true, message: 'Pushed off the plotted bearing.' });
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Pushed off the plotted bearing.; Deflected: true; Use: get_location');
+      expect(message).toBe(tableMessageFromPreview(formatNotificationPreview(notification, { maxLineLength: 120 })));
+      expect(message).not.toBe('STORM');
+      expect(message).not.toContain('[STORM]');
+      const lines = formatNotification(notification);
+      expect(lines.join('\n')).toContain('[STORM]');
+      expect(lines.at(-1)).toBe('  Deflected: true; Use: get_location');
+    });
+
+    test('msg_type wins over a combat coarse type', () => {
+      const preview = formatNotificationPreview({
+        type: 'combat',
+        msg_type: 'pathfinder_storm',
+        data: { deflected: true, message: 'Pushed off the plotted bearing.' },
+      });
+      expect(preview.tag).toBe('STORM');
+      expect(preview.headline).toBe('Pushed off the plotted bearing.');
+      expect(preview.details).toEqual([deflectedTrue]);
+    });
+
+    test('maxDetails 0 keeps the message and emits no detail', () => {
+      const preview = formatNotificationPreview(note({ deflected: true, message: 'Pushed off the plotted bearing.' }), {
+        maxDetails: 0,
+      });
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).toBe('Pushed off the plotted bearing.');
+    });
+
+    test('maxDetails 0 does not reserve fold space', () => {
+      const preview = formatNotificationPreview(note({ deflected: true, message: 'a'.repeat(180) }), { maxDetails: 0 });
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).toBe('a'.repeat(180));
+    });
+
+    test('a tiny line budget truncates the detail independently', () => {
+      const preview = formatNotificationPreview(note({ deflected: true, message: 'Pushed off the plotted bearing.' }), {
+        maxLineLength: 10,
+      });
+      expect(preview.headline).toHaveLength(10);
+      expect(preview.details[0]).toHaveLength(10);
+      expect(preview.headline.endsWith('…')).toBe(true);
+      expect(preview.details[0]?.endsWith('…')).toBe(true);
+      expect(preview.headline).not.toContain('...');
+      expect(preview.details[0]).not.toContain('...');
+    });
+
+    test('a 100 character message keeps Use: get_location inside 120', () => {
+      const notification = note({ deflected: true, message: 'a'.repeat(100) });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+      expect(preview.headline).toBe(`${'a'.repeat(83)}…`);
+      expect(preview.headline).not.toContain('Use: get_location');
+      expect(preview.headline).not.toContain('Deflected');
+      expect(preview.details).toEqual([deflectedTrue]);
+      expect(message).toBe(`${preview.headline}; ${deflectedTrue}`);
+      expect(message.length).toBeLessThanOrEqual(120);
+      expect(message).toHaveLength(120);
+      expect(message.endsWith('Use: get_location')).toBe(true);
+      expect(message).not.toContain('...');
+      expect(truncateCell(message, 120)).toBe(message);
+      const inline = formatNotificationPreview(notification);
+      expect(inline.headline).toBe('a'.repeat(100));
+      expect(inline.details).toEqual([deflectedTrue]);
+    });
+
+    test('a phrase past the 84 character keep still folds Use: get_location', () => {
+      const notification = note({
+        deflected: true,
+        message: `${'a'.repeat(90)}${deflectedTrue}`,
+      });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+      expect(preview.headline).toBe(`${'a'.repeat(83)}…`);
+      expect(preview.headline).not.toContain('Deflected');
+      expect(preview.details).toEqual([deflectedTrue]);
+      expect(message.endsWith('Use: get_location')).toBe(true);
+      expect(message.length).toBeLessThanOrEqual(120);
+      expect(message).toHaveLength(120);
+      expect(truncateCell(message, 120)).toBe(message);
+    });
+
+    test('a kept prefix that already contains the detail does not fold a second copy', () => {
+      const notification = note({ deflected: true, message: `${deflectedTrue}${'a'.repeat(100)}` });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+      expect(preview.details).toEqual([]);
+      expect(preview.headline).toBe(`${deflectedTrue}${'a'.repeat(85)}…`);
+      expect(preview.headline).toHaveLength(120);
+      expect(message).toBe(preview.headline);
+      expect(message).toContain('Use: get_location');
+      expect(message.split('Use: get_location')).toHaveLength(2);
+      expect(message).not.toContain('; Deflected: true; Use: get_location');
+    });
+
+    test('a long held-heading message ends with Deflected: false inside 120', () => {
+      const notification = note({ deflected: false, message: 'a'.repeat(110) });
+      const preview = formatNotificationPreview(notification, { maxLineLength: 120 });
+      const message = formatNotificationMessage(notification);
+      expect(preview.headline).toBe(`${'a'.repeat(101)}…`);
+      expect(preview.details).toEqual([deflectedFalse]);
+      expect(message).toBe(`${preview.headline}; ${deflectedFalse}`);
+      expect(message.endsWith('Deflected: false')).toBe(true);
+      expect(message.length).toBeLessThanOrEqual(120);
+      expect(message).toHaveLength(120);
+      expect(message).not.toContain('get_location');
+      expect(truncateCell(message, 120)).toBe(message);
+    });
+
+    test('inline budget keeps a detail once the message exceeds the wider cap', () => {
+      const preview = formatNotificationPreview(note({ deflected: true, message: 'a'.repeat(180) }));
+      expect(preview.headline).toBe(`${'a'.repeat(163)}…`);
+      expect(preview.headline).toHaveLength(164);
+      expect(preview.headline).not.toContain('Use: get_location');
+      expect(preview.details).toEqual([deflectedTrue]);
+    });
+
+    test('yellow storm tag does not follow severity', () => {
+      for (const data of [
+        { deflected: true, message: 'Pushed off the plotted bearing.' },
+        { deflected: false, message: 'Heading held.' },
+      ]) {
+        const colored = formatNotification(note(data)).join('\n');
+        expect(colored).toContain('\x1b[33m[STORM]');
+        const plain = formatNotification(note(data), { plain: true }).join('\n');
+        expect(plain).toContain('[STORM]');
+        expect(plain).not.toContain('\x1b[');
+      }
+    });
+  });
+
   describe('OpenAPI NotificationPayload inventory lock', () => {
     test('every bundled Notification_* msg_type has a preview handler', () => {
       const types = openapiNotificationMsgTypes(loadOpenApiSpec());
@@ -11953,6 +12615,10 @@ describe('notification formatting', () => {
           'refueled_by',
           'repaired_by',
           'gift_received',
+          'faction_kick',
+          'faction_promote',
+          'faction_withdraw_invite',
+          'pathfinder_storm',
           'exchange_fill',
         ]),
       );
