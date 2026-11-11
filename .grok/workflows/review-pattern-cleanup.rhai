@@ -30,6 +30,11 @@ let meta = #{
 // Rejected sites are appended to .grok/review-pattern-ledger.json. The next
 // scan skips a site when the file and family match and either the line or the
 // quote matches, so a later verifier cannot reverse a keep after lines drift.
+// The reader does not copy that file through an output schema. A schema miss
+// retries inside the one agent call, does not spend agent budget, and cannot
+// be timed out, so a trailing bracket becomes a long reasoning loop. A program
+// prints the file. The script parses the first JSON value and ignores trailing
+// text. A mismatch stops the run before Scan.
 // A test rejection whose reason says the branch is still unlocked is not a
 // rejection and is not written to the ledger.
 // An editor refusal is written the same way. A test refusal whose reason says
@@ -469,6 +474,399 @@ fn collect_ledger(result) {
         }
     }
     return #{ ok: true, entries: entries };
+}
+
+fn digit_value(ch) {
+    let digits = "0123456789";
+    let j = 0;
+    while j < 10 {
+        if ch == digits.sub_string(j, 1) {
+            return j;
+        }
+        j += 1;
+    }
+    return -1;
+}
+
+fn skip_ws(s, i) {
+    let guard = 0;
+    while i < s.len() && guard <= s.len() {
+        guard += 1;
+        let ch = s.sub_string(i, 1);
+        if ch != " " && ch != "\n" && ch != "\r" && ch != "\t" {
+            return i;
+        }
+        i += 1;
+    }
+    return i;
+}
+
+fn starts_at(s, i, word) {
+    if i + word.len() > s.len() {
+        return false;
+    }
+    return s.sub_string(i, word.len()) == word;
+}
+
+fn parse_json_string(s, i) {
+    if i >= s.len() || s.sub_string(i, 1) != "\"" {
+        return #{ ok: false };
+    }
+    i += 1;
+    let out = "";
+    let guard = 0;
+    while i < s.len() && guard <= s.len() {
+        guard += 1;
+        let ch = s.sub_string(i, 1);
+        if ch == "\"" {
+            return #{ ok: true, value: out, next: i + 1 };
+        }
+        if ch == "\n" || ch == "\r" {
+            return #{ ok: false };
+        }
+        if ch == "\\" {
+            i += 1;
+            if i >= s.len() {
+                return #{ ok: false };
+            }
+            let esc = s.sub_string(i, 1);
+            i += 1;
+            if esc == "\"" || esc == "\\" || esc == "/" {
+                out += esc;
+            } else if esc == "n" {
+                out += "\n";
+            } else if esc == "r" {
+                out += "\r";
+            } else if esc == "t" {
+                out += "\t";
+            } else {
+                return #{ ok: false };
+            }
+        } else {
+            out += ch;
+            i += 1;
+        }
+    }
+    return #{ ok: false };
+}
+
+fn parse_json_number(s, i) {
+    if i >= s.len() {
+        return #{ ok: false };
+    }
+    let negative = false;
+    if s.sub_string(i, 1) == "-" {
+        negative = true;
+        i += 1;
+    }
+    let value = 0;
+    let digits = 0;
+    let guard = 0;
+    while i < s.len() && guard <= s.len() {
+        guard += 1;
+        let d = digit_value(s.sub_string(i, 1));
+        if d < 0 {
+            if digits == 0 {
+                return #{ ok: false };
+            }
+            guard = s.len() + 1;
+        } else {
+            value = value * 10 + d;
+            digits += 1;
+            i += 1;
+        }
+    }
+    if digits == 0 {
+        return #{ ok: false };
+    }
+    if i < s.len() {
+        let ch = s.sub_string(i, 1);
+        if ch == "." || ch == "e" || ch == "E" {
+            return #{ ok: false };
+        }
+    }
+    if negative {
+        value = 0 - value;
+    }
+    return #{ ok: true, value: value, next: i };
+}
+
+fn parse_json_at(s, i, depth) {
+    if depth > 8 {
+        return #{ ok: false };
+    }
+    i = skip_ws(s, i);
+    if i >= s.len() {
+        return #{ ok: false };
+    }
+    let ch = s.sub_string(i, 1);
+    if ch == "\"" {
+        return parse_json_string(s, i);
+    }
+    if ch == "{" {
+        return parse_json_object(s, i, depth);
+    }
+    if ch == "[" {
+        return parse_json_array(s, i, depth);
+    }
+    if starts_at(s, i, "true") {
+        return #{ ok: true, value: true, next: i + 4 };
+    }
+    if starts_at(s, i, "false") {
+        return #{ ok: true, value: false, next: i + 5 };
+    }
+    if starts_at(s, i, "null") {
+        return #{ ok: true, value: (), next: i + 4 };
+    }
+    return parse_json_number(s, i);
+}
+
+fn parse_json_object(s, i, depth) {
+    i += 1;
+    let obj = #{};
+    i = skip_ws(s, i);
+    if i < s.len() && s.sub_string(i, 1) == "}" {
+        return #{ ok: true, value: obj, next: i + 1 };
+    }
+    let guard = 0;
+    let closed = false;
+    while !closed && i < s.len() && guard <= s.len() {
+        guard += 1;
+        let key = parse_json_string(s, i);
+        if key.ok != true {
+            return #{ ok: false };
+        }
+        i = skip_ws(s, key.next);
+        if i >= s.len() || s.sub_string(i, 1) != ":" {
+            return #{ ok: false };
+        }
+        i += 1;
+        let val = parse_json_at(s, i, depth + 1);
+        if val.ok != true {
+            return #{ ok: false };
+        }
+        obj[key.value] = val.value;
+        i = skip_ws(s, val.next);
+        if i >= s.len() {
+            return #{ ok: false };
+        }
+        let sep = s.sub_string(i, 1);
+        if sep == "}" {
+            closed = true;
+            i += 1;
+        } else if sep == "," {
+            i += 1;
+            i = skip_ws(s, i);
+        } else {
+            return #{ ok: false };
+        }
+    }
+    if !closed {
+        return #{ ok: false };
+    }
+    return #{ ok: true, value: obj, next: i };
+}
+
+fn parse_json_array(s, i, depth) {
+    i += 1;
+    let arr = [];
+    i = skip_ws(s, i);
+    if i < s.len() && s.sub_string(i, 1) == "]" {
+        return #{ ok: true, value: arr, next: i + 1 };
+    }
+    let guard = 0;
+    let closed = false;
+    while !closed && i < s.len() && guard <= s.len() {
+        guard += 1;
+        let val = parse_json_at(s, i, depth + 1);
+        if val.ok != true {
+            return #{ ok: false };
+        }
+        arr.push(val.value);
+        i = skip_ws(s, val.next);
+        if i >= s.len() {
+            return #{ ok: false };
+        }
+        let sep = s.sub_string(i, 1);
+        if sep == "]" {
+            closed = true;
+            i += 1;
+        } else if sep == "," {
+            i += 1;
+        } else {
+            return #{ ok: false };
+        }
+    }
+    if !closed {
+        return #{ ok: false };
+    }
+    return #{ ok: true, value: arr, next: i };
+}
+
+fn parse_json_value(s, i) {
+    return parse_json_at(s, i, 0);
+}
+
+fn count_line(raw) {
+    let line = trimmed(raw);
+    if line.len() < 7 || line.sub_string(0, 6) != "COUNT " {
+        return -1;
+    }
+    let rest = line.sub_string(6, line.len() - 6);
+    if rest.len() == 0 {
+        return -1;
+    }
+    let n = 0;
+    let i = 0;
+    while i < rest.len() {
+        let d = digit_value(rest.sub_string(i, 1));
+        if d < 0 {
+            return -1;
+        }
+        n = n * 10 + d;
+        i += 1;
+    }
+    return n;
+}
+
+fn count_lines(text) {
+    let counts = [];
+    let line = "";
+    let i = 0;
+    while i <= text.len() {
+        let at_end = i == text.len();
+        let ch = "";
+        if !at_end {
+            ch = text.sub_string(i, 1);
+        }
+        if at_end || ch == "\n" {
+            let n = count_line(line);
+            if n >= 0 {
+                counts.push(n);
+            }
+            line = "";
+        } else if ch != "\r" {
+            line += ch;
+        }
+        i += 1;
+    }
+    return counts;
+}
+
+fn entry_acceptable(raw) {
+    if type_of(raw) != "map" {
+        return false;
+    }
+    let file = trimmed(raw.file);
+    let family = trimmed(raw.family);
+    let line_no = line_number(raw.line);
+    let known = false;
+    if family == "comment" || family == "helper" || family == "presence" || family == "test" {
+        known = true;
+    }
+    if file == "" || line_no <= 0 || !known {
+        return false;
+    }
+    return true;
+}
+
+fn entries_from_array(raw_entries) {
+    let entries = [];
+    if type_of(raw_entries) != "array" {
+        return #{ ok: false, entries: entries };
+    }
+    for raw in raw_entries {
+        if !entry_acceptable(raw) {
+            return #{ ok: false, entries: [] };
+        }
+        let quote = one_line(raw.quote, 180);
+        entries = ledger_upsert(entries, trimmed(raw.file), trimmed(raw.family), line_number(raw.line), quote);
+    }
+    return #{ ok: true, entries: entries };
+}
+
+fn parse_ledger_text(text) {
+    let empty = [];
+    if type_of(text) != "string" || text == "" {
+        return #{ ok: false, entries: empty };
+    }
+    let counts = count_lines(text);
+    if counts.len() == 0 {
+        return #{ ok: false, entries: empty };
+    }
+    let i = 0;
+    let guard = 0;
+    while i < text.len() && guard <= text.len() {
+        guard += 1;
+        if text.sub_string(i, 1) == "{" {
+            let parsed = parse_json_value(text, i);
+            if parsed.ok == true && type_of(parsed.value) == "map" && type_of(parsed.value.entries) == "array" {
+                let expected = parsed.value.entries.len();
+                let matched = false;
+                for n in counts {
+                    if n == expected {
+                        matched = true;
+                    }
+                }
+                if matched {
+                    return entries_from_array(parsed.value.entries);
+                }
+            }
+        }
+        i += 1;
+    }
+    return #{ ok: false, entries: empty };
+}
+
+fn read_ledger_result(result) {
+    let empty = [];
+    if result == () || type_of(result) != "map" {
+        return #{ ok: false, entries: empty, stub: false };
+    }
+    if type_of(result.output) == "map" && result.output.stub == true {
+        return #{ ok: false, entries: empty, stub: true };
+    }
+    if type_of(result.output) == "string" {
+        let parsed = parse_ledger_text(result.output);
+        return #{ ok: parsed.ok, entries: parsed.entries, stub: false };
+    }
+    let parsed = collect_ledger(result);
+    return #{ ok: parsed.ok, entries: parsed.entries, stub: false };
+}
+
+fn ledger_parser_failures() {
+    let failed = "";
+    let trailed = "Note.\n```json\nCOUNT 1\n";
+    trailed += "{\"entries\":[{\"family\":\"comment\",\"file\":\"src/display/dock-state.ts\",\"line\":21,\"quote\":\"empty string → undocked.\"}]}]}";
+    trailed += "\n```\n";
+    let parsed = parse_ledger_text(trailed);
+    if parsed.ok != true || parsed.entries.len() != 1 || parsed.entries[0].quote != "empty string → undocked." || parsed.entries[0].line != 21 {
+        failed += "trailing ";
+    }
+    let escaped = "COUNT 1\n{\"entries\":[{\"family\":\"test\",\"file\":\"src/a.ts\",\"line\":4,\"quote\":\"join('\\\\n') and \\\\+1\"}]}";
+    parsed = parse_ledger_text(escaped);
+    let want = "join('\\n') and ";
+    want += "\\";
+    want += "+1";
+    if parsed.ok != true || parsed.entries.len() != 1 || parsed.entries[0].quote != want {
+        failed += "escape ";
+    }
+    let mismatch = "COUNT 2\n{\"entries\":[{\"family\":\"helper\",\"file\":\"src/a.ts\",\"line\":1,\"quote\":\"only\"}]}";
+    parsed = parse_ledger_text(mismatch);
+    if parsed.ok != false {
+        failed += "mismatch ";
+    }
+    let missing = "LEDGER_INVALID\n";
+    parsed = parse_ledger_text(missing);
+    if parsed.ok != false {
+        failed += "invalid ";
+    }
+    let empty_file = "COUNT 0\n{\"entries\":[]}\n";
+    parsed = parse_ledger_text(empty_file);
+    if parsed.ok != true || parsed.entries.len() != 0 {
+        failed += "empty ";
+    }
+    return failed;
 }
 
 fn collect_diff_files(result) {
@@ -1011,28 +1409,6 @@ let findings_schema = #{
 
 let ledger_path = ".grok/review-pattern-ledger.json";
 
-let ledger_schema = #{
-    "type": "object",
-    "required": ["read", "entries"],
-    "properties": #{
-        "read": #{ "type": "boolean" },
-        "entries": #{
-            "type": "array",
-            "maxItems": 400,
-            "items": #{
-                "type": "object",
-                "required": ["file", "line", "family", "quote"],
-                "properties": #{
-                    "file": #{ "type": "string" },
-                    "line": #{ "type": "integer" },
-                    "family": #{ "type": "string" },
-                    "quote": #{ "type": "string" },
-                },
-            },
-        },
-    },
-};
-
 let diff_schema = #{
     "type": "object",
     "required": ["files"],
@@ -1053,12 +1429,44 @@ let ledger_write_schema = #{
     },
 };
 
+if args != () && args.self_test == true {
+    let failures = ledger_parser_failures();
+    if failures == "" {
+        complete(#{ ok: true });
+    }
+    complete(#{ ok: false, failures: failures });
+}
+
 phase("Ledger");
 let ledger_read_prompt = "";
-ledger_read_prompt += "Read " + ledger_path + " with read_file. ";
-ledger_read_prompt += "If the file is missing, set read=true and entries to an empty array. ";
-ledger_read_prompt += "If the file is present, set read=true and copy each entry's file, line, family, and quote exactly. ";
-ledger_read_prompt += "Set read=false only when the file is present and is not a JSON object with an entries array. Do not invent entries. Do not edit the repository. ";
+ledger_read_prompt += "From the repository root, run the program below with the bash tool. ";
+ledger_read_prompt += "Do not use read_file. Do not edit a file. Do not pretty-print, summarize, or add brackets. ";
+ledger_read_prompt += "Do not rewrite the JSON by hand. A schema is not used, and a hand copy is rejected. ";
+ledger_read_prompt += "Your final message must contain the program stdout. A short note around it is ignored. ";
+ledger_read_prompt += "If python3 is missing, use python with the same program.\n";
+ledger_read_prompt += "python3 << 'PY'\n";
+ledger_read_prompt += "import json, pathlib, sys\n";
+ledger_read_prompt += "p = pathlib.Path('.grok/review-pattern-ledger.json')\n";
+ledger_read_prompt += "if not p.exists():\n";
+ledger_read_prompt += "    sys.stdout.write('COUNT 0\\n{\"entries\":[]}\\n')\n";
+ledger_read_prompt += "else:\n";
+ledger_read_prompt += "    text = p.read_text()\n";
+ledger_read_prompt += "    data = None\n";
+ledger_read_prompt += "    try:\n";
+ledger_read_prompt += "        data = json.loads(text)\n";
+ledger_read_prompt += "    except Exception:\n";
+ledger_read_prompt += "        data = None\n";
+ledger_read_prompt += "    entries = None\n";
+ledger_read_prompt += "    if isinstance(data, dict):\n";
+ledger_read_prompt += "        entries = data.get('entries')\n";
+ledger_read_prompt += "    if not isinstance(entries, list):\n";
+ledger_read_prompt += "        sys.stdout.write('LEDGER_INVALID\\n')\n";
+ledger_read_prompt += "    else:\n";
+ledger_read_prompt += "        sys.stdout.write('COUNT %d\\n' % len(entries))\n";
+ledger_read_prompt += "        sys.stdout.write(text)\n";
+ledger_read_prompt += "        if not text.endswith('\\n'):\n";
+ledger_read_prompt += "            sys.stdout.write('\\n')\n";
+ledger_read_prompt += "PY\n";
 let diff_prompt = "";
 diff_prompt += "From the repository root, run git diff --name-only HEAD and git ls-files --others --exclude-standard. ";
 diff_prompt += "Return every unique repo-relative path those commands print. Do not edit files. ";
@@ -1067,8 +1475,7 @@ let ledger_jobs = [];
 ledger_jobs.push(#{
     prompt: ledger_read_prompt,
     label: "read-ledger",
-    capability_mode: "read-only",
-    output_schema: ledger_schema,
+    capability_mode: "execute",
     phase: "Ledger",
 });
 ledger_jobs.push(#{
@@ -1090,16 +1497,19 @@ if ledger_results.len() > 0 {
 if ledger_results.len() > 1 {
     baseline_diff = ledger_results[1];
 }
-let ledger_parsed = collect_ledger(ledger_read);
-let ledger = ledger_parsed.entries;
-let ledger_read_ok = ledger_parsed.ok;
+let ledger_state = read_ledger_result(ledger_read);
+let ledger = ledger_state.entries;
+let ledger_read_ok = ledger_state.ok;
 let baseline_parsed = collect_diff_files(baseline_diff);
 let baseline_files = baseline_parsed.files;
 let baseline_ok = baseline_parsed.ok;
-if ledger_read_ok {
+if ledger_state.stub == true {
+    log("Ledger was not loaded. This run will not overwrite " + ledger_path + ".");
+} else if ledger_read_ok {
     log("Ledger loaded " + ledger.len().to_string() + " rejected site(s).");
 } else {
-    log("Ledger was not loaded. This run will not overwrite " + ledger_path + ".");
+    log("Ledger was not loaded. This run stops before Scan and will not edit.");
+    pause("verification", "The ledger reader did not return a parseable copy of .grok/review-pattern-ledger.json. This run will not scan or edit. Stop it and start a new one. Resuming does not retry the read.");
 }
 if baseline_ok {
     log("Baseline diff has " + baseline_files.len().to_string() + " path(s).");
