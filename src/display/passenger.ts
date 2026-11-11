@@ -149,6 +149,11 @@ function renderTransitLounge(lounge: Record<string, unknown>): void {
   printCompactTable('Connecting Passengers', rows, passengerTableColumns(rows), { maxCellWidth: 72 });
 }
 
+export function emitPassengerColumns(title: string, rows: Array<Record<string, unknown>>): void {
+  if (rows.length === 0) return;
+  printCompactTable(title, rows, passengerTableColumns(rows), { maxCellWidth: 72 });
+}
+
 export const passengerFormatters = [
   formatter(
     (r) => {

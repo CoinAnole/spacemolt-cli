@@ -36,6 +36,7 @@ import {
   printItemTable,
 } from './helpers.ts';
 import { emitLeviathanContacts } from './leviathans.ts';
+import { emitPassengerColumns } from './passenger.ts';
 import { emitShipPersonnel, formatCrewRatio } from './personnel.ts';
 import { emitNearbyPrizes, emitPrizeRecoveries } from './prizes.ts';
 import {
@@ -1371,6 +1372,105 @@ function emitLoginUnreadChat(result: Record<string, unknown>, command: string | 
   for (const line of lines) emitLine(line);
 }
 
+function sentText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function missionOfferLabel(mission: Record<string, unknown>): string | undefined {
+  const title = sentText(mission.title);
+  const id = sentText(mission.mission_id);
+  if (title && id && title !== id) return `${title} (${id})`;
+  return title ?? id;
+}
+
+/** Title and id as sent. acceptHint is the interact_poi offer only; get_poi does not say to accept. */
+function emitMissionOffer(mission: unknown, acceptHint: boolean): boolean {
+  if (!isRecord(mission)) return false;
+  const label = missionOfferLabel(mission);
+  if (label) emitLine(label);
+  if (acceptHint) emitLine('Accept it with accept_mission.');
+  return Boolean(label) || acceptHint;
+}
+
+function emitRecoveredItems(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const items = Object.entries(value)
+    .filter(
+      ([, quantity]) => typeof quantity === 'bigint' || (typeof quantity === 'number' && Number.isFinite(quantity)),
+    )
+    .map(([item, quantity]) => `${item} x${formatNumber(quantity)}`);
+  if (items.length === 0) return false;
+  emitLine(`Items recovered: ${items.join(', ')}`);
+  return true;
+}
+
+function emitBoardedPassengers(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  const rows = value.filter(isRecord);
+  if (rows.length === 0) return false;
+  emitPassengerColumns('Passengers boarded', rows);
+  return true;
+}
+
+function emitPoiInteraction(value: unknown): void {
+  if (!isRecord(value)) return;
+  const command = value.command;
+  if (typeof command === 'string' && command.length > 0) emitLine(`Interaction: ${command}`);
+  const message = sentText(value.message);
+  if (message) emitLine(message);
+  emitMissionOffer(value.mission, false);
+}
+
+function emitCompleteMission(r: Record<string, unknown>): boolean {
+  const hasCredits = r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '';
+  const hasIdentity = Boolean(r.mission_id && r.message);
+  if (!hasCredits && !hasIdentity) return false;
+
+  emitLine(`\n${c.bright}=== Mission Complete: ${r.title ?? r.mission_id ?? 'Mission'} ===${c.reset}`);
+  if (r.mission_id) emitLine(`ID: ${r.mission_id}`);
+
+  const rewards = summarizeCompletionRewards(r);
+  if (rewards.creditsLine) emitLine(rewards.creditsLine);
+  const debtRepaid = formatIntegerText(r.debt_repaid);
+  if (debtRepaid !== undefined && r.debt_repaid !== 0 && r.debt_repaid !== 0n) {
+    emitLine(`Debt repaid: ${debtRepaid}`);
+  }
+  if (rewards.itemsLine) emitLine(rewards.itemsLine);
+  if (rewards.reputationLine) emitLine(rewards.reputationLine);
+  if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
+  if (rewards.communityLine) emitLine(rewards.communityLine);
+  const recipesUnlocked = joinStringIds(r.recipes_unlocked);
+  if (recipesUnlocked) emitLine(`Recipes unlocked: ${recipesUnlocked}`);
+  if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
+  emitMissionUnlocks(r.unlocks);
+  if (r.message) emitLine(String(r.message));
+  emitFixerAccount(r.fixer);
+  return true;
+}
+
+function emitInteractPoi(r: Record<string, unknown>): boolean {
+  let printed = false;
+  const message = sentText(r.message);
+  if (message) {
+    emitLine(message);
+    printed = true;
+  }
+  const poiId = sentText(r.poi_id);
+  if (poiId) {
+    emitLine(`POI: ${poiId}`);
+    printed = true;
+  }
+  if (r.data_copied === true) {
+    emitLine('Data copied: yes');
+    printed = true;
+  }
+  if (emitRecoveredItems(r.items_recovered)) printed = true;
+  if (emitBoardedPassengers(r.passengers_boarded)) printed = true;
+  if (emitMissionOffer(r.mission, true)) printed = true;
+  if (isRecord(r.completion) && emitCompleteMission(r.completion)) printed = true;
+  return printed;
+}
+
 export const statusFormatters = [
   formatter((r) => emitQueue(r.queue), { commands: ['get_queue'] }),
 
@@ -1730,7 +1830,7 @@ export const statusFormatters = [
   namedFormatter(
     'poi_info',
     ['poi'],
-    (r) => {
+    (r, command) => {
       const poi = (r.poi || r) as Record<string, unknown>;
       if (!poi.id || !poi.type || !poi.system_id) return false;
       emitLine(`\n${c.bright}=== POI: ${poi.name} ===${c.reset}`);
@@ -1772,10 +1872,13 @@ export const statusFormatters = [
 
       const services = r.services as string[] | undefined;
       if (services?.length) emitLine(`\n${c.bright}Services:${c.reset} ${services.join(', ')}`);
+      if (commandNameEquals(command, 'get_poi')) emitPoiInteraction(r.interaction);
       return true;
     },
     { commands: ['get_poi'], shapeFallback: true },
   ),
+
+  formatter(emitInteractPoi, { commands: ['interact_poi'] }),
 
   namedFormatter(
     'nearby',
@@ -1968,35 +2071,7 @@ export const statusFormatters = [
   ),
 
   // complete_mission: rewards-first CompleteMissionResponse (not active-missions re-list)
-  formatter(
-    (r) => {
-      const hasCredits = r.credits_earned !== undefined && r.credits_earned !== null && r.credits_earned !== '';
-      const hasIdentity = Boolean(r.mission_id && r.message);
-      if (!hasCredits && !hasIdentity) return false;
-
-      emitLine(`\n${c.bright}=== Mission Complete: ${r.title ?? r.mission_id ?? 'Mission'} ===${c.reset}`);
-      if (r.mission_id) emitLine(`ID: ${r.mission_id}`);
-
-      const rewards = summarizeCompletionRewards(r);
-      if (rewards.creditsLine) emitLine(rewards.creditsLine);
-      const debtRepaid = formatIntegerText(r.debt_repaid);
-      if (debtRepaid !== undefined && r.debt_repaid !== 0 && r.debt_repaid !== 0n) {
-        emitLine(`Debt repaid: ${debtRepaid}`);
-      }
-      if (rewards.itemsLine) emitLine(rewards.itemsLine);
-      if (rewards.reputationLine) emitLine(rewards.reputationLine);
-      if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
-      if (rewards.communityLine) emitLine(rewards.communityLine);
-      const recipesUnlocked = joinStringIds(r.recipes_unlocked);
-      if (recipesUnlocked) emitLine(`Recipes unlocked: ${recipesUnlocked}`);
-      if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
-      emitMissionUnlocks(r.unlocks);
-      if (r.message) emitLine(String(r.message));
-      emitFixerAccount(r.fixer);
-      return true;
-    },
-    { commands: ['complete_mission'] },
-  ),
+  formatter(emitCompleteMission, { commands: ['complete_mission'] }),
 
   // Completed mission history list (flat CompletedMissionsResponse)
   formatter(

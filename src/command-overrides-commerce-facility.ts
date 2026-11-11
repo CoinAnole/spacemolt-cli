@@ -75,6 +75,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       },
     },
   },
+  interact_poi: {
+    description:
+      'Interact with an archive at the current charted POI. It only works at the current charted archive. Copying retains that data through ship loss and abandonment. An offered mission is a separate accept_mission. A comparison is completed by interacting again at the original archive.',
+    example: 'spacemolt interact_poi',
+    discoverWith: ['get_poi'],
+    seeAlso: ['get_poi', 'accept_mission', 'view_completed_mission'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt/interact_poi',
+    positionals: [],
+  },
   complete_mission: {
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt/complete_mission',

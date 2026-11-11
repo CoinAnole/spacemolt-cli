@@ -4323,6 +4323,39 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
   });
 
+  test('interact_poi help is the current charted archive and has no id argument', () => {
+    const config = COMMANDS.interact_poi;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('interact_poi command is missing from COMMANDS');
+
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.interact_poi?.positionals).toEqual([]);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.interact_poi?.apiRoute).toBe('POST /api/v2/spacemolt/interact_poi');
+    expect(config.route).toEqual({ tool: 'spacemolt', action: 'interact_poi', method: 'POST' });
+    expect(config.args).toEqual([]);
+    expect(config.required).toBeUndefined();
+    expect(config.schema).toEqual({});
+    expect(config.description).toContain('current charted archive');
+    expect(config.description).toContain('ship loss and abandonment');
+    expect(config.description).toContain('separate accept_mission');
+    expect(config.description).toContain('interacting again at the original archive');
+    expect(config.description).not.toContain('`');
+    expect(config.example).toBe('spacemolt interact_poi');
+    expect(config.seeAlso).toEqual(['get_poi', 'accept_mission', 'view_completed_mission']);
+
+    const help = captureHelp('interact_poi');
+    expect(help).toContain('current charted archive');
+    expect(help).toContain('ship loss and abandonment');
+    expect(help).toContain('accept_mission');
+    expect(help).toContain('original archive');
+    expect(help).toContain('spacemolt interact_poi');
+    expect(help).not.toContain('Arguments:');
+    expect(help).not.toContain('`');
+
+    const parsed = parseArgs(['interact_poi'], { registry: internalCommandRegistry });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.payload).toEqual({});
+  });
+
   test('get_poi help documents station contraband lines', () => {
     const sentence =
       'When a station is present, table output prints the same Contraband mode and Contraband items lines as get_base. Smuggling skill still bypasses listed items.';

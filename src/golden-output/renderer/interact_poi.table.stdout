@@ -1,0 +1,18 @@
+Observation record copied. Return to the originating archive.
+POI: sol_archive
+Data copied: yes
+Items recovered: blank_slip x0, archive_shard x2
+
+=== Passengers boarded ===
+
+  Name      | Class   | Berth   | Destination  | System | Base Fare | Bonus | Ticks | ID          
+  ----------+---------+---------+--------------+--------+-----------+-------+-------+-------------
+  Lyra Vale | economy | economy | Nova Central | Nova   | 125       | 25    | 8     | citizen-lyra
+Archive Comparison (mission-archive-1)
+Accept it with accept_mission.
+
+=== Mission Complete: Archive Comparison ===
+ID: mission-archive-1
+Credits earned: 40
+Items received: navigation_chip x1
+Comparison complete.

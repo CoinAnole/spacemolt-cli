@@ -19,6 +19,7 @@ import {
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   getSystemAgentsFixture,
+  interactPoiFixture,
   jumpFixture,
   jumpSurveyMissionsEnvelope,
   juvenileLeviathanContact,
@@ -7582,4 +7583,110 @@ test('get_commands actions without endpoint still prints Tool and omits Endpoint
   const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Action')) ?? '';
   expect(header).toContain('Tool');
   expect(header).not.toContain('Endpoint');
+});
+
+function renderPoi(fixture: Record<string, unknown>): string {
+  return renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+}
+
+function renderInteractPoi(fixture: Record<string, unknown>): string {
+  return renderStructuredResult('interact_poi', fixture, options, context).stdout.join('\n');
+}
+
+test('interact_poi prints the archive receipt, boarded passengers, offer, and completion item', () => {
+  const stdout = renderInteractPoi(structuredClone(interactPoiFixture));
+  const messageAt = stdout.indexOf('Observation record copied. Return to the originating archive.');
+  const poiAt = stdout.indexOf('POI: sol_archive');
+  const copiedAt = stdout.indexOf('Data copied: yes');
+  const itemsAt = stdout.indexOf('Items recovered: blank_slip x0, archive_shard x2');
+  const passengersAt = stdout.indexOf('=== Passengers boarded ===');
+  const offerAt = stdout.indexOf('Archive Comparison (mission-archive-1)');
+  const acceptAt = stdout.indexOf('Accept it with accept_mission.');
+  const completeAt = stdout.indexOf('=== Mission Complete: Archive Comparison ===');
+  const receivedAt = stdout.indexOf('Items received: navigation_chip x1');
+
+  expect(messageAt).toBeGreaterThanOrEqual(0);
+  expect(poiAt).toBeGreaterThan(messageAt);
+  expect(copiedAt).toBeGreaterThan(poiAt);
+  expect(itemsAt).toBeGreaterThan(copiedAt);
+  expect(passengersAt).toBeGreaterThan(itemsAt);
+  expect(stdout).toContain('Lyra Vale');
+  expect(stdout).toContain('Name');
+  expect(stdout).toContain('Base Fare');
+  expect(stdout).toContain('citizen-lyra');
+  expect(offerAt).toBeGreaterThan(passengersAt);
+  expect(acceptAt).toBeGreaterThan(offerAt);
+  expect(completeAt).toBeGreaterThan(acceptAt);
+  expect(receivedAt).toBeGreaterThan(completeAt);
+  expect(stdout).toContain('Comparison complete.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('interact_poi omits a false copy, empty recoveries, empty passengers, and a missing offer', () => {
+  const stdout = renderInteractPoi({
+    details: {
+      message: 'Nothing new here.',
+      poi_id: 'sol_archive',
+      data_copied: false,
+      items_recovered: {},
+      passengers_boarded: [],
+    },
+  });
+  expect(stdout).toContain('Nothing new here.');
+  expect(stdout).toContain('POI: sol_archive');
+  expect(stdout).not.toContain('Data copied');
+  expect(stdout).not.toContain('Items recovered');
+  expect(stdout).not.toContain('Passengers boarded');
+  expect(stdout).not.toContain('accept_mission');
+  expect(stdout).not.toContain('Mission Complete');
+});
+
+test('interact_poi keeps an explicit zero and does not print an omitted poi id', () => {
+  const zero = renderInteractPoi({
+    message: 'Recovered.',
+    items_recovered: { blank_slip: 0 },
+  });
+  expect(zero).toContain('Items recovered: blank_slip x0');
+  expect(zero).not.toContain('POI:');
+  expect(zero).not.toContain('Data copied');
+
+  const omitted = renderInteractPoi({ message: 'Still here.' });
+  expect(omitted).toBe('Still here.');
+});
+
+test('get_poi prints an archive interaction and does not tell the pilot to accept', () => {
+  const stdout = renderPoi({
+    ...poiInfoFixture,
+    interaction: {
+      command: 'interact_poi',
+      message: 'A private prompt.\nSecond line.',
+      mission: {
+        mission_id: 'mission-archive-1',
+        title: 'Archive Comparison',
+      },
+    },
+  });
+  const interactionAt = stdout.indexOf('Interaction: interact_poi');
+  const messageAt = stdout.indexOf('A private prompt.\nSecond line.');
+  const missionAt = stdout.indexOf('Archive Comparison (mission-archive-1)');
+  expect(interactionAt).toBeGreaterThan(stdout.indexOf('Dense mining field'));
+  expect(messageAt).toBeGreaterThan(interactionAt);
+  expect(missionAt).toBeGreaterThan(messageAt);
+  expect(stdout).not.toContain('accept_mission');
+  expect(stdout).not.toContain('Data copied');
+});
+
+test('get_poi prints nothing for an omitted interaction and skips an empty command', () => {
+  expect(renderPoi(structuredClone(poiInfoFixture))).not.toContain('Interaction:');
+
+  const emptyCommand = renderPoi({
+    ...poiInfoFixture,
+    interaction: { command: '', message: 'Prompt only.' },
+  });
+  expect(emptyCommand).not.toContain('Interaction:');
+  expect(emptyCommand).toContain('Prompt only.');
+
+  const notAnObject = renderPoi({ ...poiInfoFixture, interaction: 'interact_poi' });
+  expect(notAnObject).not.toContain('Interaction:');
+  expect(notAnObject).not.toContain('interact_poi');
 });

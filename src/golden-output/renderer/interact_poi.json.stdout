@@ -1,0 +1,46 @@
+{
+  "details": {
+    "message": "Observation record copied. Return to the originating archive.",
+    "poi_id": "sol_archive",
+    "data_copied": true,
+    "items_recovered": {
+      "blank_slip": 0,
+      "archive_shard": 2
+    },
+    "passengers_boarded": [
+      {
+        "citizen_id": "citizen-lyra",
+        "name": "Lyra Vale",
+        "bio": "A courier with a sealed satchel.",
+        "class": "economy",
+        "berth_class": "economy",
+        "destination": "nova_central",
+        "destination_name": "Nova Central",
+        "destination_system": "Nova",
+        "base_fare": 125,
+        "speed_bonus": 25,
+        "ticks_remaining": 8
+      }
+    ],
+    "mission": {
+      "mission_id": "mission-archive-1",
+      "type": "explore",
+      "title": "Archive Comparison",
+      "description": "Compare the copy at the original archive.",
+      "difficulty": 1,
+      "rewards": {
+        "credits": 40
+      },
+      "expires_in_ticks": 12
+    },
+    "completion": {
+      "mission_id": "mission-archive-1",
+      "title": "Archive Comparison",
+      "credits_earned": 40,
+      "message": "Comparison complete.",
+      "items_received": {
+        "navigation_chip": 1
+      }
+    }
+  }
+}

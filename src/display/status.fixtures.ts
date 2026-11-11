@@ -1508,6 +1508,47 @@ export const getStatusFixerDebtFixture = {
   },
 };
 
+/** InteractPOIResponse under details. Copy, offer, boarding, and one completion item. */
+export const interactPoiFixture = {
+  details: {
+    message: 'Observation record copied. Return to the originating archive.',
+    poi_id: 'sol_archive',
+    data_copied: true,
+    items_recovered: { blank_slip: 0, archive_shard: 2 },
+    passengers_boarded: [
+      {
+        citizen_id: 'citizen-lyra',
+        name: 'Lyra Vale',
+        bio: 'A courier with a sealed satchel.',
+        class: 'economy',
+        berth_class: 'economy',
+        destination: 'nova_central',
+        destination_name: 'Nova Central',
+        destination_system: 'Nova',
+        base_fare: 125,
+        speed_bonus: 25,
+        ticks_remaining: 8,
+      },
+    ],
+    mission: {
+      mission_id: 'mission-archive-1',
+      type: 'explore',
+      title: 'Archive Comparison',
+      description: 'Compare the copy at the original archive.',
+      difficulty: 1,
+      rewards: { credits: 40 },
+      expires_in_ticks: 12,
+    },
+    completion: {
+      mission_id: 'mission-archive-1',
+      title: 'Archive Comparison',
+      credits_earned: 40,
+      message: 'Comparison complete.',
+      items_received: { navigation_chip: 1 },
+    },
+  },
+};
+
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
   // Replacing this entry with a fuller object grows the schema baseline.
@@ -1577,6 +1618,11 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   complete_mission: { command: 'complete_mission', fixture: completeMissionFixture },
   complete_mission_shortfall: { command: 'complete_mission', fixture: completeMissionShortfallFixture },
   complete_mission_restitution: { command: 'complete_mission', fixture: completeMissionRestitutionFixture },
+  interact_poi: {
+    command: 'interact_poi',
+    fixture: interactPoiFixture,
+    schemaTarget: 'details',
+  },
   completed_missions: { command: 'completed_missions', fixture: completedMissionsFixture },
   decline_mission: { command: 'decline_mission', fixture: declineMissionFixture },
   travel: { command: 'travel', fixture: arrivalFixture },
