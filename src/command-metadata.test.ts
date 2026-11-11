@@ -3848,6 +3848,38 @@ describe('command metadata', () => {
     expect(COMMANDS.build_outpost?.seeAlso).toContain('dismantle_outpost');
   });
 
+  test('get_base_cost and build_outpost help name the outpost founding fee', () => {
+    const preview = COMMANDS.get_base_cost;
+    const deploy = COMMANDS.build_outpost;
+    for (const config of [preview, deploy]) {
+      expect(config?.description).toContain('outpost_founding_fee is the outpost fee');
+      expect(config?.description).toContain('It is not founding_fee');
+      expect(config?.description).toContain('founding_fee remains the station fee');
+      expect(config?.description).toContain('on top of the Outpost Kit');
+      expect(config?.description).toContain('faction treasury first, then the wallet');
+      expect(config?.description).toContain('dismantle does not refund it');
+      expect(config?.description).not.toContain('outpost_kit');
+    }
+    expect(preview?.description).toContain('The other fields of this response cover stations only');
+    expect(deploy?.usage).toBe('<name>');
+    expect(getArgNames(deploy ?? {})).toEqual(['name']);
+    expect(getArgNames(preview ?? {})).toEqual([]);
+    expect(deploy?.schema?.outpost_founding_fee).toBeUndefined();
+    expect(deploy?.schema?.founding_fee).toBeUndefined();
+
+    const previewHelp = captureHelp('get_base_cost');
+    const deployHelp = captureHelp('build_outpost');
+    expect(previewHelp).toContain('outpost_founding_fee is the outpost fee');
+    expect(previewHelp).toContain('It is not founding_fee');
+    expect(previewHelp).toContain('dismantle does not refund it');
+    expect(previewHelp).toContain('The other fields of this response cover stations only');
+    expect(deployHelp).toContain('outpost_founding_fee is the outpost fee');
+    expect(deployHelp).toContain('It is not founding_fee');
+    expect(deployHelp).toContain('dismantle does not refund it');
+    expect(deployHelp).not.toContain('outpost_founding_fee=');
+    expect(deployHelp).not.toContain('founding_fee=');
+  });
+
   test('storage deposit/withdraw help documents auto-docking, fleets, special targets, and ship towing', () => {
     const deposit = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.deposit?.config;
     const withdraw = BUNDLED_COMMAND_REGISTRY.commandGroups.storage?.actions.withdraw?.config;

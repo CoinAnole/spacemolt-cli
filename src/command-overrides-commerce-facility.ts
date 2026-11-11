@@ -41,6 +41,9 @@ const FACILITY_TYPE_UPKEEP_PRINT_HELP =
 const FACILITY_LIST_TRADE_AUTHENTICATOR_HELP =
   "Req. stock prints maintenance_per_cycle as quantity and name. An omitted key still adds no column. A market's trade_authenticator quantity is its declared stock plus a charge that grows with this station's recent market trade volume. The market burns that charge in full each cycle, and on a player station it goes offline when faction storage cannot cover the whole quantity. The column does not split that quantity into stock and a charge. Gameserver 0.658.0.";
 
+const OUTPOST_FOUNDING_FEE_HELP =
+  'outpost_founding_fee is the outpost fee. It is not founding_fee. founding_fee remains the station fee. The outpost fee is charged by build_outpost on top of the Outpost Kit, taken from the faction treasury first, then the wallet, and dismantle does not refund it.';
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -576,7 +579,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     },
   },
   get_base_cost: {
-    description: 'Preview the cost and eligibility requirements to found a faction station here.',
+    description:
+      'Preview the cost and eligibility requirements to found a faction station here. ' +
+      OUTPOST_FOUNDING_FEE_HELP +
+      ' The other fields of this response cover stations only.',
     example: 'spacemolt get_base_cost',
     discoverWith: ['get_poi', 'get_system', 'get_faction_tax_estimate'],
     seeAlso: ['build_base', 'build_outpost', 'buy_ship_license'],
@@ -595,7 +601,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   build_outpost: {
     usage: '<name>',
-    description: 'Deploy a lightweight faction outpost at the current eligible lawless point of interest.',
+    description:
+      'Deploy a lightweight faction outpost at the current eligible lawless point of interest. ' +
+      OUTPOST_FOUNDING_FEE_HELP,
     example: 'spacemolt build_outpost "Aurora Cache"',
     discoverWith: ['get_base_cost', 'get_poi'],
     seeAlso: ['get_base_cost', 'station_info', 'dismantle_outpost'],
