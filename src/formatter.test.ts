@@ -11964,6 +11964,17 @@ describe('structuredContent formatters', () => {
         -----+---------
         Ibis | player-3"
       ,
+        "found_gate_site": 
+      "
+      === Gate Site Founded ===
+      Base ID: gate_long_reach
+      Name: Long Reach
+      POI: poi_lawless_1
+      System: sol
+      Fee paid: 0
+      Public access: no
+      Hint: Found the far end from Vega."
+      ,
         "get_faction_achievements": 
       "Earned: 1 / 36
       Points: 60

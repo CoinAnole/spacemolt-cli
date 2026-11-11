@@ -902,6 +902,7 @@ export const shipFixtureCases = {
   ship: { command: 'get_ship', fixture: shipFixture },
   base: { command: 'get_base', fixture: baseFixture },
   station_config: { command: 'station_info', fixture: stationInfoContrabandFixture },
+  found_gate_site: { command: 'found_gate_site', fixture: foundGateSiteFixture },
   drone: { command: 'get_drone', fixture: droneFixture },
   drones: { command: 'list_drones', fixture: dronesFixture },
 };
