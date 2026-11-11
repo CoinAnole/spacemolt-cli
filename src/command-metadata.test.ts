@@ -2216,6 +2216,10 @@ describe('command metadata', () => {
     expect(catalog?.description).toContain(
       'Module entries do not list skill requirements. Skills do not gate fitting a module you own; slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit.',
     );
+    expect(catalog?.description).toContain(
+      'Hazard mining reduction and the hazard scan filter each use only the strongest fitted module. Hazard resistance adds to damage-type resistance and the total caps at 90%.',
+    );
+    expect(catalog?.description).not.toContain('Hazard resistance uses only the strongest');
     expect(catalog?.description).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
     expect(catalog?.schema?.commissionable?.type).toBe('boolean');
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');

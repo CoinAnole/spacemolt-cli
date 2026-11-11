@@ -1,4 +1,10 @@
-import { summarizeCombatSpecialEffects, summarizeEffect, summarizeModuleBonuses } from './combat-effects.ts';
+import {
+  formatHazardPercent,
+  hazardResistanceParts,
+  summarizeCombatSpecialEffects,
+  summarizeEffect,
+  summarizeModuleBonuses,
+} from './combat-effects.ts';
 import { c, emitLine, finiteNumber, isRecord } from './helpers.ts';
 
 const DEDICATED_MODULE_BONUS_KEYS = [
@@ -26,6 +32,9 @@ const DEDICATED_MODULE_BONUS_KEYS = [
   'boarding_capability',
   'boarding_contact_defense',
   'remote_medical_treatment',
+  'hazard_resistance',
+  'hazard_mining_reduction',
+  'hazard_scan_filter',
 ] as const;
 
 export function packageOperationLabel(...values: unknown[]): string | undefined {
@@ -238,6 +247,23 @@ export function emitCatalogItemDetail(entry: Record<string, unknown>, catalog: R
   if (packageOperation) emitLine(`Package operation: ${packageOperation}`);
 }
 
+function emitHazardScalar(label: string, value: unknown): void {
+  const text = formatHazardPercent(value);
+  if (text === undefined) return;
+  emitLine(`${label}: ${text}`);
+}
+
+function emitHazardModuleStats(entry: Record<string, unknown>): void {
+  if (Object.hasOwn(entry, 'hazard_resistance')) {
+    const parts = hazardResistanceParts(entry.hazard_resistance);
+    if (parts.length > 0) emitLine(`Hazard resistance: ${parts.join(', ')}`);
+  }
+  if (Object.hasOwn(entry, 'hazard_mining_reduction')) {
+    emitHazardScalar('Hazard mining reduction', entry.hazard_mining_reduction);
+  }
+  if (Object.hasOwn(entry, 'hazard_scan_filter')) emitHazardScalar('Hazard scan filter', entry.hazard_scan_filter);
+}
+
 export function emitCatalogModuleDetail(entry: Record<string, unknown>, catalog: Record<string, unknown>): void {
   emitDetailsHeader();
   emitCatalogIdentity(entry, { categoryFallback: false });
@@ -278,6 +304,8 @@ export function emitCatalogModuleDetail(entry: Record<string, unknown>, catalog:
 
   const combat = summarizeCombatSpecialEffects(entry.combat_effects);
   if (combat) emitLine(`Combat: ${combat}`);
+
+  emitHazardModuleStats(entry);
 
   const bonuses = summarizeLeftoverModuleBonuses(entry);
   if (bonuses) emitLine(`Bonuses: ${bonuses}`);

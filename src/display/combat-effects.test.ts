@@ -400,6 +400,64 @@ test('summarizeModuleBonuses prints an unsigned flux_power suffix as flux 3', ()
   expect(summarizeModuleBonuses({ flux_power: 3 })).toBe('flux 3');
 });
 
+test('summarizeModuleBonuses prints hazard percents, including 0, apart from damage-type resistance', () => {
+  const summary = summarizeModuleBonuses({
+    mining_power: 16,
+    cargo_bonus: -15,
+    hazard_mining_reduction: 50,
+    hazard_scan_filter: 0,
+    hazard_resistance: { radiation: 40, scar_dust: 0, debris: 95 },
+    resistance_bonus: { em: 30 },
+  });
+  expect(summary).toBe(
+    'mining 16, cargo -15, hazard radiation 40, hazard scar_dust 0, hazard debris 95, hazard mining reduction 50, hazard scan filter 0, em +30',
+  );
+  expect(summary).not.toContain('hazard mining 50');
+  expect(summary).not.toContain('radiation +');
+  expect(summary).not.toContain('em +70');
+  expect(summary).not.toContain('90');
+});
+
+test('summarizeModuleBonuses keeps sent hazard key order and skips a non-finite entry', () => {
+  expect(
+    summarizeModuleBonuses({
+      hazard_resistance: { scar_dust: 10, debris: Number.NaN, radiation: 0 },
+    }),
+  ).toBe('hazard scar_dust 10, hazard radiation 0');
+});
+
+test('summarizeModuleBonuses omits empty, omitted, and non-numeric hazard fields', () => {
+  expect(summarizeModuleBonuses({ hazard_resistance: {} })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_resistance: { radiation: '40' } })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_resistance: 40 })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_mining_reduction: '50' })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_scan_filter: true })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_mining_reduction: Number.POSITIVE_INFINITY })).toBe('');
+  expect(summarizeModuleBonuses({ hazard_scan_filter: null })).toBe('');
+  expect(summarizeModuleBonuses({ mining_power: 16 })).toBe('mining 16');
+  expect(
+    summarizeModuleBonuses(Object.create({ hazard_mining_reduction: 50, hazard_resistance: { radiation: 10 } })),
+  ).toBe('');
+});
+
+test('summarizeModuleBonuses prints hazard negative and negative zero as sent', () => {
+  expect(summarizeModuleBonuses({ hazard_mining_reduction: -0, hazard_scan_filter: -4 })).toBe(
+    'hazard mining reduction 0, hazard scan filter -4',
+  );
+});
+
+test('summarizeCatalogItemEffects does not turn a sealant buff into a hazard bonus', () => {
+  expect(
+    summarizeCatalogItemEffects({
+      description: 'Cuts hazard damage by 20% for 60 ticks. The total caps at 90%.',
+      effect: { type: 'buff', amount: 20, stat: 'hazard_resistance', duration: 60 },
+    }),
+  ).toBe('');
+  expect(summarizeEffect({ type: 'buff', amount: 20, stat: 'hazard_resistance', duration: 60 })).toBe(
+    'type: buff, amount: 20, stat: hazard_resistance, duration: 60',
+  );
+});
+
 test('a non-mechanical module key is omitted', () => {
   expect(summarizeModuleBonuses({ reach: 3, custom_stat: 4 })).toBe('reach 3');
 });

@@ -327,6 +327,90 @@ test('tow penalty prints Tow penalty: 30', () => {
   expect(buffer.stdout.join('\n')).toContain('Tow penalty: 30');
 });
 
+function moduleDetail(entry: Record<string, unknown>): string {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail(entry, {}), { plain: true });
+  return buffer.stdout.join('\n');
+}
+
+test('catalog module detail prints hazard resistance keys and percents, including 0', () => {
+  const stdout = moduleDetail({
+    cargo_bonus: -15,
+    hazard_resistance: { radiation: 40, scar_dust: 0, debris: 95 },
+    resistance_bonus: { em: 30 },
+  });
+  expect(stdout).toContain('Hazard resistance: radiation 40, scar_dust 0, debris 95');
+  expect(stdout).toContain('Bonuses: cargo -15, em +30');
+  expect(stdout).not.toContain('Hazard resistance: radiation 40, scar_dust 0, debris 90');
+  expect(stdout).not.toContain('em +70');
+  expect(stdout).not.toContain('radiation +40');
+});
+
+test('catalog module detail prints hazard mining reduction and scan filter, including 0', () => {
+  const stdout = moduleDetail({
+    mining_power: 16,
+    hazard_mining_reduction: 50,
+    hazard_scan_filter: 0,
+  });
+  expect(stdout).toContain('Hazard mining reduction: 50');
+  expect(stdout).toContain('Hazard scan filter: 0');
+  expect(stdout).toContain('Bonuses: mining 16');
+  expect(stdout).not.toContain('hazard mining 50');
+  expect(stdout).not.toContain('hazard mining reduction');
+});
+
+test('catalog module detail omits an empty or non-numeric hazard resistance object', () => {
+  for (const hazard_resistance of [{}, { radiation: '40' }, { radiation: Number.NaN }, 40, null]) {
+    const stdout = moduleDetail({ hazard_resistance, cargo_bonus: -15 });
+    expect(stdout).not.toContain('Hazard resistance:');
+    expect(stdout).toContain('Bonuses: cargo -15');
+  }
+  const omitted = moduleDetail({ cargo_bonus: -15 });
+  expect(omitted).not.toContain('Hazard resistance:');
+  expect(omitted).not.toContain('Hazard mining reduction:');
+  expect(omitted).not.toContain('Hazard scan filter:');
+});
+
+test('catalog module detail omits a non-finite hazard mining reduction or scan filter', () => {
+  const stdout = moduleDetail({
+    hazard_mining_reduction: '50',
+    hazard_scan_filter: Number.POSITIVE_INFINITY,
+  });
+  expect(stdout).not.toContain('Hazard mining reduction:');
+  expect(stdout).not.toContain('Hazard scan filter:');
+});
+
+test('catalog module detail prints a negative hazard percent and negative zero as sent', () => {
+  const stdout = moduleDetail({
+    hazard_resistance: { tidal_shear: -0 },
+    hazard_mining_reduction: -4,
+  });
+  expect(stdout).toContain('Hazard resistance: tidal_shear 0');
+  expect(stdout).toContain('Hazard mining reduction: -4');
+});
+
+test('sealant item detail keeps the buff effect line and does not add hazard module lines', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () =>
+      emitCatalogItemDetail(
+        {
+          description: 'Cuts hazard damage by 20% for 60 ticks. The total caps at 90%.',
+          effect: { type: 'buff', amount: 20, stat: 'hazard_resistance', duration: 60 },
+        },
+        {},
+      ),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Cuts hazard damage by 20% for 60 ticks. The total caps at 90%.');
+  expect(stdout).toContain('Effect: type: buff, amount: 20, stat: hazard_resistance, duration: 60');
+  expect(stdout).not.toContain('Hazard resistance:');
+  expect(stdout).not.toContain('Hazard mining reduction:');
+  expect(stdout).not.toContain('Hazard scan filter:');
+});
+
 test('shield without recharge prints the exact line Shield: 700 and not a tick suffix', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ base_shield: 700 }, {}), { plain: true });

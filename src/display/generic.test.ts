@@ -3072,6 +3072,41 @@ test('renders catalog item slot and module effects when present', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('catalog item effects column prints hazard bonuses apart from mining and damage resistance', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          id: 'damped_mining_head',
+          name: 'Damped Mining Head',
+          category: 'module',
+          slot: 'utility',
+          type: 'utility',
+          mining_power: 16,
+          hazard_mining_reduction: 50,
+          hazard_resistance: { radiation: 0 },
+          resistance_bonus: { em: 30 },
+        },
+      ],
+      message: 'Items: showing 1 of 1',
+      page: 1,
+      page_size: 20,
+      total: 1,
+      total_pages: 1,
+      type: 'items',
+    },
+    options,
+    context,
+  );
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('mining 16, hazard radiation 0, hazard mining reduction 50, em +30');
+  expect(stdout).not.toContain('hazard mining 50');
+  expect(stdout).not.toContain('em +30, hazard');
+  expect(stdout).not.toContain('radiation +');
+});
+
 test('catalog module table stays quiet when a row still has required_skills', () => {
   const rendered = renderStructuredResult(
     'catalog',

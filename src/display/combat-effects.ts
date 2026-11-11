@@ -376,6 +376,39 @@ function pushResistanceBonusTokens(parts: string[], value: unknown): void {
   }
 }
 
+const HAZARD_MODULE_BONUS_KEYS = new Set(['hazard_resistance', 'hazard_mining_reduction', 'hazard_scan_filter']);
+
+// Sent finite percents, including 0. Not the strongest entry, and not capped at 90%.
+export function formatHazardPercent(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return Object.is(value, -0) ? '0' : String(value);
+}
+
+export function hazardResistanceParts(value: unknown): string[] {
+  if (!isRecord(value)) return [];
+  const parts: string[] = [];
+  for (const [hazard, amount] of Object.entries(value)) {
+    const text = formatHazardPercent(amount);
+    if (text === undefined) continue;
+    parts.push(`${hazard} ${text}`);
+  }
+  return parts;
+}
+
+function pushHazardModuleBonusTokens(parts: string[], module: Record<string, unknown>): void {
+  if (Object.hasOwn(module, 'hazard_resistance')) {
+    for (const part of hazardResistanceParts(module.hazard_resistance)) parts.push(`hazard ${part}`);
+  }
+  if (Object.hasOwn(module, 'hazard_mining_reduction')) {
+    const text = formatHazardPercent(module.hazard_mining_reduction);
+    if (text !== undefined) parts.push(`hazard mining reduction ${text}`);
+  }
+  if (Object.hasOwn(module, 'hazard_scan_filter')) {
+    const text = formatHazardPercent(module.hazard_scan_filter);
+    if (text !== undefined) parts.push(`hazard scan filter ${text}`);
+  }
+}
+
 export function summarizeModuleBonuses(module: Record<string, unknown>): string {
   const parts: string[] = [];
 
@@ -385,8 +418,17 @@ export function summarizeModuleBonuses(module: Record<string, unknown>): string 
     if (token) parts.push(token);
   }
 
+  pushHazardModuleBonusTokens(parts, module);
+
   for (const key of Object.keys(module)) {
-    if (MODULE_BONUS_KEYS.has(key) || MODULE_BONUS_EXCLUSIONS.has(key) || isTableOnlyPassengerField(key)) continue;
+    if (
+      MODULE_BONUS_KEYS.has(key) ||
+      MODULE_BONUS_EXCLUSIONS.has(key) ||
+      HAZARD_MODULE_BONUS_KEYS.has(key) ||
+      isTableOnlyPassengerField(key)
+    ) {
+      continue;
+    }
     if (key === 'resistance_bonus') {
       pushResistanceBonusTokens(parts, module[key]);
       continue;

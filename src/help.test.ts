@@ -2421,6 +2421,10 @@ describe('help output branches', () => {
     expect(output).toContain(
       'Module entries do not list skill requirements. Skills do not gate fitting a module you own; slots, CPU, power, and module-specific limits such as one boarding-contact defense decide the fit.',
     );
+    expect(output).toContain(
+      'Hazard mining reduction and the hazard scan filter each use only the strongest fitted module. Hazard resistance adds to damage-type resistance and the total caps at 90%.',
+    );
+    expect(output).not.toContain('Hazard resistance uses only the strongest');
     expect(output).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
     expect(output).toContain('commissionable');
     expect(output).toContain('(ships|skills|recipes|items|facilities)');
