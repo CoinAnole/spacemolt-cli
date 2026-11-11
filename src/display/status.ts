@@ -649,10 +649,18 @@ function formatGalacticPosition(value: unknown): string | undefined {
   return `(${value.x}, ${value.y})`;
 }
 
+/** Finite `frontier_tier` as sent, including 0. An omitted or non-numeric key prints nothing. */
+function emitFrontierTier(value: unknown, options?: { color?: boolean }): void {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return;
+  const label = options?.color ? `${c.cyan}Frontier tier:${c.reset}` : 'Frontier tier:';
+  emitLine(`${label} ${String(value)}`);
+}
+
 function emitMapSystemInfo(result: Record<string, unknown>): void {
   emitLine(`\n${c.bright}=== System: ${result.name} ===${c.reset}`);
   emitLine(`ID: ${result.system_id}`);
   if (result.empire !== undefined) emitLine(`Empire: ${result.empire || 'None'}`);
+  emitFrontierTier(result.frontier_tier);
   if (result.is_stronghold === true) emitLine('Stronghold: yes');
   if (result.online !== undefined) emitLine(`Online: ${result.online}`);
   if (result.poi_count !== undefined) emitLine(`POIs: ${result.poi_count}`);
@@ -1095,6 +1103,7 @@ export function emitLocationSnapshot(
     const idText = loc.system_id && loc.system_name ? ` (${loc.system_id})` : '';
     emitLine(`${c.cyan}System:${c.reset} ${loc.system_name ?? loc.system_id}${idText}`);
   }
+  emitFrontierTier(loc.frontier_tier, { color: true });
   if (loc.empire) emitLine(`${c.cyan}Empire:${c.reset} ${loc.empire}`);
   if (loc.security_status) emitLine(`${c.cyan}Security:${c.reset} ${loc.security_status}`);
   if (connections.length > 0) {
@@ -1805,6 +1814,7 @@ export const statusFormatters = [
       emitLine(`\n${c.bright}=== System: ${sys.name} ===${c.reset}`);
       emitLine(`ID: ${sys.id}`);
       emitLine(`Empire: ${sys.empire || 'None'}`);
+      emitFrontierTier(sys.frontier_tier);
       emitLine(`Police Level: ${sys.police_level} (${r.security_status || sys.security_status || 'unknown security'})`);
       if (sys.is_stronghold === true) emitLine('Stronghold: yes');
       if (sys.description) emitLine(`Description: ${sys.description}`);

@@ -3941,6 +3941,64 @@ test('get_map system detail prints Stronghold only when is_stronghold is true', 
   expect(notStronghold).not.toContain('Stronghold');
 });
 
+test('get_map system header prints a finite frontier_tier as sent, including 0', () => {
+  const deep = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, frontier_tier: 2 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(deep).toContain('=== System: Veiled Reach ===');
+  expect(deep).toContain('Frontier tier: 2');
+  expect(deep.indexOf('Empire: None')).toBeLessThan(deep.indexOf('Frontier tier: 2'));
+  expect(deep.indexOf('Frontier tier: 2')).toBeLessThan(deep.indexOf('POIs: 1'));
+  expect(deep).not.toContain('near');
+  expect(deep).not.toContain('deep');
+  expect(deep).not.toContain('=== Response ===');
+
+  const zero = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, frontier_tier: 0 },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Frontier tier: 0');
+
+  for (const frontier_tier of [undefined, null, '2', Number.NaN, Number.POSITIVE_INFINITY, true]) {
+    const fixture = { ...getMapSystemFixture } as { frontier_tier?: unknown };
+    if (frontier_tier === undefined) delete fixture.frontier_tier;
+    else fixture.frontier_tier = frontier_tier;
+    const stdout = renderStructuredResult('get_map', fixture, options, context).stdout.join('\n');
+    expect(stdout).toContain('=== System: Veiled Reach ===');
+    expect(stdout).not.toContain('Frontier tier:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('get_map list keeps a system the server returned when frontier_tier is set', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      systems: [
+        { system_id: 'sol', name: 'Sol' },
+        { system_id: 'veil_2', name: 'Veil Two', frontier_tier: 2 },
+      ],
+      total_count: 2,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Systems ===');
+  expect(stdout).toContain('Sol');
+  expect(stdout).toContain('Veil Two');
+  expect(stdout).toContain('veil_2');
+  expect(stdout).not.toContain('Frontier tier:');
+  expect(stdout).not.toContain('near');
+  expect(stdout).not.toContain('deep');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_map system detail omits Connections when the array is empty', () => {
   const stdout = renderStructuredResult(
     'get_map',
@@ -4569,6 +4627,36 @@ test('get_system prints an unknown hazard type as sent', () => {
   expect(stdout).toContain('Hazard:  gravity_well  3');
   expect(stdout).toContain('Current POI: Earth (planet) [garden] Hazard: gravity_well 3  sol_earth');
   expect(stdout).toContain('[station]');
+});
+
+test('get_system header prints a finite frontier_tier as sent, including 0', () => {
+  const withTier = (frontier_tier: unknown) => {
+    const fixture = structuredClone(systemInfoFixture) as { system: { frontier_tier?: unknown } };
+    if (frontier_tier === undefined) delete fixture.system.frontier_tier;
+    else fixture.system.frontier_tier = frontier_tier;
+    return renderStructuredResult('get_system', fixture, options, context).stdout.join('\n');
+  };
+
+  const deep = withTier(2);
+  expect(deep).toContain('=== System: Sol ===');
+  expect(deep).toContain('Frontier tier: 2');
+  expect(deep.indexOf('Empire: Terran')).toBeLessThan(deep.indexOf('Frontier tier: 2'));
+  expect(deep.indexOf('Frontier tier: 2')).toBeLessThan(deep.indexOf('Police Level:'));
+  expect(deep).toContain('Earth (planet) [garden] [station]  sol_earth');
+  expect(deep).not.toContain('near');
+  expect(deep).not.toContain('deep');
+  expect(deep).not.toContain('=== Response ===');
+
+  expect(withTier(0)).toContain('Frontier tier: 0');
+  expect(withTier(1)).toContain('Frontier tier: 1');
+  expect(withTier(1)).not.toContain('near');
+
+  for (const frontier_tier of [undefined, null, '1', Number.NaN, Number.POSITIVE_INFINITY, false]) {
+    const stdout = withTier(frontier_tier);
+    expect(stdout).toContain('=== System: Sol ===');
+    expect(stdout).not.toContain('Frontier tier:');
+    expect(stdout).toContain('Earth (planet) [garden] [station]  sol_earth');
+  }
 });
 
 test('get_system does not treat poi type station as a base bracket', () => {
@@ -5852,6 +5940,55 @@ test('location snapshot prints Hazard from poi_hazard and omits a partial key', 
     context,
   ).stdout.join('\n');
   expect(zero).toContain('Hazard: radiation 0');
+});
+
+test('location snapshot prints a finite frontier_tier as sent and skips an omitted key', () => {
+  const location = {
+    system_id: 'veil',
+    system_name: 'Veil',
+    empire: 'None',
+    poi_id: 'veil_belt',
+    poi_name: 'Belt',
+    poi_type: 'asteroid',
+    frontier_tier: 1,
+  };
+  const located = renderStructuredResult('get_location', { location }, options, context).stdout.join('\n');
+  expect(located).toContain('System: Veil (veil)');
+  expect(located).toContain('Frontier tier: 1');
+  expect(located.indexOf('System: Veil (veil)')).toBeLessThan(located.indexOf('Frontier tier: 1'));
+  expect(located.indexOf('Frontier tier: 1')).toBeLessThan(located.indexOf('Empire:'));
+  expect(located).not.toContain('near');
+  expect(located).not.toContain('deep');
+  expect(located).not.toContain('=== Response ===');
+
+  const stated = renderStructuredResult(
+    'get_state',
+    { location: { ...location, frontier_tier: 0 } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stated).toContain('=== Location ===');
+  expect(stated).toContain('Frontier tier: 0');
+
+  const status = renderStructuredResult(
+    'get_status',
+    { player: { username: 'Ada' }, location },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(status).toContain('Location:');
+  expect(status).not.toContain('Frontier tier:');
+
+  for (const frontier_tier of [undefined, null, '2', Number.NaN, Number.POSITIVE_INFINITY]) {
+    const stdout = renderStructuredResult(
+      'get_location',
+      { location: { ...location, frontier_tier } },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('System: Veil (veil)');
+    expect(stdout).not.toContain('Frontier tier:');
+  }
 });
 
 test('travel arrival prints every online player, the truncated line, and offline collapsed', () => {
