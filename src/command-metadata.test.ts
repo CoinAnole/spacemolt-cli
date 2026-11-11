@@ -2325,7 +2325,7 @@ describe('command metadata', () => {
     );
     expect(config?.description).not.toContain('`');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).toBe(
-      "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot.",
+      "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot. A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need. commission_ship still requires that level.",
     );
     expect(config?.description).toContain("reserve the faction's mobile-base slot");
     expect(config?.description).toContain('A refusal is the error the server returns');
@@ -2347,6 +2347,15 @@ describe('command metadata', () => {
     expect(help).toContain('it is not the jump resource');
     expect(help).toContain("reserve the faction's mobile-base slot");
     expect(help).toContain('A refusal is the error the server returns');
+    expect(config?.description).toContain(
+      'A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need.',
+    );
+    expect(config?.description).toContain('commission_ship still requires that level');
+    expect(config?.schema?.blockers).toBeUndefined();
+    expect(help).toContain(
+      'A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need.',
+    );
+    expect(help).toContain('commission_ship still requires that level');
     expect(help).not.toContain('`');
     expect(help).toContain('Default quotes a fitted hull');
     expect(help).toContain('faction yards do not market-source missing materials');
