@@ -10762,6 +10762,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Grace remaining: 1 cycle');
     expect(stdout).toContain('Estimated rent/day: 7,200cr');
     expect(stdout).toContain('Faction facilities pay rent from the treasury each cycle.');
+    expect(stdout).not.toContain('Ship licenses');
     expect(stdout).not.toContain('=== Response ===');
   });
 

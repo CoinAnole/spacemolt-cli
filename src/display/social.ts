@@ -76,6 +76,24 @@ function emitFactionFuelBunkers(value: unknown): void {
   printCompactTable('Fuel bunkers', rows, columns);
 }
 
+// Array order. Acquired time stays the sent string. No royalty column.
+function emitFactionShipLicenses(value: unknown): void {
+  if (!Array.isArray(value) || value.length === 0) return;
+  const rows = value.filter(isRecord);
+  if (rows.length === 0) return;
+  printCompactTable(
+    'Ship licenses',
+    rows,
+    [
+      ['Ship', ['ship_name']],
+      ['Class ID', ['ship_class']],
+      ['Empire', ['empire']],
+      ['Acquired', ['acquired_at']],
+    ],
+    { maxCellWidth: 64 },
+  );
+}
+
 // Server totals. Do not sum fuel_bunkers, and do not treat a missing side as 0.
 function emitFactionFuelTotals(result: Record<string, unknown>): void {
   const reserve = formatExactGroupedInteger(result.total_fuel_reserve);
@@ -1732,6 +1750,7 @@ export const socialFormatters = [
       emitRentSummary('Faction rent bill', 'Faction arrears', r.faction_rent);
       if (isRecord(r.mobile_base)) emitMobileBaseSnapshot(r.mobile_base, 'info');
       if (isRecord(r.mobile_base_commission)) emitMobileBaseCommission(r.mobile_base_commission);
+      emitFactionShipLicenses(r.ship_licenses);
       return true;
     },
     { commands: ['faction_info'] },

@@ -4833,6 +4833,93 @@ test('faction_info json passes fuel_bunkers through without the table', () => {
   expect(stdout).not.toContain('Fuel bunkers');
 });
 
+test('faction_info prints ship licenses in array order with the acquired time as sent', () => {
+  const fixture = factionInfoWithRent();
+  fixture.is_member = false;
+  fixture.mobile_base_commission = { commission_id: 'commission-1', archetype_id: 'civitas' };
+  fixture.ship_licenses = [
+    {
+      ship_name: 'Later Hull',
+      ship_class: 'later_hull',
+      empire: 'crimson',
+      acquired_at: '2026-06-01T00:00:00Z',
+    },
+    {
+      ship_class: 'earlier_hull',
+      empire: 'sol',
+      acquired_at: '2026-01-01T12:30:45.123456789+00:00',
+    },
+  ];
+  const stdout = renderFactionInfo(fixture);
+  const table = stdout.indexOf('=== Ship licenses ===');
+  expect(table).toBeGreaterThan(stdout.indexOf('Faction rent bill:'));
+  expect(table).toBeGreaterThan(stdout.indexOf('Mobile base commission: commission-1'));
+  const body = stdout.slice(table);
+  expect(body).toContain('Ship');
+  expect(body).toContain('Class ID');
+  expect(body).toContain('Empire');
+  expect(body).toContain('Acquired');
+  expect(body.indexOf('Later Hull')).toBeGreaterThan(-1);
+  expect(body.indexOf('later_hull')).toBeGreaterThan(body.indexOf('Later Hull'));
+  expect(body.indexOf('earlier_hull')).toBeGreaterThan(body.indexOf('later_hull'));
+  expect(body).toContain('crimson');
+  expect(body).toContain('sol');
+  expect(body).toContain('2026-06-01T00:00:00Z');
+  expect(body).toContain('2026-01-01T12:30:45.123456789+00:00');
+  expect(body).not.toContain('2026-01-01 12:30:45');
+  expect(body).not.toContain('...');
+  expect(body).not.toContain('Royalty');
+  expect(body).not.toContain('royalty');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_info prints nothing for an omitted, empty, or unusable ship_licenses value', () => {
+  const omitted = renderFactionInfo(factionInfoWithRent());
+  expect(omitted).not.toContain('Ship licenses');
+  expect(omitted).toContain('=== Faction:');
+
+  const nonMember = factionInfoWithRent();
+  nonMember.is_member = false;
+  expect(renderFactionInfo(nonMember)).not.toContain('Ship licenses');
+
+  const empty = factionInfoWithRent();
+  empty.ship_licenses = [];
+  const emptyStdout = renderFactionInfo(empty);
+  expect(emptyStdout).not.toContain('Ship licenses');
+  expect(emptyStdout).not.toContain('(None)');
+  expect(emptyStdout).toContain('Faction rent bill:');
+
+  for (const shipLicenses of [null, 'later_hull', { ship_class: 'later_hull' }, [null, 'later_hull']]) {
+    const fixture = factionInfoWithRent();
+    fixture.ship_licenses = shipLicenses;
+    const stdout = renderFactionInfo(fixture);
+    expect(stdout).not.toContain('Ship licenses');
+    expect(stdout).not.toContain('(None)');
+    expect(stdout).toContain('Faction rent bill:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('faction_info json passes ship_licenses through without the table', () => {
+  const fixture = factionInfoWithRent();
+  fixture.ship_licenses = [
+    {
+      ship_name: 'Later Hull',
+      ship_class: 'later_hull',
+      empire: 'crimson',
+      acquired_at: '2026-06-01T00:00:00Z',
+    },
+  ];
+  const stdout = renderFactionInfo(fixture, 'json');
+  const parsed = JSON.parse(stdout) as {
+    ship_licenses: Array<{ ship_class: string; acquired_at: string; ship_name: string }>;
+  };
+  expect(parsed.ship_licenses[0]?.ship_name).toBe('Later Hull');
+  expect(parsed.ship_licenses[0]?.ship_class).toBe('later_hull');
+  expect(parsed.ship_licenses[0]?.acquired_at).toBe('2026-06-01T00:00:00Z');
+  expect(stdout).not.toContain('Ship licenses');
+});
+
 test('faction_info prints server fuel totals next to the bunker table, including 0', () => {
   const fixture = factionInfoWithRent();
   fixture.fuel_bunkers = [
