@@ -6898,6 +6898,215 @@ describe('structuredContent formatters', () => {
     expect(emptyFaction.stdout).not.toContain('pirate rep +3 (');
   });
 
+  test('complete_mission prints unlocks and recipes unlocked without choosing a next mission', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-archive',
+        title: 'The Archive',
+        credits_earned: 100,
+        message: 'Mission complete. Rewards claimed.',
+        chain_next: 'chain-mission-id',
+        recipes_unlocked: ['alloy_plate', 'field_ration'],
+        unlocks: [
+          {
+            available: false,
+            mission: { mission_id: 'zulu_followup', title: 'Zulu Followup' },
+            still_requires: [
+              {
+                mission: { mission_id: 'earlier_zulu', title: 'Earlier Zulu', system_id: 'veiled_reach' },
+                next_step: { mission_id: 'earlier_zulu', title: 'Earlier Zulu' },
+              },
+            ],
+          },
+          {
+            available: true,
+            mission: {
+              mission_id: 'alpha_followup',
+              title: 'Alpha Followup',
+              base_id: 'memorial_station',
+              base_name: 'First Step Memorial Station',
+              system_id: 'first_step',
+              system_name: 'First Step',
+            },
+            still_requires: [
+              {
+                mission: {
+                  mission_id: 'joining_the_investigators',
+                  title: 'Joining the Investigators',
+                  base_id: 'old_yard',
+                },
+                next_step: {
+                  mission_id: 'first_brief',
+                  title: 'First Brief',
+                  base_name: 'First Step Memorial Station',
+                  base_id: 'memorial_station',
+                  system_name: 'First Step',
+                  system_id: 'first_step',
+                },
+              },
+            ],
+          },
+          {
+            available: true,
+            mission: { mission_id: 'system_only', title: 'System Only', system_id: 'sol', system_name: 'Sol' },
+          },
+        ],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Recipes unlocked: alloy_plate, field_ration');
+    expect(stdout).toContain('Next: chain-mission-id');
+    expect(stdout).toContain(`Unlocks:
+  Zulu Followup (zulu_followup)
+    Available: no
+    Earlier Zulu (earlier_zulu)
+      System: veiled_reach
+      Next: Earlier Zulu (earlier_zulu)
+  Alpha Followup (alpha_followup)
+    Available: yes
+    Station: First Step Memorial Station (memorial_station)
+    System: First Step (first_step)
+    Joining the Investigators (joining_the_investigators)
+      Station: old_yard
+      Next: First Brief (first_brief)
+        Station: First Step Memorial Station (memorial_station)
+        System: First Step (first_step)
+  System Only (system_only)
+    Available: yes
+    System: Sol (sol)`);
+    expect(stdout.indexOf('Recipes unlocked:')).toBeLessThan(stdout.indexOf('Next: chain-mission-id'));
+    expect(stdout.indexOf('Next: chain-mission-id')).toBeLessThan(stdout.indexOf('Unlocks:'));
+    expect(stdout.indexOf('Unlocks:')).toBeLessThan(stdout.indexOf('Mission complete. Rewards claimed.'));
+    expect(stdout.indexOf('Zulu Followup')).toBeLessThan(stdout.indexOf('Alpha Followup'));
+    expect(stdout.indexOf('Alpha Followup')).toBeLessThan(stdout.indexOf('System Only'));
+    const systemOnly = stdout.slice(stdout.indexOf('System Only (system_only)'));
+    expect(systemOnly).not.toContain('Station:');
+    expect(systemOnly).not.toContain('Next:');
+    expect(stdout).not.toContain('Next: Alpha Followup');
+    expect(stdout).not.toContain('Next: Zulu Followup');
+    expect(stdout).not.toContain('recipe_locked');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission omits empty or missing unlocks and recipe lists', () => {
+    const extras = [
+      {},
+      { unlocks: [], recipes_unlocked: [] },
+      { unlocks: 'zulu_followup', recipes_unlocked: 'alloy_plate' },
+      { unlocks: [null, 'nope'], recipes_unlocked: [1, null] },
+    ];
+    for (const extra of extras) {
+      const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+        details: {
+          mission_id: 'mission-plain',
+          title: 'Plain',
+          credits_earned: 1,
+          message: 'Done.',
+          chain_next: 'chain-mission-id',
+          ...extra,
+        },
+      });
+      expect(stderr).toBe('');
+      expect(stdout).toContain('Next: chain-mission-id');
+      expect(stdout).not.toContain('Unlocks');
+      expect(stdout).not.toContain('Recipes unlocked');
+      expect(stdout).not.toContain('recipe_locked');
+      expect(stdout).not.toContain('=== Response ===');
+    }
+  });
+
+  test('view_completed_mission prints unlocks and appends unlock_recipes on the reward summary', () => {
+    const { stdout, stderr } = captureStructuredOutput('view_completed_mission', {
+      ...completedMissionDetailFixture,
+      rewards: {
+        ...completedMissionDetailFixture.rewards,
+        unlock_recipes: ['alloy_plate', 'field_ration'],
+      },
+      unlocks: [
+        {
+          available: false,
+          mission: { mission_id: 'zulu_followup', title: 'Zulu Followup' },
+        },
+      ],
+    });
+    const empty = captureStructuredOutput('view_completed_mission', {
+      ...completedMissionDetailFixture,
+      rewards: { ...completedMissionDetailFixture.rewards, unlock_recipes: [] },
+      unlocks: [],
+    });
+    const onlyRecipes = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-recipes',
+      title: 'Recipe Lesson',
+      rewards: { unlock_recipes: ['alloy_plate'] },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(
+      'Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1 (pirate_kael); piloting +25 XP; unlock recipes alloy_plate, field_ration',
+    );
+    expect(stdout).toContain('Next: mission-refinery-check');
+    expect(stdout.indexOf('Next: mission-refinery-check')).toBeLessThan(stdout.indexOf('Unlocks:'));
+    expect(stdout).toContain(`Unlocks:
+  Zulu Followup (zulu_followup)
+    Available: no`);
+    expect(stdout).not.toContain('recipe_locked');
+    expect(stdout).not.toContain('=== Response ===');
+    expect(empty.stdout).toContain(
+      'Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1 (pirate_kael); piloting +25 XP',
+    );
+    expect(empty.stdout).not.toContain('unlock recipes');
+    expect(empty.stdout).not.toContain('Unlocks');
+    expect(onlyRecipes.stdout).toContain('Rewards: unlock recipes alloy_plate');
+    expect(onlyRecipes.stdout).not.toContain('recipe_locked');
+  });
+
+  test('mission reward summaries append unlock_recipes and omit an empty or missing list', () => {
+    const withRecipes = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-recipes',
+            title: 'Recipe Lesson',
+            rewards: { credits: 10, unlock_recipes: ['alloy_plate', 'field_ration'] },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const omitted = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [{ mission_id: 'mission-plain', title: 'Plain', rewards: { credits: 10 } }],
+        max_missions: 5,
+      },
+    });
+    const empty = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [{ mission_id: 'mission-empty', title: 'Empty', rewards: { credits: 10, unlock_recipes: [] } }],
+        max_missions: 5,
+      },
+    });
+    const onlyRecipes = captureStructuredOutput('get_active_missions', {
+      message: 'Active missions',
+      missions: {
+        active: [{ mission_id: 'mission-only', title: 'Only', rewards: { unlock_recipes: ['alloy_plate'] } }],
+        max_missions: 5,
+      },
+    });
+
+    expect(withRecipes.stderr).toBe('');
+    expect(withRecipes.stdout).toContain('10 cr; unlock recipes alloy_plate, field_ration');
+    expect(omitted.stdout).toContain('10 cr');
+    expect(omitted.stdout).not.toContain('unlock recipes');
+    expect(empty.stdout).toContain('10 cr');
+    expect(empty.stdout).not.toContain('unlock recipes');
+    expect(onlyRecipes.stdout).toContain('unlock recipes alloy_plate');
+    expect(onlyRecipes.stdout).not.toContain('recipe_locked');
+  });
+
   test('formats empire policy snapshots without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('get_empire_info', empireInfoFixture);
 

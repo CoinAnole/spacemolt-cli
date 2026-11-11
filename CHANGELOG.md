@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `complete_mission` and `view_completed_mission` print an Unlocks block when `unlocks` is a non-empty array, in the order received. Each entry prints the mission title and id, Available as yes or no, and the station and system names with their ids when those pointer keys are sent. An omitted station or system prints nothing. Each `still_requires` row prints the missing mission title and id, then Next as the `next_step` title and id, with station and system when those keys are sent. An omitted or empty `still_requires` prints nothing for that entry. An omitted or empty `unlocks` prints nothing. Unavailable unlocks stay in the list. The existing `Next:` line from `chain_next` stays, and the CLI does not pick which unlock that line is. `complete_mission` prints `Recipes unlocked:` as the sent recipe ids when `recipes_unlocked` is a non-empty array. An omitted or empty array prints nothing. Mission reward summaries append `unlock_recipes` ids when that array is non-empty. An omitted recipe list is not printed as no unlock (gameserver 0.685.0).
+
 - `agentlogs` is removed. Gameserver 0.686.0 removed the disabled `POST /api/v2/agentlogs` endpoint.
 
 - `storage deposit` help no longer says that a boss flies a rival boss's stolen flagship while a player holds his own, then scraps it once his own is home, and scraps it at once if his own is home. It still says a boss's stolen flagship can be sent to any pirate stronghold from any station.

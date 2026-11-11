@@ -2,6 +2,7 @@ import { stringifyApiJson } from '../json-number.ts';
 import { formatOfflineCollapsedText, formatShipCountsLine } from '../notification-format-shared.ts';
 import { arenaStatLines, formatArenaPoiLine, formatArenaWonLine, formatArenaXpLine } from './arena.ts';
 import { formatBerthSummary } from './berths.ts';
+import { joinStringIds } from './catalog-detail.ts';
 import { emitCitizenshipsLine } from './citizenship.ts';
 import { emitShipCombatEffects } from './combat-effects.ts';
 import { formatCreatureLine } from './creatures.ts';
@@ -315,6 +316,62 @@ function formatMissionDialog(value: unknown): string | undefined {
   return formatMissionObjectText(value);
 }
 
+function missionPointerLabel(pointer: Record<string, unknown>): string | undefined {
+  const title = usableLabel(pointer.title);
+  const id = usableLabel(pointer.mission_id);
+  if (title && id && title !== id) return `${title} (${id})`;
+  return title ?? id;
+}
+
+function missionPointerPlace(pointer: Record<string, unknown>, nameKey: string, idKey: string): string | undefined {
+  const name = usableLabel(pointer[nameKey]);
+  const id = usableLabel(pointer[idKey]);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+function appendMissionPointerPlaces(lines: string[], pointer: Record<string, unknown>, indent: string): void {
+  const station = missionPointerPlace(pointer, 'base_name', 'base_id');
+  if (station) lines.push(`${indent}Station: ${station}`);
+  const system = missionPointerPlace(pointer, 'system_name', 'system_id');
+  if (system) lines.push(`${indent}System: ${system}`);
+}
+
+function appendMissionPointerLines(lines: string[], pointer: unknown, indent: string, prefix = ''): void {
+  if (!isRecord(pointer)) return;
+  const label = missionPointerLabel(pointer);
+  if (label) lines.push(`${indent}${prefix}${label}`);
+  appendMissionPointerPlaces(lines, pointer, `${indent}  `);
+}
+
+function emitMissionUnlocks(unlocks: unknown): void {
+  if (!Array.isArray(unlocks) || unlocks.length === 0) return;
+  const blocks: string[][] = [];
+  for (const entry of unlocks) {
+    if (!isRecord(entry)) continue;
+    const lines: string[] = [];
+    if (isRecord(entry.mission)) {
+      const label = missionPointerLabel(entry.mission);
+      if (label) lines.push(`  ${label}`);
+    }
+    if (typeof entry.available === 'boolean') lines.push(`    Available: ${entry.available ? 'yes' : 'no'}`);
+    if (isRecord(entry.mission)) appendMissionPointerPlaces(lines, entry.mission, '    ');
+    if (Array.isArray(entry.still_requires)) {
+      for (const row of entry.still_requires) {
+        if (!isRecord(row)) continue;
+        appendMissionPointerLines(lines, row.mission, '    ');
+        appendMissionPointerLines(lines, row.next_step, '      ', 'Next: ');
+      }
+    }
+    if (lines.length) blocks.push(lines);
+  }
+  if (!blocks.length) return;
+  emitLine(`\n${c.bright}Unlocks:${c.reset}`);
+  for (const lines of blocks) {
+    for (const line of lines) emitLine(line);
+  }
+}
+
 function formatSkillSummary(stats: Record<string, unknown>, skillId: string, label: string): string | undefined {
   const skill = stats[skillId];
   const levelKey = `${skillId}_level`;
@@ -463,6 +520,8 @@ function summarizeRewardForDisplay(rewards: unknown): string {
         .join(', '),
     );
   }
+  const unlockRecipes = joinStringIds(rewards.unlock_recipes);
+  if (unlockRecipes) parts.push(`unlock recipes ${unlockRecipes}`);
   return parts.filter(Boolean).join('; ');
 }
 
@@ -1902,6 +1961,7 @@ export const statusFormatters = [
       const dialog = formatMissionDialog(r.dialog);
       if (dialog) emitLine(`Dialog: ${dialog}`);
       if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
+      emitMissionUnlocks(r.unlocks);
       return true;
     },
     { commands: ['view_completed_mission'] },
@@ -1927,7 +1987,10 @@ export const statusFormatters = [
       if (rewards.reputationLine) emitLine(rewards.reputationLine);
       if (rewards.skillXpLine) emitLine(rewards.skillXpLine);
       if (rewards.communityLine) emitLine(rewards.communityLine);
+      const recipesUnlocked = joinStringIds(r.recipes_unlocked);
+      if (recipesUnlocked) emitLine(`Recipes unlocked: ${recipesUnlocked}`);
       if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
+      emitMissionUnlocks(r.unlocks);
       if (r.message) emitLine(String(r.message));
       emitFixerAccount(r.fixer);
       return true;

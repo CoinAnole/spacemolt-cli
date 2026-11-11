@@ -145,6 +145,8 @@ function summarizeRewards(rewards: unknown): string {
     const suffix = faction ? ` (${faction})` : '';
     parts.push(`pirate rep +${rewards.pirate_rep}${suffix}`);
   }
+  const unlockRecipes = joinStringIds(rewards.unlock_recipes);
+  if (unlockRecipes) parts.push(`unlock recipes ${unlockRecipes}`);
   return parts.join('; ');
 }
 
