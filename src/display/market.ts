@@ -941,7 +941,7 @@ function formatDonatedSupplyItem(r: Record<string, unknown>): string | undefined
 }
 
 function formatSupplyCommission(r: Record<string, unknown>): boolean {
-  if (r.commission_id === undefined) return false;
+  if (!hasAnyField(r, ['commission_id'])) return false;
   if (!Array.isArray(r.materials) && (r.item_id === undefined || r.supplied === undefined)) return false;
 
   emitLine(`\n${c.bright}=== Commission Supplied ===${c.reset}`);

@@ -1484,6 +1484,29 @@ test('prints Station: earth_station when a base has an id and no name', () => {
   expect(stdout.split('\n')).toContain('Station: earth_station');
 });
 
+test('prints Station: earth_station when a station name is an empty string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: '',
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Station:'));
+  expect(line).toBe('Station: earth_station');
+});
+
 test('prints Station and ID from a flat base payload with a name and id', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5875,6 +5898,32 @@ test('omits a station description that is only spaces', () => {
   expect(stdout).not.toContain('   ');
 });
 
+test('prints a padded station description trimmed', () => {
+  const description = '  Padded hub text.  ';
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          description,
+        },
+      },
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes(description.trim()));
+  expect(line).toBe(description.trim());
+  expect(stdout).not.toContain(description);
+});
+
 test('omits a non-string station description and does not print the object', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5934,6 +5983,28 @@ test('prints Empire: None for a station with no empire', () => {
         base: {
           id: 'earth_station',
           name: 'Earth Station',
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Empire:'));
+  expect(line).toBe('Empire: None');
+});
+
+test('prints Empire: None for an empty station empire', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          empire: '',
         },
       },
     },
@@ -6177,6 +6248,32 @@ test('prints Condition: good (88% satisfaction) for a condition string without c
   ).stdout.join('\n');
 
   expect(stdout.split('\n')).toContain('Condition: good (88% satisfaction)');
+});
+
+test('prints Condition: good (88% satisfaction) for an empty condition_text', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+        condition: {
+          condition_text: '',
+          condition: 'good',
+          satisfaction_pct: 88,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Condition:'));
+  expect(line).toBe('Condition: good (88% satisfaction)');
 });
 
 test('renders nested base repairs without a second wrecked line', () => {

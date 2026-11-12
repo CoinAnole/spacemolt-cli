@@ -117,6 +117,12 @@ test('treats empty-string destination_name as missing and uses id', () => {
   expect(stdout).not.toContain('Earth Station (earth_station)');
 });
 
+test('whitespace destination_name keeps the spaces on the claim hero', () => {
+  const stdout = renderClaim(claimDetails({ destination_name: '   ' }));
+  const hero = stdout.split('\n').find((row) => row.includes('→'));
+  expect(hero).toBe('Captured Lark (skiff) →     (earth_station)');
+});
+
 test('destination_name 0 prints → 0 (earth_station) with the fixture destination_base_id', () => {
   const stdout = renderClaim(claimDetails({ destination_name: 0 }));
   const hero = stdout.split('\n').find((row) => row.includes('→'));

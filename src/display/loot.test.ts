@@ -693,6 +693,20 @@ test('empty and zero xp maps claim single-item scalar lines without Skill XP', (
   expect(onlyActionEmpty).not.toContain('=== Response ===');
 });
 
+test('single-item loot quantity 0 with xp_gained prints Quantity: 0', () => {
+  const stdout = stdoutOf('loot_wreck', {
+    details: {
+      action: 'loot_wreck',
+      item_id: 'adamant_tooth',
+      quantity: 0,
+      wreck_empty: false,
+      xp_gained: { armor: 1 },
+    },
+  });
+
+  expect(stdout).toContain('Quantity: 0');
+});
+
 test('number and array xp_gained stay on the shared scalar printer', () => {
   const base = {
     action: 'loot_wreck',

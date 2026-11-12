@@ -35,7 +35,8 @@ function formatRepeaterLine(row: Record<string, unknown>): string {
 /** A missing or non-finite count is not a total. Count 0 with an empty list prints nothing. */
 export function emitRepeaterSection(repeaters: unknown, repeaterCount: unknown, title: string): boolean {
   const rows = Array.isArray(repeaters) ? repeaters.filter(isRecord) : [];
-  const finiteCount = typeof repeaterCount === 'number' && Number.isFinite(repeaterCount) ? repeaterCount : undefined;
+  const finiteCount =
+    typeof repeaterCount === 'number' && finiteText(repeaterCount) !== undefined ? repeaterCount : undefined;
   const headerCount = finiteCount !== undefined && finiteCount >= rows.length ? finiteCount : rows.length;
   const show = rows.length > 0 || (finiteCount !== undefined && finiteCount > 0);
   if (!show) return false;

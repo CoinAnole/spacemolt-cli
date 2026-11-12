@@ -3002,13 +3002,6 @@ function fitArrivalHeadline(lead: string, facts: string, max: number): string {
   return `${lead.slice(0, budget - 1)}…${suffix}`;
 }
 
-/** First line of destination_name. Blank and non-strings stay omitted. */
-function transitDestinationName(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const line = firstLine(value);
-  return line || undefined;
-}
-
 function transitDestinationId(data: Record<string, unknown>): string | undefined {
   const destination = safeScalar(data.destination);
   return destination !== undefined ? String(destination) : undefined;
@@ -3017,7 +3010,7 @@ function transitDestinationId(data: Record<string, unknown>): string | undefined
 /** Transit-start ok label. An omitted destination_name keeps the id. */
 function transitDestinationLabel(data: Record<string, unknown>): string | undefined {
   const id = transitDestinationId(data);
-  const name = transitDestinationName(data.destination_name);
+  const name = previewId(data.destination_name);
   if (name === undefined) return id;
   return formatNameId(name, id);
 }
@@ -3025,7 +3018,7 @@ function transitDestinationLabel(data: Record<string, unknown>): string | undefi
 /** Beside an existing message. Do not rewrite a message that already contains the name. */
 function transitDestinationDetail(headline: string, data: Record<string, unknown>): string | undefined {
   const id = transitDestinationId(data);
-  const name = transitDestinationName(data.destination_name);
+  const name = previewId(data.destination_name);
   if (name === undefined) {
     if (id !== undefined && !headline.includes(id)) return `→ ${id}`;
     return undefined;

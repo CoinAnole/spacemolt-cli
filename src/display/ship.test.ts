@@ -649,6 +649,11 @@ test('get_ship prints field workshop state, zero counts, and pause reason as sen
   expect(stdout.indexOf('CPU:')).toBeGreaterThan(stdout.indexOf('Pause reason: cargo_full'));
 });
 
+test('get_ship prints bigint queued jobs with every digit', () => {
+  const stdout = renderShip(shipWithWorkshop({ queued_jobs: 9007199254740993n })).stdout.join('\n');
+  expect(stdout).toContain('Queued jobs: 9007199254740993');
+});
+
 test('get_ship prints an unknown field workshop state and whitespace pause reason as sent', () => {
   const stdout = renderShip(
     shipWithWorkshop({

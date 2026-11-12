@@ -678,6 +678,19 @@ test('survey_system omits Bloom for a numeric bloom_status with intensity 0.8', 
   expect(stdout).toContain('Survey power: 18');
 });
 
+test('survey_system omits Bloom for a NaN bloom intensity', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.bloom_status = 'active';
+      details.bloom_intensity = Number.NaN;
+    }),
+  );
+
+  expect(stdout).not.toContain('Bloom:');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).toContain('Survey power: 18');
+});
+
 test('survey_system skips Skill XP for empty and zero maps', () => {
   const empty = stdoutOf(
     clonePresent((details) => {
@@ -818,6 +831,28 @@ test('survey_system keeps Ranched for an explicit 0 and omits Ranched By', () =>
   expect(stdout).not.toContain('Ranched By');
 });
 
+test('survey_system prints Ranched false for a boolean false ranched count', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: false,
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).toContain('Ranched');
+  expect(lineContaining(stdout, 'ember_grazer')).toContain('false');
+  expect(lineContaining(stdout, 'ember_grazer')).not.toContain('0');
+});
+
 test('survey_system omits Ranched for an empty-string ranched value and does not print 0', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
@@ -859,6 +894,27 @@ test('survey_system omits Ranched for a NaN ranched value and does not print NaN
   const header = lineContaining(stdout, 'Species');
   expect(header).not.toContain('Ranched');
   expect(stdout).not.toContain('NaN');
+});
+
+test('survey_system omits the Ranched column for a bigint ranched count', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.wildlife = [
+        {
+          species: 'ember_grazer',
+          name: 'Ember Grazer',
+          role: 'grazer',
+          estimate: 42,
+          abundance: 'common',
+          ranched: 0n,
+        },
+      ];
+    }),
+  );
+
+  const header = lineContaining(stdout, 'Species');
+  expect(header).not.toContain('Ranched');
+  expect(lineContaining(stdout, 'ember_grazer')).not.toContain('0');
 });
 
 test('survey_system prints the Ranched column when only ranched_by is set', () => {
@@ -1172,6 +1228,16 @@ test('survey_system prints signature for a faint row that omits type', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {
       details.faint_signatures = [{}];
+    }),
+  );
+
+  expect(stdout.split('\n')).toContain('  - signature');
+});
+
+test('survey_system prints signature for a faint row with an empty-string type', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.faint_signatures = [{ type: '' }];
     }),
   );
 

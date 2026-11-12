@@ -156,6 +156,40 @@ test('buy with quantity 10 and unfilled 4 and no fills prints Filled: 6 and Inst
   expect(stdout).not.toContain('Total cost');
 });
 
+test('buy with equal quantity and unfilled and no fills prints Filled: 0', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 10,
+      unfilled: 10,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Filled: 0');
+});
+
+test('buy with unfilled 0 prints Unfilled: 0', () => {
+  const stdout = renderStructuredResult(
+    'buy',
+    {
+      action: 'buy',
+      item: 'Fuel',
+      item_id: 'fuel',
+      quantity: 4,
+      unfilled: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Unfilled: 0');
+});
+
 test('create_sell_order prints bigint quantity_filled and total_earned', () => {
   const stdout = renderStructuredResult(
     'create_sell_order',
@@ -383,6 +417,22 @@ test('sell prints smuggling XP without a level-up line', () => {
   expect(stdout).not.toContain('Skill level');
   expect(stdout).not.toContain('From cargo');
   expect(stdout).not.toContain('From storage');
+});
+
+test('sell with unsold 0 prints Unsold: 0', () => {
+  const stdout = renderStructuredResult(
+    'sell',
+    {
+      action: 'sell',
+      item: 'Void Salt',
+      item_id: 'void_salt',
+      unsold: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Unsold: 0');
 });
 
 test('sell fills Mara, Mara, a blank, a non-record, and Ibis print from Mara, Ibis', () => {

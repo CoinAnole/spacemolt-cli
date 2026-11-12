@@ -80,6 +80,17 @@ describe('emitGiftEntries', () => {
     expect(stdout).not.toContain('(rations)');
   });
 
+  test('an empty-string item name renders 4 rations and not (rations)', () => {
+    const { stdout } = renderGifts([
+      {
+        items: [{ name: '', item_id: 'rations', quantity: 4 }],
+      },
+    ]);
+    const row = stdout.split('\n').find((line) => line.startsWith('    '));
+    expect(row).toBe('    4 rations');
+    expect(stdout).not.toContain('(rations)');
+  });
+
   test('a name without item_id renders 12 Fuel Cell', () => {
     const { stdout } = renderGifts([
       {
@@ -284,6 +295,12 @@ describe('emitGiftEntries', () => {
     expect(objectStamp.stdout).toContain('From: Ada');
     expect(objectStamp.stdout).not.toContain('When:');
     expect(objectStamp.stdout).not.toContain('[object Object]');
+  });
+
+  test('whitespace timestamp keeps the spaces on the When line', () => {
+    const { stdout } = renderGifts([{ sender: 'Ada', timestamp: '   ' }]);
+    const when = stdout.split('\n').find((line) => line.includes('When:'));
+    expect(when).toBe('  When:    ');
   });
 
   test('NaN timestamp omits When: and does not print NaN', () => {

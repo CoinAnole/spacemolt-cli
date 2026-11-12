@@ -4217,6 +4217,17 @@ describe('notification formatting', () => {
         expect(both.details).toContain('0/260 cycles missed');
       });
 
+      test('facility_rent_warning omits cycles missed when the headline already includes it', () => {
+        const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: '0/260 cycles missed',
+            missed_cycles: 0,
+            grace_cycles: 260,
+          }),
+        );
+        expect(preview.details).toEqual([]);
+      });
+
       test('non-string faction_id and object credits_owed do not dump', () => {
         const preview = formatNotificationPreview(
           note('facility_rent_warning', {
@@ -4438,6 +4449,16 @@ describe('notification formatting', () => {
         expectNoDiagnosticTokens(previewText(preview));
         expectNoNestedJsonDump(previewText(preview));
       });
+
+      test('ranch_poached system-only location prints the system id', () => {
+        const preview = formatNotificationPreview(note('ranch_poached', { system_id: 'sol' }));
+        expect(preview.details).toEqual(['sol']);
+      });
+
+      test('ranch_poached poi-only location prints the POI', () => {
+        const preview = formatNotificationPreview(note('ranch_poached', { poi_name: 'Cloudbank' }));
+        expect(preview.details).toEqual(['Cloudbank']);
+      });
     });
   });
 
@@ -4647,6 +4668,18 @@ describe('notification formatting', () => {
         );
         expect(zeroCount.details).toContain('0v3');
       });
+
+      test('omits sides digest when a side is not a record', () => {
+        const preview = formatNotificationPreview(
+          note('battle_alert', {
+            message: 'Fight.',
+            battle_id: 'b1',
+            sides: ['junk', { side_id: 1, player_count: 2 }],
+            participants: [],
+          }),
+        );
+        expect(preview.details).toEqual(['ID: b1']);
+      });
     });
 
     describe('drone_scan', () => {
@@ -4839,6 +4872,29 @@ describe('notification formatting', () => {
         );
         expect(preview.details).toHaveLength(2);
         expect(preview.details[0]).toBe('ore_iron, 10 left · ice, 2 left');
+      });
+
+      test('drone_survey resource digest truncates after six deposits', () => {
+        const preview = formatNotificationPreview(
+          note('drone_survey', {
+            drone_id: 'drone-1',
+            poi_id: 'sol_cloudbank',
+            resources: ['a', 'b', 'c', 'd', 'e', 'f', 'seventh'].map((resource_id) => ({ resource_id })),
+          }),
+        );
+        expect(preview.details[0]).toBe('a · b · c · d · e · f, +1 more');
+        expect(preview.details[0]).not.toContain('seventh');
+      });
+
+      test('drone_survey prints richness 0', () => {
+        const preview = formatNotificationPreview(
+          note('drone_survey', {
+            drone_id: 'drone-1',
+            poi_id: 'sol_cloudbank',
+            resources: [{ resource_id: 'ore_iron', richness: 0 }],
+          }),
+        );
+        expect(preview.details[0]).toBe('ore_iron richness 0');
       });
     });
   });
@@ -5087,6 +5143,21 @@ describe('notification formatting', () => {
         expect(preview.details).toEqual(['2 marines treated', 'crew 6/8 fit', 'marines 4/4 fit']);
         expect(previewText(preview)).not.toContain(', 0 injured');
         expect(previewText(preview)).not.toContain('0 crew treated');
+      });
+
+      test('personnel complement prints fit 0', () => {
+        const preview = formatNotificationPreview(
+          note('personnel_update', {
+            action: 'treatment',
+            source_username: 'Marlowe',
+            crew_capacity: 8,
+            personnel: {
+              fit_crew: 0,
+              injured_crew: 0,
+            },
+          }),
+        );
+        expect(preview.details).toEqual(['crew 0/8 fit']);
       });
 
       test('never dumps personnel.version or the raw personnel object', () => {
@@ -9573,6 +9644,24 @@ describe('notification formatting', () => {
       expect(ordinary.details.join('\n')).not.toContain('Toll');
       expect(ordinary.details.join('\n')).not.toContain('Hold:');
       expect(ordinary.details.join('\n')).not.toContain('Pass until ticks:');
+    });
+
+    test('trade_offer_received keeps only the Use line at maxDetails 1', () => {
+      const preview = formatNotificationPreview(
+        {
+          type: 'trade',
+          msg_type: 'trade_offer_received',
+          data: {
+            from_name: 'Ada',
+            trade_id: 'trade_toll',
+            offer_credits: 5,
+            note: 'lane fee',
+          },
+        },
+        { maxDetails: 1 },
+      );
+      expect(preview.details).toEqual(['Use: trade accept trade_id=trade_toll or trade decline trade_id=trade_toll']);
+      expect(preview.details.join('\n')).not.toContain('Offering');
     });
 
     test('faction_invite pure preview includes decline prompt', () => {

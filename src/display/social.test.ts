@@ -2717,6 +2717,17 @@ test('renders explicit empty ranch feed and production states', () => {
   expect(stdout).toContain('No expected ranch products.');
 });
 
+test('omits a whitespace ranch status message', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.message = '   ';
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Wildlife Ranch ===');
+  expect(stdout.split('\n')).not.toContain('   ');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders ranch supplies_ok true as Supplies: yes', () => {
   const fixture = structuredClone(ranchStatusFixture);
   fixture.supplies_ok = true;
@@ -2780,6 +2791,18 @@ test('renders cull target zero as disabled while preserving zero herd', () => {
   expect(stdout).toContain('Current herd: 0');
   expect(stdout).toContain('Cull target: disabled (0)');
   expect(stdout).toContain('Automatic culling disabled.');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omits a whitespace ranch cull message', () => {
+  const fixture = structuredClone(ranchSetCullFixture);
+  fixture.details.message = '   ';
+
+  const stdout = renderStructuredResult('facility_ranch_set_cull', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Ranch Cull Policy Updated ===');
+  expect(stdout).toContain('Current herd');
+  expect(stdout.split('\n')).not.toContain('   ');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -6690,6 +6713,14 @@ test('get_battle_summary still prints Winning Side: 1 on victory', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('Winning Side: 1');
+});
+
+test('get_battle_summary prints Winning Side: 0', () => {
+  const fixture = structuredClone(battleSummaryFixture);
+  fixture.winning_side = 0;
+  const stdout = renderStructuredResult('get_battle_summary', fixture, options, context).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Winning Side: 0');
 });
 
 test("get_battle_summary omits Winning Side when winning_side is the string '-1'", () => {

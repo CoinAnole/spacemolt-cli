@@ -4287,6 +4287,19 @@ test('renders craft quote capacity available as yes/no', () => {
   expect(garbageOut).not.toContain('Capacity available');
 });
 
+test('craft quote prints Inputs available false', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    { details: { dry_run: true, have_inputs: false } },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Inputs available: false');
+});
+
 test('renders a one-tick Time/run craft quote', () => {
   const rendered = renderStructuredResult(
     'craft',
@@ -5019,6 +5032,15 @@ test('packaged quote prints container consumed explicit 0', () => {
   outputPackage.container_consumed = 0;
   const stdout = renderStructuredResult('craft', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Container consumed: 0');
+});
+
+test('packaged quote prints reclaimed containers explicit 0', () => {
+  const fixture = structuredClone(craftPackagedQuoteFixture) as Record<string, unknown>;
+  const details = fixture.details as Record<string, unknown>;
+  const outputPackage = details.output_package as Record<string, unknown>;
+  outputPackage.reclaimed_containers = 0;
+  const stdout = renderStructuredResult('craft', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Reclaimed containers: 0');
 });
 
 test('renders numeric packaged-craft package ids', () => {

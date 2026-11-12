@@ -781,6 +781,26 @@ test('omits Foreign Overrides when foreign_sales_tax_bps is an empty map', () =>
   expect(stdout).not.toContain('Foreign Overrides');
 });
 
+test('omits Foreign Overrides when every foreign sales tax bps is non-numeric', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          foreign_sales_tax_bps: { crimson: 'nope' },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Empire Policy ===');
+  expect(stdout).not.toContain('Foreign Overrides');
+  expect(stdout).not.toContain('nope');
+});
+
 test('prints Contraband None when contraband_items is omitted', () => {
   const stdout = renderStructuredResult(
     'get_empire_info',

@@ -496,7 +496,7 @@ export function emitInstalledModules(
 
 function formatFieldWorkshopCount(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (isStrictFiniteNumber(value)) return String(value);
   return undefined;
 }
 

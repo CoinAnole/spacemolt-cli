@@ -211,3 +211,78 @@ test('fit_preview prints an issue code when its message is omitted', () => {
   expect(stdout).toContain('Valid:');
   expect(stdout).not.toContain('Need 4 more CPU');
 });
+
+test('fit_preview declines when steps are omitted', () => {
+  const fixture = { ...fitPreviewFixture };
+  delete (fixture as { steps?: unknown }).steps;
+  const stdout = renderFitPreview(fixture);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines when stats are omitted', () => {
+  const fixture = { ...fitPreviewFixture };
+  delete (fixture as { stats?: unknown }).stats;
+  const stdout = renderFitPreview(fixture);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview prints an issue message when its code is omitted', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: [{ message: 'Need 4 more CPU' }],
+  });
+  expect(stdout).toContain('Need 4 more CPU');
+  expect(stdout).toContain('Valid:');
+  expect(stdout).not.toContain('cpu_exceeded');
+});
+
+test('fit_preview prints a step when its name is omitted', () => {
+  const steps = structuredClone(fitPreviewFixture.steps) as Array<Record<string, unknown>>;
+  const pulse = steps.find((step) => step.name === 'Pulse Laser I');
+  if (!pulse) throw new Error('missing fit preview step');
+  delete pulse.name;
+  const stdout = renderFitPreview({ ...fitPreviewFixture, steps });
+  expect(stdout).toContain('install_mod');
+  expect(stdout).toContain('Valid:');
+  expect(stdout).not.toContain('Pulse Laser I');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('fit_preview declines an issue with an extra key', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: [{ code: 'cpu_exceeded', message: 'Need 4 more CPU', severity: 'error' }],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a non-string issue code', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: [{ code: 1 }],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a non-record issue entry', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: ['cpu_exceeded'],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a step with an extra key', () => {
+  const steps = structuredClone(fitPreviewFixture.steps) as Array<Record<string, unknown>>;
+  const first = steps[0];
+  if (!first) throw new Error('missing fit preview step');
+  first.slot = 'weapon';
+  const stdout = renderFitPreview({ ...fitPreviewFixture, steps });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});

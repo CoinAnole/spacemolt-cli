@@ -75,7 +75,6 @@ function readSteps(value: unknown): Array<Record<string, unknown>> | undefined {
       if (text === null) return undefined;
       if (text !== undefined) row[key] = text;
     }
-    // Omitted temporary stays blank. false is no, not blank.
     if (Object.hasOwn(entry, 'temporary')) {
       if (typeof entry.temporary !== 'boolean') return undefined;
       row.temporary_display = entry.temporary ? 'yes' : 'no';

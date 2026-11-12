@@ -181,6 +181,30 @@ test('citizenship list prints a citizenship grant identified only by name', () =
   expect(stdout).toContain('only-name');
 });
 
+test('citizenship list prints a citizenship grant identified only by id', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    citizenships: [{ id: 'only-id', granted_at: '2026-01-15T00:00:00Z' }],
+  });
+
+  expect(stdout).toContain('=== Citizenships ===');
+  expect(stdout).toContain('only-id');
+});
+
+test('citizenship list prints By when granted_by is 0', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    citizenships: [{ empire_id: 'solarian', granted_at: '2026-01-15T00:00:00Z', granted_by: 0 }],
+  });
+
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('By'));
+  const row = stdout.split('\n').find((line) => line.includes('|') && line.includes('solarian'));
+  const headers = header?.split('|').map((cell) => cell.trim()) ?? [];
+  const cells = row?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(headers).toContain('By');
+  expect(cells[headers.indexOf('By')]).toBe('0');
+});
+
 test('citizenship list prints true map keys and skips false citizenships', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',
@@ -209,6 +233,25 @@ test('citizenship list prints a Held column when a pending row has held_citizens
   expect(stdout).toContain('=== Pending Petitions ===');
   expect(stdout).toContain('Held');
   expect(stdout).toContain('solarian');
+});
+
+test('citizenship list omits the Held column when held_citizenships is not an array', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    origin: 'nebula',
+    pending_petitions: [
+      {
+        id: 'pet-crimson-1',
+        empire_id: 'crimson',
+        fee_paid: 1000,
+        status: 'pending',
+        held_citizenships: 'not-an-array-token',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Pending Petitions ===');
+  expect(stdout).not.toContain('Held');
+  expect(stdout).not.toContain('not-an-array-token');
 });
 
 test('citizenship list prints recent decisions with a Decision column', () => {

@@ -579,6 +579,18 @@ test('remote poi scan prints scan power 0 and still formats when power is omitte
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('remote poi scan prints boolean scan power true', () => {
+  const enabled = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  enabled.scan_power = true;
+  expect(renderScan(enabled)).toContain('Scan power: true');
+});
+
+test('remote poi scan prints non-finite scan power NaN', () => {
+  const nanPower = structuredClone(scanPoiEmptyFixture) as Record<string, unknown>;
+  nanPower.scan_power = Number.NaN;
+  expect(renderScan(nanPower)).toContain('Scan power: NaN');
+});
+
 test('scan with contacts and no native poi_id does not print players', () => {
   const withContacts = {
     ...structuredClone(scanFixture),
@@ -719,6 +731,18 @@ test('successful cargo scan with no cargo prints an empty hold', () => {
   expect(empty).toContain('Used: 0/0');
   expect(empty).toContain('Empty hold.');
   expect(empty).not.toContain('Cargo (0):');
+});
+
+test('cargo scan prints bigint used and capacity digits', () => {
+  const stdout = renderScan({
+    target_id: 'player-2',
+    success: true,
+    revealed_info: [],
+    mode: 'cargo',
+    cargo_used: 9007199254740993n,
+    cargo_capacity: 40n,
+  });
+  expect(stdout).toContain('Used: 9007199254740993/40');
 });
 
 test('failed cargo scan prints reason as sent and does not invent an empty hold', () => {
@@ -7843,6 +7867,14 @@ test('view_completed_mission participants objective branch prints joined names',
   expect(stdout).toContain('Meet (participants Alice, Bob)');
 });
 
+test('view_completed_mission objective title fallback prints the title', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ title: 'Meet the dockmaster' }],
+  });
+  expect(stdout).toContain('Meet the dockmaster');
+});
+
 test('view_completed_mission eligible players objective branch prints joined names', () => {
   const stdout = renderStatusTable('view_completed_mission', {
     title: 'Done',
@@ -7857,6 +7889,14 @@ test('view_completed_mission objective progress branch prints explicit zero', ()
     objectives: [{ description: 'Haul', progress: { current: 0, required: 2 } }],
   });
   expect(stdout).toContain('Haul (0/2)');
+});
+
+test('view_completed_mission empty objective fallback prints Objective', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{}],
+  });
+  expect(stdout.split('\n').find((line) => line.startsWith('  - '))).toBe('  - Objective');
 });
 
 test('view_completed_mission objective quantity branch prints quantity 0', () => {
@@ -7910,6 +7950,14 @@ test('view_completed_mission string dialog prints the dialog line', () => {
     dialog: 'Come back anytime.',
   });
   expect(stdout).toContain('Dialog: Come back anytime.');
+});
+
+test('view_completed_mission giver label and id prints title, name, and id', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    giver: { title: 'Dockmaster', name: 'Vale', id: 'npc-vale' },
+  });
+  expect(stdout).toContain('Giver: Dockmaster Vale (npc-vale)');
 });
 
 test('view_completed_mission objective system_id fallback prints the system id', () => {

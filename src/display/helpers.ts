@@ -212,7 +212,6 @@ function hazardSeverityText(value: unknown): string | undefined {
   return formatIntegerText(value);
 }
 
-/** Present hazard keys only. An omitted type or severity is left out. */
 export function hazardLabelParts(value: unknown): { type?: string; severity?: string } {
   if (!isRecord(value)) return {};
   const type = hazardTypeText(value.type);
@@ -715,7 +714,8 @@ export function emitStationPower(power: unknown): boolean {
   const batteryCapacity = power.battery_capacity;
   const generatorSupply = formatStationPowerQuantity(power.generator_supply);
   const fuelInputs = summarizePowerFuelInputs(power.fuel_inputs);
-  const remediation = typeof power.remediation === 'string' && power.remediation.trim() ? power.remediation : undefined;
+  const remediation =
+    typeof power.remediation === 'string' && hazardTypeText(power.remediation) ? power.remediation : undefined;
   const hasPower = supply !== undefined || draw !== undefined || efficiency !== undefined;
   const hasBattery = batteryStored !== undefined || batteryCapacity !== undefined;
   if (!hasPower && !hasBattery && !generatorSupply && !fuelInputs && !remediation) return false;
