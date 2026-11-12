@@ -841,9 +841,12 @@ describe('command metadata', () => {
     expect(config?.description).toContain('faction intel');
     expect(config?.description).toContain('arriving');
     expect(config?.description).toContain('before you jump');
+    expect(config?.description).toContain('In a wide system the arrival can be far from the station.');
+    expect(config?.description).toContain('Plan fuel for that in-system leg.');
     expect(config?.description).not.toContain('invalid_poi');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
+    expect(config?.description).not.toContain('arrival distance');
     expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_active_missions']));
 
     const help = captureHelp('jump');
@@ -863,13 +866,29 @@ describe('command metadata', () => {
     expect(help).toContain('faction intel');
     expect(help).toContain('returns on this call');
     expect(help).toContain('poll get_location');
+    expect(help).toContain('In a wide system the arrival can be far from the station.');
+    expect(help).toContain('Plan fuel for that in-system leg.');
     expect(help).not.toContain('invalid_poi');
     expect(help).not.toContain('`');
+    expect(help).not.toContain('arrival distance');
   });
 
   test('travel, find_route, and cloak help name hidden-POI and battle cloak rules', () => {
     expect(COMMANDS.travel?.description).toContain('invalid_poi');
     expect(COMMANDS.travel?.description).toContain('uncharted hidden POI');
+    expect(COMMANDS.travel?.description).toContain('up to 4 AU is charged its real distance');
+    expect(COMMANDS.travel?.description).toContain('sqrt(4 × distance)');
+    expect(COMMANDS.travel?.description).toContain('30 AU counts as 11 AU, 100 AU as 20 AU');
+    expect(COMMANDS.travel?.description).toContain('ceil(charged distance / speed) ticks, at least 1');
+    expect(COMMANDS.travel?.description).toContain('fuel uses the same charged distance');
+    expect(COMMANDS.travel?.description).toContain('does not return until arrival');
+    expect(COMMANDS.travel?.description).toContain('does not compute a fuel or time figure');
+    expect(COMMANDS.travel?.description).not.toContain('`');
+    const travelHelp = captureHelp('travel');
+    expect(travelHelp).toContain('sqrt(4 × distance)');
+    expect(travelHelp).toContain('does not return until arrival');
+    expect(travelHelp).toContain('does not compute a fuel or time figure');
+    expect(travelHelp).not.toContain('`');
     expect(COMMANDS.find_route?.description).toContain('system_not_found');
     expect(COMMANDS.find_route?.description).toContain('survey_system');
     expect(COMMANDS.find_route?.description).toContain('faction intel');

@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `travel` help states the in-system charge: real distance up to 4 AU, and `sqrt(4 × distance)` AU beyond that (30 AU counts as 11 AU, 100 AU as 20 AU). Time is `ceil(charged distance / speed)` ticks, at least 1, and fuel uses the same charged distance. The call does not return until arrival. The client does not compute a fuel or time figure. `jump` help says that in a wide system the arrival can be far from the station, so plan fuel for that in-system leg. No arrival distance is printed (gameserver 0.698.0).
+
 - `cloak` help says attacking, engaging, or a fleet pull into a battle drops an active cloak. You still cannot engage a cloak during a battle (`in_battle`). The `in_battle` suggestion names that same fleet pull. The cloak notification prints the server `message` as the headline, including a sentence such as "your fleet pulled you into a battle" when the server sends it. It does not add a notification type or a bearing field (gameserver 0.695.1).
 
 - `fit_preview` help says the plan uses the ship's current stats, including a ship that is due a `refit_ship`, and agrees with `install_mod` and `uninstall_mod`. The client does not choose catalog class stats. Human output prints `fuel_efficiency`, `fuel_per_jump`, and `jump_range` with the other stats, after `effective_marine_capacity` and before `crew`, when those keys are present, including an explicit 0 and a negative `fuel_efficiency`. An omitted key prints nothing. An unknown stats key still prints after the known keys. The integers print as sent. `jump_range` is not derived, the 80 percent fuel-efficiency cap is not applied, and CPU, power, hull, shield, cargo, and crew are not recomputed (gameserver 0.691.0).
