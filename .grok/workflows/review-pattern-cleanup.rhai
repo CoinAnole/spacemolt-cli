@@ -1135,6 +1135,545 @@ fn ledger_readable(entries) {
     return #{ ok: true, error: "", file: "", line: 0, code: 0, field: "" };
 }
 
+fn hex_val(ch) {
+    let c = ch.to_int();
+    if c >= 48 && c <= 57 {
+        return c - 48;
+    }
+    if c >= 97 && c <= 102 {
+        return c - 87;
+    }
+    if c >= 65 && c <= 70 {
+        return c - 55;
+    }
+    return -1;
+}
+
+fn json_escape(text) {
+    let digits = "0123456789abcdef";
+    let out = "";
+    let i = 0;
+    while i < text.len() {
+        let cp = text[i].to_int();
+        if cp == 34 {
+            out += "\\\"";
+        } else if cp == 92 {
+            out += "\\\\";
+        } else if cp == 8 {
+            out += "\\b";
+        } else if cp == 12 {
+            out += "\\f";
+        } else if cp == 10 {
+            out += "\\n";
+        } else if cp == 13 {
+            out += "\\r";
+        } else if cp == 9 {
+            out += "\\t";
+        } else if cp < 32 {
+            out += "\\u00";
+            out += digits.sub_string(cp / 16, 1);
+            out += digits.sub_string(cp % 16, 1);
+        } else {
+            out += text.sub_string(i, 1);
+        }
+        i += 1;
+    }
+    return out;
+}
+
+fn json_string_at(text, i) {
+    if i < 0 || i >= text.len() || text.sub_string(i, 1) != "\"" {
+        return #{ ok: false, text: "", pos: i };
+    }
+    let out = "";
+    let j = i + 1;
+    let closed = false;
+    while j < text.len() {
+        let ch = text.sub_string(j, 1);
+        let cp = text[j].to_int();
+        if cp < 32 {
+            return #{ ok: false, text: "", pos: i };
+        }
+        if ch == "\"" {
+            closed = true;
+            j += 1;
+            break;
+        }
+        if ch == "\\" {
+            if j + 1 >= text.len() {
+                return #{ ok: false, text: "", pos: i };
+            }
+            let e = text.sub_string(j + 1, 1);
+            if e == "\"" {
+                out += "\"";
+                j += 2;
+            } else if e == "\\" {
+                out += "\\";
+                j += 2;
+            } else if e == "/" {
+                out += "/";
+                j += 2;
+            } else if e == "b" {
+                out += "\x08";
+                j += 2;
+            } else if e == "f" {
+                out += "\x0c";
+                j += 2;
+            } else if e == "n" {
+                out += "\n";
+                j += 2;
+            } else if e == "r" {
+                out += "\r";
+                j += 2;
+            } else if e == "t" {
+                out += "\t";
+                j += 2;
+            } else if e == "u" {
+                if j + 5 >= text.len() {
+                    return #{ ok: false, text: "", pos: i };
+                }
+                let h = 0;
+                let k = 0;
+                let hex_ok = true;
+                while k < 4 {
+                    let idx = j + 2 + k;
+                    let d = hex_val(text[idx]);
+                    if d < 0 {
+                        hex_ok = false;
+                    } else {
+                        h = h * 16 + d;
+                    }
+                    k += 1;
+                }
+                if !hex_ok {
+                    return #{ ok: false, text: "", pos: i };
+                }
+                let decoded = "";
+                if h <= 126 {
+                    decoded = byte_to_char(h);
+                }
+                if decoded == "" {
+                    decoded = unicode_char(h);
+                }
+                if decoded == "" {
+                    return #{ ok: false, text: "", pos: i };
+                }
+                out += decoded;
+                j += 6;
+            } else {
+                return #{ ok: false, text: "", pos: i };
+            }
+        } else {
+            out += ch;
+            j += 1;
+        }
+    }
+    if !closed {
+        return #{ ok: false, text: "", pos: i };
+    }
+    return #{ ok: true, text: out, pos: j };
+}
+
+fn json_int_at(text, i) {
+    if i < 0 || i >= text.len() {
+        return #{ ok: false, n: 0, pos: i };
+    }
+    let c0 = text[i].to_int();
+    if c0 < 49 || c0 > 57 {
+        return #{ ok: false, n: 0, pos: i };
+    }
+    let n = 0;
+    let j = i;
+    while j < text.len() {
+        let c = text[j].to_int();
+        if c < 48 || c > 57 {
+            break;
+        }
+        n = n * 10 + (c - 48);
+        j += 1;
+    }
+    return #{ ok: true, n: n, pos: j };
+}
+
+fn take_prefix(text, i, lit) {
+    if i < 0 || i + lit.len() > text.len() {
+        return -1;
+    }
+    if text.sub_string(i, lit.len()) != lit {
+        return -1;
+    }
+    return i + lit.len();
+}
+
+fn jsonl_line(entry) {
+    let line = "{\"family\":\"";
+    line += json_escape(entry.family);
+    line += "\",\"file\":\"";
+    line += json_escape(entry.file);
+    line += "\",\"line\":";
+    line += entry.line.to_string();
+    line += ",\"quote\":\"";
+    line += json_escape(quote_of(entry));
+    line += "\"}";
+    return line;
+}
+
+fn jsonl_entry(text) {
+    if type_of(text) != "string" || text.len() < 2 {
+        return ();
+    }
+    if has_text(text, "\n") || has_text(text, "\r") {
+        return ();
+    }
+    if text.sub_string(0, 1) != "{" {
+        return ();
+    }
+    let i = take_prefix(text, 1, "\"family\":");
+    if i < 0 {
+        return ();
+    }
+    let family = json_string_at(text, i);
+    if family.ok != true {
+        return ();
+    }
+    i = take_prefix(text, family.pos, ",\"file\":");
+    if i < 0 {
+        return ();
+    }
+    let file = json_string_at(text, i);
+    if file.ok != true {
+        return ();
+    }
+    i = take_prefix(text, file.pos, ",\"line\":");
+    if i < 0 {
+        return ();
+    }
+    let num = json_int_at(text, i);
+    if num.ok != true {
+        return ();
+    }
+    i = take_prefix(text, num.pos, ",\"quote\":");
+    if i < 0 {
+        return ();
+    }
+    let quote = json_string_at(text, i);
+    if quote.ok != true {
+        return ();
+    }
+    if quote.pos + 1 != text.len() || text.sub_string(quote.pos, 1) != "}" {
+        return ();
+    }
+    if !family_known(family.text) || file.text == "" || num.n <= 0 {
+        return ();
+    }
+    let entry = #{ file: file.text, line: num.n, family: family.text, quote: quote.text };
+    if jsonl_line(entry) != text {
+        return ();
+    }
+    return entry;
+}
+
+fn jsonl_split(text) {
+    let empty = [];
+    if type_of(text) != "string" {
+        return #{ ok: false, entries: empty };
+    }
+    let blank = true;
+    let i = 0;
+    while blank && i < text.len() {
+        let c = text[i].to_int();
+        if c != 32 && c != 9 && c != 10 && c != 13 {
+            blank = false;
+        }
+        i += 1;
+    }
+    if blank || !ends_with(text, "\n") || starts_with(text, "\n") || has_text(text, "\n\n") {
+        return #{ ok: false, entries: empty };
+    }
+    let lines = [];
+    let cur = "";
+    i = 0;
+    while i < text.len() {
+        let ch = text.sub_string(i, 1);
+        if ch == "\n" {
+            lines.push(cur);
+            cur = "";
+        } else {
+            cur += ch;
+        }
+        i += 1;
+    }
+    let entries = [];
+    for line in lines {
+        let entry = jsonl_entry(line);
+        if entry == () {
+            return #{ ok: false, entries: empty };
+        }
+        entries.push(entry);
+    }
+    return #{ ok: true, entries: entries };
+}
+
+fn append_candidates(entries) {
+    let kept = [];
+    for entry in entries {
+        let one = [];
+        one.push(entry);
+        let readable = ledger_readable(one);
+        if readable.ok == true {
+            kept.push(entry);
+        }
+    }
+    return kept;
+}
+
+fn ledger_note(entries, file, family, line_no, quote) {
+    if ledger_blocks(file, family, line_no, quote, entries) {
+        return #{ entries: entries, line: () };
+    }
+    let one = [];
+    one.push(#{ file: file, line: line_no, family: family, quote: quote });
+    let readable = ledger_readable(one);
+    if readable.ok != true {
+        log("Ledger line refused before append (" + readable.error + ") at " + readable.file + ":" + readable.line.to_string() + " field " + readable.field + " code " + readable.code.to_string() + ".");
+        return #{ entries: entries, line: () };
+    }
+    let next = [];
+    for entry in entries {
+        next.push(entry);
+    }
+    next.push(one[0]);
+    return #{ entries: next, line: jsonl_line(one[0]) };
+}
+
+fn append_program_template() {
+    return #"import base64, os, pathlib, sys, json
+lines = []
+@@PAYLOAD_LINES@@
+payload = base64.b64decode("".join(lines))
+EXPECT_BYTES = @@EXPECT_BYTES@@  # substituted decimal, the loaded image plus appends already accepted
+EXPECT_SUM = @@EXPECT_SUM@@
+path = pathlib.Path(".grok/review-pattern-ledger.jsonl")
+
+def canonical_ok(payload):
+    if payload == b"" or not payload.endswith(b"\n") or payload.startswith(b"\n") or b"\n\n" in payload:
+        return False
+    for line in payload.split(b"\n")[:-1]:
+        try:
+            obj = json.loads(line.decode("utf-8"))
+        except Exception:
+            return False
+        if not isinstance(obj, dict):
+            return False
+        if set(obj) != {"family", "file", "line", "quote"}:
+            return False
+        family, file, line_no, quote = (obj["family"], obj["file"], obj["line"], obj["quote"])
+        if family not in ("comment", "helper", "presence", "test"):
+            return False
+        if not isinstance(file, str) or file == "" or not isinstance(quote, str):
+            return False
+        if type(line_no) is not int or line_no <= 0:
+            return False
+        rebuilt = json.dumps(
+            {"family": family, "file": file, "line": line_no, "quote": quote},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if rebuilt != line:
+            return False
+    return True
+
+def write_all(fd, buf):
+    view = buf
+    while view:
+        n = os.write(fd, view)
+        if not n or n < 0:
+            return False
+        view = view[n:]
+    return True
+
+before = path.read_bytes() if path.exists() else None
+if not canonical_ok(payload):
+    sys.stdout.write("LEDGER_INVALID\n")
+    sys.exit(0)
+if before is None:
+    old = pathlib.Path(".grok/review-pattern-ledger.json")
+    if old.exists() or EXPECT_BYTES != 0 or EXPECT_SUM != 0:
+        sys.stdout.write("LEDGER_INVALID\n")
+        sys.exit(0)
+    before = b""
+already = payload != b"" and before.endswith(payload)
+matches = len(before) == EXPECT_BYTES and sum(before) == EXPECT_SUM
+if not already and not matches:
+    sys.stdout.write("LEDGER_INVALID\n")
+    sys.exit(0)
+if not already:
+    fd = os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)
+    try:
+        try:
+            import fcntl
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        except Exception:
+            pass
+        locked = path.read_bytes()
+        if locked.endswith(payload):
+            already = True
+        elif len(locked) != EXPECT_BYTES or sum(locked) != EXPECT_SUM:
+            sys.stdout.write("LEDGER_INVALID\n")
+            sys.exit(0)
+        elif not write_all(fd, payload):
+            sys.stdout.write("WRITE_MISMATCH\n")
+            sys.exit(0)
+    finally:
+        os.close(fd)
+disk = path.read_bytes() if path.exists() else b""
+sys.stdout.write("FILE_BYTES %d\nFILE_SUM %d\nAPPENDED %d\n" % (
+    len(disk), sum(disk), 0 if already else payload.count(b"\n")))
+"#;
+}
+
+fn append_program_ok(template) {
+    if type_of(template) != "string" {
+        return false;
+    }
+    if has_text(template, "O_RDWR") || has_text(template, "O_TRUNC") || has_text(template, "write_bytes") || has_text(template, "write_text") || has_text(template, "truncate") || has_text(template, "unlink") || has_text(template, "os.remove") {
+        return false;
+    }
+    let i = 0;
+    while i < template.len() {
+        let open_here = false;
+        if i + 5 <= template.len() && template.sub_string(i, 5) == "open(" {
+            if i == 0 {
+                open_here = true;
+            } else {
+                let prev = template[i - 1].to_int();
+                let ident = false;
+                if (prev >= 48 && prev <= 57) || (prev >= 65 && prev <= 90) || (prev >= 97 && prev <= 122) || prev == 95 {
+                    ident = true;
+                }
+                if !ident {
+                    open_here = true;
+                }
+            }
+        }
+        if open_here {
+            let j = i + 5;
+            let depth = 1;
+            let quoted = false;
+            while j < template.len() && depth > 0 {
+                let ch = template.sub_string(j, 1);
+                if ch == "(" {
+                    depth += 1;
+                } else if ch == ")" {
+                    depth -= 1;
+                } else if ch == "\"" || ch == "'" {
+                    quoted = true;
+                }
+                j += 1;
+            }
+            if quoted {
+                return false;
+            }
+            i = j;
+        } else {
+            i += 1;
+        }
+    }
+    let needle = "os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)";
+    let count = 0;
+    let found = -1;
+    i = 0;
+    while i + needle.len() <= template.len() {
+        if template.sub_string(i, needle.len()) == needle {
+            count += 1;
+            found = i;
+            i += needle.len();
+        } else {
+            i += 1;
+        }
+    }
+    if count != 1 {
+        return false;
+    }
+    let mode = 0;
+    let k = 0;
+    while k < found {
+        let ch = template.sub_string(k, 1);
+        if mode == 0 {
+            if ch == "#" {
+                mode = 1;
+            } else if ch == "\"" {
+                mode = 2;
+            } else if ch == "'" {
+                mode = 3;
+            }
+            k += 1;
+        } else if mode == 1 {
+            if ch == "\n" {
+                mode = 0;
+            }
+            k += 1;
+        } else if mode == 2 || mode == 3 {
+            let endq = "\"";
+            if mode == 3 {
+                endq = "'";
+            }
+            if ch == "\\" {
+                if k + 1 < found {
+                    k += 2;
+                } else {
+                    k += 1;
+                }
+            } else if ch == endq {
+                mode = 0;
+                k += 1;
+            } else {
+                k += 1;
+            }
+        } else {
+            k += 1;
+        }
+    }
+    if mode != 0 {
+        return false;
+    }
+    return true;
+}
+
+fn splice_once(text, slot, value) {
+    let i = 0;
+    while i + slot.len() <= text.len() {
+        if text.sub_string(i, slot.len()) == slot {
+            let head = text.sub_string(0, i);
+            let tail_at = i + slot.len();
+            let tail = text.sub_string(tail_at, text.len() - tail_at);
+            return head + value + tail;
+        }
+        i += 1;
+    }
+    return text;
+}
+
+fn append_program(payload, expect_bytes, expect_sum) {
+    let b64 = b64_encode_text(payload);
+    let chunk = "";
+    let i = 0;
+    while i < b64.len() {
+        let n = 76;
+        if i + n > b64.len() {
+            n = b64.len() - i;
+        }
+        chunk += "lines.append('";
+        chunk += b64.sub_string(i, n);
+        chunk += "')\n";
+        i += 76;
+    }
+    let program = splice_once(append_program_template(), "@@PAYLOAD_LINES@@", chunk);
+    program = splice_once(program, "@@EXPECT_BYTES@@", expect_bytes.to_string());
+    program = splice_once(program, "@@EXPECT_SUM@@", expect_sum.to_string());
+    return program;
+}
+
 fn save_ledger(entries, label) {
     let readable = ledger_readable(entries);
     if readable.ok != true {
@@ -1349,6 +1888,135 @@ fn ledger_codec_failures() {
     let pilcrow = utf8_to_string(b64_decode("wrY=").bytes);
     if b64_decode("wrY=").ok != true || pilcrow.ok != false {
         failed += "pilcrow ";
+    }
+
+    if "\x08"[0].to_int() != 8 || "\x0c"[0].to_int() != 12 {
+        failed += "controls ";
+    }
+    let pins = [];
+    pins.push(#"{"family":"comment","file":"src/display/dock-state.ts","line":21,"quote":"* `docked_at === null` or empty string → undocked."}"#);
+    pins.push(#"{"family":"comment","file":"src/notification-format-shared.ts","line":350,"quote":"// ── Table Message baseline formatters (PR2; sole Message source after PR4) ───"}"#);
+    pins.push(#"{"family":"test","file":"src/display/inspect.test.ts","line":1422,"quote":"const stdout = renderStructuredResult('inspect', inspectCatalogModuleFixture, options, context).stdout.join('\\n');"}"#);
+    pins.push(#"{"family":"test","file":"src/display/loot.test.ts","line":160,"quote":"expect(xp).toMatch(/Looted 1 cargo stack.\\nSkill XP: armor \\+1,200/);"}"#);
+    pins.push(#"{"family":"comment","file":"src/a.ts","line":4,"quote":"keep \"tab\"\there"}"#);
+    let quotes = [];
+    quotes.push("* `docked_at === null` or empty string → undocked.");
+    quotes.push("// ── Table Message baseline formatters (PR2; sole Message source after PR4) ───");
+    quotes.push("const stdout = renderStructuredResult('inspect', inspectCatalogModuleFixture, options, context).stdout.join('\\n');");
+    quotes.push("expect(xp).toMatch(/Looted 1 cargo stack.\\nSkill XP: armor \\+1,200/);");
+    quotes.push("keep \"tab\"\there");
+    let files = ["src/display/dock-state.ts", "src/notification-format-shared.ts", "src/display/inspect.test.ts", "src/display/loot.test.ts", "src/a.ts"];
+    let families = ["comment", "comment", "test", "test", "comment"];
+    let line_nos = [21, 350, 1422, 160, 4];
+    if pins.len() != 5 || quotes.len() != 5 {
+        failed += "pin-count ";
+    }
+    let pi = 0;
+    while pi < pins.len() {
+        let built = jsonl_line(#{ file: files[pi], line: line_nos[pi], family: families[pi], quote: quotes[pi] });
+        if built != pins[pi] || ends_with(built, "\n") {
+            failed += "pin " + pi.to_string() + " ";
+        }
+        let got = jsonl_entry(pins[pi]);
+        if got == () || got.family != families[pi] || got.file != files[pi] || got.line != line_nos[pi] || got.quote != quotes[pi] {
+            failed += "entry " + pi.to_string() + " ";
+        }
+        let one_nl = jsonl_split(pins[pi] + "\n");
+        if one_nl.ok != true || one_nl.entries.len() != 1 || one_nl.entries[0].quote != quotes[pi] {
+            failed += "split1 " + pi.to_string() + " ";
+        }
+        pi += 1;
+    }
+    if has_text(pins[4], "\t") || !has_text(quotes[4], "\t") {
+        failed += "tab-char ";
+    }
+    let bad_tab = splice_once(pins[4], "\\t", "\\u0009");
+    if bad_tab == pins[4] || jsonl_entry(bad_tab) != () {
+        failed += "tab-u ";
+    }
+    let two = jsonl_split(pins[0] + "\n" + pins[1] + "\n");
+    if two.ok != true || two.entries.len() != 2 || two.entries[0].quote != quotes[0] || two.entries[1].line != 350 {
+        failed += "split2 ";
+    }
+    if jsonl_split("").ok != false || jsonl_split("\n").ok != false || jsonl_split(" \n").ok != false || jsonl_split("\t\n").ok != false {
+        failed += "split-blank ";
+    }
+    if jsonl_split(pins[0]).ok != false || jsonl_split("\n" + pins[0] + "\n").ok != false || jsonl_split(pins[0] + "\n\n").ok != false {
+        failed += "split-nl ";
+    }
+    let pretty = "{\n\"family\":\"comment\",\"file\":\"src/a.ts\",\"line\":4,\"quote\":\"x\"}\n";
+    if jsonl_split(pretty).ok != false {
+        failed += "split-pretty ";
+    }
+    let mixed = [];
+    mixed.push(#{ file: "src/a.ts", line: 9, family: "comment", quote: "keep ¶" });
+    mixed.push(#{ file: files[0], line: line_nos[0], family: families[0], quote: quotes[0] });
+    let kept = append_candidates(mixed);
+    if kept.len() != 1 || kept[0].quote != quotes[0] || ledger_readable(mixed).ok != false {
+        failed += "candidates ";
+    }
+    let noted = ledger_note([], files[0], families[0], line_nos[0], quotes[0]);
+    if noted.line != pins[0] || noted.entries.len() != 1 {
+        failed += "note ";
+    }
+    let again = ledger_note(noted.entries, files[0], families[0], 99, quotes[0]);
+    if again.line != () || again.entries.len() != 1 {
+        failed += "note-quote ";
+    }
+    let same_line = ledger_note(noted.entries, files[0], families[0], line_nos[0], "other");
+    if same_line.line != () || same_line.entries.len() != 1 {
+        failed += "note-line ";
+    }
+    let poison_note = ledger_note([], "src/a.ts", "comment", 9, "keep ¶");
+    if poison_note.line != () || poison_note.entries.len() != 0 {
+        failed += "note-poison ";
+    }
+    let template = append_program_template();
+    if append_program_ok(template) != true || template.len() < 2800 {
+        failed += "template ";
+    }
+    if !has_text(template, "def canonical_ok(payload):") || !has_text(template, "def write_all(fd, buf):") || !has_text(template, "import fcntl") {
+        failed += "template-body ";
+    }
+    if append_program_ok(template + template) != false {
+        failed += "template-twice ";
+    }
+    let trips = [];
+    trips.push("path.write_bytes(b\"{}\")");
+    trips.push("open(path, \"w\")");
+    trips.push("open(path, \"wb\")");
+    trips.push("open(path, \"wt\")");
+    trips.push("open(path, \"w+\")");
+    trips.push("open(path, \"a\")");
+    trips.push("open(path, \"ab\")");
+    trips.push("open(path, 'w')");
+    trips.push("open(path, 'wb')");
+    trips.push("open(path, \"r+\")");
+    trips.push("open(path, 'r+')");
+    trips.push("os.truncate");
+    trips.push("os.remove");
+    trips.push("unlink");
+    trips.push("write_text");
+    trips.push("O_TRUNC");
+    trips.push("O_RDWR");
+    trips.push("# os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)\nfd = os.open(path, os.O_RDWR, 0o644)\n");
+    trips.push("# os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)\nfd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)\n");
+    let ti = 0;
+    while ti < trips.len() {
+        if append_program_ok(trips[ti]) != false {
+            failed += "trip " + ti.to_string() + " ";
+        }
+        ti += 1;
+    }
+    let program = append_program(pins[0] + "\n", 12889, 1116564);
+    if program.len() >= 6000 || program.len() <= template.len() || has_text(program, "@@") || has_text(program, "Table Message") || has_text(program, "docked_at") || has_text(program, "write_bytes") {
+        failed += "program ";
+    }
+    if !has_text(program, "EXPECT_BYTES = 12889") || !has_text(program, "EXPECT_SUM = 1116564") || !has_text(program, "lines.append('") || !has_text(program, "def canonical_ok(payload):") || !has_text(program, "def write_all(fd, buf):") {
+        failed += "program-sub ";
+    }
+    if !has_text(program, "os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)") {
+        failed += "program-open ";
     }
     return failed;
 }
