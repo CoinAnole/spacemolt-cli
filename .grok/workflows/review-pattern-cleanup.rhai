@@ -1002,18 +1002,10 @@ def load_entries():
 def line_blob(entries):
     lines = []
     for entry in entries:
-        if not isinstance(entry, dict):
-            return None
-        family = entry.get("family")
-        file = entry.get("file")
-        line = entry.get("line")
-        quote = entry.get("quote", "")
-        if quote is None:
-            quote = ""
-        if not isinstance(family, str) or not isinstance(file, str) or type(line) is not int or not isinstance(quote, str):
-            return None
-        if family == "" or file == "" or line <= 0:
-            return None
+        family = entry["family"]
+        file = entry["file"]
+        line = entry["line"]
+        quote = entry["quote"]
         encoded = base64.b64encode(quote.encode("utf-8")).decode("ascii")
         lines.append(family + "\t" + file + "\t" + str(line) + "\t" + encoded)
     blob = "\n".join(lines)
@@ -1025,9 +1017,6 @@ if entries is None:
     sys.stdout.write("LEDGER_INVALID\n")
     sys.exit(0)
 raw = line_blob(entries)
-if raw is None:
-    sys.stdout.write("LEDGER_INVALID\n")
-    sys.exit(0)
 "#;
 }
 
