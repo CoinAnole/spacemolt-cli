@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.689.0",
+  "generatedAtGameserver": "v0.700.0",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -24,6 +24,8 @@
     "accept_mission|accept_mission|required-missing|player.stats",
     "accept_mission|accept_mission|required-missing|player.status_message",
     "accept_mission|accept_mission|required-missing|player.username",
+    "browse_ships|browse_ships|required-missing|listings[0].base_id",
+    "browse_ships|browse_ships|required-missing|listings[0].base_name",
     "citizenship_list_stateless|citizenship_list|required-missing|empires[0].has_pending",
     "citizenship_list_stateless|citizenship_list|required-missing|empires[1].has_pending",
     "citizenship_list|citizenship_list|required-missing|empires[0].has_pending",
@@ -80,6 +82,9 @@
     "faction_info|faction_info|required-missing|secondary_color",
     "faction_info|faction_info|required-missing|total_fuel_capacity",
     "faction_info|faction_info|required-missing|total_fuel_reserve",
+    "fit_preview|fit_preview|required-missing|stats.fuel_efficiency",
+    "fit_preview|fit_preview|required-missing|stats.fuel_per_jump",
+    "fit_preview|fit_preview|required-missing|stats.jump_range",
     "get_action_log_cursor|get_action_log|required-missing|category",
     "get_action_log_cursor|get_action_log|required-missing|page",
     "get_action_log_cursor|get_action_log|required-missing|total",
@@ -642,6 +647,7 @@
     "jump|jump|required-missing|ship.speed",
     "jump|jump|required-missing|ship.utility_slots",
     "jump|jump|required-missing|ship.weapon_slots",
+    "read_note|read_note|extra-in-fixture|value",
     "register|register|required-missing|message",
     "register|register|required-missing|player",
     "register|register|required-missing|poi",
