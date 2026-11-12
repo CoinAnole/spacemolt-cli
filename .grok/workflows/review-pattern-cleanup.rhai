@@ -1451,7 +1451,7 @@ fn append_program_template() {
 lines = []
 @@PAYLOAD_LINES@@
 payload = base64.b64decode("".join(lines))
-EXPECT_BYTES = @@EXPECT_BYTES@@  # substituted decimal, the loaded image plus appends already accepted
+EXPECT_BYTES = @@EXPECT_BYTES@@
 EXPECT_SUM = @@EXPECT_SUM@@
 path = pathlib.Path(".grok/review-pattern-ledger.jsonl")
 
@@ -1636,6 +1636,35 @@ fn append_program_ok(template) {
     }
     if mode != 0 {
         return false;
+    }
+    let allowed = found + 3;
+    let p = 0;
+    while p + 4 <= template.len() {
+        if template.sub_string(p, 4) == "open" {
+            let ident = false;
+            if p > 0 {
+                let prev = template[p - 1].to_int();
+                if (prev >= 48 && prev <= 57) || (prev >= 65 && prev <= 90) || (prev >= 97 && prev <= 122) || prev == 95 {
+                    ident = true;
+                }
+            }
+            if !ident {
+                let q = p + 4;
+                let spaced = true;
+                while spaced && q < template.len() {
+                    let ws = template.sub_string(q, 1);
+                    if ws == " " || ws == "\t" || ws == "\n" || ws == "\r" {
+                        q += 1;
+                    } else {
+                        spaced = false;
+                    }
+                }
+                if q < template.len() && template.sub_string(q, 1) == "(" && p != allowed {
+                    return false;
+                }
+            }
+        }
+        p += 1;
     }
     return true;
 }
@@ -1980,6 +2009,12 @@ fn ledger_codec_failures() {
     }
     if append_program_ok(template + template) != false {
         failed += "template-twice ";
+    }
+    if append_program_ok(append_program_template() + "open (path, \"w\")\n") != false {
+        failed += "open-ws ";
+    }
+    if append_program_ok(append_program_template() + "os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)\n") != false {
+        failed += "open-other ";
     }
     let trips = [];
     trips.push("path.write_bytes(b\"{}\")");
