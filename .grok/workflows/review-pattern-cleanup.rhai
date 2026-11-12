@@ -805,10 +805,7 @@ fn entries_from_blob(text) {
 fn ledger_bytes(entries) {
     let bytes = [];
     for entry in entries {
-        let quote = "";
-        if entry.quote != () {
-            quote = entry.quote;
-        }
+        let quote = quote_of(entry);
         let line = entry.family + "\t" + entry.file + "\t" + entry.line.to_string() + "\t" + b64_encode_bytes(utf8_bytes(quote)) + "\n";
         let more = utf8_bytes(line);
         for b in more {
