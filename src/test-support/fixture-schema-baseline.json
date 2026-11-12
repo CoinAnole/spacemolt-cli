@@ -647,7 +647,6 @@
     "jump|jump|required-missing|ship.speed",
     "jump|jump|required-missing|ship.utility_slots",
     "jump|jump|required-missing|ship.weapon_slots",
-    "read_note|read_note|extra-in-fixture|value",
     "register|register|required-missing|message",
     "register|register|required-missing|player",
     "register|register|required-missing|poi",

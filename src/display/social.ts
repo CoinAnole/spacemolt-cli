@@ -174,6 +174,42 @@ function formatYesNo(value: unknown): string | undefined {
   return value ? 'yes' : 'no';
 }
 
+/** Finite numbers and bigints, including 0. Strings are not coerced. */
+function noteIntegerText(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+function noteCreatedAtText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+const NOTE_PAGE_KEYS = ['page', 'page_size', 'total_count', 'has_more'] as const;
+
+function notePageKeyPresent(result: Record<string, unknown>, key: (typeof NOTE_PAGE_KEYS)[number]): boolean {
+  if (!Object.hasOwn(result, key)) return false;
+  if (key === 'has_more') return typeof result.has_more === 'boolean';
+  return noteIntegerText(result[key]) !== undefined;
+}
+
+function emitNotePageLines(result: Record<string, unknown>): void {
+  const labels: Record<(typeof NOTE_PAGE_KEYS)[number], string> = {
+    page: 'Page',
+    page_size: 'Page size',
+    total_count: 'Total count',
+    has_more: 'Has more',
+  };
+  for (const key of NOTE_PAGE_KEYS) {
+    if (!notePageKeyPresent(result, key)) continue;
+    if (key === 'has_more') {
+      emitLine(`Has more: ${result.has_more ? 'yes' : 'no'}`);
+      continue;
+    }
+    emitLine(`${labels[key]}: ${noteIntegerText(result[key])}`);
+  }
+}
+
 function pageNumber(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return value;
@@ -1433,11 +1469,42 @@ export const socialFormatters = [
       emitOptionalLine('Author', r.created_by ?? r.author);
       emitOptionalLine('Created', formatTimestampPreview(r.created_at));
       emitOptionalLine('Updated', formatTimestampPreview(r.updated_at));
-      emitOptionalLine('Value', r.value);
       emitBody('Content', r.content ?? r.text);
       return true;
     },
     { commands: ['read_note'] },
+  ),
+
+  formatter(
+    (r) => {
+      if (r.dry_run === true) return false;
+      const notes = r.notes;
+      const noteRows = Array.isArray(notes) ? notes.filter(isRecord) : undefined;
+      const noteList = Array.isArray(notes) && noteRows !== undefined && noteRows.length === notes.length;
+      const hasPage = NOTE_PAGE_KEYS.some((key) => notePageKeyPresent(r, key));
+      if (!noteList && !hasPage) return false;
+
+      if (noteList && noteRows) {
+        const rows = noteRows.map((entry) => ({
+          title: entry.title,
+          note_id: entry.note_id,
+          created_by: entry.created_by,
+          content_length_text: noteIntegerText(entry.content_length),
+          created_at_text: noteCreatedAtText(entry.created_at),
+        }));
+        const columns: Array<[string, string[]]> = [
+          ['Title', ['title']],
+          ['Note ID', ['note_id']],
+          ['Author', ['created_by']],
+          ['Length', ['content_length_text']],
+        ];
+        if (rows.some((row) => row.created_at_text !== undefined)) columns.push(['Created', ['created_at_text']]);
+        printCompactTable('Notes', rows, columns, { maxCellWidth: 128 });
+      }
+      emitNotePageLines(r);
+      return true;
+    },
+    { commands: ['get_notes'] },
   ),
 
   formatter(

@@ -7040,6 +7040,63 @@ describe('structuredContent formatters', () => {
     expect(stdout).not.toContain('=== Response ===');
   });
 
+  test('complete_mission prints notes received in order and leaves recipes unlocked', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-docs',
+        title: 'Documents',
+        credits_earned: 10,
+        message: 'Done.',
+        recipes_unlocked: ['alloy_plate'],
+        chain_next: 'chain-mission-id',
+        notes_received: [
+          { title: 'Survey log', note_id: 'note-1' },
+          { note_id: 'note-2' },
+          { title: 'Untitled chart' },
+          { content: 'full body', created_by: 'Ada' },
+          'nope',
+        ],
+      },
+    });
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain('Recipes unlocked: alloy_plate');
+    expect(stdout).toContain('Notes received:');
+    expect(stdout).toContain('  Survey log (note-1)');
+    expect(stdout).toContain('\n  note-2\n');
+    expect(stdout).toContain('  Untitled chart\n');
+    expect(stdout).not.toContain('note-2 (');
+    expect(stdout).not.toContain('Untitled chart (');
+    expect(stdout).not.toContain('full body');
+    expect(stdout).not.toContain('Ada');
+    expect(stdout).not.toContain('nope');
+    expect(stdout.indexOf('Recipes unlocked:')).toBeLessThan(stdout.indexOf('Notes received:'));
+    expect(stdout.indexOf('Notes received:')).toBeLessThan(stdout.indexOf('Next: chain-mission-id'));
+    expect(stdout.indexOf('Survey log (note-1)')).toBeLessThan(stdout.indexOf('\n  note-2'));
+    expect(stdout.indexOf('\n  note-2')).toBeLessThan(stdout.indexOf('Untitled chart'));
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('complete_mission omits an empty or missing notes_received array', () => {
+    const extras = [{}, { notes_received: [] }, { notes_received: 'note-1' }, { notes_received: [null, 'nope', {}] }];
+    for (const extra of extras) {
+      const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+        details: {
+          mission_id: 'mission-plain',
+          title: 'Plain',
+          credits_earned: 1,
+          message: 'Done.',
+          recipes_unlocked: ['alloy_plate'],
+          ...extra,
+        },
+      });
+      expect(stderr).toBe('');
+      expect(stdout).toContain('Recipes unlocked: alloy_plate');
+      expect(stdout).not.toContain('Notes received');
+      expect(stdout).not.toContain('=== Response ===');
+    }
+  });
+
   test('complete_mission omits empty or missing unlocks and recipe lists', () => {
     const extras = [
       {},

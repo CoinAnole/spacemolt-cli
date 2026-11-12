@@ -1384,7 +1384,30 @@ export const readNoteFixture = {
   created_by: 'Marlowe',
   created_at: '2026-05-28T12:00:00Z',
   updated_at: '2026-05-29T12:00:00Z',
-  value: 250,
+};
+
+/** Schema-shaped GetNotesResponse. Array order is the table order. Length 0 is sent, not derived. */
+export const getNotesFixture = {
+  notes: [
+    {
+      note_id: 'note-1',
+      title: 'Ore contract',
+      content_length: 40,
+      created_by: 'Marlowe',
+      created_at: '2026-05-28T12:00:00Z',
+    },
+    {
+      note_id: 'note-2',
+      title: 'Survey log',
+      content_length: 0,
+      created_by: 'Ada Vale',
+      created_at: '2026-05-29T08:15:00Z',
+    },
+  ],
+  total_count: 2,
+  page: 1,
+  page_size: 20,
+  has_more: false,
 };
 
 export const factionVisitRoomFixture = {
@@ -2342,6 +2365,7 @@ export const socialHighValueFixtures: Record<string, HighValueFixtureEntry> = {
     fixture: actionLogPirateDestroyedFixture,
   },
   read_note: { command: 'read_note', fixture: readNoteFixture },
+  get_notes: { command: 'get_notes', fixture: getNotesFixture },
   faction_visit_room: { command: 'faction_visit_room', fixture: factionVisitRoomFixture },
   faction_info: { command: 'faction_info', fixture: factionInfoFixture },
   faction_info_omitted_rent: { command: 'faction_info', fixture: factionInfoOmittedRentFixture },

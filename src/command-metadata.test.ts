@@ -525,7 +525,7 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.delete_note).toBe(deleteNote);
     expect(COMMANDS.delete_note?.description).toBe(deleteNote);
     expect(CURATED_COMMAND_DESCRIPTIONS.delete_note).toBe(COMMANDS.delete_note?.description);
-    expect(COMMANDS.create_note?.usage).toBe('<title> <content>  (create tradeable note)');
+    expect(COMMANDS.create_note?.usage).toBe('<title> <content>  (create private note)');
     expect(COMMANDS.delete_note?.usage).toBe('<note_id>  (delete note permanently)');
     expect(COMMANDS.create_note?.route).toEqual({
       tool: 'spacemolt_social',

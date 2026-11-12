@@ -1438,6 +1438,23 @@ function emitPoiInteraction(value: unknown): void {
   emitMissionOffer(value.mission, false);
 }
 
+/** Title and note_id only. An omitted or empty array, or an entry with neither key, prints nothing. */
+function emitNotesReceived(notes: unknown): void {
+  if (!Array.isArray(notes) || notes.length === 0) return;
+  const lines: string[] = [];
+  for (const entry of notes) {
+    if (!isRecord(entry)) continue;
+    const title = usableLabel(entry.title);
+    const id = usableLabel(entry.note_id);
+    if (title && id) lines.push(`  ${title} (${id})`);
+    else if (title) lines.push(`  ${title}`);
+    else if (id) lines.push(`  ${id}`);
+  }
+  if (lines.length === 0) return;
+  emitLine(`\n${c.bright}Notes received:${c.reset}`);
+  for (const line of lines) emitLine(line);
+}
+
 function emitCompleteMission(r: Record<string, unknown>): boolean {
   const hasCredits = rowsHaveValue([r], ['credits_earned']);
   const hasIdentity = Boolean(r.mission_id && r.message);
@@ -1458,6 +1475,7 @@ function emitCompleteMission(r: Record<string, unknown>): boolean {
   if (rewards.communityLine) emitLine(rewards.communityLine);
   const recipesUnlocked = joinStringIds(r.recipes_unlocked);
   if (recipesUnlocked) emitLine(`Recipes unlocked: ${recipesUnlocked}`);
+  emitNotesReceived(r.notes_received);
   if (r.chain_next) emitLine(`Next: ${r.chain_next}`);
   emitMissionUnlocks(r.unlocks);
   if (r.message) emitLine(String(r.message));

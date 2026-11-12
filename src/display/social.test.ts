@@ -9661,3 +9661,105 @@ test('list_battles formatter ignores a dry-run preview and other commands that s
   const log = renderStructuredResult('get_battle_log', { battles: null, has_more: true, total: 4 }, options, context);
   expect(log.stdout.join('\n')).not.toContain('Public battles');
 });
+
+test('read_note prints the author and does not print value or a derived length', () => {
+  const stdout = renderCommand('read_note', {
+    note_id: 'note-1',
+    title: 'Ore contract',
+    content: 'abc',
+    created_by: 'Ada Vale',
+    created_at: '2026-05-28T12:00:00Z',
+    updated_at: '2026-05-29T12:00:00Z',
+    value: 250,
+    content_length: 3,
+  });
+  expect(stdout).toContain('Author: Ada Vale');
+  expect(stdout).toContain('Content:');
+  expect(stdout).toContain('abc');
+  expect(stdout).not.toContain('Value');
+  expect(stdout).not.toContain('250');
+  expect(stdout).not.toContain('Length');
+  expect(stdout).not.toContain('content_length');
+});
+
+test('get_notes prints rows in array order, including length 0 and a false has_more', () => {
+  const stdout = renderCommand('get_notes', {
+    notes: [
+      {
+        title: 'Second later',
+        note_id: 'note-b',
+        created_by: 'Ada',
+        content_length: 0,
+        created_at: '2026-05-29T08:15:00Z',
+        value: 9,
+        content: 'secret body',
+      },
+      {
+        title: 'First kept',
+        note_id: 'note-a',
+        created_by: 'Marlowe',
+        content_length: 12,
+        created_at: '',
+      },
+      {
+        note_id: 'note-c',
+        created_by: 'Ibis',
+        content_length: 4,
+        created_at: 12,
+      },
+    ],
+    page: 0,
+    page_size: 0,
+    total_count: 0,
+    has_more: false,
+  });
+  const lines = stdout.split('\n');
+  const header = lines.find((line) => line.includes('Title') && line.includes('Length')) ?? '';
+  const row = (id: string) => lines.find((line) => line.includes(id)) ?? '';
+  expect(stdout.indexOf('Second later')).toBeLessThan(stdout.indexOf('First kept'));
+  expect(stdout.indexOf('First kept')).toBeLessThan(stdout.indexOf('note-c'));
+  expect(header).toContain('Note ID');
+  expect(header).toContain('Author');
+  expect(header).toContain('Created');
+  expect(row('note-b')).toContain('Ada');
+  expect(row('note-b')).toContain('2026-05-29T08:15:00Z');
+  expect(row('note-b')).toMatch(/\|\s*0\s*\|/);
+  expect(row('note-b')).not.toContain('secret body');
+  expect(row('note-b')).not.toContain('| 9');
+  expect(row('note-a')).not.toContain('T');
+  expect(row('note-c')).not.toContain('12');
+  expect(stdout).toContain('Page: 0');
+  expect(stdout).toContain('Page size: 0');
+  expect(stdout).toContain('Total count: 0');
+  expect(stdout).toContain('Has more: no');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_notes leaves an omitted page key and an omitted created column blank', () => {
+  const stdout = renderCommand('get_notes', {
+    notes: [{ title: 'Bare', note_id: 'note-z', content_length: 1 }],
+    page_size: 20,
+    has_more: true,
+  });
+  const header = stdout.split('\n').find((line) => line.includes('Title')) ?? '';
+  expect(stdout).not.toContain('Page:');
+  expect(stdout).not.toContain('Total count');
+  expect(stdout).toContain('Page size: 20');
+  expect(stdout).toContain('Has more: yes');
+  expect(header).not.toContain('Created');
+  expect(stdout).toContain('Bare');
+  expect(stdout).toContain('note-z');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_notes does not format a dry-run preview notes array', () => {
+  const stdout = renderCommand('get_notes', {
+    dry_run: true,
+    command: 'get_notes',
+    url: 'https://game.spacemolt.com/api/v2/spacemolt_social/get_notes',
+    notes: ['No mutation was sent. This is a client-side route and payload preview.'],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).toContain('No mutation was sent');
+  expect(stdout).not.toContain('=== Notes ===');
+});

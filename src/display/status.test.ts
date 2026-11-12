@@ -8126,6 +8126,21 @@ test('interact_poi prints the archive receipt, boarded passengers, offer, and co
   expect(completeAt).toBeGreaterThan(acceptAt);
   expect(receivedAt).toBeGreaterThan(completeAt);
   expect(stdout).toContain('Comparison complete.');
+  expect(stdout).not.toContain('Notes received');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('interact_poi completion prints notes received through the mission formatter', () => {
+  const fixture = structuredClone(interactPoiFixture);
+  const details = fixture.details as Record<string, unknown>;
+  const completion = details.completion as Record<string, unknown>;
+  completion.notes_received = [{ title: 'Archive copy', note_id: 'note-archive' }];
+  completion.recipes_unlocked = ['archive_recipe'];
+  const stdout = renderInteractPoi(fixture);
+  expect(stdout).toContain('Recipes unlocked: archive_recipe');
+  expect(stdout).toContain('Notes received:');
+  expect(stdout).toContain('Archive copy (note-archive)');
+  expect(stdout.indexOf('=== Mission Complete:')).toBeLessThan(stdout.indexOf('Notes received:'));
   expect(stdout).not.toContain('=== Response ===');
 });
 

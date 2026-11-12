@@ -508,7 +508,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     },
   },
   create_note: {
-    usage: '<title> <content>  (create tradeable note)',
+    usage: '<title> <content>  (create private note)',
     category: 'Notes',
     apiRoute: 'POST /api/v2/spacemolt_social/create_note',
     positionals: [
