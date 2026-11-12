@@ -1883,6 +1883,9 @@ export const statusFormatters = [
       emitLine(`ID: ${poi.id}`);
       emitLine(`Type: ${poi.type}`);
       emitLine(`System: ${poi.system_id}`);
+      // Blank (empty or whitespace) and non-strings print nothing. A non-blank id is printed as sent.
+      const parentId = poi.parent_id;
+      if (typeof parentId === 'string' && parentId.trim() !== '') emitLine(`Attached to: ${parentId}`);
       if (poi.description) emitLine(`Description: ${poi.description}`);
       if (poi.class) emitLine(`Class: ${poi.class}`);
       const arenaLine = formatArenaPoiLine(poi.arena);

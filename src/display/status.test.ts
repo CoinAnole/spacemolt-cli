@@ -1667,6 +1667,42 @@ test('get_poi services prints Services for a non-empty list', () => {
   expect(stdout).toContain('Services: refuel');
 });
 
+test('get_poi prints Attached to from poi.parent_id and skips a blank key', () => {
+  const fixture = structuredClone(poiInfoFixture);
+  (fixture.poi as Record<string, unknown>).parent_id = 'sol_earth';
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Attached to: sol_earth');
+  expect(stdout.indexOf('System: sol')).toBeLessThan(stdout.indexOf('Attached to: sol_earth'));
+  expect(stdout.indexOf('Attached to: sol_earth')).toBeLessThan(stdout.indexOf('Description: Dense mining field'));
+  expect(stdout).not.toContain('Attached to: Earth');
+  expect(stdout).not.toContain('Crucible');
+  expect(stdout).not.toContain('Ironhearth');
+  expect(stdout).not.toContain('Sol Central');
+
+  const spaced = structuredClone(poiInfoFixture);
+  (spaced.poi as Record<string, unknown>).parent_id = ' sol_earth ';
+  const spacedOut = renderStructuredResult('get_poi', spaced, options, context).stdout.join('\n');
+  expect(spacedOut.split('\n')).toContain('Attached to:  sol_earth ');
+
+  const rootOnly = structuredClone(poiInfoFixture) as Record<string, unknown>;
+  rootOnly.parent_id = 'sol_earth';
+  const rootOut = renderStructuredResult('get_poi', rootOnly, options, context).stdout.join('\n');
+  expect(rootOut).not.toContain('Attached to');
+
+  const missing = renderStructuredResult('get_poi', structuredClone(poiInfoFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(missing).not.toContain('Attached to');
+
+  for (const value of ['', '   ', '\t', 1, null, { id: 'sol_earth' }]) {
+    const blank = structuredClone(poiInfoFixture);
+    (blank.poi as Record<string, unknown>).parent_id = value;
+    const blankOut = renderStructuredResult('get_poi', blank, options, context).stdout.join('\n');
+    expect(blankOut).not.toContain('Attached to');
+    expect(blankOut).not.toContain('sol_earth');
+  }
+});
+
 test('get_player prints arena record and XP after skill stats', () => {
   const stdout = renderStructuredResult(
     'get_player',
