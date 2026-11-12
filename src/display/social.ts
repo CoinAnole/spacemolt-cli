@@ -1652,6 +1652,9 @@ export const socialFormatters = [
           : undefined;
         const missionCompleted = eventType === 'mission.completed';
         const directSuppliedDisplay = missionCompleted ? formatYesBlank(scalarFrom('direct_supplied')) : undefined;
+        // requested is an extra boolean; only salvage.ship_recovered lifts it. No fee column.
+        const shipRecovered = eventType === 'salvage.ship_recovered';
+        const requestedDisplay = shipRecovered ? formatYesNo(scalarFrom('requested')) : undefined;
         const exchangeFill = eventType === 'trading.exchange_fill';
         const orderDisplay = exchangeFill ? formatActionLogOrderId(scalarFrom('order_id')) : undefined;
         const itemIdDisplay = formatActionLogOrderId(scalarFrom('item_id'));
@@ -1702,6 +1705,8 @@ export const socialFormatters = [
         delete row.quantity_display;
         if (itemIdDisplay !== undefined) row.item_id_display = itemIdDisplay;
         if (quantityDisplay !== undefined) row.quantity_display = quantityDisplay;
+        delete row.requested_display;
+        if (requestedDisplay !== undefined) row.requested_display = requestedDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1751,6 +1756,7 @@ export const socialFormatters = [
       }
       if (hasAnyField(rows, ['item_id_display'])) columns.push(['Item ID', ['item_id_display']]);
       if (hasAnyField(rows, ['quantity_display'])) columns.push(['Quantity', ['quantity_display']]);
+      if (hasAnyField(rows, ['requested_display'])) columns.push(['Requested', ['requested_display']]);
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);

@@ -519,6 +519,13 @@ function formatYesNo(value: unknown): string | undefined {
   return undefined;
 }
 
+/** Finite numbers and bigints, including 0. Strings are not coerced. -0 prints as 0. */
+function formatFiniteNumberOrBigint(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
 function formatEtaTicks(value: unknown): string | undefined {
   const n = finiteNumber(value);
   if (n === undefined) return undefined;
@@ -1571,6 +1578,8 @@ export const genericFormatters = [
       }
       if (r.responders_reached !== undefined) emitLine(`Responders reached: ${r.responders_reached}`);
       if (r.expires_seconds !== undefined) emitLine(`Expires in: ${r.expires_seconds}s`);
+      const towArrives = formatFiniteNumberOrBigint(r.tow_arrives_seconds);
+      if (towArrives !== undefined) emitLine(`Tow arrives in: ${towArrives}s`);
       if (typeof r.message === 'string' && r.message) emitLine(r.message);
       return true;
     },

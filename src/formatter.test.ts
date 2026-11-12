@@ -8843,6 +8843,7 @@ describe('structuredContent formatters', () => {
       'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
     );
     expect(stdout).not.toContain('Missions sent');
+    expect(stdout).not.toContain('Tow arrives');
     expect(stdout).not.toContain('=== Response ===');
   });
 
@@ -8861,7 +8862,66 @@ describe('structuredContent formatters', () => {
       'MAYDAY: Phoenix is stranded at Earth Station in Sol with 0/120 fuel! Any pilots nearby, please help!',
     );
     expect(stdout).not.toContain('Missions sent');
+    expect(stdout).not.toContain('Tow arrives');
     expect(stdout).not.toContain('=== Response ===');
+  });
+
+  test('distress_signal prints tow_arrives_seconds including 0 and does not print a fee', () => {
+    const tow = (towArrives: unknown, extra: Record<string, unknown> = {}) => ({
+      details: {
+        action: 'distress_signal',
+        distress_type: 'tow',
+        system: 'sol',
+        system_name: 'Sol',
+        poi: 'earth_station',
+        poi_name: 'Earth Station',
+        mission_id: '',
+        responders_reached: 0,
+        expires_seconds: 0,
+        message: 'Salvage Authority tug dispatched.',
+        fee: 500,
+        hazard: 'radiation',
+        pathfinder_fee: 40,
+        ...(towArrives === undefined ? {} : { tow_arrives_seconds: towArrives }),
+        ...extra,
+      },
+    });
+
+    const zero = captureStructuredOutput('distress_signal', tow(0));
+    expect(zero.stderr).toBe('');
+    expect(zero.stdout).toContain('Type: tow');
+    expect(zero.stdout).toContain('Location: Earth Station (earth_station) @ Sol (sol)');
+    expect(zero.stdout).toContain('Mission ID: none');
+    expect(zero.stdout).toContain('Responders reached: 0');
+    expect(zero.stdout).toContain('Expires in: 0s');
+    expect(zero.stdout).toContain('Tow arrives in: 0s');
+    expect(zero.stdout).toContain('Salvage Authority tug dispatched.');
+    expect(zero.stdout.indexOf('Expires in: 0s')).toBeLessThan(zero.stdout.indexOf('Tow arrives in: 0s'));
+    expect(zero.stdout.indexOf('Tow arrives in: 0s')).toBeLessThan(
+      zero.stdout.indexOf('Salvage Authority tug dispatched.'),
+    );
+    expect(zero.stdout).not.toContain('Fee');
+    expect(zero.stdout).not.toContain('500');
+    expect(zero.stdout).not.toContain('radiation');
+    expect(zero.stdout).not.toContain('Pathfinder');
+    expect(zero.stdout).not.toContain('=== Response ===');
+
+    const bigint = captureStructuredOutput('distress_signal', tow(300n));
+    expect(bigint.stdout).toContain('Tow arrives in: 300s');
+    const negativeZero = captureStructuredOutput('distress_signal', tow(-0));
+    expect(negativeZero.stdout).toContain('Tow arrives in: 0s');
+    expect(negativeZero.stdout).not.toContain('Tow arrives in: -0s');
+    const fraction = captureStructuredOutput('distress_signal', tow(1.5));
+    expect(fraction.stdout).toContain('Tow arrives in: 1.5s');
+
+    for (const value of [undefined, null, '300', '0', Number.NaN, Number.POSITIVE_INFINITY, true]) {
+      const rendered = captureStructuredOutput('distress_signal', tow(value));
+      const label = typeof value === 'number' && !Number.isFinite(value) ? String(value) : JSON.stringify(value);
+      expect(rendered.stdout, label).not.toContain('Tow arrives');
+      expect(rendered.stdout, label).toContain('Type: tow');
+      expect(rendered.stdout, label).toContain('Expires in: 0s');
+      expect(rendered.stdout, label).not.toContain('=== Response ===');
+    }
   });
 
   test('view_insurance formats policies list without falling to raw response', () => {

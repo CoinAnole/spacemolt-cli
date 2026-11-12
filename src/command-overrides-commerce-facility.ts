@@ -114,9 +114,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt/completed_missions',
   },
   distress_signal: {
-    usage: '[fuel|repair|combat]  (claimable rescue, 1hr cooldown)',
+    usage: '[fuel|repair|combat|tow]  (fuel, repair, or combat: claimable rescue, 1hr cooldown; tow: no cooldown)',
     description:
-      'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel.',
+      'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel. tow (gameserver 0.696.0) calls a Galactic Salvage Authority tug: no broadcast and no cooldown, and a tow does not block your other distress calls. The tug arrives in 5 minutes and docks you at the nearest public station, for the same fee as an idle-ship recovery: 500 credits, waived when you run low, higher from a hazard, plus a Pathfinder fee from the frontier. One tug can be on the way at a time. You cannot call a tow while held or in a battle. On arrival the tug turns back if you are docked, away from that POI, traveling, in a battle, or held by a warp scrambler. It is not available while held. Human output prints Tow arrives in from tow_arrives_seconds when that value is a finite number or bigint, including 0. An omitted key prints nothing. The response has no fee, hazard, or Pathfinder field, so no fee is printed.',
     example: 'spacemolt distress_signal fuel',
     discoverWith: ['get_status'],
     seeAlso: ['accept_mission', 'get_active_missions'],
@@ -129,7 +129,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       distress_type: {
         description:
-          'Type of distress: fuel (out of fuel), repair (hull critically damaged), combat (under attack). Omit to default to fuel.',
+          'Type of distress: fuel (out of fuel), repair (hull critically damaged), combat (under attack), tow (Salvage Authority tug docks you at the nearest public station after 5 minutes, for a fee). Omit to default to fuel.',
       },
     },
   },

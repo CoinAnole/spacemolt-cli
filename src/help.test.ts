@@ -976,6 +976,14 @@ describe('help output branches', () => {
     expect(output).toContain('No ammunition name and no storage destination are added');
     expect(output).toContain('gameserver 0.677.5');
     expect(description).toContain('gameserver 0.677.5');
+    expect(output).toContain('salvage.ship_recovered');
+    expect(output).toContain('Table column Requested');
+    expect(output).toContain('including false');
+    expect(output).toContain('yes or no');
+    expect(output).toContain('No fee column');
+    expect(output).toContain('gameserver 0.696.0');
+    expect(description).toContain('salvage.ship_recovered');
+    expect(description).toContain('No fee column');
     expect(output).toContain('longer than 80 characters');
     expect(output).toContain('faction.freight_fee_earned');
     expect(output).toContain('faction.freight_premium_earned');

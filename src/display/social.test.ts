@@ -281,6 +281,21 @@ function fillEntry(
   };
 }
 
+function salvageEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 911,
+    created_at: '2026-11-11T12:00:00.000Z',
+    event_type: 'salvage.ship_recovered',
+    category: 'salvage',
+    summary: 'Tug dispatched.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function expectNoPrizeOrLocation(header: string | undefined): void {
   expect(header).toBeDefined();
   expect(header).not.toContain('Prize');
@@ -1616,6 +1631,117 @@ test('does not parse direct supplied out of the summary', () => {
   expect(actionLogHeaderColumns(withField).filter((column) => column === 'Direct supplied')).toEqual([
     'Direct supplied',
   ]);
+});
+
+test('prints Requested yes or no for salvage.ship_recovered, including false', () => {
+  const yes = renderActionLog(actionLogPage([salvageEntry({ requested: true })]));
+  expect(actionLogHeaderColumns(yes)).toContain('Requested');
+  expect(actionLogHeaderColumns(yes)).not.toContain('Fee');
+  expect(actionLogCell(yes, 'salvage.ship_recovered', 'Requested')).toBe('yes');
+  expect(actionLogCell(yes, 'Tug dispatched.', 'Event')).toBe('salvage.ship_recovered');
+
+  const no = renderActionLog(actionLogPage([salvageEntry({ requested: false, fee: 500 })]));
+  expect(actionLogCell(no, 'salvage.ship_recovered', 'Requested')).toBe('no');
+  expect(actionLogHeaderColumns(no)).not.toContain('Fee');
+  expect(no).not.toContain('500');
+  expect(no).not.toContain('requested_display');
+
+  const fromEntry = renderActionLog(actionLogPage([salvageEntry(undefined, { requested: false })]));
+  expect(actionLogCell(fromEntry, 'salvage.ship_recovered', 'Requested')).toBe('no');
+
+  const zero = renderActionLog(actionLogPage([salvageEntry({ requested: false }, { id: 0 })]));
+  expect(actionLogCell(zero, 'salvage.ship_recovered', 'ID')).toBe('0');
+  expect(actionLogCell(zero, 'salvage.ship_recovered', 'Requested')).toBe('no');
+});
+
+test('omits Requested when salvage.ship_recovered sends no boolean', () => {
+  const pages = [
+    salvageEntry(undefined),
+    salvageEntry({}),
+    salvageEntry({ requested: null }),
+    salvageEntry({ fee: 500 }),
+  ];
+  for (const entry of pages) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(entry.data ?? null)).not.toContain('Requested');
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(entry.data ?? null)).not.toContain('Fee');
+    expect(stdout).not.toContain('500');
+  }
+});
+
+test('does not lift requested off other event types', () => {
+  for (const eventType of ['combat.pirate_destroyed', 'mission.completed', 'salvage.ship_recovered.extra'] as const) {
+    const stdout = renderActionLog(
+      actionLogPage([salvageEntry({ requested: true }, { event_type: eventType, summary: `${eventType} summary` })]),
+    );
+    expect(actionLogHeaderColumns(stdout), eventType).not.toContain('Requested');
+    expect(stdout, eventType).not.toContain('yes');
+  }
+
+  const wrongCase = renderActionLog(
+    actionLogPage([salvageEntry({ requested: true }, { event_type: 'SALVAGE.SHIP_RECOVERED' })]),
+  );
+  expect(actionLogHeaderColumns(wrongCase)).not.toContain('Requested');
+});
+
+test('lifts requested from the entry or data, including a trimmed event type', () => {
+  const entryWins = renderActionLog(actionLogPage([salvageEntry({ requested: true }, { requested: false })]));
+  expect(actionLogCell(entryWins, 'salvage.ship_recovered', 'Requested')).toBe('no');
+
+  const dataWins = renderActionLog(actionLogPage([salvageEntry({ requested: false }, { requested: true })]));
+  expect(actionLogCell(dataWins, 'salvage.ship_recovered', 'Requested')).toBe('yes');
+
+  const nullFallsThrough = renderActionLog(actionLogPage([salvageEntry({ requested: false }, { requested: null })]));
+  expect(actionLogCell(nullFallsThrough, 'salvage.ship_recovered', 'Requested')).toBe('no');
+
+  const emptyFallsThrough = renderActionLog(actionLogPage([salvageEntry({ requested: true }, { requested: '' })]));
+  expect(actionLogCell(emptyFallsThrough, 'salvage.ship_recovered', 'Requested')).toBe('yes');
+
+  const whitespaceBlocks = renderActionLog(actionLogPage([salvageEntry({ requested: true }, { requested: '   ' })]));
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Requested');
+
+  const fromType = salvageEntry({ requested: true }, { type: 'salvage.ship_recovered' });
+  delete fromType.event_type;
+  const typeStdout = renderActionLog(actionLogPage([fromType]));
+  expect(actionLogCell(typeStdout, 'salvage.ship_recovered', 'Requested')).toBe('yes');
+
+  const trimmed = renderActionLog(
+    actionLogPage([salvageEntry({ requested: false }, { event_type: ' salvage.ship_recovered ' })]),
+  );
+  expect(actionLogCell(trimmed, 'salvage.ship_recovered', 'Requested')).toBe('no');
+});
+
+test('omits Requested for non-boolean requested values and does not parse the summary', () => {
+  const badValues: unknown[] = ['true', 'false', 'yes', 'no', 1, 0, 1n, 0n, 1.5, {}, []];
+  for (const value of badValues) {
+    const label = typeof value === 'bigint' ? `${value}n` : JSON.stringify(value);
+    const onData = renderActionLog(actionLogPage([salvageEntry({ requested: value })]));
+    expect(actionLogHeaderColumns(onData), label).not.toContain('Requested');
+    const onEntry = renderActionLog(actionLogPage([salvageEntry({ requested: true }, { requested: value })]));
+    expect(actionLogHeaderColumns(onEntry), `entry ${label}`).not.toContain('Requested');
+  }
+
+  const summary = 'requested: true';
+  const summaryOnly = renderActionLog(actionLogPage([salvageEntry(undefined, { summary })]));
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Requested');
+  expect(summaryOnly).toContain(summary);
+
+  const mixed = renderActionLog(
+    actionLogPage([
+      salvageEntry({ requested: false }, { id: 911, summary }),
+      salvageEntry(undefined, { id: 912, summary: 'Idle recovery.' }),
+      salvageEntry({ requested: true }, { id: 913, event_type: 'mission.completed', summary: 'Not a tow.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(mixed)).toContain('Requested');
+  expect(actionLogHeaderColumns(mixed)).not.toContain('Fee');
+  expect(actionLogCell(mixed, summary, 'Requested')).toBe('no');
+  expect(actionLogCell(mixed, 'Idle recovery.', 'Requested')).toBe('');
+  expect(actionLogCell(mixed, 'Not a tow.', 'Requested')).toBe('');
+
+  const poisoned = renderActionLog(actionLogPage([salvageEntry({ requested: true }, { requested_display: 'poison' })]));
+  expect(actionLogCell(poisoned, 'salvage.ship_recovered', 'Requested')).toBe('yes');
+  expect(poisoned).not.toContain('poison');
 });
 
 test('keeps Direct supplied beside rent columns on a mixed action-log page', () => {
