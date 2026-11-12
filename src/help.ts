@@ -1152,7 +1152,7 @@ ${c.bright}Action Commands (1 per tick, ~10 seconds):${c.reset}
 
   ${c.cyan}Ship Exchange:${c.reset}
     list_ship_for_sale        List a stored ship for sale
-    browse_ships              Browse ships for sale at station
+    browse_ships              Ships at a station or every charted station
     buy_listed_ship <id>      Buy a player-listed ship
     cancel_ship_listing <id>  Cancel your ship listing
     place_ship_buy_order <class_id> <price>  Place a standing ship buy order

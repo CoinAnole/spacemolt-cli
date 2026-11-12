@@ -2978,6 +2978,163 @@ test('browse_ships listing with tier 0 prints the ship name and omits T0', () =>
   expect(stdout).not.toContain('T0');
 });
 
+function renderBrowseShips(result: Record<string, unknown>): string {
+  return renderStructuredResult('browse_ships', result, options, context).stdout.join('\n');
+}
+
+test('browse_ships all_stations prints each listing station and does not invent a header station', () => {
+  const stdout = renderBrowseShips({
+    base_id: '',
+    base_name: '',
+    count: 7,
+    can_fly: true,
+    page: 0,
+    page_size: 0,
+    total: 0,
+    total_pages: 0,
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+        base_name: 'Luna Station',
+        base_id: 'luna_station',
+      },
+      {
+        ship_id: 'ship-2',
+        ship_name: 'Same Name',
+        class_id: 'hauler',
+        price: 10,
+        listing_id: 'listing-2',
+        base_name: 'Earth Station',
+        base_id: 'Earth Station',
+      },
+      {
+        ship_id: 'ship-3',
+        ship_name: 'Id Only',
+        class_id: 'courier',
+        price: 11,
+        listing_id: 'listing-3',
+        base_name: '',
+        base_id: 'sol_station',
+      },
+      {
+        ship_id: 'ship-4',
+        ship_name: 'Name Only',
+        class_id: 'fighter',
+        price: 12,
+        listing_id: 'listing-4',
+        base_name: 'Haven',
+        base_id: '',
+      },
+    ],
+    buy_orders: [
+      {
+        order_id: 'ship-order-1',
+        base_name: 'Luna Station',
+        base_id: 'luna_station',
+        class_id: 'prospector',
+        class_name: 'Prospector',
+        price: 1000,
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale ===');
+  expect(stdout).not.toContain('@ Station');
+  expect(stdout).not.toContain('Ships for Sale @');
+  expect(stdout).toContain('Station: Luna Station (luna_station)');
+  expect(stdout).toContain('Station: Earth Station');
+  expect(stdout).not.toContain('Earth Station (Earth Station)');
+  expect(stdout).toContain('Station: sol_station');
+  expect(stdout).toContain('Station: Haven');
+  expect(stdout).toContain('Page: 0');
+  expect(stdout).toContain('Page size: 0');
+  expect(stdout).toContain('Total: 0');
+  expect(stdout).toContain('Total pages: 0');
+  expect(stdout).toContain('=== Ship Buy Orders ===');
+  expect(stdout).not.toContain('Ship Buy Orders @');
+  expect(stdout.toLowerCase()).not.toContain('count');
+  expect(stdout).not.toContain('can_fly');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('browse_ships omits an absent page key and keeps a single-station header name', () => {
+  const stdout = renderBrowseShips({
+    base_id: 'earth_station',
+    base_name: 'Earth Station',
+    count: 1,
+    page_size: 50,
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+        base_name: 'Earth Station',
+        base_id: 'earth_station',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale @ Earth Station ===');
+  expect(stdout).not.toContain('Ships for Sale @ Earth Station (earth_station)');
+  expect(stdout).toContain('Station: Earth Station (earth_station)');
+  expect(stdout).toContain('Page size: 50');
+  expect(stdout).not.toContain('Page:');
+  expect(stdout).not.toContain('Total');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('browse_ships with no matches prints page fields, including a bigint 0, and omits total', () => {
+  const stdout = renderBrowseShips({
+    base_id: '',
+    base_name: '',
+    count: 0,
+    listings: [],
+    page: 2,
+    page_size: 0n,
+    total_pages: 1,
+  });
+
+  expect(stdout).toContain('=== Ships for Sale ===');
+  expect(stdout).not.toContain('@');
+  expect(stdout).toContain('Page: 2');
+  expect(stdout).toContain('Page size: 0');
+  expect(stdout).toContain('Total pages: 1');
+  expect(stdout).not.toContain('Total:');
+  expect(stdout.toLowerCase()).not.toContain('count');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('browse_ships leaves a non-numeric page key and an omitted listing station unprinted', () => {
+  const stdout = renderBrowseShips({
+    base_name: 'Earth Station',
+    page: '1',
+    total: null,
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+        base_name: '',
+        base_id: '',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale @ Earth Station ===');
+  expect(stdout).not.toContain('Station:');
+  expect(stdout).not.toContain('Page:');
+  expect(stdout).not.toContain('Total');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('two-item view_market summary blanks Best Buy when price_each is an unsafe bigint', () => {
   const stdout = renderStructuredResult(
     'view_market',

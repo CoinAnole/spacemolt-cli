@@ -5374,6 +5374,37 @@ describe('command metadata', () => {
     expect(COMMANDS.jump?.description).not.toContain(phrase);
   });
 
+  test('browse_ships help documents charted-station search', () => {
+    const usage = COMMANDS.browse_ships?.usage ?? '';
+    const description = COMMANDS.browse_ships?.description ?? '';
+    expect(usage).toContain('[all_stations=true/false]');
+    expect(usage).toContain('[can_fly=true/false]');
+    expect(usage).toContain('[page=...]');
+    expect(usage).toContain('[page_size=...]');
+    expect(usage).toContain('cannot be combined with base_id');
+    expect(usage).toContain('station base ID or station POI ID');
+    expect(description).toContain('all_stations=true');
+    expect(description).toContain('cheapest first');
+    expect(description).toContain('cannot be combined with base_id');
+    expect(description).toContain('default 50, max 100');
+    expect(description).toContain('empire reputation');
+    expect(description).toContain('prestige locks');
+    expect(description).toContain('Engineering');
+    expect(description).toContain('buy_listed_ship');
+    expect(description).toContain('does not check Piloting, reputation, prestige, or Engineering');
+    expect(description).toContain('does not sort the rows');
+    expect(description).toContain('does not invent a station title');
+    expect(description).not.toContain('`');
+    const help = captureHelp('browse_ships');
+    expect(help).toContain('all_stations=true');
+    expect(help).toContain('can_fly=true');
+    expect(help).toContain('page_size');
+    expect(help).toContain('Search every station you have charted');
+    expect(help).toContain('Cannot be combined with base_id');
+    expect(help).toContain('default 50, max 100');
+    expect(help).not.toContain('`');
+  });
+
   test('loot_wreck and storage_loot document module_id cargo loot', () => {
     expect(COMMANDS.loot_wreck?.args).toEqual(['wreck_id', 'item_id', 'quantity', 'module_id']);
     expect(COMMANDS.loot_wreck?.usage).toContain('[module_id=…]');

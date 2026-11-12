@@ -1112,6 +1112,58 @@ function emitIntelDescription(value: unknown, indent: string, printedMessage: st
   emitLine(`${indent}Description: ${text}`);
 }
 
+function nonEmptyStationString(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+function shipListingStation(baseName: unknown, baseId: unknown): string | undefined {
+  const name = nonEmptyStationString(baseName);
+  const id = nonEmptyStationString(baseId);
+  if (name && id && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+function browseShipsHeaderStation(result: Record<string, unknown>, orderStations: unknown[]): string | undefined {
+  const name = nonEmptyStationString(result.base_name);
+  const id = nonEmptyStationString(result.base_id);
+  if (name) return name;
+  if (id) return id;
+  if (result.base_name === '' && result.base_id === '') return undefined;
+  const legacy = nonEmptyStationString(result.base);
+  if (legacy) return legacy;
+  for (const station of orderStations) {
+    const text = nonEmptyStationString(station);
+    if (text) return text;
+  }
+  return 'Station';
+}
+
+const SHIP_BROWSE_PAGE_FIELDS = [
+  ['page', 'Page'],
+  ['page_size', 'Page size'],
+  ['total', 'Total'],
+  ['total_pages', 'Total pages'],
+] as const;
+
+function shipBrowsePageText(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+function shipBrowseHasPageField(result: Record<string, unknown>): boolean {
+  return SHIP_BROWSE_PAGE_FIELDS.some(([key]) => Object.hasOwn(result, key));
+}
+
+function emitShipBrowsePage(result: Record<string, unknown>): void {
+  for (const [key, label] of SHIP_BROWSE_PAGE_FIELDS) {
+    if (!Object.hasOwn(result, key)) continue;
+    const text = shipBrowsePageText(result[key]);
+    if (text === undefined) continue;
+    emitLine(`${label}: ${text}`);
+  }
+}
+
 export const marketFormatters = [
   // Ship listings (browse_ships) — must come before market listings since both use r.listings
   formatter(
@@ -1122,11 +1174,22 @@ export const marketFormatters = [
         : [];
       const shipBuyOrderSource = normalizedCommand === 'view_ship_buy_orders' ? r.orders : r.buy_orders;
       const buyOrders = Array.isArray(shipBuyOrderSource) ? shipBuyOrderSource.filter(isRecord) : [];
-      if (!listings.length && !buyOrders.length) return false;
+      const emptyChartedBrowse =
+        normalizedCommand === 'browse_ships' &&
+        Array.isArray(r.listings) &&
+        r.listings.length === 0 &&
+        listings.length === 0 &&
+        buyOrders.length === 0 &&
+        ((r.base_name === '' && r.base_id === '') || shipBrowseHasPageField(r));
+      if (!listings.length && !buyOrders.length && !emptyChartedBrowse) return false;
 
       const orderStations = [...new Set(buyOrders.map((order) => order.base_name || order.base_id).filter(Boolean))];
-      const stationName = r.base_name || r.base || orderStations[0] || 'Station';
-      if (listings.length) emitLine(`\n${c.bright}=== Ships for Sale @ ${stationName} ===${c.reset}`);
+      const headerStation = browseShipsHeaderStation(r, orderStations);
+      const atStation = headerStation ? ` @ ${headerStation}` : '';
+      if (listings.length || emptyChartedBrowse) {
+        emitLine(`\n${c.bright}=== Ships for Sale${atStation} ===${c.reset}`);
+      }
+      emitShipBrowsePage(r);
       for (const listing of listings) {
         const shipClass = listing.class_id || 'Unknown';
         const shipName = listing.ship_name || shipClass;
@@ -1140,7 +1203,9 @@ export const marketFormatters = [
         const shield = listing.shield ? `Shield: ${listing.shield}` : '';
         const stats = [hull, shield].filter(Boolean).join(', ');
         const seller = listing.seller || listing.seller_name || listing.seller_id || 'Unknown';
+        const station = shipListingStation(listing.base_name, listing.base_id);
         emitLine(`\n${c.cyan}${shipName}${c.reset} (${shipClass}) ${scale}`);
+        if (station) emitLine(`  Station: ${station}`);
         if (categoryTier) emitLine(`  ${categoryTier}`);
         emitLine(`  Price: ${c.yellow}${formattedPrice} credits${c.reset}`);
         if (stats) emitLine(`  ${stats}`);
@@ -1148,7 +1213,7 @@ export const marketFormatters = [
         emitLine(`  Listing ID: ${listing.listing_id}`);
       }
       if (buyOrders.length) {
-        emitLine(`\n${c.bright}=== Ship Buy Orders @ ${stationName} ===${c.reset}`);
+        emitLine(`\n${c.bright}=== Ship Buy Orders${atStation} ===${c.reset}`);
         for (const order of buyOrders) {
           const shipClass = order.class_id || 'Unknown';
           const shipName = order.class_name || shipClass;
@@ -1156,7 +1221,7 @@ export const marketFormatters = [
           const taxEscrow = formatCreditWords(order.tax_escrow);
           const orderBase = order.base_name || order.base_id;
           emitLine(`\n${c.cyan}${shipName}${c.reset} (${shipClass})`);
-          if (orderBase && (orderStations.length !== 1 || orderBase !== stationName))
+          if (orderBase && (orderStations.length !== 1 || orderBase !== headerStation))
             emitLine(`  Station: ${orderBase}`);
           if (price) emitLine(`  Price: ${c.yellow}${price}${c.reset}`);
           if (order.buyer) emitLine(`  Buyer: ${order.buyer}`);

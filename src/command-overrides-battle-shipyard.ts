@@ -366,7 +366,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   // Do not re-add base_id.description — it hides the generated dual-ID sentence.
   browse_ships: {
     usage:
-      '[base_id] [class_id] [max_price]  (base_id: station base ID or station POI ID; defaults to current station)',
+      '[base_id] [class_id] [max_price] [all_stations=true/false] [can_fly=true/false] [page=...] [page_size=...]  (base_id: station base ID or station POI ID; defaults to current station; all_stations cannot be combined with base_id; page and page_size apply with all_stations)',
     category: 'Ship Exchange',
     apiRoute: 'POST /api/v2/spacemolt_ship/browse_ships',
     positionals: ['base_id', 'class_id', 'max_price'],
