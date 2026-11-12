@@ -8198,6 +8198,104 @@ test('get_poi prints an archive interaction and does not tell the pilot to accep
   expect(stdout).not.toContain('Data copied');
 });
 
+test('poi mission offers print piloting_xp and skip the other rewards', () => {
+  const poi = renderPoi({
+    ...poiInfoFixture,
+    interaction: {
+      command: 'interact_poi',
+      message: 'A private prompt.',
+      mission: {
+        mission_id: 'mission-archive-1',
+        title: 'Archive Comparison',
+        rewards: { credits: 10, skill_xp: { piloting: 25 }, piloting_xp: 8 },
+        piloting_xp: 99,
+      },
+    },
+  });
+  const titleAt = poi.indexOf('Archive Comparison (mission-archive-1)');
+  const xpAt = poi.indexOf('Piloting XP: 8');
+  expect(titleAt).toBeGreaterThan(poi.indexOf('A private prompt.'));
+  expect(xpAt).toBeGreaterThan(titleAt);
+  expect(poi).not.toContain('accept_mission');
+  expect(poi).not.toContain('10 cr');
+  expect(poi).not.toContain('piloting XP');
+  expect(poi).not.toContain('99');
+
+  const zero = renderInteractPoi({
+    message: 'Offer.',
+    poi_id: 'sol_archive',
+    mission: { title: 'Archive Comparison', mission_id: 'mission-archive-1', rewards: { piloting_xp: 0 } },
+  });
+  expect(zero.indexOf('Archive Comparison (mission-archive-1)')).toBeGreaterThanOrEqual(0);
+  expect(zero.indexOf('Piloting XP: 0')).toBeGreaterThan(zero.indexOf('Archive Comparison (mission-archive-1)'));
+  expect(zero.indexOf('Piloting XP: 0')).toBeLessThan(zero.indexOf('Accept it with accept_mission.'));
+
+  const negativeZero = renderPoi({
+    ...poiInfoFixture,
+    interaction: {
+      message: 'Prompt.',
+      mission: { mission_id: 'mission-neg', title: 'Neg', rewards: { piloting_xp: -0 } },
+    },
+  });
+  expect(negativeZero).toContain('Piloting XP: 0');
+  expect(negativeZero).not.toContain('Piloting XP: -0');
+  expect(negativeZero).not.toContain('accept_mission');
+
+  const big = renderInteractPoi({
+    message: 'Offer.',
+    mission: { title: 'Big', mission_id: 'mission-big', rewards: { piloting_xp: 9007199254740993n } },
+  });
+  expect(big).toContain('Piloting XP: 9007199254740993');
+  expect(big.indexOf('Piloting XP: 9007199254740993')).toBeLessThan(big.indexOf('Accept it with accept_mission.'));
+
+  const omitted = renderInteractPoi({
+    message: 'Offer.',
+    mission: {
+      title: 'Archive Comparison',
+      mission_id: 'mission-archive-1',
+      rewards: { credits: 10, skill_xp: { piloting: 25 } },
+    },
+  });
+  expect(omitted).toContain('Archive Comparison (mission-archive-1)');
+  expect(omitted).toContain('Accept it with accept_mission.');
+  expect(omitted).not.toContain('Piloting XP');
+  expect(omitted).not.toContain('10 cr');
+  expect(omitted).not.toContain('piloting');
+
+  const xpOnly = renderPoi({
+    ...poiInfoFixture,
+    interaction: { message: 'Prompt.', mission: { rewards: { piloting_xp: 2 } } },
+  });
+  expect(xpOnly).toContain('Piloting XP: 2');
+  expect(xpOnly).not.toContain('accept_mission');
+
+  for (const piloting_xp of [Number.NaN, Number.POSITIVE_INFINITY, '8', null, true] as const) {
+    const stdout = renderInteractPoi({
+      message: 'Offer.',
+      mission: { title: 'T', mission_id: 'm', rewards: { piloting_xp } },
+    });
+    expect(stdout).toContain('T (m)');
+    expect(stdout).toContain('Accept it with accept_mission.');
+    expect(stdout).not.toContain('Piloting XP');
+  }
+
+  const completion = renderInteractPoi({
+    message: 'Done.',
+    poi_id: 'sol_archive',
+    completion: {
+      mission_id: 'mission-done',
+      title: 'Done',
+      credits_earned: 1,
+      message: 'Complete.',
+      skill_xp_gained: { piloting: 9 },
+      piloting_xp: 40,
+      rewards: { piloting_xp: 40 },
+    },
+  });
+  expect(completion).toContain('Skill XP: piloting +9');
+  expect(completion).not.toContain('Piloting XP:');
+});
+
 test('get_poi prints nothing for an omitted interaction and skips an empty command', () => {
   expect(renderPoi(structuredClone(poiInfoFixture))).not.toContain('Interaction:');
 

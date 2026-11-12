@@ -497,6 +497,13 @@ function summarizeObjectiveForDisplay(objective: unknown): string {
   return `${description ?? objective.type ?? 'Objective'}${detailText}`;
 }
 
+// Omitted piloting_xp is not 0. Print only a finite number or bigint.
+function formatPilotingXp(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
 function summarizeRewardForDisplay(rewards: unknown): string {
   if (!isRecord(rewards)) return '';
   const parts: string[] = [];
@@ -520,6 +527,8 @@ function summarizeRewardForDisplay(rewards: unknown): string {
         .join(', '),
     );
   }
+  const pilotingXp = formatPilotingXp(rewards.piloting_xp);
+  if (pilotingXp !== undefined) parts.push(`Piloting XP: ${pilotingXp}`);
   const unlockRecipes = joinStringIds(rewards.unlock_recipes);
   if (unlockRecipes) parts.push(`unlock recipes ${unlockRecipes}`);
   return parts.filter(Boolean).join('; ');
@@ -1400,13 +1409,15 @@ function missionOfferLabel(mission: Record<string, unknown>): string | undefined
   return title ?? id;
 }
 
-/** Title and id as sent. acceptHint is the interact_poi offer only; get_poi does not say to accept. */
+/** Title, id, and a sent piloting_xp. acceptHint is the interact_poi offer only; get_poi does not say to accept. */
 function emitMissionOffer(mission: unknown, acceptHint: boolean): boolean {
   if (!isRecord(mission)) return false;
   const label = missionOfferLabel(mission);
   if (label) emitLine(label);
+  const pilotingXp = isRecord(mission.rewards) ? formatPilotingXp(mission.rewards.piloting_xp) : undefined;
+  if (pilotingXp !== undefined) emitLine(`Piloting XP: ${pilotingXp}`);
   if (acceptHint) emitLine('Accept it with accept_mission.');
-  return Boolean(label) || acceptHint;
+  return Boolean(label) || pilotingXp !== undefined || acceptHint;
 }
 
 function emitRecoveredItems(value: unknown): boolean {

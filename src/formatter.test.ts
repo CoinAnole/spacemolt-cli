@@ -7215,6 +7215,224 @@ describe('structuredContent formatters', () => {
     expect(onlyRecipes.stdout).not.toContain('recipe_locked');
   });
 
+  function missionColumn(stdout: string, missionId: string, header: string): string {
+    const lines = stdout.split('\n');
+    const headerLine = lines.find((line) => line.split(' | ').some((cell) => cell.trim() === header));
+    const row = lines.find((line) => line.split(' | ').some((cell) => cell.trim() === missionId));
+    if (!headerLine || !row) return '';
+    const index = headerLine.split(' | ').findIndex((cell) => cell.trim() === header);
+    return row.split(' | ')[index]?.trim() ?? '';
+  }
+
+  test('mission reward summaries print piloting_xp apart from skill_xp, including 0', () => {
+    const boardRewards = '1800 cr; mining XP +55';
+    const activeRewards = '1800 cr; mining XP +55; rep +3; pirate rep +1 (pirate_kael)';
+    expect(boardRewards.length).toBeLessThanOrEqual(32);
+    expect(boardRewards.length + '; Piloting XP: 40'.length).toBeGreaterThan(32);
+    expect(activeRewards.length).toBeLessThanOrEqual(64);
+    expect(activeRewards.length + '; Piloting XP: 40'.length).toBeGreaterThan(64);
+
+    const board = captureStructuredOutput('get_missions', {
+      missions: [
+        {
+          mission_id: 'mission-route',
+          title: 'Route',
+          rewards: { credits: 1800, skill_xp: { mining: 55 }, piloting_xp: 40 },
+        },
+      ],
+    });
+    const active = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-route',
+            title: 'Route',
+            rewards: {
+              credits: 1800,
+              skill_xp: { mining: 55, piloting: 0 },
+              reputation: 3,
+              pirate_rep: 1,
+              pirate_faction: 'pirate_kael',
+              piloting_xp: 40,
+            },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const accepted = captureStructuredOutput('accept_mission', {
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-accept',
+            title: 'Accepted',
+            rewards: {
+              credits: 1800,
+              skill_xp: { mining: 55 },
+              reputation: 3,
+              pirate_rep: 1,
+              pirate_faction: 'pirate_kael',
+              piloting_xp: 40,
+            },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const abandoned = captureStructuredOutput('abandon_mission', {
+      missions: {
+        active: [
+          { mission_id: 'mission-abandon', title: 'Left', rewards: { skill_xp: { hauling: 4 }, piloting_xp: 0 } },
+        ],
+        max_missions: 5,
+      },
+    });
+    const zeroOnly = captureStructuredOutput('get_missions', {
+      missions: [{ mission_id: 'mission-zero', title: 'Zero', rewards: { credits: 0, piloting_xp: 0 } }],
+    });
+    const negativeZero = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [{ mission_id: 'mission-neg', title: 'Neg', rewards: { piloting_xp: -0 } }],
+        max_missions: 5,
+      },
+    });
+    const fraction = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [{ mission_id: 'mission-frac', title: 'Frac', rewards: { piloting_xp: 1.5 } }],
+        max_missions: 5,
+      },
+    });
+    const big = captureStructuredOutput('get_active_missions', {
+      missions: {
+        active: [{ mission_id: 'mission-big', title: 'Big', rewards: { piloting_xp: 9007199254740993n } }],
+        max_missions: 5,
+      },
+    });
+    const omitted = captureStructuredOutput('get_missions', {
+      missions: [
+        {
+          mission_id: 'mission-omit',
+          title: 'Omit',
+          rewards: { credits: 10, skill_xp: { piloting: 25 } },
+          piloting_xp: 99,
+        },
+      ],
+    });
+    const completed = captureStructuredOutput('view_completed_mission', {
+      ...completedMissionDetailFixture,
+      rewards: { ...completedMissionDetailFixture.rewards, piloting_xp: 12 },
+    });
+    const completedZero = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-zero',
+      title: 'Zero',
+      rewards: { piloting_xp: 0, skill_xp: { piloting: 25 } },
+    });
+    const completedOmitted = captureStructuredOutput('view_completed_mission', completedMissionDetailFixture);
+    const completedRecipes = captureStructuredOutput('view_completed_mission', {
+      template_id: 'mission-recipes',
+      title: 'Recipe Lesson',
+      rewards: { unlock_recipes: ['alloy_plate'], piloting_xp: 3, skill_xp: { piloting: 1 } },
+    });
+
+    expect(board.stderr).toBe('');
+    expect(missionColumn(board.stdout, 'mission-route', 'Rewards')).toBe(boardRewards);
+    expect(missionColumn(board.stdout, 'mission-route', 'Piloting XP')).toBe('40');
+    expect(board.stdout).not.toContain('Pilot...');
+    expect(board.stdout).not.toContain('Piloting XP:');
+    expect(active.stderr).toBe('');
+    expect(missionColumn(active.stdout, 'mission-route', 'Rewards')).toBe(activeRewards);
+    expect(missionColumn(active.stdout, 'mission-route', 'Piloting XP')).toBe('40');
+    expect(active.stdout).not.toContain('Pilot...');
+    expect(active.stdout).not.toContain('piloting XP +40');
+    expect(active.stdout).not.toContain('piloting XP +0');
+    expect(accepted.stderr).toBe('');
+    expect(accepted.stdout).toContain('=== Active Missions ===');
+    expect(missionColumn(accepted.stdout, 'mission-accept', 'Rewards')).toBe(activeRewards);
+    expect(missionColumn(accepted.stdout, 'mission-accept', 'Piloting XP')).toBe('40');
+    expect(accepted.stdout).not.toContain('Pilot...');
+    expect(abandoned.stderr).toBe('');
+    expect(missionColumn(abandoned.stdout, 'mission-abandon', 'Rewards')).toBe('hauling XP +4');
+    expect(missionColumn(abandoned.stdout, 'mission-abandon', 'Piloting XP')).toBe('0');
+    expect(abandoned.stdout).not.toContain('Piloting XP:');
+    expect(missionColumn(zeroOnly.stdout, 'mission-zero', 'Piloting XP')).toBe('0');
+    expect(missionColumn(zeroOnly.stdout, 'mission-zero', 'Rewards')).toBe('');
+    expect(zeroOnly.stdout).not.toContain('0 cr');
+    expect(zeroOnly.stdout).not.toContain('Piloting XP:');
+    expect(missionColumn(negativeZero.stdout, 'mission-neg', 'Piloting XP')).toBe('0');
+    expect(negativeZero.stdout).not.toContain('-0');
+    expect(missionColumn(fraction.stdout, 'mission-frac', 'Piloting XP')).toBe('1.5');
+    expect(missionColumn(big.stdout, 'mission-big', 'Piloting XP')).toBe('9007199254740993');
+    expect(big.stdout).not.toContain('...');
+    expect(omitted.stdout).toContain('10 cr; piloting XP +25');
+    expect(omitted.stdout).not.toContain('Piloting XP');
+    expect(omitted.stdout).not.toContain('99');
+    expect(completed.stdout).toContain(
+      'Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1 (pirate_kael); piloting +25 XP; Piloting XP: 12',
+    );
+    expect(completed.stdout).not.toContain('piloting +12 XP');
+    expect(completed.stdout).not.toContain('piloting +37 XP');
+    expect(completedZero.stdout).toContain('Rewards: piloting +25 XP; Piloting XP: 0');
+    expect(completedOmitted.stdout).toContain(
+      'Rewards: 7,500 cr; 25 ore_iron; reputation +3; pirate rep +1 (pirate_kael); piloting +25 XP',
+    );
+    expect(completedOmitted.stdout).not.toContain('Piloting XP:');
+    expect(completedRecipes.stdout).toContain('Rewards: piloting +1 XP; Piloting XP: 3; unlock recipes alloy_plate');
+
+    for (const piloting_xp of [Number.NaN, Number.POSITIVE_INFINITY, '40', null, true] as const) {
+      const listed = captureStructuredOutput('get_active_missions', {
+        missions: {
+          active: [{ mission_id: 'mission-bad', title: 'Bad', rewards: { credits: 10, piloting_xp } }],
+          max_missions: 5,
+        },
+      });
+      const viewed = captureStructuredOutput('view_completed_mission', {
+        template_id: 'mission-bad',
+        title: 'Bad',
+        rewards: { credits: 10, piloting_xp },
+      });
+      expect(listed.stdout).toContain('10 cr');
+      expect(listed.stdout).not.toContain('Piloting XP');
+      expect(viewed.stdout).toContain('Rewards: 10 cr');
+      expect(viewed.stdout).not.toContain('Piloting XP');
+    }
+  });
+
+  test('complete_mission receipt has no piloting line and remaining missions keep the column', () => {
+    const { stdout, stderr } = captureStructuredOutput('complete_mission', {
+      details: {
+        mission_id: 'mission-delivery-1',
+        title: 'Food Delivery',
+        credits_earned: 1,
+        message: 'Mission complete. Rewards claimed.',
+        skill_xp_gained: { piloting: 25 },
+        piloting_xp: 40,
+        rewards: { piloting_xp: 40, skill_xp: { piloting: 25 } },
+      },
+      missions: {
+        active: [
+          {
+            mission_id: 'mission-left',
+            title: 'Still Going',
+            rewards: { credits: 1800, skill_xp: { mining: 55 }, piloting_xp: 7 },
+          },
+        ],
+        max_missions: 5,
+      },
+    });
+    const tableAt = stdout.indexOf('=== Active Missions ===');
+    const receipt = stdout.slice(0, tableAt);
+
+    expect(stderr).toBe('');
+    expect(tableAt).toBeGreaterThan(stdout.indexOf('=== Mission Complete: Food Delivery ==='));
+    expect(receipt).toContain('Skill XP: piloting +25');
+    expect(receipt).not.toContain('Piloting XP');
+    expect(receipt).not.toContain('40');
+    expect(missionColumn(stdout, 'mission-left', 'Rewards')).toBe('1800 cr; mining XP +55');
+    expect(missionColumn(stdout, 'mission-left', 'Piloting XP')).toBe('7');
+    expect(stdout).not.toContain('Pilot...');
+    expect(stdout).not.toContain('=== Response ===');
+  });
+
   test('formats empire policy snapshots without raw JSON fallback', () => {
     const { stdout, stderr } = captureStructuredOutput('get_empire_info', empireInfoFixture);
 

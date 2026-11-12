@@ -117,6 +117,18 @@ function summarizeCommunityStatus(mission: Record<string, unknown>): string {
   return '';
 }
 
+// Omitted piloting_xp is not 0. Print only a finite number or bigint.
+function formatPilotingXp(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+function pilotingXpDisplay(rewards: unknown): string | undefined {
+  if (!isRecord(rewards)) return undefined;
+  return formatPilotingXp(rewards.piloting_xp);
+}
+
 function summarizeRewards(rewards: unknown): string {
   if (!isRecord(rewards)) return '';
   const parts: string[] = [];
@@ -396,6 +408,7 @@ const GENERIC_LIST_COLUMNS_BY_KEY: Record<string, Array<[string, string[]]>> = {
     ['Difficulty', ['difficulty']],
     ['Expires', ['expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
     ['Rewards', ['rewards_summary']],
+    ['Piloting XP', ['piloting_xp_display']],
   ],
 };
 
@@ -1061,6 +1074,7 @@ function emitMissionsBoard(result: Record<string, unknown>, beforeTable?: () => 
   const rows = missions.map((mission) => ({
     ...mission,
     rewards_summary: summarizeRewards(mission.rewards),
+    piloting_xp_display: pilotingXpDisplay(mission.rewards),
     objectives_summary: objectivesSummary(mission.objectives),
     community_summary: summarizeCommunityStatus(mission),
     ...missionLedgerDisplays(mission),
@@ -1108,6 +1122,7 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
     ...mission,
     objectives_summary: objectivesSummary(mission.objectives),
     rewards_summary: summarizeRewards(mission.rewards),
+    piloting_xp_display: pilotingXpDisplay(mission.rewards),
     community_summary: summarizeCommunityStatus(mission),
     // no_expiry true is not a countdown, even when expires_in_ticks is 0. Omitted keeps that count.
     expires_display: mission.no_expiry === true ? 'none' : undefined,
@@ -1123,6 +1138,7 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
     ['Rewards', ['rewards_summary']],
     ['Expires', ['expires_display', 'expires_in_ticks', 'expiry_ticks', 'ticks_remaining']],
   ];
+  insertOptionalColumn(columns, rows, 'Piloting XP', ['piloting_xp_display'], 'Rewards');
   insertOptionalColumn(columns, rows, 'Community', ['community_summary'], 'Type');
   if (rows.some((mission) => hasScalarValue(mission, ['issuing_base', 'issuing_base_id']))) {
     const objectivesIndex = columns.findIndex(([label]) => label === 'Objectives');
