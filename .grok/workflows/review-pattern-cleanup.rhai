@@ -27,22 +27,31 @@ let meta = #{
 // Error handling, changelog and help wording, response-field retargets, and
 // pull-request stacking stay out. Those are not behavior-preserving cleanups.
 //
-// Rejected sites are appended to .grok/review-pattern-ledger.json. The next
-// scan skips a site when the file and family match and either the line or the
-// quote matches, so a later verifier cannot reverse a keep after lines drift.
+// Rejected sites are appended, one JSON object per line, to
+// .grok/review-pattern-ledger.jsonl. The next scan skips a site when the file
+// and family match and either the line or the quote matches, so a later
+// verifier cannot reverse a keep after lines drift. A recorded row is not
+// rewritten. The same quote at a new line is already blocked and is not stored
+// again.
 // The reader does not copy that file through an output schema or as JSON text.
 // A schema miss retries inside the one agent call and cannot be timed out.
-// A program prints COUNT, PARTS, and SUM, then one base64 part per call.
-// Each part stays under the tool output cap. The script strips whitespace,
-// decodes, and checks the count and the byte sum. A mismatch stops the run
-// before Scan. Resuming does not retry the read.
-// The writer runs a program that writes the canonical bytes. Before that
-// program runs, every entry must rebuild through the same reader the next
-// Ledger phase uses. A quote that does not rebuild is not written. A second
-// program reads the file back, and the script checks the count and the byte sum.
+// A program prints COUNT, PARTS, SUM, FILE_BYTES, and FILE_SUM, then one
+// base64 part per call. Each part stays under the tool output cap. The script
+// strips whitespace, decodes, and checks the count and the transport byte sum.
+// That sum is not FILE_SUM. A mismatch stops the run before Scan. Resuming
+// does not retry the read.
+// Zero entries are only a missing JSONL path that git cat-file reports is not
+// in HEAD, when .grok/review-pattern-ledger.json is also absent. A zero-byte
+// file, a blank file, a deleted tracked path, any other git failure, or the
+// old JSON object still on disk is LEDGER_INVALID. The reader does not create
+// a JSONL file.
+// The writer is an execute agent. Its program appends only the new lines, and
+// only when the loaded length and FILE_SUM still match. The check reader, not
+// writer stdout, decides whether those lines landed. A file that is neither
+// the loaded bytes nor those bytes plus the new lines pauses the run.
 // A test rejection whose reason says the branch is still unlocked is not a
 // rejection and is not written to the ledger.
-// An editor refusal is written the same way. A test refusal whose reason says
+// An editor refusal is appended the same way. A test refusal whose reason says
 // the branch is still unlocked is not a refusal and is not written to the ledger.
 // A comment that names a command, payload, or caller the following code does
 // not name is kept whole, including any version-history clause in it.
@@ -398,35 +407,6 @@ fn line_number(raw) {
         return raw;
     }
     return 0;
-}
-
-fn ledger_upsert(entries, file, family, line_no, quote) {
-    let next = [];
-    let found_match = false;
-    for entry in entries {
-        let same_site = false;
-        if entry.file == file && entry.family == family {
-            if entry.line == line_no {
-                same_site = true;
-            } else if quote != "" && entry.quote == quote {
-                same_site = true;
-            }
-        }
-        if !found_match && same_site {
-            let kept_quote = entry.quote;
-            if quote != "" {
-                kept_quote = quote;
-            }
-            next.push(#{ file: file, line: line_no, family: family, quote: kept_quote });
-            found_match = true;
-        } else {
-            next.push(entry);
-        }
-    }
-    if !found_match {
-        next.push(#{ file: file, line: line_no, family: family, quote: quote });
-    }
-    return next;
 }
 
 fn ledger_blocks(file, family, line_no, quote, entries) {
@@ -831,6 +811,8 @@ fn parse_manifest(text) {
     let count = -1;
     let parts = -1;
     let byte_sum = -1;
+    let file_bytes = -1;
+    let file_sum = -1;
     let lines = split_lines(text);
     for line in lines {
         line.trim();
@@ -851,6 +833,22 @@ fn parse_manifest(text) {
                 if parts < 0 {
                     return #{ ok: false, error: "manifest" };
                 }
+            } else if starts_with(line, "FILE_BYTES ") {
+                if file_bytes >= 0 {
+                    return #{ ok: false, error: "manifest" };
+                }
+                file_bytes = parse_u32(line.sub_string(11, line.len() - 11));
+                if file_bytes < 0 {
+                    return #{ ok: false, error: "manifest" };
+                }
+            } else if starts_with(line, "FILE_SUM ") {
+                if file_sum >= 0 {
+                    return #{ ok: false, error: "manifest" };
+                }
+                file_sum = parse_u32(line.sub_string(9, line.len() - 9));
+                if file_sum < 0 {
+                    return #{ ok: false, error: "manifest" };
+                }
             } else if starts_with(line, "SUM ") {
                 if byte_sum >= 0 {
                     return #{ ok: false, error: "manifest" };
@@ -867,7 +865,17 @@ fn parse_manifest(text) {
     if count < 0 || parts < 0 || byte_sum < 0 {
         return #{ ok: false, error: "manifest" };
     }
-    return #{ ok: true, count: count, parts: parts, sum: byte_sum, error: "" };
+    return #{ ok: true, count: count, parts: parts, sum: byte_sum, file_bytes: file_bytes, file_sum: file_sum, error: "" };
+}
+
+fn live_manifest_ok(manifest) {
+    if type_of(manifest) != "map" || manifest.ok != true {
+        return false;
+    }
+    if manifest.file_bytes < 0 || manifest.file_sum < 0 {
+        return false;
+    }
+    return true;
 }
 
 fn assemble_parts(part_texts) {
@@ -946,60 +954,76 @@ fn agent_stdout(result) {
 }
 
 fn ledger_python_body() {
-    let text = "";
-    text += "import json, base64, pathlib, sys\n";
-    text += "CHUNK = 4500\n";
-    text += "p = pathlib.Path('.grok/review-pattern-ledger.json')\n";
-    text += "def load_entries():\n";
-    text += "    if not p.exists():\n";
-    text += "        return []\n";
-    text += "    try:\n";
-    text += "        data = json.loads(p.read_text())\n";
-    text += "    except Exception:\n";
-    text += "        return None\n";
-    text += "    if not isinstance(data, dict):\n";
-    text += "        return None\n";
-    text += "    entries = data.get('entries')\n";
-    text += "    if not isinstance(entries, list):\n";
-    text += "        return None\n";
-    text += "    return entries\n";
-    text += "def line_blob(entries):\n";
-    text += "    lines = []\n";
-    text += "    for entry in entries:\n";
-    text += "        if not isinstance(entry, dict):\n";
-    text += "            return None\n";
-    text += "        family = entry.get('family')\n";
-    text += "        file = entry.get('file')\n";
-    text += "        line = entry.get('line')\n";
-    text += "        quote = entry.get('quote', '')\n";
-    text += "        if quote is None:\n";
-    text += "            quote = ''\n";
-    text += "        if not isinstance(family, str) or not isinstance(file, str) or type(line) is not int or not isinstance(quote, str):\n";
-    text += "            return None\n";
-    text += "        if family == '' or file == '' or line <= 0:\n";
-    text += "            return None\n";
-    text += "        encoded = base64.b64encode(quote.encode('utf-8')).decode('ascii')\n";
-    text += "        lines.append(family + '\\t' + file + '\\t' + str(line) + '\\t' + encoded)\n";
-    text += "    blob = '\\n'.join(lines)\n";
-    text += "    if lines:\n";
-    text += "        blob += '\\n'\n";
-    text += "    return blob.encode('utf-8')\n";
-    text += "entries = load_entries()\n";
-    text += "if entries is None:\n";
-    text += "    sys.stdout.write('LEDGER_INVALID\\n')\n";
-    text += "    sys.exit(0)\n";
-    text += "raw = line_blob(entries)\n";
-    text += "if raw is None:\n";
-    text += "    sys.stdout.write('LEDGER_INVALID\\n')\n";
-    text += "    sys.exit(0)\n";
-    return text;
+    return #"import json, base64, pathlib, sys, subprocess
+CHUNK = 4500
+p = pathlib.Path(".grok/review-pattern-ledger.jsonl")
+file_raw = b""
+def load_entries():
+    global file_raw
+    file_raw = b""
+    if not p.exists():
+        git_cmd = "LC_ALL=C git cat-file -e HEAD:.grok/review-pattern-ledger.jsonl"
+        try:
+            proc = subprocess.run(git_cmd, shell=True, capture_output=True)
+        except Exception:
+            return None
+        err = proc.stderr.decode("utf-8", "replace")
+        if proc.returncode != 0 and "does not exist in" in err:
+            old = pathlib.Path(".grok/review-pattern-ledger.json")
+            if not old.exists():
+                return []
+        return None
+    raw = p.read_bytes()
+    file_raw = raw
+    if len(raw) == 0 or raw.strip(b" \t\r\n") == b"":
+        return None
+    if not raw.endswith(b"\n") or raw.startswith(b"\n") or b"\n\n" in raw:
+        return None
+    entries = []
+    for line in raw.split(b"\n")[:-1]:
+        try:
+            obj = json.loads(line.decode("utf-8"))
+        except Exception:
+            return None
+        if not isinstance(obj, dict) or set(obj) != {"family", "file", "line", "quote"}:
+            return None
+        family = obj["family"]
+        file = obj["file"]
+        line_no = obj["line"]
+        quote = obj["quote"]
+        if family not in ("comment", "helper", "presence", "test"):
+            return None
+        if not isinstance(file, str) or file == "" or not isinstance(quote, str):
+            return None
+        if type(line_no) is not int or line_no <= 0:
+            return None
+        entries.append({"family": family, "file": file, "line": line_no, "quote": quote})
+    return entries
+def line_blob(entries):
+    lines = []
+    for entry in entries:
+        family = entry["family"]
+        file = entry["file"]
+        line = entry["line"]
+        quote = entry["quote"]
+        encoded = base64.b64encode(quote.encode("utf-8")).decode("ascii")
+        lines.append(family + "\t" + file + "\t" + str(line) + "\t" + encoded)
+    blob = "\n".join(lines)
+    if lines:
+        blob += "\n"
+    return blob.encode("utf-8")
+entries = load_entries()
+if entries is None:
+    sys.stdout.write("LEDGER_INVALID\n")
+    sys.exit(0)
+raw = line_blob(entries)
+"#;
 }
 
 fn manifest_tail() {
-    let text = "";
-    text += "parts = 0 if len(raw) == 0 else (len(raw) + CHUNK - 1) // CHUNK\n";
-    text += "sys.stdout.write('COUNT %d\\nPARTS %d\\nSUM %d\\n' % (len(entries), parts, sum(raw)))\n";
-    return text;
+    return #"parts = 0 if len(raw) == 0 else (len(raw) + CHUNK - 1) // CHUNK
+sys.stdout.write("COUNT %d\nPARTS %d\nSUM %d\nFILE_BYTES %d\nFILE_SUM %d\n" % (len(entries), parts, sum(raw), len(file_raw), sum(file_raw)))
+"#;
 }
 
 fn part_tail(part_no) {
@@ -1663,69 +1687,102 @@ fn append_program(payload, expect_bytes, expect_sum) {
     return program;
 }
 
-fn save_ledger(entries, label) {
-    let readable = ledger_readable(entries);
-    if readable.ok != true {
-        log("Ledger write refused before replace. Entry would not survive the next read (" + readable.error + ") at " + readable.file + ":" + readable.line.to_string() + " field " + readable.field + " code " + readable.code.to_string() + ".");
-        return false;
-    }
-    let encoded = json_encode(#{ entries: entries });
-    let b64 = b64_encode_text(encoded);
-    let program = "";
-    program += "import base64, pathlib, sys\n";
-    program += "lines = []\n";
-    let i = 0;
-    while i < b64.len() {
-        let n = 76;
-        if i + n > b64.len() {
-            n = b64.len() - i;
-        }
-        program += "lines.append('";
-        program += b64.sub_string(i, n);
-        program += "')\n";
-        i += 76;
-    }
-    program += "raw = base64.b64decode(''.join(lines))\n";
-    program += "path = pathlib.Path('.grok/review-pattern-ledger.json')\n";
-    program += "path.write_bytes(raw)\n";
-    program += "disk = path.read_bytes()\n";
-    program += "if disk != raw:\n";
-    program += "    sys.stdout.write('WRITE_MISMATCH\\n')\n";
-    program += "else:\n";
-    program += "    sys.stdout.write('WROTE %d\\n' % len(raw))\n";
-    let prompt = "";
-    prompt += "From the repository root, run the program below once with the shell. ";
-    prompt += "Do not use the write tool. Do not edit the program. Do not reformat the file. ";
-    prompt += "Do not run the program again. ";
-    prompt += "Your final message must be the program stdout and nothing else. ";
-    prompt += "If python3 is missing, use python with the same program.\n";
-    prompt += shell_program(program);
-    let write_result = agent(prompt, #{
-        label: label,
-        capability_mode: "read-write",
-        phase: "Clean",
-    });
-    let wrote = agent_stdout(write_result);
-    if wrote.stub == true || wrote.ok != true {
-        return false;
-    }
+fn pause_ledger_mismatch(expected_bytes, expected_sum, manifest_bytes, manifest_sum) {
+    let message = "Ledger checksum mismatch for .grok/review-pattern-ledger.jsonl. Expected ";
+    message += expected_bytes.to_string();
+    message += " bytes summing to ";
+    message += expected_sum.to_string();
+    message += ", manifest has ";
+    message += manifest_bytes.to_string();
+    message += " bytes summing to ";
+    message += manifest_sum.to_string();
+    message += ". Inspect git diff -- .grok/review-pattern-ledger.jsonl before any checkout. Extra bytes may be a good append from this run, a replay, or an overlapping run. Not scanning or editing until the file is restored.";
+    pause("verification", message);
+}
+
+fn read_ledger_image(label, phase_name) {
     let check = agent(ledger_read_prompt(ledger_python_body() + manifest_tail()), #{
-        label: label + "-check",
+        label: label,
         capability_mode: "execute",
-        phase: "Clean",
+        phase: phase_name,
     });
     let checked = agent_stdout(check);
     if checked.ok != true {
-        return false;
+        return #{ ok: false, count: -1, file_bytes: -1, file_sum: -1 };
     }
     let manifest = parse_manifest(checked.text);
-    if manifest.ok != true {
-        return false;
+    if live_manifest_ok(manifest) != true {
+        return #{ ok: false, count: -1, file_bytes: -1, file_sum: -1 };
     }
-    if manifest.count != entries.len() || manifest.sum != ledger_sum(entries) {
-        return false;
+    return #{ ok: true, count: manifest.count, file_bytes: manifest.file_bytes, file_sum: manifest.file_sum };
+}
+
+fn ledger_image_ok(label, phase_name, expected_bytes, expected_sum, expected_count) {
+    let image = read_ledger_image(label, phase_name);
+    if image.ok == true && image.file_bytes == expected_bytes && image.file_sum == expected_sum && image.count == expected_count {
+        return true;
     }
-    return true;
+    let got_bytes = -1;
+    let got_sum = -1;
+    if image.ok == true {
+        got_bytes = image.file_bytes;
+        got_sum = image.file_sum;
+    }
+    pause_ledger_mismatch(expected_bytes, expected_sum, got_bytes, got_sum);
+    return false;
+}
+
+fn append_ledger(pending, loaded_bytes, loaded_sum, loaded_count, label) {
+    if pending.len() == 0 {
+        log("Ledger unchanged; rejected sites were already recorded.");
+        return #{ ok: true, paused: false, bytes: loaded_bytes, sum: loaded_sum, count: loaded_count };
+    }
+    let payload = "";
+    for line in pending {
+        payload += line;
+        payload += "\n";
+    }
+    let payload_raw = utf8_bytes(payload);
+    let payload_len = payload_raw.len();
+    let payload_sum = 0;
+    for b in payload_raw {
+        payload_sum += b;
+    }
+    let template = append_program_template();
+    if append_program_ok(template) != true {
+        log("Ledger append refused. The writer program is not append-only.");
+        return #{ ok: false, paused: false, bytes: loaded_bytes, sum: loaded_sum, count: loaded_count };
+    }
+    let program = append_program(payload, loaded_bytes, loaded_sum);
+    let write_result = agent(ledger_read_prompt(program), #{
+        label: label,
+        capability_mode: "execute",
+        phase: "Clean",
+    });
+    let wrote = agent_stdout(write_result);
+    if wrote.text != "" {
+        log("Ledger writer: " + one_line(wrote.text, 160));
+    }
+    let image = read_ledger_image(label + "-check", "Clean");
+    if image.ok == true && image.file_bytes == loaded_bytes && image.file_sum == loaded_sum && image.count == loaded_count {
+        log("Ledger append failed. File still matches the loaded checksum. Rejected sites from this run were not saved.");
+        return #{ ok: false, paused: false, bytes: loaded_bytes, sum: loaded_sum, count: loaded_count };
+    }
+    let next_bytes = loaded_bytes + payload_len;
+    let next_sum = loaded_sum + payload_sum;
+    let next_count = loaded_count + pending.len();
+    if image.ok == true && image.file_bytes == next_bytes && image.file_sum == next_sum && image.count == next_count {
+        log("Ledger appended " + pending.len().to_string() + " line(s). File is " + next_count.to_string() + " lines, " + next_bytes.to_string() + " bytes, FILE_SUM " + next_sum.to_string() + ".");
+        return #{ ok: true, paused: false, bytes: next_bytes, sum: next_sum, count: next_count };
+    }
+    let got_bytes = -1;
+    let got_sum = -1;
+    if image.ok == true {
+        got_bytes = image.file_bytes;
+        got_sum = image.file_sum;
+    }
+    pause_ledger_mismatch(next_bytes, next_sum, got_bytes, got_sum);
+    return #{ ok: false, paused: true, bytes: loaded_bytes, sum: loaded_sum, count: loaded_count };
 }
 
 fn ledger_codec_failures() {
@@ -2012,6 +2069,66 @@ fn ledger_codec_failures() {
     }
     if !has_text(program, "os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)") {
         failed += "program-open ";
+    }
+    let reader = ledger_python_body();
+    if !has_text(reader, "read_bytes") || !has_text(reader, #"split(b"\n")[:-1]"#) || !has_text(reader, #"endswith(b"\n")"#) || !has_text(reader, #"b"\n\n""#) {
+        failed += "reader-bytes ";
+    }
+    if !has_text(reader, "LC_ALL=C") || !has_text(reader, "git cat-file -e HEAD:.grok/review-pattern-ledger.jsonl") {
+        failed += "reader-git ";
+    }
+    if !has_text(reader, "Path(\".grok/review-pattern-ledger.json\")") || !has_text(reader, "if not old.exists():") {
+        failed += "reader-old ";
+    }
+    let zero_snip = #"    if len(raw) == 0 or raw.strip(b" \t\r\n") == b"":
+        return None"#;
+    let old_snip = #"            if not old.exists():
+                return []
+        return None"#;
+    if !has_text(reader, zero_snip) || !has_text(reader, old_snip) {
+        failed += "reader-empty ";
+    }
+    let marker = "return []";
+    let returns_empty = 0;
+    let ri = 0;
+    while ri + marker.len() <= reader.len() {
+        if reader.sub_string(ri, marker.len()) == marker {
+            returns_empty += 1;
+            ri += marker.len();
+        } else {
+            ri += 1;
+        }
+    }
+    if returns_empty != 1 || has_text(reader, "read_text") || has_text(reader, "write_bytes") {
+        failed += "reader-returns ";
+    }
+    let tail = manifest_tail();
+    if !has_text(tail, "FILE_BYTES") || !has_text(tail, "FILE_SUM") || has_text(tail, "EXPECT_") || has_text(reader, "EXPECT_") {
+        failed += "manifest-tail ";
+    }
+    let bare = parse_manifest("COUNT 0\nPARTS 0\nSUM 0\n");
+    if bare.ok != true || bare.file_bytes != -1 || bare.file_sum != -1 || live_manifest_ok(bare) != false {
+        failed += "live-bare ";
+    }
+    let zeros = parse_manifest("COUNT 0\nPARTS 0\nSUM 0\nFILE_BYTES 0\nFILE_SUM 0\n");
+    if zeros.ok != true || zeros.file_bytes != 0 || zeros.file_sum != 0 || zeros.sum != 0 || live_manifest_ok(zeros) != true {
+        failed += "live-zero ";
+    }
+    let only_bytes = parse_manifest("COUNT 0\nPARTS 0\nSUM 0\nFILE_BYTES 0\n");
+    if only_bytes.ok != true || live_manifest_ok(only_bytes) != false {
+        failed += "live-nosum ";
+    }
+    let dup_sum = parse_manifest("COUNT 1\nPARTS 1\nSUM 2\nFILE_BYTES 3\nFILE_SUM 4\nFILE_SUM 5\n");
+    if dup_sum.ok != false {
+        failed += "dup-sum ";
+    }
+    let dup_bytes = parse_manifest("COUNT 1\nPARTS 1\nSUM 2\nFILE_BYTES 3\nFILE_BYTES 4\nFILE_SUM 5\n");
+    if dup_bytes.ok != false {
+        failed += "dup-bytes ";
+    }
+    let fields = parse_manifest("COUNT 91\nPARTS 3\nSUM 993217\nFILE_BYTES 12889\nFILE_SUM 1116564\n");
+    if fields.ok != true || fields.count != 91 || fields.parts != 3 || fields.sum != 993217 || fields.file_bytes != 12889 || fields.file_sum != 1116564 || live_manifest_ok(fields) != true || fields.sum == fields.file_sum {
+        failed += "file-fields ";
     }
     return failed;
 }
@@ -2554,7 +2671,7 @@ let findings_schema = #{
     },
 };
 
-let ledger_path = ".grok/review-pattern-ledger.json";
+let ledger_path = ".grok/review-pattern-ledger.jsonl";
 
 let diff_schema = #{
     "type": "object",
@@ -2611,6 +2728,10 @@ let ledger = [];
 let ledger_read_ok = false;
 let ledger_stub = false;
 let ledger_error = "";
+let ledger_file_bytes = 0;
+let ledger_file_sum = 0;
+let ledger_count = 0;
+let ledger_halt = false;
 let manifest_got = agent_stdout(ledger_read);
 if manifest_got.stub == true {
     ledger_stub = true;
@@ -2620,52 +2741,60 @@ if manifest_got.stub == true {
     let manifest = parse_manifest(manifest_got.text);
     if manifest.ok != true {
         ledger_error = manifest.error;
-    } else if manifest.parts == 0 {
-        let none = [];
-        let loaded = load_transport(manifest_got.text, none);
-        if loaded.ok != true {
-            ledger_error = loaded.error;
-        } else {
-            ledger = loaded.entries;
-            ledger_read_ok = true;
-        }
-    } else if manifest.parts > 16 {
-        ledger_error = "too-many-parts";
+    } else if live_manifest_ok(manifest) != true {
+        ledger_error = "FILE_SUM";
     } else {
-        let part_jobs = [];
-        let part_no = 1;
-        while part_no <= manifest.parts {
-            part_jobs.push(#{
-                prompt: ledger_read_prompt(ledger_python_body() + part_tail(part_no)),
-                label: "read-ledger-part-" + part_no.to_string(),
-                capability_mode: "execute",
-                phase: "Ledger",
-            });
-            part_no += 1;
-        }
-        let part_results = parallel(part_jobs);
-        if type_of(part_results) != "array" {
-            part_results = [];
-        }
-        let part_texts = [];
-        let part_failed = false;
-        for part_result in part_results {
-            let part_got = agent_stdout(part_result);
-            if part_got.ok != true {
-                part_failed = true;
-            } else {
-                part_texts.push(part_got.text);
-            }
-        }
-        if part_failed || part_texts.len() != manifest.parts {
-            ledger_error = "part";
-        } else {
-            let loaded = load_transport(manifest_got.text, part_texts);
+        ledger_file_bytes = manifest.file_bytes;
+        ledger_file_sum = manifest.file_sum;
+        if manifest.parts == 0 {
+            let none = [];
+            let loaded = load_transport(manifest_got.text, none);
             if loaded.ok != true {
                 ledger_error = loaded.error;
             } else {
                 ledger = loaded.entries;
+                ledger_count = ledger.len();
                 ledger_read_ok = true;
+            }
+        } else if manifest.parts > 16 {
+            ledger_error = "too-many-parts";
+        } else {
+            let part_jobs = [];
+            let part_no = 1;
+            while part_no <= manifest.parts {
+                part_jobs.push(#{
+                    prompt: ledger_read_prompt(ledger_python_body() + part_tail(part_no)),
+                    label: "read-ledger-part-" + part_no.to_string(),
+                    capability_mode: "execute",
+                    phase: "Ledger",
+                });
+                part_no += 1;
+            }
+            let part_results = parallel(part_jobs);
+            if type_of(part_results) != "array" {
+                part_results = [];
+            }
+            let part_texts = [];
+            let part_failed = false;
+            for part_result in part_results {
+                let part_got = agent_stdout(part_result);
+                if part_got.ok != true {
+                    part_failed = true;
+                } else {
+                    part_texts.push(part_got.text);
+                }
+            }
+            if part_failed || part_texts.len() != manifest.parts {
+                ledger_error = "part";
+            } else {
+                let loaded = load_transport(manifest_got.text, part_texts);
+                if loaded.ok != true {
+                    ledger_error = loaded.error;
+                } else {
+                    ledger = loaded.entries;
+                    ledger_count = ledger.len();
+                    ledger_read_ok = true;
+                }
             }
         }
     }
@@ -2674,12 +2803,12 @@ let baseline_parsed = collect_diff_files(baseline_diff);
 let baseline_files = baseline_parsed.files;
 let baseline_ok = baseline_parsed.ok;
 if ledger_stub {
-    log("Ledger was not loaded. This run will not overwrite " + ledger_path + ".");
+    log("Ledger was not loaded. This run will not append to " + ledger_path + ".");
 } else if ledger_read_ok {
     log("Ledger loaded " + ledger.len().to_string() + " rejected site(s).");
 } else {
     log("Ledger was not loaded. This run stops before Scan and will not edit.");
-    let pause_message = "The ledger reader did not return a parseable copy of .grok/review-pattern-ledger.json";
+    let pause_message = "The ledger reader did not return a parseable copy of .grok/review-pattern-ledger.jsonl";
     if ledger_error != "" {
         pause_message += " (" + ledger_error + ")";
     }
@@ -3040,27 +3169,37 @@ let clean_schema = #{
 phase("Clean");
 let ledger_added = 0;
 let ledger_wrote = false;
+let ledger_append_failed = false;
 let refusal_write_failed = false;
 if ledger_read_ok {
+    let reject_pending = [];
     for finding in rejected {
-        let before_len = ledger.len();
-        ledger = ledger_upsert(ledger, finding.file, finding.family, finding.line, finding.quote);
-        if ledger.len() != before_len {
+        let noted = ledger_note(ledger, finding.file, finding.family, finding.line, finding.quote);
+        ledger = noted.entries;
+        if noted.line != () {
+            reject_pending.push(noted.line);
             ledger_added += 1;
         }
     }
-}
-if ledger_read_ok && rejected.len() > 0 {
-    if save_ledger(ledger, "write-ledger") {
-        ledger_wrote = true;
-        log("Ledger now has " + ledger.len().to_string() + " site(s), " + ledger_added.to_string() + " new.");
-    } else {
-        log("Ledger write failed. Rejected sites from this run were not saved.");
+    if rejected.len() > 0 {
+        let appended = append_ledger(reject_pending, ledger_file_bytes, ledger_file_sum, ledger_count, "write-ledger");
+        if appended.paused == true {
+            ledger_halt = true;
+            ledger_append_failed = true;
+        } else if appended.ok == true && reject_pending.len() > 0 {
+            ledger_wrote = true;
+            ledger_file_bytes = appended.bytes;
+            ledger_file_sum = appended.sum;
+            ledger_count = appended.count;
+            log("Ledger now has " + ledger.len().to_string() + " site(s), " + ledger_added.to_string() + " new.");
+        } else if appended.ok != true {
+            ledger_append_failed = true;
+        }
     }
 }
 let clean_jobs = [];
 let clean_areas = [];
-if do_apply {
+if do_apply && !ledger_halt {
     for scan_area in areas {
         let batch = [];
         for finding in confirmed {
@@ -3102,7 +3241,7 @@ if do_apply {
             clean_areas.push(scan_area);
         }
     }
-} else {
+} else if !do_apply {
     log("Apply is off. Confirmed edits stay in the report.");
 }
 
@@ -3204,20 +3343,35 @@ if editor_contradictions > 0 {
 if refused_unmatched > 0 {
     log("Ignored " + refused_unmatched.to_string() + " refusal(s) with no matching finding or reason.");
 }
-if ledger_read_ok && refused_items.len() > 0 {
+if ledger_read_ok && clean_jobs.len() > 0 && !ledger_halt {
+    if ledger_image_ok("ledger-intact-clean", "Clean", ledger_file_bytes, ledger_file_sum, ledger_count) != true {
+        ledger_halt = true;
+    }
+}
+if ledger_read_ok && refused_items.len() > 0 && !ledger_halt {
+    let refusal_pending = [];
     for item in refused_items {
-        let before_len = ledger.len();
-        ledger = ledger_upsert(ledger, item.file, item.family, item.line, item.quote);
-        if ledger.len() != before_len {
+        let noted = ledger_note(ledger, item.file, item.family, item.line, item.quote);
+        ledger = noted.entries;
+        if noted.line != () {
+            refusal_pending.push(noted.line);
             ledger_added += 1;
         }
     }
-    if save_ledger(ledger, "write-ledger-refusals") {
-        ledger_wrote = true;
-        log("Ledger now has " + ledger.len().to_string() + " site(s), " + ledger_added.to_string() + " new.");
-    } else {
+    let appended = append_ledger(refusal_pending, ledger_file_bytes, ledger_file_sum, ledger_count, "write-ledger-refusals");
+    if appended.paused == true {
+        ledger_halt = true;
+        ledger_append_failed = true;
         refusal_write_failed = true;
-        log("Ledger write failed. Refused sites from this run were not saved.");
+    } else if appended.ok == true && refusal_pending.len() > 0 {
+        ledger_wrote = true;
+        ledger_file_bytes = appended.bytes;
+        ledger_file_sum = appended.sum;
+        ledger_count = appended.count;
+        log("Ledger now has " + ledger.len().to_string() + " site(s), " + ledger_added.to_string() + " new.");
+    } else if appended.ok != true {
+        ledger_append_failed = true;
+        refusal_write_failed = true;
     }
 }
 
@@ -3239,11 +3393,15 @@ let repair_schema = #{
     },
 };
 
-phase("Check");
+let check_execute_ran = false;
+if !ledger_halt {
+    phase("Check");
+}
 let check_files = [];
 let check_from_diff = false;
 let run_golden = false;
-if do_apply && baseline_ok {
+if !ledger_halt && do_apply && baseline_ok {
+    check_execute_ran = true;
     let after_diff = agent(diff_prompt, #{
         label: "check-diff",
         capability_mode: "execute",
@@ -3271,16 +3429,17 @@ if do_apply {
     run_golden = needs_golden(check_files);
 }
 let check_result = ();
-if do_apply && check_files.len() > 0 {
+if !ledger_halt && do_apply && check_files.len() > 0 {
+    check_execute_ran = true;
     check_result = agent(make_check_prompt(check_files, run_golden), #{
         label: "lint-typecheck-test",
         capability_mode: "execute",
         output_schema: check_schema,
         phase: "Check",
     });
-} else if do_apply {
+} else if !ledger_halt && do_apply {
     log("No files changed. Skipped lint, typecheck, and tests.");
-} else {
+} else if !ledger_halt {
     log("Apply is off. Skipped lint, typecheck, and tests.");
 }
 
@@ -3295,7 +3454,7 @@ if check_result != () {
         log("lint, typecheck, or targeted tests did not pass.");
     }
 }
-if do_apply && check_ok == false && check_summary != "" {
+if !ledger_halt && do_apply && check_ok == false && check_summary != "" {
     let repair_prompt = "";
     repair_prompt += "Lint, typecheck, or a targeted test failed after a behavior-preserving cleanup. Fix only the diagnostics quoted in the summary, and only in the edited list. ";
     repair_prompt += "If the diagnostic is formatting or a line longer than 120 characters, run biome check --write on only those files, using node_modules/.bin/biome. Do not rewrite logic to satisfy the formatter. ";
@@ -3334,8 +3493,14 @@ if do_apply && check_ok == false && check_summary != "" {
             }
         }
     }
-    if repair_hits > 0 {
+    if ledger_read_ok {
+        if ledger_image_ok("ledger-intact-repair", "Check", ledger_file_bytes, ledger_file_sum, ledger_count) != true {
+            ledger_halt = true;
+        }
+    }
+    if !ledger_halt && repair_hits > 0 {
         if baseline_ok {
+            check_execute_ran = true;
             let repair_diff = agent(diff_prompt, #{
                 label: "recheck-diff",
                 capability_mode: "execute",
@@ -3354,6 +3519,7 @@ if do_apply && check_ok == false && check_summary != "" {
         }
         run_golden = needs_golden(check_files);
         log("Repair touched " + repair_hits.to_string() + " file(s). Re-running lint, typecheck, and targeted tests.");
+        check_execute_ran = true;
         check_result = agent(make_check_prompt(check_files, run_golden), #{
             label: "lint-typecheck-test-again",
             capability_mode: "execute",
@@ -3368,8 +3534,13 @@ if do_apply && check_ok == false && check_summary != "" {
         } else {
             log("lint, typecheck, or targeted tests did not pass after repair.");
         }
-    } else {
+    } else if !ledger_halt {
         log("Check failed and the repair changed nothing in the check list.");
+    }
+}
+if !ledger_halt && check_execute_ran && ledger_read_ok {
+    if ledger_image_ok("ledger-intact-check", "Check", ledger_file_bytes, ledger_file_sum, ledger_count) != true {
+        ledger_halt = true;
     }
 }
 
@@ -3408,10 +3579,10 @@ if ledger_read_ok {
         report += "Ledger write: refused sites not saved\n";
     } else if ledger_wrote {
         report += "Ledger write: saved\n";
-    } else if rejected.len() == 0 && refused_items.len() == 0 {
-        report += "Ledger write: unchanged\n";
-    } else {
+    } else if ledger_append_failed {
         report += "Ledger write: failed\n";
+    } else {
+        report += "Ledger write: unchanged\n";
     }
 } else {
     report += "Ledger write: skipped because the ledger could not be read\n";
@@ -3493,12 +3664,14 @@ if do_apply {
 } else {
     summary += ", report only";
 }
-complete(#{
-    summary: summary,
-    apply: do_apply,
-    confirmed: confirmed.len(),
-    edited: edited.len(),
-    check_ok: check_ok,
-    path: report_path,
-    report: report,
-});
+if !ledger_halt {
+    complete(#{
+        summary: summary,
+        apply: do_apply,
+        confirmed: confirmed.len(),
+        edited: edited.len(),
+        check_ok: check_ok,
+        path: report_path,
+        report: report,
+    });
+}
