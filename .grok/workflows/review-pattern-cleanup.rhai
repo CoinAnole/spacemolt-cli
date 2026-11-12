@@ -36,8 +36,10 @@ let meta = #{
 // Each part stays under the tool output cap. The script strips whitespace,
 // decodes, and checks the count and the byte sum. A mismatch stops the run
 // before Scan. Resuming does not retry the read.
-// The writer runs a program that writes the canonical bytes. A second program
-// reads the file back, and the script checks the count and the byte sum.
+// The writer runs a program that writes the canonical bytes. Before that
+// program runs, every entry must rebuild through the same reader the next
+// Ledger phase uses. A quote that does not rebuild is not written. A second
+// program reads the file back, and the script checks the count and the byte sum.
 // A test rejection whose reason says the branch is still unlocked is not a
 // rejection and is not written to the ledger.
 // An editor refusal is written the same way. A test refusal whose reason says
@@ -580,48 +582,34 @@ fn byte_to_char(b) {
     return "";
 }
 
+fn unicode_chars() {
+    return "°±·×–—‘’“”…←→↔−≠≤≥─│╭╮╯╰✓✗🚀";
+}
+
+fn unicode_points() {
+    return [
+        0x00B0, 0x00B1, 0x00B7, 0x00D7,
+        0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2026,
+        0x2190, 0x2192, 0x2194,
+        0x2212, 0x2260, 0x2264, 0x2265,
+        0x2500, 0x2502, 0x256D, 0x256E, 0x256F, 0x2570,
+        0x2713, 0x2717,
+        0x1F680
+    ];
+}
+
 fn unicode_char(cp) {
-    if cp == 0x00D7 {
-        return "×";
+    let chars = unicode_chars();
+    let points = unicode_points();
+    if chars.len() != points.len() {
+        return "";
     }
-    if cp == 0x00B1 {
-        return "±";
-    }
-    if cp == 0x2013 {
-        return "–";
-    }
-    if cp == 0x2014 {
-        return "—";
-    }
-    if cp == 0x2018 {
-        return "‘";
-    }
-    if cp == 0x2019 {
-        return "’";
-    }
-    if cp == 0x201C {
-        return "“";
-    }
-    if cp == 0x201D {
-        return "”";
-    }
-    if cp == 0x2026 {
-        return "…";
-    }
-    if cp == 0x2190 {
-        return "←";
-    }
-    if cp == 0x2192 {
-        return "→";
-    }
-    if cp == 0x2260 {
-        return "≠";
-    }
-    if cp == 0x2264 {
-        return "≤";
-    }
-    if cp == 0x2265 {
-        return "≥";
+    let i = 0;
+    while i < points.len() {
+        if points[i] == cp {
+            return chars.sub_string(i, 1);
+        }
+        i += 1;
     }
     return "";
 }
@@ -817,10 +805,7 @@ fn entries_from_blob(text) {
 fn ledger_bytes(entries) {
     let bytes = [];
     for entry in entries {
-        let quote = "";
-        if entry.quote != () {
-            quote = entry.quote;
-        }
+        let quote = quote_of(entry);
         let line = entry.family + "\t" + entry.file + "\t" + entry.line.to_string() + "\t" + b64_encode_bytes(utf8_bytes(quote)) + "\n";
         let more = utf8_bytes(line);
         for b in more {
@@ -1053,7 +1038,109 @@ fn ledger_read_prompt(body) {
     return text;
 }
 
+fn quote_of(entry) {
+    if entry.quote != () {
+        return entry.quote;
+    }
+    return "";
+}
+
+fn scalar_failure(text) {
+    let i = 0;
+    while i < text.len() {
+        let ch = text.sub_string(i, 1);
+        let back = utf8_to_string(utf8_bytes(ch));
+        if back.ok != true || back.text != ch {
+            return text[i].to_int();
+        }
+        i += 1;
+    }
+    return -1;
+}
+
+fn first_bad_entry(entries) {
+    let file = "";
+    let line_no = 0;
+    let code = 0;
+    let field = "";
+    let saw_nul = false;
+    for entry in entries {
+        if code <= 0 {
+            let quote_code = scalar_failure(quote_of(entry));
+            let file_code = scalar_failure(entry.file);
+            let family_code = scalar_failure(entry.family);
+            if quote_code > 0 {
+                file = entry.file;
+                line_no = entry.line;
+                code = quote_code;
+                field = "quote";
+            } else if file_code > 0 {
+                file = entry.file;
+                line_no = entry.line;
+                code = file_code;
+                field = "file";
+            } else if family_code > 0 {
+                file = entry.file;
+                line_no = entry.line;
+                code = family_code;
+                field = "family";
+            } else if !saw_nul && (quote_code == 0 || file_code == 0 || family_code == 0) {
+                saw_nul = true;
+                file = entry.file;
+                line_no = entry.line;
+                if quote_code == 0 {
+                    field = "quote";
+                } else if file_code == 0 {
+                    field = "file";
+                } else {
+                    field = "family";
+                }
+            }
+        }
+    }
+    return #{ file: file, line: line_no, code: code, field: field };
+}
+
+fn ledger_readable(entries) {
+    let bytes = ledger_bytes(entries);
+    let text = utf8_to_string(bytes);
+    if text.ok != true {
+        let bad = first_bad_entry(entries);
+        return #{ ok: false, error: text.error, file: bad.file, line: bad.line, code: bad.code, field: bad.field };
+    }
+    let parsed = entries_from_blob(text.text);
+    if parsed.ok != true {
+        let bad = first_bad_entry(entries);
+        return #{ ok: false, error: parsed.error, file: bad.file, line: bad.line, code: bad.code, field: bad.field };
+    }
+    if parsed.entries.len() != entries.len() {
+        return #{ ok: false, error: "count", file: "", line: 0, code: 0, field: "" };
+    }
+    let i = 0;
+    while i < entries.len() {
+        let entry = entries[i];
+        let got = parsed.entries[i];
+        if got.family != entry.family || got.file != entry.file || got.line != entry.line || got.quote != quote_of(entry) {
+            let one = [];
+            one.push(entry);
+            let bad = first_bad_entry(one);
+            let code = bad.code;
+            if bad.field == "" {
+                code = -1;
+            }
+            return #{ ok: false, error: "round", file: entry.file, line: entry.line, code: code, field: bad.field };
+        }
+        i += 1;
+    }
+    return #{ ok: true, error: "", file: "", line: 0, code: 0, field: "" };
+}
+
 fn save_ledger(entries, label) {
+    let readable = ledger_readable(entries);
+    if readable.ok != true {
+        log("Ledger write refused before replace. Entry would not survive the next read (" + readable.error + ") at " + readable.file + ":" + readable.line.to_string() + " field " + readable.field + " code " + readable.code.to_string() + ".");
+        return false;
+    }
     let encoded = json_encode(#{ entries: entries });
     let b64 = b64_encode_text(encoded);
     let program = "";
@@ -1159,6 +1246,10 @@ fn ledger_codec_failures() {
     if ledger_sum(sample) != 7913 {
         failed += "sum ";
     }
+    let sample_read = ledger_readable(sample);
+    if sample_read.ok != true {
+        failed += "sample-read ";
+    }
     let manifest = "COUNT 2\nPARTS 1\nSUM 7913\n";
     let part = "dGVzdAlzcmMvYS50cwk0CWFtOXBiaWduWEc0bktTQmhibVFnWENzeA\npjb21tZW50CXNyYy9kaXNwbGF5L2RvY2stc3RhdGUudHMJMjEJWVNEaWhwSWdZZz09Cg==";
     let parts = [];
@@ -1175,6 +1266,10 @@ fn ledger_codec_failures() {
     if empty.ok != true || empty.entries.len() != 0 {
         failed += "empty ";
     }
+    let empty_read = ledger_readable([]);
+    if empty_read.ok != true || empty_read.error != "" {
+        failed += "empty-read ";
+    }
     let invalid = load_transport("LEDGER_INVALID\n", []);
     if invalid.ok != false {
         failed += "invalid ";
@@ -1183,6 +1278,77 @@ fn ledger_codec_failures() {
     let back = utf8_to_string(b64_decode(b64_encode_text(round)).bytes);
     if back.ok != true || back.text != round {
         failed += "round ";
+    }
+    let rocket = "🚀";
+    let rocket_scalar = rocket.len() == 1 && rocket[0].to_int() == 128640;
+    if !rocket_scalar {
+        failed += "rocket-cp ";
+    }
+    let b64s = [
+        "wrA=", "wrE=", "wrc=", "w5c=",
+        "4oCT", "4oCU", "4oCY", "4oCZ", "4oCc", "4oCd", "4oCm",
+        "4oaQ", "4oaS", "4oaU",
+        "4oiS", "4omg", "4omk", "4oml",
+        "4pSA", "4pSC", "4pWt", "4pWu", "4pWv", "4pWw",
+        "4pyT", "4pyX",
+        "8J+agA=="
+    ];
+    let chars = unicode_chars();
+    let points = unicode_points();
+    if chars.len() != 27 || points.len() != 27 || b64s.len() != 27 {
+        failed += "catalog-len ";
+    } else if points[points.len() - 1] != 0x1F680 {
+        failed += "rocket-point ";
+    } else {
+        let i = 0;
+        while i < points.len() {
+            let ch = chars.sub_string(i, 1);
+            if ch.len() != 1 || ch[0].to_int() != points[i] || unicode_char(points[i]) != ch || b64_encode_text(ch) != b64s[i] {
+                failed += "catalog " + i.to_string() + " ";
+            }
+            i += 1;
+        }
+    }
+    let rocket_back = utf8_to_string(b64_decode("8J+agA==").bytes);
+    if rocket_back.ok != true || rocket_back.text != rocket {
+        failed += "rocket-b64 ";
+    }
+    let dot = utf8_to_string(b64_decode("wrc=").bytes);
+    if dot.ok != true || dot.text != "·" {
+        failed += "dot ";
+    }
+    let times = utf8_to_string(b64_decode("w5c=").bytes);
+    if times.ok != true || times.text != "×" {
+        failed += "times ";
+    }
+    let duel = "1× Ring Cleaver (Fighter) · solo duel";
+    let duel_entries = [];
+    duel_entries.push(#{ file: "src/formatter.test.ts", line: 11563, family: "test", quote: duel });
+    let duel_read = ledger_readable(duel_entries);
+    if duel_read.ok != true || ledger_sum(duel_entries) != 7780 || b64_encode_text(duel) != "McOXIFJpbmcgQ2xlYXZlciAoRmlnaHRlcikgwrcgc29sbyBkdWVs" {
+        failed += "duel ";
+    }
+    let encoded = json_encode(#{ entries: duel_entries });
+    let encoded_back = utf8_to_string(b64_decode(b64_encode_text(encoded)).bytes);
+    if encoded_back.ok != true || encoded_back.text != encoded {
+        failed += "json-round ";
+    } else if encoded.contains("·") && encoded.contains("×") {
+    } else if (encoded.contains("\\u00b7") || encoded.contains("\\u00B7")) && (encoded.contains("\\u00d7") || encoded.contains("\\u00D7")) {
+    } else {
+        failed += "json-form ";
+    }
+    let poison = [];
+    poison.push(#{ file: "src/a.ts", line: 9, family: "comment", quote: "keep ¶" });
+    let refused = ledger_readable(poison);
+    if refused.ok != false || refused.code != 182 || refused.line != 9 {
+        failed += "poison ";
+    }
+    if ledger_sum(poison) != 2581 {
+        failed += "poisonsum ";
+    }
+    let pilcrow = utf8_to_string(b64_decode("wrY=").bytes);
+    if b64_decode("wrY=").ok != true || pilcrow.ok != false {
+        failed += "pilcrow ";
     }
     return failed;
 }
