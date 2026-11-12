@@ -7458,7 +7458,7 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('Rescue WealthyMiner2023 WealthyMiner2023 0/1');
     expect(stdout).toContain('Issuing Base');
     expect(stdout).toContain('Earth Station');
-    expect(stdout).toContain('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
+    expect(stdout).toContain('Deliver Food Rations food_rations earth_station 0/5 cargo:2 s...');
     expect(stdout).toContain('piloting XP +50');
     expect(stdout).toContain(
       'Distress Call: CombatDummy6 (mission-distress-combatdummy6): Rescue CombatDummy6 in Markab before the distress signal expires.',
@@ -7498,13 +7498,15 @@ describe('structuredContent formatters', () => {
     const objectivesIndex = cells(header ?? '').indexOf('Objectives');
     const delivery = stdout.split('\n').find((line) => line.includes('|') && line.includes('Faction Supply Delivery'));
     const distress = stdout.split('\n').find((line) => line.includes('|') && line.includes('CombatDummy6'));
-    expect(cells(delivery ?? '')[objectivesIndex]).toBe('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
+    expect(cells(delivery ?? '')[objectivesIndex]).toBe(
+      'Deliver Food Rations food_rations earth_station 0/5 cargo:2 s...',
+    );
     expect(cells(distress ?? '')[objectivesIndex]).toBe('Rescue CombatDummy6 CombatDummy6 0/1');
     expect(cells(distress ?? '')[objectivesIndex]).not.toContain('cargo:');
     expect(cells(distress ?? '')[objectivesIndex]).not.toContain('storage:');
   });
 
-  test('get_active_missions prefers destination names and falls back to IDs', () => {
+  test('get_active_missions prints a counting base name and a differing target_base', () => {
     const { stdout, stderr } = captureStructuredOutput('get_active_missions', {
       missions: {
         active: [
@@ -7545,8 +7547,9 @@ describe('structuredContent formatters', () => {
     });
 
     expect(stderr).toBe('');
-    expect(stdout).toContain('Deliver Supplies Kepler Hub 0/1');
-    expect(stdout).not.toContain('kepler_hub');
+    expect(stdout).toContain('Deliver Supplies Kepler Hub kepler_hub 0/1');
+    expect(stdout).not.toContain('(kepler_hub)');
+    expect(stdout).not.toContain('id kepler_hub');
     expect(stdout).toContain('Deliver Parts frontier_cache 0/2');
     expect(stdout).toContain('nova_station');
   });
@@ -7618,7 +7621,7 @@ describe('structuredContent formatters', () => {
     expect(named.stderr).toBe('');
     expect(named.stdout).toContain('Destroy Kestrel Kestrel 0/1');
     expect(named.stdout).not.toContain('9c8913b2cf825728a2404c9e4c4d7afb');
-    expect(named.stdout).toContain('Deliver Food Rations earth_station 0/5');
+    expect(named.stdout).toContain('Deliver Food Rations food_rations earth_station 0/5');
     expect(named.stdout).not.toContain('cargo:');
     expect(named.stdout).not.toContain('storage:');
     expect(idOnly.stderr).toBe('');
@@ -7662,7 +7665,7 @@ describe('structuredContent formatters', () => {
       },
     ]);
     expect(both.stderr).toBe('');
-    expect(objectivesCell(both.stdout)).toBe('Deliver Food Rations earth_station 0/5 cargo:2 storage:3');
+    expect(objectivesCell(both.stdout)).toBe('Deliver Food Rations food_rations earth_station 0/5 cargo:2 s...');
     expect(both.stdout).not.toContain('=== Response ===');
     expect(both.stdout).not.toContain('[object Object]');
 
@@ -7895,9 +7898,185 @@ describe('structuredContent formatters', () => {
         max_missions: 5,
       },
     });
-    expect(withBase.stdout).toContain('Deliver cargo earth_station 0/4');
-    expect(withBase.stdout).not.toContain('Iron Ore');
+    expect(withBase.stdout).toContain('Deliver cargo Iron Ore earth_station 0/4');
     expect(withBase.stdout).not.toContain('ore_iron');
+  });
+
+  test('get_active_missions appends the counting base without dropping item, player, or system text', () => {
+    const cells = (line: string) => line.split('|').map((cell) => cell.trim());
+    const objectiveCell = (command: string, body: Record<string, unknown>, title: string) => {
+      const { stdout, stderr } = captureStructuredOutput(command, body);
+      expect(stderr).toBe('');
+      const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Objectives'));
+      const row = stdout.split('\n').find((line) => line.includes('|') && line.includes(title));
+      const index = cells(header ?? '').indexOf('Objectives');
+      return { stdout, cell: cells(row ?? '')[index] };
+    };
+    const active = (objectives: Record<string, unknown>[], command = 'get_active_missions') =>
+      objectiveCell(
+        command,
+        {
+          missions: {
+            active: [
+              {
+                mission_id: 'mission-count-base',
+                title: 'Count Base',
+                type: 'delivery',
+                objectives,
+                rewards: {},
+              },
+            ],
+            max_missions: 1,
+          },
+        },
+        'Count Base',
+      );
+
+    const named = active([
+      {
+        description: 'Buy ore',
+        item_name: 'Iron Ore',
+        item_id: 'ore_iron',
+        target_base_name: 'Kepler Hub',
+        target_base: 'kepler_hub',
+        target_base_id: 'ignored_board_id',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(named.cell).toBe('Buy ore Iron Ore Kepler Hub kepler_hub 0/1');
+    expect(named.stdout).not.toContain('ore_iron');
+    expect(named.stdout).not.toContain('ignored_board_id');
+    expect(named.stdout).not.toContain('(kepler_hub)');
+    expect(named.stdout).not.toContain('id kepler_hub');
+    expect(named.stdout).not.toContain('station Kepler');
+
+    const same = active([
+      {
+        description: 'Buy ore',
+        item_id: 'ore_iron',
+        target_base_name: 'kepler_hub',
+        target_base: 'kepler_hub',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(same.cell).toBe('Buy ore ore_iron kepler_hub 0/1');
+
+    const spaced = active([
+      {
+        description: 'Buy ore',
+        item_name: 'Ore',
+        target_base_name: ' Hub ',
+        target_base: 'hub',
+        current: 1,
+        required: 2,
+      },
+    ]);
+    expect(spaced.cell).toBe('Buy ore Ore  Hub  hub 1/2');
+
+    const blank = active([
+      {
+        description: 'Buy ore',
+        item_name: 'Ore',
+        target_base_name: '   ',
+        target_base: '',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(blank.cell).toBe('Buy ore Ore 0/1');
+
+    const omitted = active([
+      {
+        description: 'Buy ore',
+        item_name: 'Ore',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(omitted.cell).toBe('Buy ore Ore 0/1');
+
+    const nonString = active([
+      {
+        description: 'Buy ore',
+        item_name: 'Ore',
+        target_base_name: 4,
+        target_base: { id: 'hub' },
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(nonString.cell).toBe('Buy ore Ore 0/1');
+    expect(nonString.stdout).not.toContain('[object Object]');
+    expect(nonString.stdout).not.toContain('hub');
+
+    const player = active([
+      {
+        description: 'Destroy Kestrel',
+        target_player: 'Kestrel',
+        target_player_id: 'player_kestrel',
+        target_base_name: 'Kepler Hub',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(player.cell).toBe('Destroy Kestrel Kestrel Kepler Hub 0/1');
+    expect(player.stdout).not.toContain('player_kestrel');
+
+    const system = active([
+      {
+        description: 'Visit',
+        system_name: 'Sol',
+        item_name: 'Ore',
+        target_base: 'earth_station',
+        current: 0,
+        required: 1,
+      },
+    ]);
+    expect(system.cell).toBe('Visit Sol earth_station 0/1');
+
+    const objectives = [
+      {
+        description: 'Buy ore',
+        item_name: 'Ore',
+        target_base_name: 'Kepler Hub',
+        target_base: 'kepler_hub',
+        current: 0,
+        required: 1,
+      },
+    ];
+    const accepted = active(objectives, 'accept_mission');
+    const abandoned = active(objectives, 'abandon_mission');
+    expect(accepted.cell).toBe('Buy ore Ore Kepler Hub kepler_hub 0/1');
+    expect(abandoned.cell).toBe(accepted.cell);
+
+    const board = objectiveCell(
+      'get_missions',
+      {
+        missions: [
+          {
+            mission_id: 'board-delivery-1',
+            title: 'Board Delivery',
+            type: 'delivery',
+            objectives: [
+              {
+                description: 'Deliver ore',
+                item_id: 'ore_iron',
+                target_base_name: 'Kepler Hub',
+                target_base: 'kepler_hub',
+                target_base_id: 'kepler_id',
+              },
+            ],
+          },
+        ],
+      },
+      'Board Delivery',
+    );
+    expect(board.cell).toBe('Deliver ore Kepler Hub');
+    expect(board.stdout).not.toContain('ore_iron');
+    expect(board.stdout).not.toContain('kepler_hub');
+    expect(board.stdout).not.toContain('kepler_id');
   });
 
   test('get_active_missions shows community percent and progress in an optional Community column', () => {

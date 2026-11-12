@@ -72,28 +72,52 @@ function summarizeProgress(objective: Record<string, unknown>): string {
   return suffix.trim();
 }
 
-function summarizeObjective(objective: unknown): string {
+// A blank counting-base string adds nothing. A non-blank string is printed as sent.
+function sentNonBlankString(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  return value;
+}
+
+// Appended after the target slot. Neither string is labeled as an id.
+function countingBaseTexts(objective: Record<string, unknown>): string[] {
+  const name = sentNonBlankString(objective.target_base_name);
+  const base = sentNonBlankString(objective.target_base);
+  if (!name) return base ? [base] : [];
+  if (!base || base === name) return [name];
+  return [name, base];
+}
+
+function objectiveTarget(objective: Record<string, unknown>, countingBase: boolean): unknown {
+  const head = objective.target ?? objective.target_name ?? objective.target_username ?? objective.target_player;
+  const tail = objective.system_name ?? objective.item_name ?? objective.item_id ?? objective.target_player_id;
+  // Board objectives keep target_base_name and target_base in the one target slot.
+  if (!countingBase) return head ?? objective.target_base_name ?? objective.target_base ?? tail;
+  return head ?? tail;
+}
+
+function summarizeObjective(objective: unknown, countingBase = false): string {
   if (!isRecord(objective)) return String(objective);
   const description = objective.description ?? objective.title ?? objective.type;
-  const target =
-    objective.target ??
-    objective.target_name ??
-    objective.target_username ??
-    objective.target_player ??
-    objective.target_base_name ??
-    objective.target_base ??
-    objective.system_name ??
-    objective.item_name ??
-    objective.item_id ??
-    objective.target_player_id;
-  const parts = [description, isRecord(target) ? (target.name ?? target.id) : target, summarizeProgress(objective)]
+  const target = objectiveTarget(objective, countingBase);
+  const baseTexts = countingBase ? countingBaseTexts(objective) : [];
+  const parts = [
+    description,
+    isRecord(target) ? (target.name ?? target.id) : target,
+    ...baseTexts,
+    summarizeProgress(objective),
+  ]
     .filter((part) => presentCount(part))
     .map(String);
   return parts.join(' ');
 }
 
-function objectivesSummary(objectives: unknown): string {
-  return Array.isArray(objectives) ? objectives.map(summarizeObjective).filter(Boolean).join('; ') : '';
+function objectivesSummary(objectives: unknown, countingBase = false): string {
+  return Array.isArray(objectives)
+    ? objectives
+        .map((objective) => summarizeObjective(objective, countingBase))
+        .filter(Boolean)
+        .join('; ')
+    : '';
 }
 
 function summarizeCommunityProgressMap(value: unknown): string {
@@ -1120,7 +1144,7 @@ export function emitActiveMissionsTable(result: Record<string, unknown>): boolea
 
   const rows = missions.map((mission) => ({
     ...mission,
-    objectives_summary: objectivesSummary(mission.objectives),
+    objectives_summary: objectivesSummary(mission.objectives, true),
     rewards_summary: summarizeRewards(mission.rewards),
     piloting_xp_display: pilotingXpDisplay(mission.rewards),
     community_summary: summarizeCommunityStatus(mission),

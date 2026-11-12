@@ -18,9 +18,9 @@ Docked at: Earth Station (earth_station)
 
 === Active Missions ===
 
-  Title                   | ID                         | Type     | Difficulty | Issuing Base  | Objectives                                     | Rewards         | Expires
-  ------------------------+----------------------------+----------+------------+---------------+------------------------------------------------+-----------------+--------
-  Faction Supply Delivery | mission-faction-delivery-1 | delivery | 2          | Earth Station | Deliver Food Rations earth_station 0/5 cargo:5 | 1200 cr; rep +2 | 31     
+  Title                   | ID                         | Type     | Difficulty | Issuing Base  | Objectives                                                  | Rewards         | Expires
+  ------------------------+----------------------------+----------+------------+---------------+-------------------------------------------------------------+-----------------+--------
+  Faction Supply Delivery | mission-faction-delivery-1 | delivery | 2          | Earth Station | Deliver Food Rations food_rations earth_station 0/5 cargo:5 | 1200 cr; rep +2 | 31     
 
 Faction Supply Delivery (mission-faction-delivery-1): Deliver faction supplies to the contract issuer.
 missions 1/5
