@@ -2,7 +2,7 @@ import { emitLine, formatter, isRecord, printCompactTable, type ResultFormatter 
 
 const TOP_LEVEL_KEYS = new Set(['issues', 'ship_id', 'stats', 'steps', 'valid']);
 
-/** OpenAPI FitPreviewStats property order. Present keys only; do not derive ratios or free cargo. */
+/** Present keys only. Fuel keys stay after effective_marine_capacity; do not derive them or free cargo. */
 const STAT_KEY_ORDER = [
   'max_hull',
   'max_shield',
@@ -24,6 +24,9 @@ const STAT_KEY_ORDER = [
   'utility_slots_used',
   'effective_crew_capacity',
   'effective_marine_capacity',
+  'fuel_efficiency',
+  'fuel_per_jump',
+  'jump_range',
   'crew',
   'marines',
 ] as const;

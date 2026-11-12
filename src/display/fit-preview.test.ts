@@ -112,6 +112,48 @@ test('fit_preview prints an extra stats key after schema stats', () => {
   expect(stdout).toContain('marines: 0\nbonus_armor: 1');
 });
 
+test('fit_preview prints fuel stats after marine capacity and before crew', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    stats: {
+      jump_range: 0,
+      crew: 2,
+      fuel_efficiency: -15,
+      effective_marine_capacity: 1,
+      fuel_per_jump: 9,
+      bonus_armor: 1,
+      marines: 0,
+    },
+  });
+  const marine = stdout.indexOf('effective_marine_capacity: 1');
+  const efficiency = stdout.indexOf('fuel_efficiency: -15');
+  const perJump = stdout.indexOf('fuel_per_jump: 9');
+  const range = stdout.indexOf('jump_range: 0');
+  const crew = stdout.indexOf('crew: 2');
+  const marines = stdout.indexOf('marines: 0');
+  const extra = stdout.indexOf('bonus_armor: 1');
+  expect(marine).toBeGreaterThanOrEqual(0);
+  expect(marine).toBeLessThan(efficiency);
+  expect(efficiency).toBeLessThan(perJump);
+  expect(perJump).toBeLessThan(range);
+  expect(range).toBeLessThan(crew);
+  expect(crew).toBeLessThan(marines);
+  expect(marines).toBeLessThan(extra);
+  expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('jump_range: 11');
+});
+
+test('fit_preview prints a sent fuel efficiency above 80 and skips an omitted jump range', () => {
+  const stats = { ...fitPreviewStatsFixture, fuel_efficiency: 90, fuel_per_jump: 0 };
+  const stdout = renderFitPreview({ ...fitPreviewFixture, stats });
+  expect(stdout).toContain('fuel_efficiency: 90');
+  expect(stdout).toContain('fuel_per_jump: 0');
+  expect(stdout.indexOf('effective_marine_capacity: 1')).toBeLessThan(stdout.indexOf('fuel_efficiency: 90'));
+  expect(stdout.indexOf('fuel_per_jump: 0')).toBeLessThan(stdout.indexOf('crew: 2'));
+  expect(stdout).not.toContain('jump_range');
+  expect(stdout).not.toContain('fuel_efficiency: 80');
+});
+
 test('fit_preview prints nothing for empty issues and Steps: (none) for empty steps', () => {
   const stdout = renderFitPreview({
     ...fitPreviewFixture,

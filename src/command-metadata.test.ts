@@ -7362,7 +7362,7 @@ describe('command metadata', () => {
 
   test('fit_preview help is a read-only JSON modules array beside install_mod', () => {
     const description =
-      'Preview a planned module fit for the active ship. Pass modules as a JSON array of module type ids, one id per fitted module, repeated to fit two of the same type. [] previews an empty ship. It works anywhere. The command fits nothing, buys nothing, and moves nothing. Run the steps yourself, one per tick, in order. Cargo is checked against the hold as it is now, so keep room for modules the steps move through cargo. A temporary step unfits a kept module that a later step fits again. no_safe_order means the modules fit but no order reaches the fit.';
+      "Preview a planned module fit for the active ship. Pass modules as a JSON array of module type ids, one id per fitted module, repeated to fit two of the same type. [] previews an empty ship. It works anywhere. The plan uses the ship's current stats, including a ship that is due a refit_ship, and agrees with install_mod and uninstall_mod. The client does not choose catalog class stats. The command fits nothing, buys nothing, and moves nothing. Run the steps yourself, one per tick, in order. Cargo is checked against the hold as it is now, so keep room for modules the steps move through cargo. A temporary step unfits a kept module that a later step fits again. no_safe_order means the modules fit but no order reaches the fit.";
     const usage =
       'modules=<JSON array of module type ids>  (not a positional; one id per fitted module; repeat an id to fit two; [] previews an empty ship)';
     const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_ship/fit_preview']?.summary ?? '';
@@ -7407,6 +7407,10 @@ describe('command metadata', () => {
     expect(help).toContain('hold as it is now');
     expect(help).toContain('temporary step unfits a kept module');
     expect(help).toContain('no_safe_order means the modules fit but no order reaches the fit');
+    expect(help).toContain("the ship's current stats");
+    expect(help).toContain('due a refit_ship');
+    expect(help).toContain('agrees with install_mod and uninstall_mod');
+    expect(help).toContain('does not choose catalog class stats');
     expect(help).toContain('not a positional');
     expect(help).toContain('modules=...');
     expect(help).toContain('--modules ...');
