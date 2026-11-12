@@ -520,7 +520,6 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
     emitLine(`${label}: ${(labelId ? ids.map(labelId) : ids).join(', ')}`);
   }
 
-  // Keyed by player id. Append a printable username; never replace or drop the id.
   function playerIdWithUsername(id: string): string {
     const usernames = result.player_usernames;
     if (!isRecord(usernames) || !Object.hasOwn(usernames, id)) return id;
@@ -761,7 +760,9 @@ export function emitStationLifeSupport(lifeSupport: unknown): boolean {
   const maintenance = summarizeLifeSupportMaintenance(lifeSupport.maintenance);
   const starved = summarizeLifeSupportMaintenance(lifeSupport.starved);
   const remediation =
-    typeof lifeSupport.remediation === 'string' && lifeSupport.remediation.trim() ? lifeSupport.remediation : undefined;
+    typeof lifeSupport.remediation === 'string' && hazardTypeText(lifeSupport.remediation)
+      ? lifeSupport.remediation
+      : undefined;
   const hasSlots = supply !== undefined || demand !== undefined;
   if (!hasSlots && plants === undefined && !maintenance && !starved && !remediation) return false;
 

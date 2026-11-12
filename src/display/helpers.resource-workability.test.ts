@@ -53,6 +53,10 @@ describe('formatResourceWorkabilitySuffix', () => {
     expect(formatPlain({ lock_minimum_stock: 0 })).toBe(', lock min 0');
   });
 
+  test('supported power 0', () => {
+    expect(formatPlain({ supported_power: 0 })).toBe(', supports power 0');
+  });
+
   test('finiteNumber rejects bigint instead of rounding', () => {
     expect(finiteNumber(9007199254740993n)).toBeUndefined();
     expect(finiteNumber(42)).toBe(42);

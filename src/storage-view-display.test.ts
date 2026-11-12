@@ -169,6 +169,18 @@ describe('rewriteStorageViewHint', () => {
     expect(rewritten.hint).toBe('0 items in storage at alpha (100 total across 2 stations)');
   });
 
+  test('rewrites a multi-station hint for a non-array items field', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        hint: '100 items in storage at alpha, beta',
+        items: 'ore',
+      },
+      { requestedStationId: 'alpha' },
+    );
+
+    expect(rewritten.hint).toBe('0 items in storage at alpha (100 total across 2 stations)');
+  });
+
   test('rewrites a multi-station hint whose parsed total is not greater than the local quantity', () => {
     const rewritten = rewriteStorageViewHint(
       {

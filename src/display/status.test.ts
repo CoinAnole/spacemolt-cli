@@ -2069,6 +2069,16 @@ test('get_poi nested station prints indented ID and POI and skips Station Base I
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_poi nested station prints Fuel: 0 when fuel is 0', () => {
+  const fixture = structuredClone(stationPoiInfoFixture) as {
+    base: { fuel?: number };
+  };
+  fixture.base.fuel = 0;
+  const stdout = renderStructuredResult('get_poi', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('  Fuel: 0/1000');
+});
+
 test('get_poi does not print station tourism lines', () => {
   const stdout = renderStructuredResult(
     'get_poi',
@@ -4838,6 +4848,18 @@ test('get_system_agents omits the Ship column when every ship_name and ship_clas
   expect(header).not.toContain('Ship');
 });
 
+test('get_system_agents omits the Status column when every status_message is empty', () => {
+  const fixture = cloneSystemAgents();
+  for (const agent of fixture.agents) {
+    agent.status_message = '';
+  }
+  const stdout = renderSystemAgents(fixture);
+  const header = agentsHeader(stdout);
+
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Status');
+});
+
 test('get_system_agents shows Docked when every agent is undocked', () => {
   const fixture = cloneSystemAgents();
   for (const agent of fixture.agents) agent.docked = false;
@@ -6564,6 +6586,18 @@ test('get_state prints [CLOAKED] when player.is_cloaked is true and omits it whe
   expect(visibleOut).not.toContain('[CLOAKED]');
 });
 
+test('get_state omits Empire when player.empire is an empty string', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { player: { username: 'Marlowe', empire: '' } },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Username:');
+  expect(stdout).not.toContain('Empire:');
+});
+
 test('get_state prints slot counts when only defense_slots is set', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   fixture.ship.defense_slots = 1;
@@ -6999,6 +7033,30 @@ test('get_state array module stats print the JSON array text', () => {
   const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
   const row = modulesHalf.split('\n').find((line) => line.includes('Mode Shield')) ?? '';
   expect(row).toContain(JSON.stringify(tags));
+});
+
+test('get_state nested module stat object prints inner JSON', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'nested-1',
+          name: 'Adaptive Shield',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 5,
+          power_usage: 10,
+          stats: { wrap: { inner: { a: 1 } } },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('wrap (inner {"a":1})');
 });
 
 const SHORT_DOCKED_NO = '  Docked: No';
@@ -7875,6 +7933,14 @@ test('view_completed_mission objective title fallback prints the title', () => {
   expect(stdout).toContain('Meet the dockmaster');
 });
 
+test('view_completed_mission objective type fallback prints the type', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ type: 'kill_player' }],
+  });
+  expect(stdout).toContain('kill_player');
+});
+
 test('view_completed_mission eligible players objective branch prints joined names', () => {
   const stdout = renderStatusTable('view_completed_mission', {
     title: 'Done',
@@ -7889,6 +7955,14 @@ test('view_completed_mission objective progress branch prints explicit zero', ()
     objectives: [{ description: 'Haul', progress: { current: 0, required: 2 } }],
   });
   expect(stdout).toContain('Haul (0/2)');
+});
+
+test('view_completed_mission objective progress falls back to completed and target', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Haul', progress: { completed: 1, target: 4 } }],
+  });
+  expect(stdout).toContain('Haul (1/4)');
 });
 
 test('view_completed_mission empty objective fallback prints Objective', () => {

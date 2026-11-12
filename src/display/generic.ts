@@ -727,15 +727,6 @@ function emitCraftRentalDetails(result: Record<string, unknown>): void {
   }
 }
 
-function craftResultRows(results: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  return results.map((result) => ({
-    ...result,
-    success_display: result.success === undefined ? undefined : result.success ? 'yes' : 'no',
-    rental_display: craftRentalDisplay(result),
-    fee_display: formatCreditsAmount(craftEscrowCredits(result)),
-  }));
-}
-
 function craftJobRows(
   jobs: Array<Record<string, unknown>>,
   result: Record<string, unknown>,
@@ -1286,7 +1277,12 @@ export const genericFormatters = [
 
       const results = firstArray(r, ['results']);
       if (results) {
-        const rows = craftResultRows(results);
+        const rows = results.map((result) => ({
+          ...result,
+          success_display: result.success === undefined ? undefined : result.success ? 'yes' : 'no',
+          rental_display: craftRentalDisplay(result),
+          fee_display: formatCreditsAmount(craftEscrowCredits(result)),
+        }));
         const columns: Array<[string, string[]]> = [
           ['Index', ['index']],
           ['OK', ['success_display']],

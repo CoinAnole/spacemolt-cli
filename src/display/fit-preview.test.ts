@@ -104,6 +104,14 @@ test('fit_preview prints an extra stats key and does not recompute cargo', () =>
   expect(stdout).not.toContain('available');
 });
 
+test('fit_preview prints an extra stats key after schema stats', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    stats: { ...fitPreviewStatsFixture, bonus_armor: 1 },
+  });
+  expect(stdout).toContain('marines: 0\nbonus_armor: 1');
+});
+
 test('fit_preview prints nothing for empty issues and Steps: (none) for empty steps', () => {
   const stdout = renderFitPreview({
     ...fitPreviewFixture,
@@ -250,6 +258,16 @@ test('fit_preview prints a step when its name is omitted', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('fit_preview declines a non-string step name', () => {
+  const steps = structuredClone(fitPreviewFixture.steps) as Array<Record<string, unknown>>;
+  const pulse = steps.find((step) => step.name === 'Pulse Laser I');
+  if (!pulse) throw new Error('missing fit preview step');
+  pulse.name = 1;
+  const stdout = renderFitPreview({ ...fitPreviewFixture, steps });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
 test('fit_preview declines an issue with an extra key', () => {
   const stdout = renderFitPreview({
     ...fitPreviewFixture,
@@ -268,10 +286,28 @@ test('fit_preview declines a non-string issue code', () => {
   expect(stdout).not.toContain('Valid:');
 });
 
+test('fit_preview declines a non-string issue message', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    issues: [{ code: 'cpu_exceeded', message: 1 }],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
 test('fit_preview declines a non-record issue entry', () => {
   const stdout = renderFitPreview({
     ...fitPreviewFixture,
     issues: ['cpu_exceeded'],
+  });
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Valid:');
+});
+
+test('fit_preview declines a non-record step entry', () => {
+  const stdout = renderFitPreview({
+    ...fitPreviewFixture,
+    steps: ['install_mod'],
   });
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('Valid:');

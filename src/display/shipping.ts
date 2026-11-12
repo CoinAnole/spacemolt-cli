@@ -3,7 +3,7 @@ import { c, emitLine, formatIntegerText, formatter, isRecord, printCompactTable 
 type ValueFormatter = (value: unknown) => string | undefined;
 
 function text(value: unknown): string | undefined {
-  if (typeof value === 'string') return value.trim() ? value : undefined;
+  if (typeof value === 'string') return presentString(value) ? value : undefined;
   if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
   return undefined;
 }

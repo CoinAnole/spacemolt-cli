@@ -325,6 +325,20 @@ describe('notification presentation', () => {
     expect(presented.summarizedCount).toBe(0);
   });
 
+  test('leaves a crafting update with a failed count of 1 individual', () => {
+    const update = {
+      type: 'crafting',
+      msg_type: 'crafting_update',
+      timestamp: '2026-06-29T00:00:00.000Z',
+      data: { failed: 1 },
+    };
+
+    const presented = presentNotifications([update]);
+
+    expect(presented.notifications).toEqual([update]);
+    expect(presented.summarizedCount).toBe(0);
+  });
+
   test('leaves crafting completion and failure notifications visible', () => {
     const completed = {
       type: 'crafting',
@@ -791,6 +805,26 @@ describe('notification presentation', () => {
     expect(presented.notifications[0]).toMatchObject({
       data: { count: 2, actions: { jump: 2 }, latest_action: 'jump' },
     });
+  });
+
+  test('summarizes a padded mixed-case system action', () => {
+    const jumpOnlyA = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:00.000Z',
+      data: { action: ' Jump ' },
+    };
+    const jumpOnlyB = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:12:05.000Z',
+      data: { action: ' Jump ' },
+    };
+
+    const presented = presentNotifications([jumpOnlyA, jumpOnlyB]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications.map((n) => n.msg_type)).toEqual(['system_progress_summary']);
   });
 
   test('does not summarize a high-signal system jump message', () => {

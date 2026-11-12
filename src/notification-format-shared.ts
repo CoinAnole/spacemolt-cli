@@ -1732,7 +1732,7 @@ function stationSalePreviewLines(data: Record<string, unknown>): string[] {
 function tradeOfferNote(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const text = value.replace(/[\r\n]+/g, ' ').trim();
-  return text.length > 0 ? text : undefined;
+  return nonEmptyString(value) === undefined ? undefined : text;
 }
 
 function tradeOfferNoticeLines(data: Record<string, unknown>): string[] {

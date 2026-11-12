@@ -267,6 +267,13 @@ test('zero module bonus omits a Reach line and prints Scramble: 2', () => {
   expect(stdout).not.toContain('Reach');
 });
 
+test('empty-string cooldown prints Cooldown: 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ cooldown: '' }, {}), { plain: true });
+  const line = buffer.stdout.find((row) => row.startsWith('Cooldown:'));
+  expect(line).toBe('Cooldown: 0');
+});
+
 test('accuracy bonus prints Accuracy: 4', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ accuracy_bonus: 4 }, {}), { plain: true });
@@ -479,6 +486,24 @@ test('missing weapon slot count prints Slots: 0 weapon, 4 defense, 0 utility', (
 test('weapon_slots 0 with defense and utility omitted prints Slots: 0 weapon, 0 defense, 0 utility', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ weapon_slots: 0 }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Slots: 0 weapon, 0 defense, 0 utility');
+});
+
+test('empty-string weapon_slots prints Slots: 0 weapon, 0 defense, 0 utility', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ weapon_slots: '' }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Slots: 0 weapon, 0 defense, 0 utility');
+});
+
+test('empty-array weapon_slots prints Slots: 0 weapon, 0 defense, 0 utility', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ weapon_slots: [] }, {}), { plain: true });
+  expect(buffer.stdout).toContain('Slots: 0 weapon, 0 defense, 0 utility');
+});
+
+test('null weapon_slots prints Slots: 0 weapon, 0 defense, 0 utility', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ weapon_slots: null }, {}), { plain: true });
   expect(buffer.stdout).toContain('Slots: 0 weapon, 0 defense, 0 utility');
 });
 
@@ -978,12 +1003,28 @@ test('empty category does not print Category:', () => {
   expect(buffer.stdout.join('\n')).not.toContain('Category:');
 });
 
+test('empty-array category with type ore prints a blank Category line and not Category: ore', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ category: [], type: 'ore' }, {}), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  const line = buffer.stdout.find((row) => row.startsWith('Category:'));
+  expect(line).toBe('Category: ');
+  expect(stdout).not.toContain('Category: ore');
+});
+
 test('null size omits Size and base_value 2 prints Base value: 2', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ size: null, base_value: 2 }, {}), { plain: true });
   const stdout = buffer.stdout.join('\n');
   expect(stdout).not.toContain('Size');
   expect(stdout).toContain('Base value: 2');
+});
+
+test('empty-array size prints Size: with a trailing space', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogItemDetail({ size: [] }, {}), { plain: true });
+  const line = buffer.stdout.find((row) => row.startsWith('Size:'));
+  expect(line).toBe('Size: ');
 });
 
 test('item tier prints Tier: 2', () => {

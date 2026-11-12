@@ -219,6 +219,23 @@ test('create_sell_order prints bigint quantity_filled and total_earned', () => {
   expect(stdout).not.toContain((9007199254740991 + 2).toLocaleString());
 });
 
+test('create_sell_order with an empty order_id prints Sell Order Created and omits Order ID', () => {
+  const stdout = renderStructuredResult(
+    'create_sell_order',
+    {
+      action: 'create_sell_order',
+      item: 'Iron Ore',
+      item_id: 'ore_iron',
+      order_id: '',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Sell Order Created ===');
+  expect(stdout).not.toContain('Order ID');
+});
+
 test('create_sell_order bigint quantity_filled without quantity_listed omits Remaining listed', () => {
   const stdout = renderStructuredResult(
     'create_sell_order',
@@ -2116,6 +2133,25 @@ test('get_trades prints a note, a toll, its tick, and a hold, and skips expires_
   expect(outgoing).not.toContain('Hold:');
   expect(outgoing).not.toContain('Expires tick:');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_trades outgoing offer with an empty target_name prints pending offers and omits To', () => {
+  const stdout = renderStructuredResult(
+    'get_trades',
+    {
+      outgoing: [
+        {
+          trade_id: 'trade-out',
+          target_name: '',
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Pending Trade Offers ===');
+  expect(stdout).not.toContain('To:');
 });
 
 test('get_trades omits an empty note, a false hold, and a toll tick that was not sent', () => {

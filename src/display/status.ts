@@ -509,10 +509,7 @@ function summarizeRewardForDisplay(rewards: unknown): string {
   }
   if (rewards.reputation !== undefined) parts.push(`reputation ${formatSignedNumber(rewards.reputation)}`);
   if (rewards.pirate_rep !== undefined) {
-    const faction =
-      typeof rewards.pirate_faction === 'string' && rewards.pirate_faction.trim() !== ''
-        ? rewards.pirate_faction.trim()
-        : '';
+    const faction = chartDescription(rewards.pirate_faction) ?? '';
     const suffix = faction ? ` (${faction})` : '';
     parts.push(`pirate rep ${formatSignedNumber(rewards.pirate_rep)}${suffix}`);
   }

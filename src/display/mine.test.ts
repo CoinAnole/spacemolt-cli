@@ -522,6 +522,22 @@ test('mine yield with an empty remaining_display declines to the raw fallback', 
   expect(stdout).not.toContain('=== Mine ===');
 });
 
+test('mine yield with an empty resource_id declines to the raw fallback', () => {
+  const payload = {
+    kind: 'yield',
+    resource_id: '',
+    quantity: 42,
+    remaining: 120,
+    remaining_display: '120 units',
+  };
+
+  expect(mineFormatters[0]?.(payload, 'mine')).toBe(false);
+
+  const stdout = stdoutOf(payload);
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Mine ===');
+});
+
 test('mine yield with a bigint quantity declines to the raw fallback', () => {
   const payload = {
     kind: 'yield',

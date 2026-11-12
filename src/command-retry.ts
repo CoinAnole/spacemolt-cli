@@ -308,17 +308,6 @@ function createStore(mode: StoreMode): NonNullable<SpaceMoltClientOptions['sessi
   };
 }
 
-function loginOkFrame(): Frame {
-  return {
-    status: 200,
-    label: 'login success',
-    data: {
-      session: { id: 'sess_login_body', player_id: 'player_1', created_at: CREATED, expires_at: EXPIRES },
-      structuredContent: { player: { id: 'player_1' } },
-    },
-  };
-}
-
 async function drive(frames: Frame[], options: DriveOptions): Promise<DriveResult> {
   const events: TraceEvent[] = [];
   const loginFrames = options.login === 'ok' ? undefined : [...options.login];
@@ -370,7 +359,16 @@ async function drive(frames: Frame[], options: DriveOptions): Promise<DriveResul
           loginSends += 1;
           events.push({ type: 'login', payload: request?.payload });
           if (request?.method !== 'POST') throw new Error(`login method ${request?.method ?? '(none)'}`);
-          const frame = loginFrames ? loginFrames.shift() : loginOkFrame();
+          const frame = loginFrames
+            ? loginFrames.shift()
+            : {
+                status: 200,
+                label: 'login success',
+                data: {
+                  session: { id: 'sess_login_body', player_id: 'player_1', created_at: CREATED, expires_at: EXPIRES },
+                  structuredContent: { player: { id: 'player_1' } },
+                },
+              };
           if (!frame) throw new Error('login retry continued after the scripted login responses');
           const status = frame.status;
           return {
@@ -805,13 +803,6 @@ function boundaryProbes(): Probe[] {
     stopped: true,
     harm: 'Each exhausted flat 503 spends one of the 3 rate-limit retries. After those retries a further undock is another mutation.',
   });
-
-  const login503 = (header = '1'): Frame => ({
-    status: 503,
-    label: 'login HTTP 503',
-    retryAfterHeader: header,
-    data: { error: { code: 'service_unavailable', message: 'Authentication provider unreachable' } },
-  });
   probes.push({
     name: 'a failed recovery login does not send undock again',
     frames: [objectError(401, 'session_expired', { retry_after: 1 }, 'HTTP 401 session_expired')],
@@ -827,7 +818,15 @@ function boundaryProbes(): Probe[] {
     commands: 1,
     stopped: true,
     logins: 4,
-    login: repeat(login503(), 4),
+    login: repeat(
+      {
+        status: 503,
+        label: 'login HTTP 503',
+        retryAfterHeader: '1',
+        data: { error: { code: 'service_unavailable', message: 'Authentication provider unreachable' } },
+      },
+      4,
+    ),
     harm: 'The recovery login never got through. Undock must not be sent on the new session.',
   });
   probes.push({

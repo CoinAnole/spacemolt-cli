@@ -155,6 +155,12 @@ describe('emitStationDefences', () => {
     expect(buffer.stdout.join('\n')).toContain('Hull: 5/?');
   });
 
+  test('emitStationDefences prints a max shield question mark when max_shield is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationDefences({ shield: 5 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Shield: 5/?');
+  });
+
   test('emitStationDefences prints a dps question mark when only reach is set', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationDefences({ weapon_reach: 2 }), { plain: true });
@@ -199,6 +205,16 @@ describe('emitStationLifeSupport', () => {
     expect(buffer.stdout.join('\n')).toContain('Upkeep: Oxygen x2');
   });
 
+  test('life support upkeep uses item_id when name is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitStationLifeSupport({ maintenance: [{ item_id: 'oxygen', quantity: 2 }] }),
+      { plain: true },
+    );
+    expect(buffer.stdout.join('\n')).toContain('Upkeep: oxygen x2');
+  });
+
   test('life support prints upkeep cadence without maintenance items', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ supply: 40, maintenance_cycle_ticks: 100 }), {
@@ -214,6 +230,12 @@ describe('emitStationLifeSupport', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ supply: 40 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Slots: ?/40 used');
+  });
+
+  test('life support prints demand 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ demand: 0, supply: 40 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Slots: 0/40 used');
   });
 
   test('life support prints a question mark when supply is absent', () => {
@@ -259,6 +281,14 @@ describe('emitStationPower', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ battery_stored: 420 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Battery: 420/?');
+  });
+
+  test('station power prints battery stored 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ battery_stored: 0, battery_capacity: 600 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Battery: 0/600');
   });
 
   test('station power fuel inputs use quantity when quantity_per_cycle is absent', () => {
@@ -313,6 +343,14 @@ describe('emitStationPower', () => {
       plain: true,
     });
     expect(buffer.stdout.join('\n')).toContain('85.5% efficiency');
+  });
+
+  test('station power prints 0% efficiency', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 10, current_draw: 10, efficiency: 0 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('0% efficiency');
   });
 
   test('generator supply prints as sent, including 0, and is not subtracted from supply', () => {

@@ -4535,6 +4535,51 @@ test('faction_profile prints an Allies table for one ally row', () => {
   expect(stdout).toContain('NOIR');
 });
 
+test('faction_profile prints a Stations table for one station row', () => {
+  const stdout = renderStructuredResult(
+    'faction_profile',
+    {
+      name: 'Drift Matrix',
+      tag: 'DMX7',
+      stations: [{ name: 'Earth Station', system_name: 'Sol' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Stations ===');
+  expect(stdout).toContain('Earth Station');
+});
+
+test('faction_profile prints an Enemies table for one enemy row', () => {
+  const stdout = renderStructuredResult(
+    'faction_profile',
+    {
+      name: 'Drift Matrix',
+      tag: 'DMX7',
+      enemies: [{ name: 'Raid Compact', tag: 'RAID' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Enemies ===');
+  expect(stdout).toContain('RAID');
+});
+
+test('faction_profile prints a Wars table for one war row', () => {
+  const stdout = renderStructuredResult(
+    'faction_profile',
+    {
+      name: 'Drift Matrix',
+      tag: 'DMX7',
+      wars: [{ name: 'Rim War', tag: 'RIM' }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Wars ===');
+  expect(stdout).toContain('RIM');
+});
+
 const factionInfoMobileBase = {
   name: 'Civitas',
   base_id: 'mobile_civitas_example',
@@ -4710,6 +4755,16 @@ test('faction_profile prints Earned without a slash or with an unknown earned', 
   expect(totalOnly).toContain('Earned: ? / 9');
 });
 
+test('faction_profile prints a numeric-string leaderboard value without grouping', () => {
+  const stdout = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    ranks: [{ label: 'Standing', rank: 1, value: '1000' }],
+  });
+  expect(stdout).toContain('1000');
+  expect(stdout).not.toContain('1,000');
+});
+
 test('faction_info prints the mobile base snapshot before the commission', () => {
   const fixture = factionInfoWithMobileBase();
   fixture.mobile_base_commission = { commission_id: 'comm-1', archetype_id: 'civitas' };
@@ -4745,6 +4800,15 @@ test('faction_info prints partial mobile base headers and skips absent endpoint 
   expect(stdout).not.toContain('Destination:');
   expect(stdout).not.toContain('Started tick:');
   expect(stdout).not.toContain('System:');
+});
+
+test('faction_profile prints Treasury: 0 when treasury is 0', () => {
+  const stdout = renderCommand('faction_profile', {
+    name: 'Drift Matrix',
+    tag: 'DMX7',
+    treasury: 0,
+  });
+  expect(stdout).toContain('Treasury: 0');
 });
 
 test('faction_profile prints Colors with an em dash when only primary_color is present', () => {

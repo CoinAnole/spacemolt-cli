@@ -304,6 +304,25 @@ test('a numeric unix-second notification timestamp prints the UTC second preview
   expect(stdout).not.toContain(String(timestamp));
 });
 
+test('prints the epoch preview when a notification timestamp is 0', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: 0,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Timestamp'));
+  const timestampCell = dataRow?.split('|').map((cell) => cell.trim())[0];
+  expect(timestampCell).toBe('1970-01-01 00:00:00');
+});
+
 test('prints a created_at preview when the notification timestamp is omitted', () => {
   const createdAt = '2026-05-23T18:59:39.049Z';
   const stdout = stdoutOf('get_notifications', {
@@ -382,6 +401,25 @@ test('a numeric unix-millisecond notification timestamp prints the UTC second pr
 
   expect(stdout).toContain('2026-05-23 18:59:39');
   expect(stdout).not.toContain(String(timestamp));
+});
+
+test('prints NaN in the Timestamp cell when the notification timestamp is not finite', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: Number.NaN,
+        data: { message: 'Server maintenance scheduled.' },
+      },
+    ],
+  });
+
+  const dataRow = stdout.split('\n').find((line) => line.includes('|') && !line.includes('Timestamp'));
+  const timestampCell = dataRow?.split('|').map((cell) => cell.trim())[0];
+  expect(timestampCell).toBe('NaN');
 });
 
 test('prints notification in the Type cell when msg_type, type, and data.type are blank', () => {

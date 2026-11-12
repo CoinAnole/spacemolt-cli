@@ -306,6 +306,20 @@ test('empty ship_name does not print a Name column', () => {
   expect(stdout).not.toContain('Name');
 });
 
+test('null ship_name does not print Name', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ ship_name: null }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).not.toContain('Name');
+});
+
+test('empty-array ship_name prints Name', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ ship_name: [] }] }), { plain: true });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Name');
+});
+
 test('hull 0 prints 0/8 and not ?/8', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitNearbyPrizes({ prizes: [{ hull: 0, max_hull: 8 }] }), { plain: true });

@@ -164,6 +164,7 @@ test('empty conversion object prints the jettison heading and omits output field
 
   expect(stderr).toBe('');
   expect(stdout).toContain('=== Jettison ===');
+  expect(stdout).not.toContain('OK');
   expect(stdout).not.toContain('Output Item Id');
   expect(stdout).not.toContain('Output Quantity');
   expect(stdout).not.toContain('=== Response ===');
@@ -463,6 +464,8 @@ test('blank jettison action with item_id prints === Result ===', () => {
 
   expect(stderr).toBe('');
   expect(stdout).toContain('=== Result ===');
+  expect(stdout).toContain('Item Id: ore_iron');
+  expect(stdout).not.toContain('Action:');
 });
 
 test('whitespace jettison action prints === Result === and the Action line', () => {
@@ -571,6 +574,18 @@ test('non-record jettison result row declines to the raw response', () => {
   expect(stdout).toContain('=== Response ===');
   expect(stdout).not.toContain('=== Create Sell Order ===');
   expect(stdout).not.toContain('=== Intel ===');
+});
+
+test('non-array jettison results decline to the raw response', () => {
+  const { stdout } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: { item_id: 'ore_iron' },
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Results');
 });
 
 test('string conversion output_quantity declines to the raw response', () => {
