@@ -375,7 +375,7 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     code: 'in_battle',
     message: 'You are in a battle.',
     suggestion:
-      'You are in a battle, so the cloak stays off. Attacking or engaging also drops an active cloak. Leave the battle, then retry "spacemolt cloak". Run "spacemolt get_battle_status" to see the fight.',
+      'You are in a battle, so the cloak stays off. Attacking, engaging, or a fleet pull into a battle also drops an active cloak. Leave the battle, then retry "spacemolt cloak". Run "spacemolt get_battle_status" to see the fight.',
     retryable: true,
     auth: false,
     relatedCommands: ['get_battle_status', 'cloak'],

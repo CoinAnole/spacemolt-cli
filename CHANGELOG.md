@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `cloak` help says attacking, engaging, or a fleet pull into a battle drops an active cloak. You still cannot engage a cloak during a battle (`in_battle`). The `in_battle` suggestion names that same fleet pull. The cloak notification prints the server `message` as the headline, including a sentence such as "your fleet pulled you into a battle" when the server sends it. It does not add a notification type or a bearing field (gameserver 0.695.1).
+
 - `fit_preview` help says the plan uses the ship's current stats, including a ship that is due a `refit_ship`, and agrees with `install_mod` and `uninstall_mod`. The client does not choose catalog class stats. Human output prints `fuel_efficiency`, `fuel_per_jump`, and `jump_range` with the other stats, after `effective_marine_capacity` and before `crew`, when those keys are present, including an explicit 0 and a negative `fuel_efficiency`. An omitted key prints nothing. An unknown stats key still prints after the known keys. The integers print as sent. `jump_range` is not derived, the 80 percent fuel-efficiency cap is not applied, and CPU, power, hull, shield, cargo, and crew are not recomputed (gameserver 0.691.0).
 
 - `get_poi` prints `Attached to:` followed by `poi.parent_id` when that value is a non-blank string, as sent, including leading and trailing spaces. An omitted, blank, or non-string key prints nothing. The id is not replaced with a parent name (gameserver 0.692.0).

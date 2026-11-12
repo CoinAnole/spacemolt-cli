@@ -884,6 +884,7 @@ describe('command metadata', () => {
     expect(COMMANDS.find_route?.description).toContain('including yours');
     expect(COMMANDS.find_route?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.find_route);
     expect(COMMANDS.cloak?.description).toContain('in_battle');
+    expect(COMMANDS.cloak?.description).toContain('Attacking, engaging, or a fleet pull into a battle');
     expect(COMMANDS.cloak?.description).toContain('mid-jump');
     expect(COMMANDS.cloak?.description).toContain('mid-travel');
     expect(COMMANDS.cloak?.description).toContain('Pathfinder drift');

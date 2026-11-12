@@ -3456,6 +3456,7 @@ describe('help output branches', () => {
     expect(output).toContain('Error [in_battle]');
     expect(output).toContain('Suggestion:');
     expect(output).toContain('cloak');
+    expect(output).toContain('fleet pull into a battle');
     expect(output).toContain('This error may be retryable.');
   });
 

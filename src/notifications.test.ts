@@ -2436,6 +2436,24 @@ describe('notification formatting', () => {
     });
 
     describe('cloak', () => {
+      test('prints a fleet-pull message and adds no bearing', () => {
+        const notification = note('cloak', {
+          message: 'your fleet pulled you into a battle',
+          enabled: false,
+          cloak_strength: 0,
+        });
+        const preview = formatNotificationPreview(notification);
+        expect(preview.tag).toBe('CLOAK');
+        expect(preview.headline).toBe('your fleet pulled you into a battle');
+        expect(preview.severity).toBe('warning');
+        expect(preview.details).toContain('strength 0');
+        expect(preview.details.join('\n')).not.toContain('bearing');
+        const output = stripAnsi(formatNotification(notification).join('\n'));
+        expect(output).toContain('[CLOAK]');
+        expect(output).toContain('your fleet pulled you into a battle');
+        expect(output).not.toContain('bearing');
+      });
+
       test('15-tick emergency message still shows strength 1 as a detail', () => {
         const notification = note('cloak', {
           message: 'Emergency cloak engaged for 15 ticks',

@@ -787,6 +787,7 @@ describe('in_battle', () => {
     expect(ERROR_REGISTRY.in_battle?.commandSuggestions).toBeUndefined();
     const suggestion = getErrorSuggestion('in_battle');
     expect(suggestion).toContain('cloak');
+    expect(suggestion).toContain('fleet pull into a battle');
     expect(suggestion).toContain('get_battle_status');
     expect(getErrorSuggestion('in_battle', 'cloak')).toBe(suggestion);
     expect(getRelatedCommands('in_battle')).toEqual(['get_battle_status', 'cloak']);
