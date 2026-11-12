@@ -1539,50 +1539,10 @@ fn append_program_ok(template) {
     if has_text(template, "O_RDWR") || has_text(template, "O_TRUNC") || has_text(template, "write_bytes") || has_text(template, "write_text") || has_text(template, "truncate") || has_text(template, "unlink") || has_text(template, "os.remove") {
         return false;
     }
-    let i = 0;
-    while i < template.len() {
-        let open_here = false;
-        if i + 5 <= template.len() && template.sub_string(i, 5) == "open(" {
-            if i == 0 {
-                open_here = true;
-            } else {
-                let prev = template[i - 1].to_int();
-                let ident = false;
-                if (prev >= 48 && prev <= 57) || (prev >= 65 && prev <= 90) || (prev >= 97 && prev <= 122) || prev == 95 {
-                    ident = true;
-                }
-                if !ident {
-                    open_here = true;
-                }
-            }
-        }
-        if open_here {
-            let j = i + 5;
-            let depth = 1;
-            let quoted = false;
-            while j < template.len() && depth > 0 {
-                let ch = template.sub_string(j, 1);
-                if ch == "(" {
-                    depth += 1;
-                } else if ch == ")" {
-                    depth -= 1;
-                } else if ch == "\"" || ch == "'" {
-                    quoted = true;
-                }
-                j += 1;
-            }
-            if quoted {
-                return false;
-            }
-            i = j;
-        } else {
-            i += 1;
-        }
-    }
     let needle = "os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o644)";
     let count = 0;
     let found = -1;
-    i = 0;
+    let i = 0;
     while i + needle.len() <= template.len() {
         if template.sub_string(i, needle.len()) == needle {
             count += 1;
