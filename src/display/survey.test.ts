@@ -753,6 +753,16 @@ test('survey_system skips Skill XP for an empty-string xp value', () => {
   expect(stdout).not.toContain('Skill XP:');
 });
 
+test('survey_system prints Skill XP: scanning + for an empty-array scanning gain', () => {
+  const stdout = stdoutOf(
+    clonePresent((details) => {
+      details.xp_gained = { scanning: [] };
+    }),
+  );
+
+  expect(lineContaining(stdout, 'Skill XP:')).toBe('Skill XP: scanning +');
+});
+
 test('survey_system skips a null skill XP entry and prints the other gain', () => {
   const stdout = stdoutOf(
     clonePresent((details) => {

@@ -3262,6 +3262,13 @@ test('facility_types detail prints Service pool capacity 0 beside the other pool
   expect(poolLine).toBe('Service pool: 0 cap, +4/cycle, 1x crew_rations');
 });
 
+test('facility_types detail prints service pool refill 0 as +0/cycle', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture);
+  fixture.service_pool_refill_per_cycle = 0;
+  const poolLine = facilityTypeDetailLines(fixture).find((line) => line.startsWith('Service pool:'));
+  expect(poolLine).toContain('+0/cycle');
+});
+
 test('facility_types detail prints the supply item when service pool units are omitted', () => {
   const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
   delete fixture.service_pool_units_per_item;
@@ -3271,6 +3278,13 @@ test('facility_types detail prints the supply item when service pool units are o
   expect(poolLine).toBe('Service pool: 20 cap, +4/cycle, crew_rations');
   expect(poolLine).not.toContain('1x');
   expect(stdout).not.toContain('1x');
+});
+
+test('facility_types detail prints service pool units 0 as 0x crew_rations', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture);
+  fixture.service_pool_units_per_item = 0;
+  const poolLine = facilityTypeDetailLines(fixture).find((line) => line.startsWith('Service pool:'));
+  expect(poolLine).toContain('0x crew_rations');
 });
 
 test('facility_types detail prints an explicit false buildable and skips an omitted key', () => {
@@ -3385,6 +3399,19 @@ test('facility_types detail prints service pool units when the supply item is om
   fixture.service_pool_units_per_item = 1;
   const poolLine = facilityTypeDetailLines(fixture).find((line) => line.startsWith('Service pool:'));
   expect(poolLine).toBe('Service pool: 20 cap, +4/cycle, 1x');
+});
+
+test('facility_types detail omits an empty-string service_pool_supply_item the same way as a deleted item', () => {
+  const deleted = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete deleted.service_pool_supply_item;
+  deleted.service_pool_units_per_item = 1;
+  const empty = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  empty.service_pool_supply_item = '';
+  empty.service_pool_units_per_item = 1;
+  const deletedLine = facilityTypeDetailLines(deleted).find((line) => line.startsWith('Service pool:'));
+  const emptyLine = facilityTypeDetailLines(empty).find((line) => line.startsWith('Service pool:'));
+  expect(emptyLine).toBe(deletedLine);
+  expect(emptyLine).toBe('Service pool: 20 cap, +4/cycle, 1x');
 });
 
 test('facility_types shapeFallback does not claim catalog-shaped type_id objects', () => {

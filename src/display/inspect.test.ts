@@ -6289,6 +6289,27 @@ test('prints Fuel: ?/500 when station fuel is missing and max_fuel is 500', () =
   expect(stdout.split('\n')).toContain('Fuel: ?/500');
 });
 
+test('prints Fuel: ?/0 when station fuel is omitted and max_fuel is 0', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+          max_fuel: 0,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n')).toContain('Fuel: ?/0');
+});
+
 test('omits Fuel when a station has neither fuel nor max_fuel', () => {
   const stdout = renderStructuredResult(
     'inspect',

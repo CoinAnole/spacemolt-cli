@@ -541,3 +541,14 @@ test('citizenship apply with an empty message matches an omitted message', () =>
   expect(lines[headingIndex + 1]).toBe('Origin: nebula');
   expect(lines[headingIndex + 1]).not.toBe('');
 });
+
+test('citizenship apply with message 404 does not print 404', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    origin: 'nebula',
+    message: 404,
+  });
+
+  expect(stdout).toContain('=== Citizenship Application ===');
+  expect(stdout).toContain('Origin: nebula');
+  expect(stdout).not.toContain('404');
+});

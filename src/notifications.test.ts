@@ -6332,6 +6332,15 @@ describe('notification formatting', () => {
       ).toBe('2 items: credits×100, ore_iron×5');
     });
 
+    test('sums repeated item ids', () => {
+      expect(
+        formatInventoryPreview([
+          { item_id: 'ore_iron', quantity: 5 },
+          { item_id: 'ore_iron', quantity: 2 },
+        ]),
+      ).toBe('1 item: ore_iron×7');
+    });
+
     test('truncates with +N more and never emits nested JSON', () => {
       const loot = {
         a: 1,
@@ -6357,8 +6366,17 @@ describe('notification formatting', () => {
       expect(formatInventoryPreview({ nested: { ore_iron: 5 } })).toBeUndefined();
     });
 
+    test('drops nests deeper than 2 and still prints a two-level nest', () => {
+      expect(formatInventoryPreview({ items: { cargo: { loot: { ore_iron: 5 } } } })).toBeUndefined();
+      expect(formatInventoryPreview({ items: { cargo: { ore_iron: 5 } } })).toBe('1 item: ore_iron×5');
+    });
+
     test('formats a module row without quantity as one unit', () => {
       expect(formatInventoryPreview([{ module_id: 'laser_1' }])).toBe('1 item: laser_1×1');
+    });
+
+    test('formats an item_name label when item_id is absent', () => {
+      expect(formatInventoryPreview([{ item_name: 'Iron Ore', quantity: 2 }])).toBe('1 item: Iron Ore×2');
     });
 
     test('returns undefined for quantity 0', () => {

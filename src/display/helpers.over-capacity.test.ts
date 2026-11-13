@@ -469,4 +469,19 @@ describe('emitStationPower', () => {
     expect(stdout).toContain('Generator supply: 15');
     expect(stdout).not.toContain('Power: ?');
   });
+
+  test('generator supply prints a bigint with every digit', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ generator_supply: 9007199254740993n }), { plain: true });
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Generator supply: 9007199254740993');
+    expect(stdout).not.toContain('9007199254740992');
+  });
+
+  test('station power omits a whitespace-only remediation', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const printed = withDisplayRenderBuffer(buffer, () => emitStationPower({ remediation: '  ' }), { plain: true });
+    expect(printed).toBe(false);
+    expect(buffer.stdout.join('\n')).not.toContain('Power:');
+  });
 });

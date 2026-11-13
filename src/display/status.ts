@@ -797,7 +797,7 @@ function emitCargoScan(result: Record<string, unknown>, options?: { printSuccess
   if (nativeScanField(result, 'hold_cancelled') === true) emitLine('Hold cancelled: true');
   if (options?.printSuccess !== false && result.success === false) emitLine('Success: false');
   const reason = nativeScanField(result, 'reason');
-  if (typeof reason === 'string' && reason !== '') emitLine(`Reason: ${reason}`);
+  if (usableLabel(reason)) emitLine(`Reason: ${reason}`);
 
   const cargo = nativeScanField(result, 'cargo');
   const items = Array.isArray(cargo) ? cargo.filter(isRecord) : [];

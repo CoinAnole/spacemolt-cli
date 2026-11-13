@@ -1513,7 +1513,7 @@ export const genericFormatters = [
 
       const giftSuffix = r.gifts_truncated === true ? ' (showing recent, truncated)' : '';
       emitDockSummaryLine('Gifts', countFromFieldOrArray(r, 'gifts_count', 'gifts'), giftSuffix);
-      if (typeof r.gifts_note === 'string' && r.gifts_note.trim()) {
+      if (typeof r.gifts_note === 'string' && sentNonBlankString(r.gifts_note)) {
         emitLine(`${c.dim}${r.gifts_note}${c.reset}`);
       }
       if (Array.isArray(r.gifts) && r.gifts.length > 0) {

@@ -566,6 +566,23 @@ test('prints last_assessed_at 1779926400000 as Last assessed: 2026-05-28 00:00 U
   expect(stdout).toContain('Last assessed: 2026-05-28 00:00 UTC');
 });
 
+test('prints last_assessed_at 1e20 as Last assessed with the locale number and without UTC', () => {
+  const lastAssessedAt = 1e20;
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      last_assessed_at: lastAssessedAt,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const lastAssessed = stdout.split('\n').find((line) => line.startsWith('Last assessed:'));
+  expect(lastAssessed).toBe(`Last assessed: ${lastAssessedAt.toLocaleString()}`);
+  expect(lastAssessed).not.toContain('UTC');
+});
+
 test('prints next_assessment_approx_seconds 0 as Next assessment approx: 0s', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -726,6 +743,21 @@ test('prints an assessed_property_by_ship string withheld instead of the raw res
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Property by ship: ship when assessed_property_by_ship is [{}]', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: '',
+      assessed_property_by_ship: [{}],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const propertyLine = stdout.split('\n').find((line) => line.startsWith('Property by ship:'));
+  expect(propertyLine).toBe('Property by ship: ship');
+});
+
 test('prints a sales_tax_rates record instead of the raw response dump', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -822,6 +854,21 @@ test('prints Income tax: entry when income_tax is an empty record', () => {
 
   const incomeLine = stdout.split('\n').find((line) => line.startsWith('Income tax:'));
   expect(incomeLine).toBe('Income tax: entry');
+});
+
+test('prints Income tax: entry and does not print bracket when income_tax brackets are [{}]', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: [{ brackets: [{}] }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const incomeLine = stdout.split('\n').find((line) => line.startsWith('Income tax:'));
+  expect(incomeLine).toBe('Income tax: entry');
+  expect(stdout).not.toContain('bracket');
 });
 
 test('omits Foreign Overrides when foreign_sales_tax_bps is an empty map', () => {

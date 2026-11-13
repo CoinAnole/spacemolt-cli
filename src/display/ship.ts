@@ -557,7 +557,6 @@ function emitPilotingXp(value: unknown): void {
   if (text !== undefined) emitLine(`Piloting XP: ${text}`);
 }
 
-// Finite number or bigint, including 0, as sent. Omitted, non-number, and non-finite print nothing.
 function formatModuleDraw(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
   if (isStrictFiniteNumber(value)) return Object.is(value, -0) ? '0' : String(value);

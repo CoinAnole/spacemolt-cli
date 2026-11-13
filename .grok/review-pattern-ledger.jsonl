@@ -99,3 +99,8 @@
 {"family":"test","file":"src/display/empire.test.ts","line":473,"quote":"expect(stdout).toContain('Taxes: Sales 1%');"}
 {"family":"comment","file":"src/notification-format-shared.ts","line":4025,"quote":"// 3. Direct message keys alone (only after sender+body and command+error miss)"}
 {"family":"test","file":"src/notifications.test.ts","line":10533,"quote":"data: { skill_id: 'mining', xp_gained: 5, current_xp: 0, next_level_xp: 0 },"}
+{"family":"presence","file":"src/display/status.ts","line":327,"quote":"value.title === undefined || value.title === null || value.title === '' ? undefined : String(value.title);"}
+{"family":"test","file":"src/display/inspect.test.ts","line":2133,"quote":"test('omits a blank catalog message', () => {"}
+{"family":"comment","file":"src/notification-format-shared.ts","line":3784,"quote":"// Receipt when present; null falls through to Policy 5 generic (scalar bag / last resort)."}
+{"family":"presence","file":"src/notification-format-shared.ts","line":123,"quote":"if (!key?.trim() || quantity === undefined || quantity <= 0) return;"}
+{"family":"presence","file":"src/openapi-metadata.ts","line":73,"quote":"if (typeof version !== 'string' || version.trim() === '') {"}

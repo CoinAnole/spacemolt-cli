@@ -386,6 +386,31 @@ test('faction_garages omits optional station and ship names when absent', () => 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('faction_garages omits System when system_name is empty', () => {
+  const stdout = renderFactionGarages({
+    station_count: 1,
+    total_ships: 1,
+    stations: [
+      {
+        base_id: 'nova_terra_central',
+        system_name: '',
+        used: 1,
+        capacity: 4,
+        ships: [
+          {
+            ship_id: 'ship-garage',
+            class_id: 'prospector',
+            depositor_id: 'player-1',
+            deposited_tick: 12050,
+          },
+        ],
+      },
+    ],
+  }).stdout.join('\n');
+
+  expect(stdout).not.toContain('System:');
+});
+
 test('faction_garages station with empty ships prints none', () => {
   const stdout = renderFactionGarages({
     station_count: 1,
@@ -2957,6 +2982,16 @@ test('get_base prints the condition string and satisfaction 0 when condition_tex
   fixture.condition.satisfaction_pct = 0;
   const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
   expect(stdout).toContain('Condition: strained (0% satisfaction)');
+});
+
+test('get_base prints Fuel: ?/0 when fuel is omitted and max_fuel is 0', () => {
+  const fixture = structuredClone(baseFixture) as Record<string, unknown> & {
+    base: Record<string, unknown>;
+  };
+  delete fixture.base.fuel;
+  fixture.base.max_fuel = 0;
+  const stdout = renderStructuredResult('get_base', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Fuel: ?/0');
 });
 
 test('get_drone omits Script when script is absent', () => {

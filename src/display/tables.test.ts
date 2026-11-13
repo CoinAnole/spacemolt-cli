@@ -70,4 +70,10 @@ describe('formatItemTable', () => {
     const row = lines.find((line) => line.includes('ore_iron'));
     expect(row?.split('|')[0]?.trim()).toBe('Iron Ore');
   });
+
+  test('formatItemTable prints an empty id when item_id is absent', () => {
+    const lines = formatItemTable([{ name: 'Fuel Cell', quantity: 1, size: 1 }]);
+    const row = lines.find((line) => line.includes('Fuel Cell'));
+    expect(row).toBe('  Fuel Cell |    |   1 |         1');
+  });
 });

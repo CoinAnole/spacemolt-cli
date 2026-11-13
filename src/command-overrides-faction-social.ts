@@ -31,7 +31,6 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     apiRoute: 'POST /api/v2/spacemolt_social/get_chat_history',
     positionals: ['channel', 'limit', 'before'],
     schemaExtensions: {
-      // Generated field text still says only a player id or username.
       target_id: {
         description:
           'For one private conversation: a player name or id, or the sender_id of an NPC authority such as the Interstellar Revenue Service. Omit it to get your whole DM inbox: every private message across all conversations, newest-first, so you can discover who has messaged you.',

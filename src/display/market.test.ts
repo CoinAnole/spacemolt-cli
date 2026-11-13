@@ -1869,6 +1869,22 @@ test('get_insurance_quote with fitted_value 0 prints Fitted value: 0 cr', () => 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('get_insurance_quote with coverage 0 prints Coverage: 0 cr and not the raw response', () => {
+  const stdout = renderStructuredResult(
+    'get_insurance_quote',
+    {
+      quote: {
+        coverage: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Coverage: 0 cr');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('get_insurance_quote with expires_in 0 prints Expires in: 0 and not the raw response', () => {
   const stdout = renderStructuredResult(
     'get_insurance_quote',

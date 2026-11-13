@@ -822,7 +822,7 @@ function projectAllyRentalFee(row: Record<string, unknown>): Record<string, unkn
   if (hasAnyField([row], ['rental_fee_per_run'])) return row;
   const production = facilityProduction(row);
   const fee = production?.rental_fee_per_run;
-  if (typeof fee === 'bigint' || (typeof fee === 'number' && Number.isFinite(fee))) {
+  if (noteIntegerText(fee) !== undefined) {
     return { ...row, rental_fee_per_run: fee };
   }
   return row;

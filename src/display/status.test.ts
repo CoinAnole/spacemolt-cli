@@ -4377,6 +4377,20 @@ test('get_map systems list prints total_count 0', () => {
   expect(stdout).toContain('total 0');
 });
 
+test('completed_missions prints total 0', () => {
+  const stdout = renderStructuredResult(
+    'completed_missions',
+    {
+      missions: [],
+      total_count: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('total 0');
+});
+
 test('get_map list with mixed descriptions prints a Chart descriptions table', () => {
   const stdout = renderStructuredResult(
     'get_map',
@@ -8393,6 +8407,14 @@ test('scan object revealed_info prints 0 and skips nested records', () => {
   expect(stdout).not.toContain('nested_skip');
 });
 
+test('scan array revealed_info prints 0', () => {
+  const stdout = renderScan({
+    target_id: 'poi-1',
+    revealed_info: [0],
+  });
+  expect(stdout).toContain('  0');
+});
+
 test('scan object revealed_info skips array values', () => {
   const stdout = renderScan({
     target_id: 'poi-1',
@@ -8418,6 +8440,15 @@ test('view_completed_mission giver label and id prints title, name, and id', () 
     giver: { title: 'Dockmaster', name: 'Vale', id: 'npc-vale' },
   });
   expect(stdout).toContain('Giver: Dockmaster Vale (npc-vale)');
+});
+
+test('view_completed_mission giver id-only prints the id', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    giver: { id: 'npc-vale' },
+  });
+  expect(stdout).toContain('Giver: npc-vale');
+  expect(stdout).not.toContain('Giver: npc-vale (');
 });
 
 test('view_completed_mission objective system_id fallback prints the system id', () => {
