@@ -33,6 +33,10 @@ let meta = #{
 // verifier cannot reverse a keep after lines drift. A recorded row is not
 // rewritten. The same quote at a new line is already blocked and is not stored
 // again.
+// A drop line is {"op":"drop","family","file","line","quote"}. The reader
+// walks the file in order and removes every earlier row with that file,
+// family, and quote. A row appended after the drop is active again. This
+// workflow still appends only the four-key row.
 // The reader does not copy that file through an output schema or as JSON text.
 // A schema miss retries inside the one agent call and cannot be timed out.
 // A program prints COUNT, PARTS, SUM, FILE_BYTES, and FILE_SUM, then one
@@ -985,7 +989,14 @@ def load_entries():
             obj = json.loads(line.decode("utf-8"))
         except Exception:
             return None
-        if not isinstance(obj, dict) or set(obj) != {"family", "file", "line", "quote"}:
+        if not isinstance(obj, dict):
+            return None
+        keys = set(obj)
+        if keys == {"family", "file", "line", "quote"}:
+            is_drop = False
+        elif keys == {"op", "family", "file", "line", "quote"} and obj.get("op") == "drop":
+            is_drop = True
+        else:
             return None
         family = obj["family"]
         file = obj["file"]
@@ -997,7 +1008,11 @@ def load_entries():
             return None
         if type(line_no) is not int or line_no <= 0:
             return None
-        entries.append({"family": family, "file": file, "line": line_no, "quote": quote})
+        row = {"family": family, "file": file, "line": line_no, "quote": quote}
+        if is_drop:
+            entries = [kept for kept in entries if not (kept["family"] == family and kept["file"] == file and kept["quote"] == quote)]
+        else:
+            entries.append(row)
     return entries
 def line_blob(entries):
     lines = []
@@ -2073,6 +2088,9 @@ fn ledger_codec_failures() {
     let reader = ledger_python_body();
     if !has_text(reader, "read_bytes") || !has_text(reader, #"split(b"\n")[:-1]"#) || !has_text(reader, #"endswith(b"\n")"#) || !has_text(reader, #"b"\n\n""#) {
         failed += "reader-bytes ";
+    }
+    if !has_text(reader, "{\"op\", \"family\", \"file\", \"line\", \"quote\"}") || !has_text(reader, "obj.get(\"op\") == \"drop\"") {
+        failed += "reader-drop ";
     }
     if !has_text(reader, "LC_ALL=C") || !has_text(reader, "git cat-file -e HEAD:.grok/review-pattern-ledger.jsonl") {
         failed += "reader-git ";
