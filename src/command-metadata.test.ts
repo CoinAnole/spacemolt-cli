@@ -1455,6 +1455,11 @@ describe('command metadata', () => {
       expect(text).toContain('returns the same invalid_target');
       expect(text).toContain('target_unavailable');
       expect(text).toContain('until the crew has a new ship');
+      expect(text).toContain('A target whose grant of safe passage binds you returns safe_passage.');
+      expect(text).not.toContain('grantor_id');
+      expect(text).not.toContain('faction_id');
+      expect(text).not.toContain('granted_tick');
+      expect(text).not.toContain('until_tick');
       expect(text).toContain('target_docked');
       expect(text).toContain('normal side rules');
       expect(text).toContain('joins their side');
@@ -1513,6 +1518,9 @@ describe('command metadata', () => {
         "Fleet and faction auto-joins no longer pull you into a fight against your own faction's station.",
       );
       expect(text).toContain('Your drones no longer open a side against it.');
+      expect(text).toContain('Joining against a pilot whose grant of safe passage binds you returns safe_passage.');
+      expect(text).not.toContain('grantor_id');
+      expect(text).not.toContain('faction_id');
       expect(text).toContain('Does not cost a tick');
       expect(text.indexOf('A passed side_id is not re-picked')).toBeLessThan(text.indexOf('When side_id is omitted'));
       expect(text.indexOf('When side_id is omitted')).toBeLessThan(
@@ -1635,6 +1643,7 @@ describe('command metadata', () => {
     expect(hunt?.description).toContain('[RNC] Belt-Grazer');
     expect(hunt?.description).not.toContain('leviathan_id=');
     expect(hunt?.description).not.toContain('target_id');
+    expect(hunt?.description).not.toContain('safe_passage');
     expect(hunt?.description).not.toContain('`');
     const huntDescription = hunt?.description ?? '';
     expect(huntDescription).toContain(WILDLIFE_FLEE_WINDOW_HELP);
@@ -1687,6 +1696,7 @@ describe('command metadata', () => {
     expect(help).toContain('[RNC] Belt-Grazer');
     expect(help).not.toContain('leviathan_id=');
     expect(help).not.toContain('target_id');
+    expect(help).not.toContain('safe_passage');
     expect(help).not.toContain('`');
     expect(help).toContain(WILDLIFE_FLEE_WINDOW_HELP);
     expect(help.indexOf('Loot is unchanged.')).toBeLessThan(help.indexOf(WILDLIFE_FLEE_WINDOW_HELP));
@@ -1830,6 +1840,9 @@ describe('command metadata', () => {
       expect(text).toContain(WILDLIFE_FLEE_WINDOW_HELP);
       expect(text.indexOf('Set your battle stance')).toBeLessThan(text.indexOf(WILDLIFE_FLEE_WINDOW_HELP));
       expect(text.indexOf(WILDLIFE_FLEE_WINDOW_HELP)).toBeLessThan(text.indexOf('For board'));
+      expect(text).toContain('board against a pilot whose grant of safe passage binds you returns safe_passage.');
+      expect(text).not.toMatch(/\b(?:fire|evade|brace|flee)\b[^.]*returns safe_passage/);
+      expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('flee_required');
       expect(text).not.toContain('`');
       expect(text).not.toContain('attack or hunt still starts or joins');
@@ -1864,6 +1877,8 @@ describe('command metadata', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.battle_target;
     expect(config?.usage).toContain('target_id_or_name');
     expect(config?.description).toContain('intact prizes');
+    expect(config?.description).toContain('A target whose grant of safe passage binds you returns safe_passage.');
+    expect(config?.description).not.toContain('grantor_id');
     expect(config?.example).toBe('spacemolt battle_target "Pirate Skiff"');
     expect(config?.seeAlso).toEqual(expect.arrayContaining(['get_battle_status']));
     // Positional stays target_id (wire alias → id); not exposed on assembled CommandConfig
@@ -1882,6 +1897,8 @@ describe('command metadata', () => {
     const help = captureHelp('battle_target');
     expect(help).toContain('target_id_or_name');
     expect(help).toContain('intact prizes');
+    expect(help).toContain('A target whose grant of safe passage binds you returns safe_passage.');
+    expect(help).not.toContain('grantor_id');
     expect(help).toContain(
       'Board stance (not focus fire) rejects creatures, drones, and stations because they are not capturable.',
     );

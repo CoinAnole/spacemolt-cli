@@ -71,7 +71,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
     description:
-      "Join an existing battle. This command cannot start a battle. Pass side_id to choose a side. A passed side_id is not re-picked. A side_id that opposes your own faction's station returns own_faction_station. Omit side_id for faction-based auto-assignment. Omitting side_id joins your station's side when your faction's station is in the battle. When side_id is omitted, side selection no longer changes at random. Pirates join the lowest-numbered NPC side. If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's. 0.630.5 does not say whether an ally still comes first when that disagrees with those two sentences. Fleet and faction auto-joins no longer pull you into a fight against your own faction's station. Your drones no longer open a side against it. Does not cost a tick — only reload does.",
+      "Join an existing battle. This command cannot start a battle. Pass side_id to choose a side. A passed side_id is not re-picked. A side_id that opposes your own faction's station returns own_faction_station. Omit side_id for faction-based auto-assignment. Omitting side_id joins your station's side when your faction's station is in the battle. When side_id is omitted, side selection no longer changes at random. Pirates join the lowest-numbered NPC side. If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's. 0.630.5 does not say whether an ally still comes first when that disagrees with those two sentences. Fleet and faction auto-joins no longer pull you into a fight against your own faction's station. Your drones no longer open a side against it. Does not cost a tick — only reload does. Joining against a pilot whose grant of safe passage binds you returns safe_passage.",
     example: 'spacemolt battle_engage 1',
     discoverWith: ['get_battle_status'],
     seeAlso: ['attack', 'get_battle_status', 'battle_target', 'battle_stance'],
@@ -100,7 +100,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     description:
       'Set your battle stance (fire, evade, brace, flee, or board). ' +
       WILDLIFE_FLEE_WINDOW_HELP +
-      " For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. A faster effective speed lets the boarder intercept the target's retreat and flee; an equal or faster target can kite. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does. plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players.",
+      " For board, the server requires target and marines=N (fit marines committed; the battle tick caps to marines actually available); other stances still take only <stance>. The CLI rejects marines below 1. A faster effective speed lets the boarder intercept the target's retreat and flee; an equal or faster target can kite. Changing away from board begins a non-instant withdrawal. Does not cost a tick — only reload does. plunder robs another player's cargo and leaves the hull; capture is the default; plunder targets only players. board against a pilot whose grant of safe passage binds you returns safe_passage.",
     example: 'spacemolt battle_stance board pirate-1 marines=8',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_target'],
@@ -128,7 +128,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_target: {
     usage: '<target_id_or_name>',
     description:
-      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, stations, or intact prizes. Does not cost a tick — only reload does.',
+      'Focus fire on one combatant in the current battle. Pass the ID or name of any participant from get_battle_status — players, pirates, police, drones, creatures, stations, or intact prizes. Does not cost a tick — only reload does. A target whose grant of safe passage binds you returns safe_passage.',
     example: 'spacemolt battle_target "Pirate Skiff"',
     discoverWith: ['get_battle_status'],
     seeAlso: ['get_battle_status', 'battle_stance', 'reload'],
