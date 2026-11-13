@@ -3255,6 +3255,13 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).not.toContain('=== Categories ===');
 });
 
+test('facility_types detail prints Service pool capacity 0 beside the other pool fields', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture);
+  fixture.service_pool_capacity = 0;
+  const poolLine = facilityTypeDetailLines(fixture).find((line) => line.startsWith('Service pool:'));
+  expect(poolLine).toBe('Service pool: 0 cap, +4/cycle, 1x crew_rations');
+});
+
 test('facility_types detail prints the supply item when service pool units are omitted', () => {
   const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
   delete fixture.service_pool_units_per_item;

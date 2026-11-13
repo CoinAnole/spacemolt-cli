@@ -313,7 +313,7 @@ function formatMissionObjectText(value: unknown): string | undefined {
   if (!isRecord(value)) return String(value);
 
   const name = value.name ?? value.title ?? value.id ?? value.content ?? value.text ?? value.message;
-  if (name !== undefined && name !== null && name !== '') return String(name);
+  if (rowsHaveValue([{ name }], ['name'])) return String(name);
 
   const json = stringifyApiJson(value);
   return json === undefined || json === '{}' ? undefined : json;
@@ -1912,7 +1912,6 @@ export const statusFormatters = [
       emitLine(`ID: ${poi.id}`);
       emitLine(`Type: ${poi.type}`);
       emitLine(`System: ${poi.system_id}`);
-      // Blank (empty or whitespace) and non-strings print nothing. A non-blank id is printed as sent.
       const parentId = poi.parent_id;
       if (typeof parentId === 'string' && parentId.trim() !== '') emitLine(`Attached to: ${parentId}`);
       if (poi.description) emitLine(`Description: ${poi.description}`);

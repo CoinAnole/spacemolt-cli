@@ -205,6 +205,14 @@ describe('emitStationLifeSupport', () => {
     expect(buffer.stdout.join('\n')).toContain('Upkeep: Oxygen x2');
   });
 
+  test('life support upkeep prints a question mark when quantity is absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ maintenance: [{ name: 'Oxygen' }] }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Upkeep: Oxygen x?');
+  });
+
   test('life support upkeep uses item_id when name is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(
@@ -213,6 +221,12 @@ describe('emitStationLifeSupport', () => {
       { plain: true },
     );
     expect(buffer.stdout.join('\n')).toContain('Upkeep: oxygen x2');
+  });
+
+  test('life support upkeep uses item when name and item_id are absent', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ maintenance: [{ quantity: 2 }] }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Upkeep: item x2');
   });
 
   test('life support prints upkeep cadence without maintenance items', () => {

@@ -89,3 +89,6 @@
 {"family":"comment","file":"src/display/fit-preview.ts","line":78,"quote":"// Omitted temporary stays blank. false is no, not blank."}
 {"family":"test","file":"src/display/helpers.over-capacity.test.ts","line":128,"quote":"test('emitStationDefences prints explicit hull 0', () => {"}
 {"family":"comment","file":"src/notification-format-shared.ts","line":350,"quote":"// ── Table Message baseline formatters (PR2; sole Message source after PR4) ───"}
+{"family":"test","file":"src/display/status.test.ts","line":6714,"quote":"test('get_state prints Ship: (none) when ship and riding are absent', () => {"}
+{"family":"comment","file":"src/display/generic.ts","line":75,"quote":"// A blank counting-base string adds nothing. A non-blank string is printed as sent."}
+{"family":"presence","file":"src/display/market.ts","line":1150,"quote":"if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);"}

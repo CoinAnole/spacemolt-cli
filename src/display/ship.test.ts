@@ -867,6 +867,20 @@ test('get_ship prints refit available yes or no and skips an omitted or non-bool
   expect(renderShip(root).stdout.join('\n')).not.toContain('Refit available:');
 });
 
+test('get_ship prints Armor: 0 when armor is 0', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  fixture.ship.armor = 0;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Armor: 0');
+});
+
+test('get_ship prints Armor: 0 when armor is omitted', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+  delete fixture.ship.armor;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  expect(stdout).toContain('Armor: 0');
+});
+
 test('get_ship keeps module stats off the table', () => {
   const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
   const expander = fixture.modules[0];

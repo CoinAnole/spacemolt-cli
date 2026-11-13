@@ -465,6 +465,26 @@ test('citizenship list prints an explicit zero citizen flag as 0', () => {
   expect(row).not.toContain('no');
 });
 
+test('citizenship list prints Min rep 0 when an empire min_reputation is 0', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    empires: [
+      {
+        empire_name: 'Solarian',
+        empire_id: 'solarian',
+        min_reputation: 0,
+      },
+    ],
+  });
+
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Min rep'));
+  const row = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Solarian') && !line.includes('Min rep'));
+  const headers = header?.split('|').map((cell) => cell.trim()) ?? [];
+  const cells = row?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(cells[headers.indexOf('Min rep')]).toBe('0');
+});
+
 test('citizenship apply omits Status when status is an empty string', () => {
   const stdout = stdoutOf('citizenship_apply', {
     empire_id: 'solarian',

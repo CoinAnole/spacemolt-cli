@@ -181,10 +181,6 @@ function noteIntegerText(value: unknown): string | undefined {
   return undefined;
 }
 
-function noteCreatedAtText(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
 const NOTE_PAGE_KEYS = ['page', 'page_size', 'total_count', 'has_more'] as const;
 
 function notePageKeyPresent(result: Record<string, unknown>, key: (typeof NOTE_PAGE_KEYS)[number]): boolean {
@@ -1496,7 +1492,8 @@ export const socialFormatters = [
           note_id: entry.note_id,
           created_by: entry.created_by,
           content_length_text: noteIntegerText(entry.content_length),
-          created_at_text: noteCreatedAtText(entry.created_at),
+          created_at_text:
+            typeof entry.created_at === 'string' && entry.created_at.length > 0 ? entry.created_at : undefined,
         }));
         const columns: Array<[string, string[]]> = [
           ['Title', ['title']],

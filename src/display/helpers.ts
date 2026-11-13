@@ -561,7 +561,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
 
   if (typeof result.description === 'string') {
     const description = result.description.trim();
-    if (description !== '') emitLine(`Description: ${description}`);
+    if (hazardTypeText(result.description) !== undefined) emitLine(`Description: ${description}`);
   }
 
   emitYesNo('Public access', result.public_access);

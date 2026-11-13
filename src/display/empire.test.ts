@@ -260,6 +260,24 @@ test('omits statement period started when the timestamp is unparseable', () => {
   expect(stdout).not.toContain('Period started');
 });
 
+test('omits Period started when latest_statement period_started_at is null', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      ...taxEstimateFixture,
+      latest_statement: {
+        ...taxEstimateFixture.latest_statement,
+        period_started_at: null,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Latest Weekly Statement ===');
+  expect(stdout).not.toContain('Period started');
+});
+
 test('omits statement income by category when the map is empty', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -677,6 +695,22 @@ test('prints a taxable_income_by_source string withheld instead of the raw respo
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Income by source: source when taxable_income_by_source is one empty record', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: '',
+      taxable_income_by_source: [{}],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const sourceLine = stdout.split('\n').find((line) => line.startsWith('Income by source:'));
+  expect(sourceLine).toBe('Income by source: source');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('prints an assessed_property_by_ship string withheld instead of the raw response heading', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -706,6 +740,20 @@ test('prints a sales_tax_rates record instead of the raw response dump', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints Sales tax rates: withheld when sales_tax_rates is the string withheld', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      sales_tax_rates: 'withheld',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Sales tax rates: withheld');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders an empty sales-tax reason without a parenthetical', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',
@@ -718,6 +766,20 @@ test('renders an empty sales-tax reason without a parenthetical', () => {
 
   const ratesLine = stdout.split('\n').find((line) => line.startsWith('Sales tax rates:'));
   expect(ratesLine).toBe('Sales tax rates: solarian 1%');
+});
+
+test('prints Sales tax rates: rate when sales_tax_rates is one empty record', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      sales_tax_rates: [{}],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const ratesLine = stdout.split('\n').find((line) => line.startsWith('Sales tax rates:'));
+  expect(ratesLine).toBe('Sales tax rates: rate');
 });
 
 test('prints the Tax Estimate header and omits Income tax when income_tax is empty', () => {

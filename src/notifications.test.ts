@@ -12057,6 +12057,15 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
     });
 
+    test('a hold message that already names the trade id omits the trade detail', () => {
+      const preview = formatNotificationPreview({
+        msg_type: 'hold_update',
+        data: { message: 'See trade-9', trade_id: 'trade-9' },
+      });
+      expect(preview.headline).toBe('See trade-9');
+      expect(preview.details).toEqual([]);
+    });
+
     test('empty strings and a non-number start tick print nothing', () => {
       const preview = formatNotificationPreview({
         msg_type: 'hold_update',
@@ -12633,6 +12642,14 @@ describe('notification formatting', () => {
       expect(preview.details[0]?.endsWith('…')).toBe(true);
       expect(preview.headline).not.toContain('...');
       expect(preview.details[0]).not.toContain('...');
+    });
+
+    test('a 36-character storm budget replaces the headline with the deflected detail', () => {
+      const preview = formatNotificationPreview(note({ deflected: true, message: 'Pushed off the plotted bearing.' }), {
+        maxLineLength: 36,
+      });
+      expect(preview.headline).toBe(deflectedTrue);
+      expect(preview.details).toEqual([deflectedTrue]);
     });
 
     test('a 100 character message keeps Use: get_location inside 120', () => {
@@ -13442,6 +13459,20 @@ describe('notification formatting', () => {
       expect(message).not.toContain('(prospector)');
     });
 
+    test('ship class without a ship name', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          ship_class: 'hauler',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered hauler, ship ship-42');
+    });
+
     test('count-map truncation lists six command counts and +1 more', () => {
       const notification = {
         type: 'action',
@@ -13526,6 +13557,22 @@ describe('notification formatting', () => {
       expect(message).not.toContain('(');
     });
 
+    test('base name equal to its base id', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: 'commission-1',
+          ship_id: 'ship-42',
+          base_name: 'sol_station',
+          base_id: 'sol_station',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toBe('Commission commission-1 delivered ship ship-42, at sol_station');
+      expect(message).not.toContain('(');
+    });
+
     test('ship_commission without receipt falls through to scalar bag (not JSON)', () => {
       const notification = {
         type: 'system',
@@ -13537,6 +13584,20 @@ describe('notification formatting', () => {
       expect(message).toContain('commission_id=commission-only');
       expectNoNestedJsonDump(message);
       expect(formatNotificationPreview(notification).tag).toBe('SHIP_COMMISSION_COMPLETE');
+    });
+
+    test('a blank commission id is absent from the receipt', () => {
+      const notification = {
+        type: 'system',
+        msg_type: 'ship_commission_complete',
+        data: {
+          commission_id: '   ',
+          ship_id: 'ship-42',
+        },
+      };
+      const message = formatNotificationMessage(notification);
+      expect(message).toContain('ship_id=ship-42');
+      expect(message).not.toContain('Commission');
     });
 
     test('inline pure registry uses preview headline for market_update', () => {

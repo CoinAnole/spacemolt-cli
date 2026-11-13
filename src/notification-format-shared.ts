@@ -3347,7 +3347,7 @@ function previewRanchPoached(
 function sentPreviewLine(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const line = value.split(/\r?\n/, 1)[0] ?? '';
-  return line.trim() === '' ? undefined : line;
+  return nonEmptyString(line) ? line : undefined;
 }
 
 function previewHazardWarning(
@@ -4166,7 +4166,6 @@ export function tableMessageFromPreview(preview: NotificationPreview): string {
   const details = preview.details;
   if (!details.length) return preview.headline;
   const first = details[0];
-  // Role: is inline-only; never occupy the table Message fold slot.
   if (first?.startsWith('Role:')) return preview.headline;
   if (first && first.length <= TABLE_DETAIL_FOLD_LIMIT && !preview.headline.includes(first)) {
     return `${preview.headline}; ${first}`;

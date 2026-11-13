@@ -4016,6 +4016,13 @@ test('get_status_summary prints Crew occupancy and omits it without personnel or
   expect(ridingOut).toContain('passenger on Ibis');
 });
 
+test('get_status_summary prints passenger on carrier when the riding carrier name is omitted', () => {
+  const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
+  riding.riding = { ship_id: 'ship-ibis-1' };
+  const ridingOut = renderStructuredResult('get_status_summary', riding, options, context).stdout.join('\n');
+  expect(ridingOut).toContain('passenger on carrier');
+});
+
 test('get_status_summary prints Skills None when no skill entries', () => {
   const fixture = structuredClone(getStatusFixture) as {
     skills?: unknown;
@@ -4040,6 +4047,21 @@ test('get_status prints the riding ship id', () => {
   riding.riding = { carrier: 'Ibis', ship_id: 'ship-ibis-1' };
   const stdout = renderStructuredResult('get_status', riding, options, context).stdout.join('\n');
   expect(stdout).toContain("Riding aboard: Ibis's ship (ship-ibis-1)");
+});
+
+test('get_status omits the riding ship id when ship_id is absent', () => {
+  const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
+  riding.riding = { carrier: 'Ibis' };
+  const stdout = renderStructuredResult('get_status', riding, options, context).stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes('Riding aboard:'));
+  expect(line?.trim()).toBe("Riding aboard: Ibis's ship");
+});
+
+test('get_status prints a question mark when the riding carrier name is omitted', () => {
+  const riding = structuredClone(getStatusFixture) as { riding?: Record<string, unknown> };
+  riding.riding = { ship_id: 'ship-ibis-1' };
+  const stdout = renderStructuredResult('get_status', riding, options, context).stdout.join('\n');
+  expect(stdout).toContain("Riding aboard: ?'s ship");
 });
 
 test('get_status_summary still prints Crew 0/6 when incapacitated', () => {
@@ -6873,6 +6895,14 @@ test('get_state prints the riding ship id', () => {
   expect(stdout).toContain("Riding aboard: Ibis's ship (carrier-ship-1)");
 });
 
+test('get_state omits the riding ship id when ship_id is absent', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as { riding: Record<string, unknown> };
+  delete fixture.riding.ship_id;
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+  const line = stdout.split('\n').find((entry) => entry.includes('Riding aboard:'));
+  expect(line?.trim()).toBe("Riding aboard: Ibis's ship");
+});
+
 test('get_state cargo share lines gloss size-1 fill and that lower is better', () => {
   const snapshot = renderStructuredResult(
     'get_state',
@@ -6963,6 +6993,13 @@ test('get_status and get_state print refit available yes or no and skip an omitt
       expect(stdout).not.toContain('Refit available:');
     }
   }
+});
+
+test('get_status prints Armor: 0 when armor is 0', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.armor = 0;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('  Armor: 0');
 });
 
 test('get_state prints ship location when the string is non-empty', () => {

@@ -2880,6 +2880,26 @@ test('view_orders remaining 0 and quantity 100 prints 0/100', () => {
   expect(stdout).toContain('0/100');
 });
 
+test('view_orders quantity without remaining prints the quantity alone', () => {
+  const stdout = renderStructuredResult(
+    'view_orders',
+    {
+      orders: [
+        {
+          quantity: 100,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const openCell = stdout.split('\n').find((line) => line.includes('100'));
+
+  expect(openCell).toContain('100');
+  expect(openCell).not.toContain('/');
+});
+
 test('browse_ships listing with hull 0 omits Hull', () => {
   const stdout = renderStructuredResult(
     'browse_ships',
@@ -3059,6 +3079,23 @@ test('browse_ships all_stations prints each listing station and does not invent 
   expect(stdout.toLowerCase()).not.toContain('count');
   expect(stdout).not.toContain('can_fly');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('browse_ships with omitted base fields prints Ships for Sale @ Station', () => {
+  const stdout = renderBrowseShips({
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale @ Station ===');
+  expect(stdout).toContain('@ Station');
 });
 
 test('browse_ships omits an absent page key and keeps a single-station header name', () => {

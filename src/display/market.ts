@@ -1113,7 +1113,7 @@ function emitIntelDescription(value: unknown, indent: string, printedMessage: st
 }
 
 function nonEmptyStationString(value: unknown): string | undefined {
-  return typeof value === 'string' && value !== '' ? value : undefined;
+  return typeof value === 'string' && hasNonEmptyBaseId(value) ? value : undefined;
 }
 
 function shipListingStation(baseName: unknown, baseId: unknown): string | undefined {

@@ -183,6 +183,19 @@ test('empty jettison results print (None)', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('empty jettison results omit OK', () => {
+  const { stdout, stderr } = renderJettison('storage jettison', {
+    details: {
+      action: 'bulk_jettison',
+      results: [],
+    },
+  });
+
+  expect(stderr).toBe('');
+  expect(stdout).toContain('(None)');
+  expect(stdout).not.toContain('OK');
+});
+
 test('bulk jettison lists each conversion, including 0', () => {
   const { stdout, stderr } = renderJettison('storage jettison', storageJettisonPartialFixture);
 

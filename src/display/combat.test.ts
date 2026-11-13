@@ -289,6 +289,26 @@ test('an empty target declines to the response dump instead of an arrival', () =
   expect(stdout).not.toContain('=== Attack ===');
 });
 
+test('an attack reply with target 0 prints the response dump and does not print the Attack header', () => {
+  const stdout = renderCombat('attack', {
+    details: {
+      action: 'attack',
+      kind: 'npc',
+      target: 0,
+      target_type: 'creature',
+      target_name: '[RNC] Belt-Grazer',
+    },
+    location: {
+      poi_id: 'sol_belt',
+      poi_name: 'Belt',
+      nearby_players: [{ username: 'Ibis' }],
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('=== Attack ===');
+});
+
 test('a whitespace target prints the Attack header and Kind with no Target line', () => {
   const stdout = renderCombat('attack', {
     details: {

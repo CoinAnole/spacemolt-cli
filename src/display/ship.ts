@@ -548,7 +548,7 @@ function isStrictFiniteNumber(value: unknown): value is number {
 // Omitted piloting_xp is not 0. Print only a finite number or bigint.
 function formatPilotingXp(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  if (isStrictFiniteNumber(value)) return Object.is(value, -0) ? '0' : String(value);
   return undefined;
 }
 

@@ -511,6 +511,17 @@ test('a non-array loot list declines before any wreck-loot heading', () => {
   expect(stringLooted).toContain('Looted: not-an-array');
 });
 
+test('non-array skipped loot list declines before the wreck-loot heading', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllModulesFixture, (details) => {
+      details.skipped = { id: 'mod-laser-9' };
+    }),
+  );
+  expect(stdout).not.toContain('=== Wreck Loot ===');
+  expect(stdout).toContain('=== Response ===');
+});
+
 test('all-loot tables are not a shape fallback for other commands', () => {
   const stdout = stdoutOf('storage_deposit', lootWreckAllCargoFixture);
 

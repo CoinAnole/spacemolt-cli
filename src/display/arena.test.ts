@@ -554,6 +554,19 @@ test('declines malformed arena shapes and keeps the raw fallback', () => {
   expect(output('arena_decline', { details: { action: 'decline' } })).toContain('=== Response ===');
 });
 
+test('a complete arena accept with an empty battle_id prints the dump and not Arena match started', () => {
+  const stdout = output('arena_accept', {
+    details: {
+      ...arenaAcceptDetails,
+      battle_id: '',
+      message: 'Match accepted.',
+    },
+  });
+
+  expect(stdout).toContain('=== Response ===');
+  expect(stdout).not.toContain('Arena match started');
+});
+
 test('arena status declines when the win record is incomplete', () => {
   const stdout = output('arena_status', { at_arena: true, arena_wins: 3, arena_losses: 1 });
   expect(stdout).toContain('=== Response ===');

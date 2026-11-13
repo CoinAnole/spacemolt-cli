@@ -3919,6 +3919,82 @@ test('falls through when inspect package is a non-record string', () => {
   expect(stdout).not.toContain('Contents: (empty)');
 });
 
+test('falls through when inspect system is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'system',
+      system: 'RAW_SYSTEM_VALUE',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Inspect ===');
+  expect(stdout).toContain('RAW_SYSTEM_VALUE');
+  expect(stdout).not.toContain('System: unknown');
+});
+
+test('falls through when inspect poi is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'poi',
+      poi: 'RAW_POI_VALUE',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Inspect ===');
+  expect(stdout).toContain('RAW_POI_VALUE');
+  expect(stdout).not.toContain('POI:');
+});
+
+test('falls through when inspect base is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'base',
+      base: 'RAW_BASE_VALUE',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Inspect ===');
+  expect(stdout).toContain('RAW_BASE_VALUE');
+  expect(stdout).not.toContain('Station:');
+});
+
+test('falls through when inspect catalog is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'mystery',
+      kind: 'catalog',
+      catalog: 'RAW_CATALOG_VALUE',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout).toContain('=== Inspect ===');
+  expect(stdout).toContain('RAW_CATALOG_VALUE');
+  expect(stdout).not.toContain('Catalog (');
+});
+
 test('renders poi inspect results with description', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -5285,6 +5361,32 @@ test('prints Class: nav_buoy for a summary type without class and does not set f
   expect(stdout).not.toContain('Faction intel');
 });
 
+test('omits Faction intel when faction_poi_intel is a non-record string', () => {
+  const rendered = renderStructuredResult(
+    'inspect',
+    {
+      id: 'nav_buoy',
+      kind: 'poi',
+      poi: {
+        summary: {
+          id: 'nav_buoy',
+          name: 'Nav Buoy',
+          type: 'nav_buoy',
+        },
+      },
+      faction_poi_intel: 'RAW_FACTION_POI_INTEL',
+    },
+    options,
+    context,
+  );
+
+  expect(rendered.success).toBe(true);
+  const stdout = rendered.stdout.join('\n');
+  expect(stdout.split('\n')).toContain('POI: Nav Buoy');
+  expect(stdout).not.toContain('Faction intel');
+  expect(stdout).not.toContain('RAW_FACTION_POI_INTEL');
+});
+
 test('prints Class: asteroid_belt for summary class over type', () => {
   const rendered = renderStructuredResult(
     'inspect',
@@ -6036,6 +6138,30 @@ test('omits Condition when a station has no condition record', () => {
   expect(stdout.split('\n').find((entry) => entry.startsWith('Empire:'))).toBe('Empire: None');
   const line = stdout.split('\n').find((entry) => entry.startsWith('Condition:'));
   expect(line).toBeUndefined();
+});
+
+test('omits Condition when a station condition is a non-record string', () => {
+  const stdout = renderStructuredResult(
+    'inspect',
+    {
+      id: 'earth_station',
+      kind: 'base',
+      base: {
+        base: {
+          id: 'earth_station',
+          name: 'Earth Station',
+        },
+        condition: 'RAW_STATION_CONDITION',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout.split('\n').find((entry) => entry.startsWith('Empire:'))).toBe('Empire: None');
+  const line = stdout.split('\n').find((entry) => entry.startsWith('Condition:'));
+  expect(line).toBeUndefined();
+  expect(stdout).not.toContain('RAW_STATION_CONDITION');
 });
 
 test('omits Facilities when a station facilities value is omitted or not an array', () => {
