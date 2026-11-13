@@ -22,6 +22,7 @@ import {
   emitStationIds,
   formatDeepCoreLine,
   formatDeepCoreMark,
+  formatFiniteNumberAsSent,
   formatHazardTypeSeverity,
   formatIntegerText,
   formatLiveryName,
@@ -152,6 +153,29 @@ function hasUnknownSignature(...sources: unknown[]): boolean {
 function emitUnknownSignatureHint(...sources: unknown[]): void {
   if (!hasUnknownSignature(...sources)) return;
   emitLine(`${c.yellow}Unknown cloaked signature (not identified).${c.reset}`);
+}
+
+// Array order. Do not sort or name the stars.
+function emitStarSightings(sightings: unknown): void {
+  if (!Array.isArray(sightings) || sightings.length === 0) return;
+  const rows: Array<Record<string, unknown>> = [];
+  for (const entry of sightings) {
+    if (!isRecord(entry)) continue;
+    const row: Record<string, unknown> = {};
+    const bearing = formatFiniteNumberAsSent(entry.bearing);
+    const temperature = formatFiniteNumberAsSent(entry.temperature);
+    const brightness = formatFiniteNumberAsSent(entry.brightness);
+    if (bearing !== undefined) row.bearing = bearing;
+    if (temperature !== undefined) row.temperature = temperature;
+    if (brightness !== undefined) row.brightness = brightness;
+    rows.push(row);
+  }
+  if (rows.length === 0) return;
+  printCompactTable('Star sightings', rows, [
+    ['Bearing', ['bearing']],
+    ['Temperature', ['temperature']],
+    ['Brightness', ['brightness']],
+  ]);
 }
 
 function emitActiveScanLine(result: Record<string, unknown>, command: string | undefined): void {
@@ -1125,6 +1149,7 @@ export function emitLocationSnapshot(
     emitLine(`${c.cyan}Docked at:${c.reset} ${loc.docked_at}`);
   }
   emitLines(transitLines);
+  emitStarSightings(loc.star_sightings);
   emitUnknownSignatureHint(loc);
   if (showCombatEffects && isRecord(result.ship)) emitShipCombatEffects(result.ship);
   emitLocationResources(loc.resources);

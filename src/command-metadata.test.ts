@@ -7354,7 +7354,8 @@ describe('command metadata', () => {
       'When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.';
     const location =
       'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
-      locationRule;
+      locationRule +
+      ' A fitted telescope adds star_sightings with bearing, temperature, and brightness. The list is omitted when no working telescope has a star in view. The client does not choose which module is fitted.';
     const state =
       'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule;
@@ -7371,7 +7372,13 @@ describe('command metadata', () => {
       'When details.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, within one sensor level of your scanner. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. A false or omitted details field prints nothing. The sibling location.unknown_signature is not copied onto this arrival line.';
 
     expect(COMMANDS.get_location?.description).toBe(location);
+    expect(COMMANDS.get_location?.description).toContain('star_sightings');
+    expect(COMMANDS.get_location?.description).toContain('no working telescope has a star in view');
+    expect(COMMANDS.get_location?.description).toContain('does not choose which module is fitted');
     expect(COMMANDS.get_state?.description).toBe(state);
+    expect(COMMANDS.get_state?.description).not.toContain('star_sightings');
+    expect(COMMANDS.travel?.description).not.toContain('star_sightings');
+    expect(COMMANDS.jump?.description).not.toContain('star_sightings');
     expect(COMMANDS.faction_scan_poi?.description).toBe(scan);
     expect(COMMANDS.faction_scan_poi?.description).toContain(factionSensed);
     expect(scan).toContain('poi_not_found');

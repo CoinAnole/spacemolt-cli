@@ -25,6 +25,7 @@ import {
   firstArray,
   formatCreditRate,
   formatExactGroupedInteger,
+  formatFiniteNumberAsSent,
   formatter,
   isRecord,
   namedFormatter,
@@ -445,6 +446,8 @@ function withModuleAmmo(row: Record<string, unknown>): Record<string, unknown> {
     const cell = moduleAmmoCell(row[field]);
     if (cell !== undefined) next[`${field}_display`] = cell;
   }
+  const grade = formatFiniteNumberAsSent(row.telescope_grade);
+  if (grade !== undefined) next.telescope_grade_display = grade;
   return next;
 }
 
@@ -470,6 +473,7 @@ export function emitInstalledModules(
   ];
   let tableRows = rows.map((row) => (isRecord(row) ? withModuleAmmo(row) : row));
   const projected = tableRows.filter(isRecord);
+  appendOptionalColumn(columns, projected, 'Telescope grade', ['telescope_grade_display']);
   for (const [label, field] of MODULE_AMMO_FIELDS) {
     appendOptionalColumn(columns, projected, label, [`${field}_display`]);
   }

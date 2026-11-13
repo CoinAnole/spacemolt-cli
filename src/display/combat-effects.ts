@@ -330,6 +330,7 @@ export const MODULE_BONUS_EXCLUSIONS = new Set([
   'combat_effects',
   'special',
   'effect',
+  'telescope_grade',
   'category',
   'stackable',
   'tradeable',

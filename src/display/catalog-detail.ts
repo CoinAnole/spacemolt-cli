@@ -5,7 +5,7 @@ import {
   summarizeEffect,
   summarizeModuleBonuses,
 } from './combat-effects.ts';
-import { c, emitLine, finiteNumber, isRecord } from './helpers.ts';
+import { c, emitLine, finiteNumber, formatFiniteNumberAsSent, isRecord } from './helpers.ts';
 
 const DEDICATED_MODULE_BONUS_KEYS = [
   'reach',
@@ -35,6 +35,7 @@ const DEDICATED_MODULE_BONUS_KEYS = [
   'hazard_resistance',
   'hazard_mining_reduction',
   'hazard_scan_filter',
+  'telescope_grade',
 ] as const;
 
 export function packageOperationLabel(...values: unknown[]): string | undefined {
@@ -306,6 +307,9 @@ export function emitCatalogModuleDetail(entry: Record<string, unknown>, catalog:
   if (combat) emitLine(`Combat: ${combat}`);
 
   emitHazardModuleStats(entry);
+
+  const telescopeGrade = formatFiniteNumberAsSent(entry.telescope_grade);
+  if (telescopeGrade !== undefined) emitLine(`Telescope grade: ${telescopeGrade}`);
 
   const bonuses = summarizeLeftoverModuleBonuses(entry);
   if (bonuses) emitLine(`Bonuses: ${bonuses}`);

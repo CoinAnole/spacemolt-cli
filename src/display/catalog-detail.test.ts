@@ -340,6 +340,24 @@ function moduleDetail(entry: Record<string, unknown>): string {
   return buffer.stdout.join('\n');
 }
 
+test('catalog module detail prints Telescope grade including 0 and omits a non-number', () => {
+  expect(moduleDetail({ telescope_grade: 0 })).toContain('Telescope grade: 0');
+  expect(moduleDetail({ telescope_grade: 2 })).toContain('Telescope grade: 2');
+  expect(moduleDetail({ telescope_grade: 1.5 })).toContain('Telescope grade: 1.5');
+  const withBonus = moduleDetail({ telescope_grade: 1, cargo_bonus: 4 });
+  expect(withBonus).toContain('Telescope grade: 1');
+  expect(withBonus).toContain('Bonuses: cargo +4');
+  expect(withBonus).not.toContain('telescope');
+  expect(withBonus).not.toContain('Stellar');
+  expect(withBonus).not.toContain('Seam Glass');
+  for (const telescope_grade of [undefined, null, '2', Number.NaN, Number.POSITIVE_INFINITY, true]) {
+    const stdout = moduleDetail({ telescope_grade, cargo_bonus: 4 });
+    expect(stdout).not.toContain('Telescope grade');
+    expect(stdout).toContain('Bonuses: cargo +4');
+  }
+  expect(moduleDetail({ cargo_bonus: 4 })).not.toContain('Telescope grade');
+});
+
 test('catalog module detail prints hazard resistance keys and percents, including 0', () => {
   const stdout = moduleDetail({
     cargo_bonus: -15,

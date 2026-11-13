@@ -333,6 +333,16 @@ test('MODULE_BONUS_EXCLUSIONS includes required_skills', () => {
   expect(summarizeModuleBonuses({ reach: 3, required_skills: { scanning: 3 } })).toBe('reach 3');
 });
 
+test('telescope_grade stays out of the bonus summary and the effects column', () => {
+  expect(MODULE_BONUS_EXCLUSIONS.has('telescope_grade')).toBe(true);
+  expect(summarizeModuleBonuses({ telescope_grade: 2, reach: 1 })).toBe('reach 1');
+  expect(summarizeModuleBonuses({ telescope_grade: 0 })).toBe('');
+  expect(summarizeModuleBonuses({ telescope_grade: 1 })).toBe('');
+  expect(summarizeModuleEffects({ telescope_grade: 2, combat_effects: { lifesteal_pct: 1 } })).toBe('lifesteal 1%');
+  expect(summarizeCatalogItemEffects({ telescope_grade: 2, reach: 3 })).toBe('reach 3');
+  expect(summarizeCatalogItemEffects({ telescope_grade: 1 })).not.toContain('telescope');
+});
+
 test('summarizeModuleBonuses omits inspect-only weapon fields and zero bonuses', () => {
   expect(summarizeModuleBonuses(bloodReaver)).not.toContain('damage');
   expect(summarizeModuleBonuses(bloodReaver)).not.toContain('autocannon');

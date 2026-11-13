@@ -78,6 +78,12 @@ export function finiteNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
+/** Finite number as sent, including 0. Strings and other non-numbers stay blank. */
+export function formatFiniteNumberAsSent(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return Object.is(value, -0) ? '0' : String(value);
+}
+
 export function formatIntegerText(value: unknown): string | undefined {
   if (typeof value === 'bigint' || (typeof value === 'number' && Number.isFinite(value))) {
     return value.toLocaleString();

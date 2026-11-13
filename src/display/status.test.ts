@@ -9,6 +9,7 @@ import {
   getLocationFixture,
   getLocationLeviathansFixture,
   getLocationResourcesFixture,
+  getLocationStarSightingsFixture,
   getMapFixture,
   getMapStarlessFixture,
   getMapSystemFixture,
@@ -8520,4 +8521,162 @@ test('get_state location snapshot prints nearby_repeaters and get_status does no
   const statusOut = renderStructuredResult('get_status', status, options, context).stdout.join('\n');
   expect(statusOut).not.toContain('Repeaters');
   expect(statusOut).not.toContain('rep-sliver-1');
+});
+
+test('get_location prints star sightings after transit and before the unknown signature', () => {
+  const location = {
+    system_id: 'sol',
+    system_name: 'Sol',
+    poi_id: 'sol_belt',
+    poi_name: 'Belt',
+    in_transit: true,
+    transit_type: 'pathfinder',
+    transit_bearing: 270,
+    transit_ticks_elapsed: 3,
+    void_message: 'Stars thin out behind you.',
+    unknown_signature: true,
+    star_sightings: [
+      { bearing: 11.25, temperature: 4100, brightness: 0.25 },
+      { bearing: 0, temperature: -0, brightness: 8.5 },
+      { bearing: 45 },
+      { temperature: 'hot', bearing: Number.NaN, brightness: 0 },
+      null,
+      'skip',
+    ],
+  };
+  const stdout = renderStructuredResult('get_location', { location }, options, context).stdout.join('\n');
+  const transit = stdout.indexOf('Transit: pathfinder');
+  const bearing = stdout.indexOf('Bearing: 270°');
+  const voidLine = stdout.indexOf('Stars thin out behind you.');
+  const sightings = stdout.indexOf('=== Star sightings ===');
+  const unknown = stdout.indexOf('Unknown cloaked signature (not identified).');
+  expect(transit).toBeGreaterThan(-1);
+  expect(bearing).toBeGreaterThan(transit);
+  expect(voidLine).toBeGreaterThan(bearing);
+  expect(sightings).toBeGreaterThan(voidLine);
+  expect(unknown).toBeGreaterThan(sightings);
+  const header = stdout.split('\n').find((line) => line.includes('Bearing') && line.includes('Temperature'));
+  expect(header).toBeDefined();
+  expect(header?.indexOf('Bearing')).toBeLessThan(header?.indexOf('Temperature') ?? -1);
+  expect(header?.indexOf('Temperature')).toBeLessThan(header?.indexOf('Brightness') ?? -1);
+  expect(header).not.toContain('Name');
+  expect(header).not.toContain('Distance');
+  const block = stdout.slice(sightings, unknown);
+  expect(block).not.toContain('°');
+  expect(block).not.toContain('Name');
+  expect(block).not.toContain('Distance');
+  expect(stdout.indexOf('0.25')).toBeLessThan(stdout.indexOf('8.5'));
+  expect(stdout).toContain('4100');
+  expect(stdout).toContain('8.5');
+  expect(stdout).not.toContain('hot');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('skip');
+  expect(stdout).not.toContain('Stellar');
+  expect(stdout).not.toContain('kelvin');
+  const rows = stdout.split('=== Star sightings ===')[1]?.split('Unknown cloaked')[0] ?? '';
+  const dataRows = rows.split('\n').filter((line) => line.includes('|') && !line.includes('Bearing'));
+  expect(dataRows).toHaveLength(4);
+  expect(dataRows[2]).toContain('45');
+  expect(dataRows[3]).toContain('0');
+  expect(dataRows[3]).not.toContain('hot');
+});
+
+test('get_location prints nothing for an omitted, empty, or non-array star_sightings', () => {
+  const base = {
+    system_id: 'sol',
+    system_name: 'Sol',
+    poi_id: 'sol_earth',
+    poi_name: 'Earth',
+  };
+  const omitted = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('=== Location ===');
+  expect(omitted).not.toContain('Star sightings');
+
+  for (const star_sightings of [[], { bearing: 1, temperature: 2, brightness: 3 }, '1', 0, null]) {
+    const stdout = renderStructuredResult(
+      'get_location',
+      { location: { ...base, star_sightings } },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('=== Location ===');
+    expect(stdout).not.toContain('Star sightings');
+  }
+
+  const junk = renderStructuredResult(
+    'get_location',
+    { location: { ...base, star_sightings: [null, 'skip', 1] } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(junk).not.toContain('Star sightings');
+
+  const rootOnly = renderStructuredResult(
+    'get_location',
+    { location: base, star_sightings: [{ bearing: 1, temperature: 2, brightness: 3 }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(rootOnly).not.toContain('Star sightings');
+});
+
+test('get_state without star_sightings prints nothing and travel arrival ignores the key', () => {
+  const state = renderStructuredResult('get_state', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(state).toContain('=== Location ===');
+  expect(state).not.toContain('Star sightings');
+
+  const sightings = [{ bearing: 10, temperature: 5000, brightness: 1 }];
+  const travel = renderArrival('travel', {
+    details: {
+      action: 'travel',
+      poi: 'Earth',
+      poi_id: 'sol_earth',
+      online_players: [],
+      star_sightings: sightings,
+    },
+    location: {
+      system_id: 'sol',
+      poi_id: 'sol_earth',
+      poi_name: 'Earth',
+      nearby_players: [],
+      star_sightings: sightings,
+    },
+  });
+  expect(travel).toContain('Arrived at Earth');
+  expect(travel).not.toContain('Star sightings');
+  expect(travel).not.toContain('5000');
+
+  const jump = renderArrival('jump', {
+    details: schemaJumpDetails,
+    location: {
+      poi_id: 'procyon_a',
+      poi_name: 'Procyon A',
+      nearby_players: [],
+      star_sightings: sightings,
+    },
+  });
+  expect(jump).toContain('Arrived at Procyon A');
+  expect(jump).not.toContain('Star sightings');
+  expect(jump).not.toContain('5000');
+});
+
+test('get_location star sightings fixture keeps array order including 0', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    structuredClone(getLocationStarSightingsFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Star sightings ===');
+  expect(stdout.indexOf('12.5')).toBeLessThan(stdout.indexOf('4.2'));
+  expect(stdout.indexOf('4.2')).toBeLessThan(stdout.indexOf('3200.5'));
+  expect(stdout).toContain('5800');
+  expect(stdout).not.toContain('Star sightings (0)');
 });

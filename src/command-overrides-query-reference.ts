@@ -204,7 +204,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_location: {
     description:
-      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.',
+      'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. A fitted telescope adds star_sightings with bearing, temperature, and brightness. The list is omitted when no working telescope has a star in view. The client does not choose which module is fitted.',
     category: 'Query commands',
     apiRoute: 'POST /api/v2/spacemolt/get_location',
   },

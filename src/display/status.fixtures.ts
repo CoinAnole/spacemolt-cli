@@ -111,6 +111,17 @@ export const getLocationLeviathansFixture = {
   },
 };
 
+export const getLocationStarSightingsFixture = {
+  ...getLocationFixture,
+  location: {
+    ...getLocationFixture.location,
+    star_sightings: [
+      { bearing: 12.5, temperature: 5800, brightness: 4.2 },
+      { bearing: 0, temperature: 3200.5, brightness: 0 },
+    ],
+  },
+};
+
 export const getStatusFixture = {
   player: {
     username: 'Marlowe',
@@ -1586,6 +1597,7 @@ export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_location: { command: 'get_location', fixture: getLocationFixture },
   get_location_resources: { command: 'get_location', fixture: getLocationResourcesFixture },
   get_location_leviathans: { command: 'get_location', fixture: getLocationLeviathansFixture },
+  get_location_star_sightings: { command: 'get_location', fixture: getLocationStarSightingsFixture },
   get_system: { command: 'get_system', fixture: systemInfoFixture },
   get_poi: { command: 'get_poi', fixture: poiInfoFixture },
   get_poi_workability: { command: 'get_poi', fixture: poiWorkabilityFixture },

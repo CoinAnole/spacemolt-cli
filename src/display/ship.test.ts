@@ -909,6 +909,46 @@ test('get_ship module table prints a bigint current_ammo as the full digit strin
   expect(moduleCell(gunRow, header, 'Current ammo')).toBe(digits);
 });
 
+test('installed modules gain a Telescope grade column only for a finite grade', () => {
+  const fixture = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+  const expander = fixture.modules[0];
+  const laser = fixture.modules[1];
+  if (!expander || !laser) throw new Error('ship fixture is missing modules');
+  expander.telescope_grade = 0;
+  laser.telescope_grade = 1.5;
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';
+  const header = modulesHalf.split('\n').find((line) => line.includes('Slot') && line.includes('ID')) ?? '';
+  expect(header).toContain('Telescope grade');
+  expect(header.indexOf('Size')).toBeLessThan(header.indexOf('Telescope grade'));
+  expect(header.indexOf('Telescope grade')).toBeLessThan(header.indexOf('ID'));
+  expect(moduleCell(tableRow(modulesHalf, 'Cargo Expander III'), header, 'Telescope grade')).toBe('0');
+  expect(moduleCell(tableRow(modulesHalf, 'Pulse Laser III'), header, 'Telescope grade')).toBe('1.5');
+  expect(modulesHalf).not.toContain('Stellar');
+  expect(modulesHalf).not.toContain('Seam Glass');
+
+  const blank = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+  const first = blank.modules[0];
+  if (!first) throw new Error('ship fixture is missing its first module');
+  first.telescope_grade = 2;
+  delete blank.modules[1]?.telescope_grade;
+  const mixed = renderShip(blank).stdout.join('\n');
+  const mixedHalf = mixed.split('=== Modules ===')[1] ?? '';
+  const mixedHeader = mixedHalf.split('\n').find((line) => line.includes('Telescope grade')) ?? '';
+  expect(moduleCell(tableRow(mixedHalf, 'Pulse Laser III'), mixedHeader, 'Telescope grade')).toBe('');
+  expect(moduleCell(tableRow(mixedHalf, 'Cargo Expander III'), mixedHeader, 'Telescope grade')).toBe('2');
+
+  for (const telescope_grade of ['2', Number.NaN, Number.POSITIVE_INFINITY, null, true]) {
+    const quiet = structuredClone(shipFixture) as { modules: Array<Record<string, unknown>> };
+    for (const row of quiet.modules) row.telescope_grade = telescope_grade;
+    const out = renderShip(quiet).stdout.join('\n');
+    expect(out.split('=== Modules ===')[1] ?? '').not.toContain('Telescope grade');
+  }
+
+  const omitted = renderShip(shipFixture).stdout.join('\n');
+  expect(omitted.split('=== Modules ===')[1] ?? '').not.toContain('Telescope grade');
+});
+
 test('get_ship does not flag per-module CPU or Power', () => {
   const stdout = renderShip(shipOverCapacityFixture).stdout.join('\n');
   const modulesHalf = stdout.split('=== Modules ===')[1] ?? '';

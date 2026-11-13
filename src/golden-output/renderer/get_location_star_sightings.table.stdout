@@ -1,0 +1,32 @@
+
+=== Location ===
+Credits: 12,345
+System: Sol (sol)
+Empire: Terran
+Security: high security
+Connections: alpha_centauri
+POI: Earth (planet)
+Docked at: earth_station
+
+=== Star sightings ===
+
+  Bearing | Temperature | Brightness
+  --------+-------------+-----------
+  12.5    | 5800        | 4.2       
+  0       | 3200.5      | 0         
+
+Nearby Players (1):
+  Marlowe [SMC] (prospector)
+
+Nearby Prizes (1):
+
+=== Nearby Prizes ===
+
+  Prize ID     | Actor         | Name       | Class   | Status    | Hull  | Shield | Combat
+  -------------+---------------+------------+---------+-----------+-------+--------+-------
+  prize-dust-1 | actor-prize-1 | Dust Devil | frigate | available | 40/80 | 10/20  |       
+
+Nearby Pirates (1):
+  Raider (skiff) - Admiral Kael - hostile
+
+Nearby NPCs: 1
