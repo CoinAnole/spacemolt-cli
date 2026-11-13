@@ -1246,6 +1246,7 @@ describe('command metadata', () => {
     expect(help).toContain('Faction postings pay only the first pilot to complete them.');
     expect(help).toContain('mission_not_available');
     expect(help).toContain('names each missing mission and the next step');
+    expect(help).not.toContain('mission_already_settled');
     expect(help).toContain('5-mission');
     expect(help).toContain('30 minutes');
     expect(help).toContain('3 hours');
@@ -5592,7 +5593,7 @@ describe('command metadata', () => {
     const buyListed =
       "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. A listed ship in a bay or under tow cannot be bought.";
     const completeMission =
-      'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then. An empire mission can include piloting in skill_xp_gained. A faction-posted mission does not.';
+      'Complete a mission and claim rewards. A wreck turn-in needs your tow claim and the wreck at your POI. A stale tow returns wreck_not_here. Run release_tow, then tow the wreck again where it lies. Do not retry complete_mission until then. An empire mission can include piloting in skill_xp_gained. A faction-posted mission does not. Once your objectives are met, complete_mission returns mission_already_settled when another pilot completed that faction posting first, or when that faction disbanded. Use abandon_mission to clear your copy.';
 
     expect(CORE_COMMAND_OVERRIDES.switch_ship?.description).toBeUndefined();
     expect(CURATED_COMMAND_DESCRIPTIONS.switch_ship).toBe(switchShip);
@@ -5617,6 +5618,15 @@ describe('command metadata', () => {
       GENERATED_API_ROUTES['POST /api/v2/spacemolt/complete_mission']?.summary,
     );
     expect(completeMission).not.toContain('`');
+
+    expect(completeMission).toContain(
+      'Once your objectives are met, complete_mission returns mission_already_settled when another pilot completed that faction posting first, or when that faction disbanded.',
+    );
+    expect(completeMission).toContain('Use abandon_mission to clear your copy.');
+    expect(completeMission).not.toMatch(/empire mission[^.]*mission_already_settled/);
+    expect(completeMission).not.toMatch(/community[^.]*mission_already_settled/);
+    expect(CURATED_COMMAND_DESCRIPTIONS.accept_mission).not.toContain('mission_already_settled');
+    expect(COMMANDS.accept_mission?.description).not.toContain('mission_already_settled');
 
     expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).toBe('Clear a wreck tow without moving the wreck');
     expect(CURATED_COMMAND_DESCRIPTIONS.release_tow).not.toBe(COMMANDS.release_tow?.description);

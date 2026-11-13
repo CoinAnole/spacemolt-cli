@@ -2243,6 +2243,12 @@ describe('help output branches', () => {
     expect(output).toContain('release_tow');
     expect(output).toContain('An empire mission can include piloting in skill_xp_gained');
     expect(output).toContain('A faction-posted mission does not');
+    expect(output).toContain(
+      'Once your objectives are met, complete_mission returns mission_already_settled when another pilot completed that faction posting first, or when that faction disbanded.',
+    );
+    expect(output).toContain('Use abandon_mission to clear your copy.');
+    expect(output).not.toMatch(/empire mission[^.]*mission_already_settled/);
+    expect(output).not.toMatch(/community[^.]*mission_already_settled/);
     expect(output).not.toContain('tier 1:');
     expect(output).not.toContain('20 + 20');
   });
@@ -4401,6 +4407,28 @@ describe('help output branches', () => {
       expect(output).not.toContain('This is an authentication error.');
       expect(output).toContain('do not keep retrying');
     }
+  });
+
+  test('displayError prints mission_already_settled as the server sent it and does not parse details', () => {
+    const message = 'Already settled. Clear your copy.';
+    const capture = captureWriter();
+    displayError(
+      'complete_mission',
+      {
+        code: 'mission_already_settled',
+        message,
+        details: { faction_id: 'fac_1', settled_by: 'other-pilot' },
+      },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain(`Error [mission_already_settled]: ${message}`);
+    expect(output).not.toContain('faction_id');
+    expect(output).not.toContain('fac_1');
+    expect(output).not.toContain('settled_by');
+    expect(output).not.toContain('other-pilot');
+    expect(output).not.toContain('Suggestion:');
+    expect(output).not.toContain('abandon_mission');
   });
 
   test('displayError prints safe_passage detail keys that are present and keeps an empty faction_id', () => {

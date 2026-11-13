@@ -584,6 +584,20 @@ describe('field_jobs_queued', () => {
   });
 });
 
+describe('mission_already_settled', () => {
+  test('has no client handler, detail parser, or retry rule', () => {
+    expect(ERROR_REGISTRY.mission_already_settled).toBeUndefined();
+    expect(getErrorSuggestion('mission_already_settled')).toBeUndefined();
+    expect(getErrorSuggestion('mission_already_settled', 'complete_mission')).toBeUndefined();
+    expect(getErrorSuggestion('mission_already_settled', 'accept_mission')).toBeUndefined();
+    expect(isKnownErrorCode('mission_already_settled')).toBe(false);
+    expect(ERROR_CODES).not.toContain('mission_already_settled');
+    expect(isRetryableError('mission_already_settled')).toBe(true);
+    expect(isAuthError('mission_already_settled')).toBe(false);
+    expect(getRelatedCommands('mission_already_settled')).toEqual([]);
+  });
+});
+
 describe('prestige hull gift and garage refusals', () => {
   test('cannot_gift, not_qualified, and cannot_garage have no client handler', () => {
     for (const code of ['cannot_gift', 'not_qualified', 'cannot_garage']) {
