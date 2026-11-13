@@ -1449,6 +1449,12 @@ describe('command metadata', () => {
       );
       expect(text).toContain('Your drones no longer open a side against it.');
       expect(text).toContain('0.630.5 does not say whether an ally still comes first');
+      expect(text).toContain('lost its ship');
+      expect(text).toContain('returns to its stronghold when its battle ends');
+      expect(text).toContain('place it died');
+      expect(text).toContain('returns the same invalid_target');
+      expect(text).toContain('target_unavailable');
+      expect(text).toContain('until the crew has a new ship');
       expect(text).toContain('target_docked');
       expect(text).toContain('normal side rules');
       expect(text).toContain('joins their side');
