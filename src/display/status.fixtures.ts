@@ -214,6 +214,24 @@ export const getStatusOverCapacityFixture = {
   },
 };
 
+export const getStatusModuleDrawFixture = {
+  ...getStatusFixture,
+  ship: {
+    ...getStatusFixture.ship,
+    module_cpu: 9,
+    module_power: 0,
+  },
+};
+
+export const getStateModuleDrawFixture = {
+  ...getStatusFixture,
+  ship: {
+    ...getStatusFixture.ship,
+    module_cpu: 0,
+    module_power: 12,
+  },
+};
+
 export const getStatusResourcesFixture = {
   ...getStatusFixture,
   location: {
@@ -1562,11 +1580,13 @@ export const interactPoiFixture = {
 
 export const statusHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_status: { command: 'get_status', fixture: getStatusFixture },
+  get_status_module_draw: { command: 'get_status', fixture: getStatusModuleDrawFixture },
   // Replacing this entry with a fuller object grows the schema baseline.
   get_state: {
     command: 'get_state',
     fixture: getStatusFixture,
   },
+  get_state_module_draw: { command: 'get_state', fixture: getStateModuleDrawFixture },
   get_status_over_capacity: { command: 'get_status', fixture: getStatusOverCapacityFixture },
   get_status_resources: { command: 'get_status', fixture: getStatusResourcesFixture },
   get_state_resources: { command: 'get_state', fixture: getStatusResourcesFixture },

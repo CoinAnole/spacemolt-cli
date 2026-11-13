@@ -5770,6 +5770,39 @@ describe('command metadata', () => {
     expect(help).toMatch(/faction garage/i);
   });
 
+  test('get_ship help names pre-discount module CPU and power and the 90% rule', () => {
+    const description = COMMANDS.get_ship?.description ?? '';
+    expect(description).toContain('CPU and Power lines are the draw after the Engineering discount');
+    expect(description).toContain('Module CPU and Module power are the fitted-module draw before it');
+    expect(description).toContain('Compare those with capacity');
+    expect(description).toContain(
+      "Passive Engineering XP is 1 per tick while you are online and your fitted modules draw 90% or more of the ship's power capacity or CPU capacity",
+    );
+    expect(description).toContain('The test uses the module draw before the Engineering discount');
+    expect(description).toContain('A higher Engineering level does not move a full fit below that line');
+    expect(description).toContain('a fit that is full on CPU counts');
+    expect(description).toContain('A logged-out pilot does not earn the XP');
+    expect(description).toContain('The client does not decide whether the ship earns the XP');
+    expect(description).not.toContain('`');
+
+    const help = captureHelp('get_ship');
+    expect(help).toContain('Module CPU and Module power are the fitted-module draw before it');
+    expect(help).toContain('90% or more');
+    expect(help).toContain('a fit that is full on CPU counts');
+    expect(help).toContain('logged-out pilot does not earn the XP');
+    expect(help).not.toContain('`');
+
+    for (const command of ['get_status', 'get_state'] as const) {
+      const text = COMMANDS[command]?.description ?? '';
+      expect(text).not.toContain('Module CPU');
+      expect(text).not.toContain('90% or more');
+      expect(text).not.toContain('does not decide whether the ship earns the XP');
+      const commandHelp = captureHelp(command);
+      expect(commandHelp).not.toContain('Module CPU');
+      expect(commandHelp).not.toContain('90% or more');
+    }
+  });
+
   test('faction_garages documents remote get_ship as the fit path', () => {
     const config = COMMANDS.faction_garages;
     expect(config).toBeDefined();

@@ -51,7 +51,7 @@ import {
   nativeRemotePoiId,
   nativeScanField,
 } from './scan-contacts.ts';
-import { emitCargoHold, emitDroneBay, emitInstalledModules, emitRefitAvailable } from './ship.ts';
+import { emitCargoHold, emitDroneBay, emitInstalledModules, emitModuleDraw, emitRefitAvailable } from './ship.ts';
 
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
 
@@ -1302,9 +1302,11 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
       `Cargo: ${ship.cargo_used}/${ship.cargo_capacity}${overCapacitySuffix(ship.cargo_used, ship.cargo_capacity)}`,
     );
     emitLine(`CPU: ${ship.cpu_used}/${ship.cpu_capacity}${overCapacitySuffix(ship.cpu_used, ship.cpu_capacity)}`);
+    emitModuleDraw('Module CPU', ship.module_cpu);
     emitLine(
       `Power: ${ship.power_used}/${ship.power_capacity}${overCapacitySuffix(ship.power_used, ship.power_capacity)}`,
     );
+    emitModuleDraw('Module power', ship.module_power);
     if (
       Object.hasOwn(ship, 'weapon_slots') ||
       Object.hasOwn(ship, 'defense_slots') ||
@@ -1709,7 +1711,9 @@ export const statusFormatters = [
         emitLine(`  Fuel: ${s.fuel}/${s.max_fuel}`);
         emitLine(`  Cargo: ${s.cargo_used}/${s.cargo_capacity}${overCapacitySuffix(s.cargo_used, s.cargo_capacity)}`);
         emitLine(`  CPU: ${s.cpu_used}/${s.cpu_capacity}${overCapacitySuffix(s.cpu_used, s.cpu_capacity)}`);
+        emitModuleDraw('Module CPU', s.module_cpu, '  ');
         emitLine(`  Power: ${s.power_used}/${s.power_capacity}${overCapacitySuffix(s.power_used, s.power_capacity)}`);
+        emitModuleDraw('Module power', s.module_power, '  ');
         emitShipPersonnel(s, { indent: '  ' });
         emitShipCombatEffects(s);
 

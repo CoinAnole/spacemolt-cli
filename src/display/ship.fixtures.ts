@@ -133,6 +133,15 @@ export const shipOverCapacityFixture = {
   },
 };
 
+export const shipModuleDrawFixture = {
+  ...shipFixture,
+  ship: {
+    ...shipFixture.ship,
+    module_cpu: 18,
+    module_power: 0,
+  },
+};
+
 export const baseFixture = {
   base: {
     armor: 400,
@@ -1068,6 +1077,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   get_cargo_empty: { command: 'get_cargo', fixture: emptyCargoFixture },
   get_cargo_over_capacity: { command: 'get_cargo', fixture: cargoOverCapacityFixture },
   get_ship: { command: 'get_ship', fixture: shipFixture },
+  get_ship_module_draw: { command: 'get_ship', fixture: shipModuleDrawFixture },
   get_ship_incapacitated: { command: 'get_ship', fixture: shipIncapacitatedFixture },
   get_ship_over_capacity: { command: 'get_ship', fixture: shipOverCapacityFixture },
   get_ship_drone_bay: { command: 'get_ship', fixture: shipDroneBayFixture },

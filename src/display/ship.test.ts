@@ -24,6 +24,7 @@ import {
   sellWreckPartialPayFixture,
   shipFixture,
   shipIncapacitatedFixture,
+  shipModuleDrawFixture,
   shipOverCapacityFixture,
   stationInfoContrabandFixture,
   stationInfoJumpGateAlliesFixture,
@@ -612,6 +613,87 @@ test('get_ship flags only over-capacity ratios', () => {
   expect(stdout).toContain('Power: 23/75');
   expect(stdout).not.toContain('Cargo: 0/1250 (over capacity)');
   expect(stdout).not.toContain('Power: 23/75 (over capacity)');
+});
+
+test('get_ship prints pre-discount module CPU and power, including 0, beside the discounted lines', () => {
+  const stdout = renderShip(shipModuleDrawFixture).stdout.join('\n');
+  const lines = stdout.split('\n');
+  const cpu = lines.indexOf('CPU: 16/34');
+  const moduleCpu = lines.indexOf('Module CPU: 18');
+  const power = lines.indexOf('Power: 23/75');
+  const modulePower = lines.indexOf('Module power: 0');
+  expect(moduleCpu).toBe(cpu + 1);
+  expect(power).toBe(moduleCpu + 1);
+  expect(modulePower).toBe(power + 1);
+  expect(lines[modulePower + 1]).toMatch(/^Slots:/);
+  expect(stdout).not.toContain('18/34');
+  expect(stdout).not.toContain('0/75');
+  expect(stdout).not.toContain('Module CPU: 18 (over capacity)');
+  expect(stdout).not.toContain('Module power: 0 (over capacity)');
+  expect(stdout).not.toContain('90%');
+  expect(stdout).not.toContain('Engineering XP');
+  expect(lines[moduleCpu]).not.toContain('%');
+  expect(lines[modulePower]).not.toContain('%');
+});
+
+test('get_ship omits module CPU and power when both keys are absent', () => {
+  const stdout = renderShip(shipFixture).stdout.join('\n');
+  expect(stdout).toContain('CPU: 16/34');
+  expect(stdout).toContain('Power: 23/75');
+  expect(stdout).not.toContain('Module CPU');
+  expect(stdout).not.toContain('Module power');
+  expect(stdout).not.toContain('Module CPU: ?');
+  expect(stdout).not.toContain('Module power: ?');
+});
+
+test('get_ship does not mark CPU or Power over capacity from the module draw', () => {
+  const fixture = {
+    ...shipFixture,
+    ship: { ...shipFixture.ship, cpu_used: 16, module_cpu: 40, power_used: 23, module_power: 90 },
+  };
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const lines = stdout.split('\n');
+  expect(lines).toContain('CPU: 16/34');
+  expect(lines).toContain('Module CPU: 40');
+  expect(lines).toContain('Power: 23/75');
+  expect(lines).toContain('Module power: 90');
+  expect(stdout).not.toContain('CPU: 16/34 (over capacity)');
+  expect(stdout).not.toContain('Power: 23/75 (over capacity)');
+  expect(stdout).not.toContain('40/34');
+  expect(stdout).not.toContain('90/75');
+  expect(stdout).not.toContain('(over capacity)');
+});
+
+test('get_ship prints a module draw of 0 and a bigint as sent and skips the other key', () => {
+  const zeroOnly = { ...shipFixture, ship: { ...shipFixture.ship, module_cpu: 0 } };
+  const zeroStdout = renderShip(zeroOnly).stdout.join('\n');
+  expect(zeroStdout.split('\n')).toContain('Module CPU: 0');
+  expect(zeroStdout).not.toContain('Module power');
+
+  const bigintFixture = {
+    ...shipFixture,
+    ship: { ...shipFixture.ship, module_cpu: 9007199254740993n, module_power: 0n },
+  };
+  const bigintStdout = renderShip(bigintFixture).stdout.join('\n');
+  expect(bigintStdout.split('\n')).toContain('Module CPU: 9007199254740993');
+  expect(bigintStdout.split('\n')).toContain('Module power: 0');
+  expect(bigintStdout).not.toContain('9007199254740992');
+
+  const fraction = { ...shipFixture, ship: { ...shipFixture.ship, module_cpu: 18.5, module_power: 0 } };
+  expect(renderShip(fraction).stdout.join('\n').split('\n')).toContain('Module CPU: 18.5');
+});
+
+test('get_ship prints nothing for a non-number or non-finite module draw', () => {
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '18', null, true, {}, []]) {
+    const fixture = { ...shipFixture, ship: { ...shipFixture.ship, module_cpu: value, module_power: value } };
+    const stdout = renderShip(fixture).stdout.join('\n');
+    expect(stdout).toContain('CPU: 16/34');
+    expect(stdout).not.toContain('Module CPU');
+    expect(stdout).not.toContain('Module power');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('Infinity');
+    expect(stdout).not.toContain('Module CPU: ?');
+  }
 });
 
 function shipWithWorkshop(fieldWorkshop: unknown, cargo?: { used: number; capacity: number }) {

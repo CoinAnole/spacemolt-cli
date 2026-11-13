@@ -557,6 +557,18 @@ function emitPilotingXp(value: unknown): void {
   if (text !== undefined) emitLine(`Piloting XP: ${text}`);
 }
 
+// Finite number or bigint, including 0, as sent. Omitted, non-number, and non-finite print nothing.
+function formatModuleDraw(value: unknown): string | undefined {
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  return undefined;
+}
+
+export function emitModuleDraw(label: 'Module CPU' | 'Module power', value: unknown, indent = ''): void {
+  const text = formatModuleDraw(value);
+  if (text !== undefined) emitLine(`${indent}${label}: ${text}`);
+}
+
 function isBulkReloadDetails(r: Record<string, unknown>): boolean {
   if (r.mode === 'bulk') return true;
   // Results is the batch even when mode is omitted. Summary is not required.
@@ -759,9 +771,11 @@ export const shipFormatters = [
       emitLine(
         `CPU: ${ship.cpu_used ?? '?'}/${ship.cpu_capacity ?? '?'}${overCapacitySuffix(ship.cpu_used, ship.cpu_capacity)}`,
       );
+      emitModuleDraw('Module CPU', ship.module_cpu);
       emitLine(
         `Power: ${ship.power_used ?? '?'}/${ship.power_capacity ?? '?'}${overCapacitySuffix(ship.power_used, ship.power_capacity)}`,
       );
+      emitModuleDraw('Module power', ship.module_power);
       emitLine(
         `Slots: ${ship.weapon_slots ?? 0} weapon, ${ship.defense_slots ?? 0} defense, ${ship.utility_slots ?? 0} utility`,
       );

@@ -14,9 +14,11 @@ import {
   getMapStarlessFixture,
   getMapSystemFixture,
   getStateLeviathansFixture,
+  getStateModuleDrawFixture,
   getStateSnapshotFixture,
   getStatusDetainedFixture,
   getStatusFixture,
+  getStatusModuleDrawFixture,
   getStatusOverCapacityFixture,
   getStatusResourcesFixture,
   getSystemAgentsFixture,
@@ -3542,6 +3544,119 @@ test('get_status flags only the over-capacity CPU line', () => {
   expect(stdout).toContain('  Power: 10/25');
   expect(stdout).not.toContain('  Cargo: 12/60 (over capacity)');
   expect(stdout).not.toContain('  Power: 10/25 (over capacity)');
+});
+
+test('short get_status prints module CPU and power at the CPU indent, including 0', () => {
+  const stdout = renderStructuredResult(
+    'get_status',
+    structuredClone(getStatusModuleDrawFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const lines = stdout.split('\n');
+  const cpu = lines.indexOf('  CPU: 8/20');
+  const moduleCpu = lines.indexOf('  Module CPU: 9');
+  const power = lines.indexOf('  Power: 10/25');
+  const modulePower = lines.indexOf('  Module power: 0');
+  expect(moduleCpu).toBe(cpu + 1);
+  expect(power).toBe(moduleCpu + 1);
+  expect(modulePower).toBe(power + 1);
+  expect(lines[modulePower + 1]).toMatch(/^\s\sCrew:/);
+  expect(lines).not.toContain('Module CPU: 9');
+  expect(lines).not.toContain('Module power: 0');
+  expect(stdout).not.toContain('9/20');
+  expect(stdout).not.toContain('90%');
+  expect(stdout).not.toContain('Engineering XP');
+  expect(lines[moduleCpu]).not.toContain('%');
+  expect(lines[modulePower]).not.toContain('%');
+});
+
+test('short get_status omits module CPU and power when both keys are absent', () => {
+  const stdout = renderStructuredResult('get_status', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('  CPU: 8/20');
+  expect(stdout).toContain('  Power: 10/25');
+  expect(stdout).not.toContain('Module CPU');
+  expect(stdout).not.toContain('Module power');
+});
+
+test('short get_status does not mark CPU or Power over capacity from the module draw', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.module_cpu = 40;
+  fixture.ship.module_power = 0;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  const lines = stdout.split('\n');
+  expect(lines).toContain('  CPU: 8/20');
+  expect(lines).toContain('  Module CPU: 40');
+  expect(lines).toContain('  Power: 10/25');
+  expect(lines).toContain('  Module power: 0');
+  expect(stdout).not.toContain('(over capacity)');
+  expect(lines).not.toContain('  CPU: 40/20');
+  expect(lines).not.toContain('  CPU: 40/20 (over capacity)');
+  expect(lines).not.toContain('  Power: 0/25');
+  expect(lines).not.toContain('  Module CPU: 40 (over capacity)');
+  expect(lines).not.toContain('  Module power: 0 (over capacity)');
+});
+
+test('short get_status prints a bigint module draw as sent and skips a non-finite one', () => {
+  const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+  fixture.ship.module_cpu = 9007199254740993n;
+  fixture.ship.module_power = Number.NaN;
+  const stdout = renderStructuredResult('get_status', fixture, options, context).stdout.join('\n');
+  expect(stdout.split('\n')).toContain('  Module CPU: 9007199254740993');
+  expect(stdout).not.toContain('Module power');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('Module CPU: ?');
+  expect(stdout).not.toContain('9007199254740992');
+});
+
+test('get_state prints module CPU and power at the CPU indent, including 0', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    structuredClone(getStateModuleDrawFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const lines = stdout.split('\n');
+  const cpu = lines.indexOf('CPU: 8/20');
+  const moduleCpu = lines.indexOf('Module CPU: 0');
+  const power = lines.indexOf('Power: 10/25');
+  const modulePower = lines.indexOf('Module power: 12');
+  expect(moduleCpu).toBe(cpu + 1);
+  expect(power).toBe(moduleCpu + 1);
+  expect(modulePower).toBe(power + 1);
+  expect(lines[modulePower + 1]).toMatch(/^Crew:/);
+  expect(lines).not.toContain('  Module CPU: 0');
+  expect(lines).not.toContain('  Module power: 12');
+  expect(lines).not.toContain('CPU: 0/20');
+  expect(lines).not.toContain('Power: 12/25');
+  expect(stdout).not.toContain('90%');
+  expect(stdout).not.toContain('Engineering XP');
+});
+
+test('get_state omits module CPU and power when both keys are absent', () => {
+  const stdout = renderStructuredResult('get_state', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(stdout).toContain('CPU: 8/20');
+  expect(stdout).toContain('Power: 10/25');
+  expect(stdout).not.toContain('Module CPU');
+  expect(stdout).not.toContain('Module power');
+});
+
+test('get_status_summary does not print CPU, Power, or module draw', () => {
+  const stdout = renderStructuredResult(
+    'get_status_summary',
+    structuredClone(getStatusModuleDrawFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Player:');
+  expect(stdout).not.toContain('CPU:');
+  expect(stdout).not.toContain('Power:');
+  expect(stdout).not.toContain('Module');
+  expect(stdout).not.toContain('90%');
 });
 
 test('get_status_summary stays compact without over-capacity ratio lines', () => {
