@@ -11,6 +11,7 @@
   "name": "Aurora Freeport",
   "public_access": false,
   "gate": {
+    "allies_only": false,
     "built": true,
     "entangler_due_in_cycles": 0,
     "faction_only": false,

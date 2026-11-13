@@ -610,7 +610,7 @@ function gateMaterialLines(value: unknown): string[] | undefined {
   return lines.length ? lines : undefined;
 }
 
-/** Station info. An omitted or empty gate prints nothing. No upkeep list beyond phase_materials_left. */
+/** Station info. An omitted or empty gate prints nothing. No upkeep list beyond phase_materials_left. allies_only prints yes or no only when it is a boolean, including false. Omission is not no. */
 export function emitStationJumpGate(gate: unknown): boolean {
   if (!isRecord(gate)) return false;
   const lines: string[] = [];
@@ -623,6 +623,8 @@ export function emitStationJumpGate(gate: unknown): boolean {
   if (online) lines.push(`  Online: ${online}`);
   const factionOnly = gateYesNo(gate.faction_only);
   if (factionOnly) lines.push(`  Faction only: ${factionOnly}`);
+  const alliesOnly = gateYesNo(gate.allies_only);
+  if (alliesOnly) lines.push(`  Allies only: ${alliesOnly}`);
   const toll = formatGateInteger(gate.toll);
   if (toll !== undefined) lines.push(`  Toll: ${toll}`);
   const built = gateYesNo(gate.built);

@@ -4051,13 +4051,20 @@ describe('command metadata', () => {
     expect(getArgNames(access ?? {})).toEqual(['access']);
     expect(access?.schema?.access?.enum).toEqual(['public', 'allies', 'faction']);
     expect(access?.schema?.station_id).toBeUndefined();
-    expect(access?.description).toContain('operation text names public and faction');
+    expect(access?.description).toContain('operation text names public, allies, and faction');
+    expect(access?.description).toContain('public lets any pilot cross, paying the toll');
+    expect(access?.description).toContain('allies admits your faction and its allies, and allies pay the toll');
+    expect(access?.description).toContain('faction admits only your faction');
+    expect(access?.description).toContain('Other pilots are refused');
+    expect(access?.description).toContain('The server message prints as sent');
     expect(access?.description).toContain('schema enum is public, allies, and faction');
     expect(access?.description).toContain('no station id argument');
+    expect(access?.schema?.access?.description).toContain('operation text names public, allies, and faction');
     expect(access?.description).not.toContain('`');
     const accessHelp = captureHelp('set_gate_access');
     expect(accessHelp).toContain('access (public|allies|faction)');
-    expect(accessHelp).toContain('operation text names public and faction');
+    expect(accessHelp).toContain('operation text names public, allies, and faction');
+    expect(accessHelp).toContain('allies pay the toll');
     expect(accessHelp).not.toContain('station_id');
 
     const toll = COMMANDS.set_toll;
@@ -4087,8 +4094,13 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.allCommands.facility_set_toll).toBeUndefined();
 
     expect(COMMANDS.station_info?.description).toContain('Jump gate block');
+    expect(COMMANDS.station_info?.description).toContain('faction only, allies only');
+    expect(COMMANDS.station_info?.description).toContain('including false');
+    expect(COMMANDS.station_info?.description).toContain('not treated as no');
     expect(COMMANDS.get_base?.description).toContain('one Jump gate line');
     expect(COMMANDS.get_base?.description).toContain('An outpost without gate is not a gate');
+    expect(COMMANDS.get_base?.description).not.toContain('allies only');
+    expect(COMMANDS.found_gate_site?.description).not.toContain('allies only');
   });
 
   test('storage deposit/withdraw help documents auto-docking, fleets, special targets, and ship towing', () => {

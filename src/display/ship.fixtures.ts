@@ -865,6 +865,7 @@ export const buildingJumpGate = {
 };
 
 export const builtJumpGate = {
+  allies_only: false,
   built: true,
   entangler_due_in_cycles: 0,
   faction_only: false,
@@ -885,6 +886,14 @@ export const stationInfoJumpGateFixture = {
 export const stationInfoJumpGateBuiltFixture = {
   ...stationInfoContrabandScalarsFixture,
   gate: builtJumpGate,
+};
+
+export const stationInfoJumpGateAlliesFixture = {
+  ...stationInfoContrabandScalarsFixture,
+  gate: {
+    ...builtJumpGate,
+    allies_only: true,
+  },
 };
 
 export const foundGateSiteFixture = {
@@ -1082,6 +1091,7 @@ export const shipHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   station_info_contraband: { command: 'station_info', fixture: stationInfoContrabandFixture },
   station_info_contraband_scalars: { command: 'station_info', fixture: stationInfoContrabandScalarsFixture },
   station_info_jump_gate: { command: 'station_info', fixture: stationInfoJumpGateFixture },
+  station_info_jump_gate_allies: { command: 'station_info', fixture: stationInfoJumpGateAlliesFixture },
   station_info_jump_gate_built: { command: 'station_info', fixture: stationInfoJumpGateBuiltFixture },
   found_gate_site: { command: 'found_gate_site', fixture: foundGateSiteFixture, schemaTarget: 'details' },
   get_base_repairs: { command: 'get_base', fixture: baseRepairsFixture },

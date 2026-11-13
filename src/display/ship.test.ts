@@ -26,6 +26,7 @@ import {
   shipIncapacitatedFixture,
   shipOverCapacityFixture,
   stationInfoContrabandFixture,
+  stationInfoJumpGateAlliesFixture,
   stationInfoJumpGateBuiltFixture,
   stationInfoJumpGateFixture,
   treatPersonnelFixture,
@@ -3011,6 +3012,16 @@ test('found_gate_site prints the founding receipt and skips omitted keys', () =>
   expect(partial).not.toContain('System:');
   expect(partial).not.toContain('Hint:');
   expect(partial).not.toContain('Jump gate');
+  expect(partial).not.toContain('Allies only');
+
+  const allied = renderStructuredResult(
+    'found_gate_site',
+    { ...foundGateSiteFixture, allies_only: true },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(allied).toContain('Public access: no');
+  expect(allied).not.toContain('Allies only');
 });
 
 test('station info prints a jump gate block and omits an absent gate', () => {
@@ -3024,6 +3035,7 @@ test('station info prints a jump gate block and omits an absent gate', () => {
   expect(building).toContain('Far system: Vega Reach (vega)');
   expect(building).toContain('Online: no');
   expect(building).toContain('Faction only: yes');
+  expect(building).not.toContain('Allies only');
   expect(building).toContain('Toll: 0');
   expect(building).toContain('Built: no');
   expect(building).toContain('Partner built: no');
@@ -3048,6 +3060,8 @@ test('station info prints a jump gate block and omits an absent gate', () => {
   ).stdout.join('\n');
   expect(built).toContain('Online: yes');
   expect(built).toContain('Faction only: no');
+  expect(built).toContain('Allies only: no');
+  expect(built.indexOf('Allies only: no')).toBeGreaterThan(built.indexOf('Faction only: no'));
   expect(built).toContain('Built: yes');
   expect(built).toContain(`Toll: ${(1000000).toLocaleString()}`);
   expect(built).toContain('Entangler due: 0');
@@ -3064,6 +3078,28 @@ test('station info prints a jump gate block and omits an absent gate', () => {
     context,
   ).stdout.join('\n');
   expect(quiet).not.toContain('Jump gate');
+
+  const allies = renderStructuredResult(
+    'station_info',
+    structuredClone(stationInfoJumpGateAlliesFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(allies).toContain('Faction only: no');
+  expect(allies).toContain('Allies only: yes');
+  expect(allies.indexOf('Allies only: yes')).toBeGreaterThan(allies.indexOf('Faction only: no'));
+
+  const notBoolean = renderStructuredResult(
+    'station_info',
+    {
+      ...stationInfoContrabandFixture,
+      gate: { faction_only: false, allies_only: 'true', far_system_name: 'Vega Reach', toll: 0 },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(notBoolean).toContain('Faction only: no');
+  expect(notBoolean).not.toContain('Allies only');
 
   const emptyMaterials = renderStructuredResult(
     'station_info',
@@ -3102,13 +3138,21 @@ test('get_base prints one jump gate line and does not treat every outpost as a g
       ...baseFixture,
       base: {
         ...baseFixture.base,
-        gate: { far_system_id: 'far_system_zz', far_system_name: 'Far Haven', online: false, toll: 0 },
+        gate: {
+          allies_only: true,
+          faction_only: true,
+          far_system_id: 'far_system_zz',
+          far_system_name: 'Far Haven',
+          online: false,
+          toll: 0,
+        },
       },
     },
     options,
     context,
   ).stdout.join('\n');
   expect(gated).toContain('Jump gate: Far Haven, online no, toll 0');
+  expect(gated).not.toContain('Allies only');
   expect(gated).not.toContain('far_system_zz');
   expect(gated).not.toContain('Phase:');
   expect(gated).not.toContain('Entangler due');

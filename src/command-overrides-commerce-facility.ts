@@ -1026,7 +1026,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_info: {
     description:
-      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules. When gate is an object, table output prints a Jump gate block: far system name and id, online, faction only, toll including 0, built, partner built, and partner base id when sent. While phase is a number it prints phase, phase name, phases total, cycles done, cycles, labor per cycle including 0, and materials left as item id and quantity including 0. An empty or omitted materials object prints nothing. When built is true, entangler due and upkeep cycles covered print when those keys are numbers, including 0. An omitted gate prints nothing.",
+      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules. When gate is an object, table output prints a Jump gate block: far system name and id, online, faction only, allies only, toll including 0, built, partner built, and partner base id when sent. Allies only prints yes or no when allies_only is a boolean, including false, after faction only. An omitted allies_only prints nothing and is not treated as no. While phase is a number it prints phase, phase name, phases total, cycles done, cycles, labor per cycle including 0, and materials left as item id and quantity including 0. An empty or omitted materials object prints nothing. When built is true, entangler due and upkeep cycles covered print when those keys are numbers, including 0. An omitted gate prints nothing.",
     example: 'spacemolt station_info',
     discoverWith: ['get_status', 'get_base'],
     seeAlso: [
@@ -1147,7 +1147,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   set_gate_access: {
     usage: '<access>',
     description:
-      'Set who may cross the jump gate end you are docked at. Applies to both ends and needs ManageBases. There is no station id argument. The operation text names public and faction. public lets any pilot cross, paying the toll. faction admits only your faction. The schema enum is public, allies, and faction.',
+      'Set who may cross the jump gate end you are docked at. Applies to both ends and needs ManageBases. There is no station id argument. The operation text names public, allies, and faction. public lets any pilot cross, paying the toll. allies admits your faction and its allies, and allies pay the toll. faction admits only your faction. Other pilots are refused. The server message prints as sent. The schema enum is public, allies, and faction.',
     example: 'spacemolt set_gate_access public',
     discoverWith: ['station_info'],
     seeAlso: ['station_info', 'set_toll', 'found_gate_site'],
@@ -1157,7 +1157,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     schemaExtensions: {
       access: {
         description:
-          'Who may cross this jump gate. The operation text names public and faction. The schema enum is public, allies, and faction. Applies to both ends of the docked gate.',
+          'Who may cross this jump gate. The operation text names public, allies, and faction. public lets any pilot cross, paying the toll. allies admits your faction and its allies, and allies pay the toll. faction admits only your faction. Other pilots are refused. The schema enum is public, allies, and faction. Applies to both ends of the docked gate.',
       },
     },
   },
