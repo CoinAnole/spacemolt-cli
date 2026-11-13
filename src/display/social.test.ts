@@ -4069,6 +4069,129 @@ test('grouped facility_list prints a Building cell of true when under_constructi
   expect(tableCell(player, 'player-refinery', 'Building')).toBe('true');
 });
 
+test('grouped facility_list prints Ticks left including 0 and leaves an omitted key blank', () => {
+  const stdout = renderStructuredResult(
+    'facility_list',
+    structuredClone(facilityListFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const station = sectionAfter(stdout, 'Station Facilities', 'Player Facilities');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  const faction = sectionAfter(stdout, 'Faction Facilities');
+
+  expect(facilityTableHeader(station)).not.toContain('Ticks left');
+  expect(facilityTableHeader(faction)).not.toContain('Ticks left');
+  expect(facilityTableHeader(player)).toContain('Building');
+  expect(facilityTableHeader(player)?.indexOf('Building')).toBeLessThan(
+    facilityTableHeader(player)?.indexOf('Ticks left') ?? -1,
+  );
+  expect(tableCell(player, 'player-berth', 'Building')).toBe('true');
+  expect(tableCell(player, 'player-berth', 'Ticks left')).toBe('0');
+  expect(tableCell(player, 'player-bunker', 'Ticks left')).toBe('');
+  expect(tableCell(player, 'player-refinery', 'Ticks left')).toBe('');
+  expect(tableCell(player, 'player-refinery', 'Active')).toBeUndefined();
+  expect(player).not.toContain('building (');
+  expect(stdout).not.toContain('ticks left)');
+});
+
+test('facility_list omits Ticks left unless a row sends a finite number or bigint', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  for (const key of ['station_facilities', 'player_facilities', 'faction_facilities'] as const) {
+    for (const row of fixture[key] as Array<Record<string, unknown>>) delete row.ticks_until_complete;
+  }
+  const playerFacilities = fixture.player_facilities as Array<Record<string, unknown>>;
+  if (!playerFacilities[0]) throw new Error('Player facility fixture is incomplete.');
+  playerFacilities[0].ticks_until_complete = Number.POSITIVE_INFINITY;
+  playerFacilities[0].repair_complete_tick = 40;
+  playerFacilities[0].status = 'under_construction';
+  const infinite = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const player = sectionAfter(infinite, 'Player Facilities', 'Faction Facilities');
+  expect(facilityTableHeader(player)).not.toContain('Ticks left');
+  expect(tableCell(player, 'player-refinery', 'Active')).toBe('under_construction');
+  expect(player).not.toContain('building (');
+  expect(infinite).toContain('Repair Tick');
+  expect(infinite).toContain('40');
+
+  playerFacilities[0].ticks_until_complete = 12n;
+  const bigint = renderStructuredResult('facility_list', fixture, options, context).stdout.join('\n');
+  const bigintPlayer = sectionAfter(bigint, 'Player Facilities', 'Faction Facilities');
+  expect(tableCell(bigintPlayer, 'player-refinery', 'Ticks left')).toBe('12');
+  expect(tableCell(bigintPlayer, 'player-berth', 'Ticks left')).toBe('');
+  expect(tableCell(bigintPlayer, 'player-refinery', 'Active')).toBe('under_construction');
+  expect(bigintPlayer).not.toContain('building (');
+});
+
+test('facility_owned prints Ticks left including 0 and does not derive it', () => {
+  const stdout = renderStructuredResult(
+    'facility_owned',
+    structuredClone(facilityOwnedFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Facilities');
+  expect(tableCell(section, 'player-berth', 'Building')).toBe('true');
+  expect(tableCell(section, 'player-berth', 'Ticks left')).toBe('0');
+  expect(tableCell(section, 'player-bunker', 'Ticks left')).toBe('');
+  expect(tableCell(section, 'player-refinery', 'Ticks left')).toBe('');
+  expect(section).not.toContain('building (');
+
+  const derived = {
+    action: 'owned',
+    facilities: [
+      {
+        facility_id: 'repair-only',
+        type: 'ore_refinery',
+        name: 'Ore Refinery',
+        base_id: 'earth_station',
+        base_name: 'Earth Station',
+        rent_per_cycle: 10,
+        under_construction: true,
+        repair_complete_tick: 9,
+        status: 'under_construction',
+      },
+    ],
+  };
+  const derivedStdout = renderStructuredResult('facility_owned', derived, options, context).stdout.join('\n');
+  const derivedSection = sectionAfter(derivedStdout, 'Facilities');
+  expect(derivedSection).not.toContain('Ticks left');
+  expect(tableCell(derivedSection, 'repair-only', 'Status')).toBe('under_construction');
+  expect(tableCell(derivedSection, 'repair-only', 'Building')).toBe('true');
+  expect(derivedStdout).not.toContain('building (');
+
+  const mixed = structuredClone(facilityOwnedFixture) as Record<string, unknown>;
+  const facilities = mixed.facilities as Array<Record<string, unknown>>;
+  const berth = facilities.find((row) => row.facility_id === 'player-berth');
+  const bunker = facilities.find((row) => row.facility_id === 'player-bunker');
+  if (!berth || !bunker) throw new Error('Owned facility fixture is incomplete.');
+  berth.ticks_until_complete = 7n;
+  bunker.ticks_until_complete = '4';
+  const mixedStdout = renderStructuredResult('facility_owned', mixed, options, context).stdout.join('\n');
+  const mixedSection = sectionAfter(mixedStdout, 'Facilities');
+  expect(tableCell(mixedSection, 'player-berth', 'Ticks left')).toBe('7');
+  expect(tableCell(mixedSection, 'player-bunker', 'Ticks left')).toBe('');
+  expect(tableCell(mixedSection, 'player-refinery', 'Ticks left')).toBe('');
+});
+
+test('faction_facility_owned prints Ticks left including 0 and leaves an omitted key blank', () => {
+  const stdout = renderStructuredResult(
+    'faction_facility_owned',
+    structuredClone(factionFacilityOwnedFixture),
+    options,
+    context,
+  ).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Faction Facilities');
+  const header = section.split('\n').find((line) => line.includes('Name') && line.includes('Building'));
+  expect(header).toBeDefined();
+  expect(header?.indexOf('Building')).toBeLessThan(header?.indexOf('Ticks left') ?? -1);
+  expect(tableCell(section, 'faction-berth-0', 'Building')).toBe('yes');
+  expect(tableCell(section, 'faction-berth-0', 'Ticks left')).toBe('0');
+  expect(tableCell(section, 'faction-bunker', 'Ticks left')).toBe('');
+  expect(tableCell(section, 'faction-yard-1', 'Ticks left')).toBe('');
+  expect(section).not.toContain('building (');
+  expect(tableCell(section, 'faction-yard-1', 'Active')).toBeUndefined();
+});
+
 test('grouped facility_list prints Missed as 0 for player and faction and not from a missing key elsewhere', () => {
   const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
   fixture.public_facilities = [
@@ -8755,6 +8878,8 @@ test('faction_facility_list omits Damaged column when no damaged fields', () => 
   expect(stdout).not.toMatch(/\|\s*Damaged\s*\|/);
   expect(stdout).toMatch(/\|\s*Building\s*$|\|\s*Building\b/);
   expect(stdout).toContain('12');
+  expect(stdout).not.toContain('Ticks left');
+  expect(stdout).not.toContain('building (');
   expect(stdout).not.toContain('=== Response ===');
 });
 

@@ -13,6 +13,27 @@
       "missed_rent_cycles": 2,
       "arrears_owed": 2400,
       "labor_per_run": 60
+    },
+    {
+      "facility_id": "faction-berth-0",
+      "type": "faction_shipyard_berth",
+      "name": "Zero Berth",
+      "base_id": "earth_station",
+      "base_name": "Earth Station",
+      "rent_per_cycle": 0,
+      "labor_per_run": 0,
+      "under_construction": true,
+      "ticks_until_complete": 0
+    },
+    {
+      "facility_id": "faction-bunker",
+      "type": "fuel_bunker",
+      "name": "Faction Fuel Bunker",
+      "base_id": "mars_station",
+      "base_name": "Mars Station",
+      "system_id": "sol",
+      "rent_per_cycle": 80,
+      "labor_per_run": 10
     }
   ],
   "faction_rent": {

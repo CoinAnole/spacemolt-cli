@@ -1,9 +1,11 @@
 
 === Facilities ===
 
-  Name                            | Type         | ID              | Level | Rent/cycle | Owner
-  --------------------------------+--------------+-----------------+-------+------------+------
-  Frontier Smelter (Ore Refinery) | ore_refinery | player-refinery |       | 120        |      
+  Name                            | Type           | ID              | Level | Building | Ticks left | Rent/cycle | Owner
+  --------------------------------+----------------+-----------------+-------+----------+------------+------------+------
+  Frontier Smelter (Ore Refinery) | ore_refinery   | player-refinery |       |          |            | 120        |      
+  Shipyard Berth                  | shipyard_berth | player-berth    |       | true     | 0          | 0 (paused) |      
+  Fuel Bunker                     | fuel_bunker    | player-bunker   |       |          |            | 40         |      
 
 Personal rent bill: 120cr/cycle
 Facilities: 1

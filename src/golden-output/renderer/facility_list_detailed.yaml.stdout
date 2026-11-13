@@ -89,6 +89,20 @@ player_facilities:
     recipe_id: iron_ore_reverse
     damaged: true
     production: {queued_runs: 0, queued_items: 0, backlog_ticks: 0, output_price_per_unit: 0.25}
+  - facility_id: "player-berth"
+    type: shipyard_berth
+    name: "Shipyard Berth"
+    description: "Player shipyard berth still under construction."
+    category: production
+    level: 1
+    under_construction: true
+    ticks_until_complete: 0
+  - facility_id: "player-bunker"
+    type: fuel_bunker
+    name: "Player Fuel Bunker"
+    description: "Player fuel storage."
+    category: service
+    level: 1
 faction_facilities:
   - facility_id: "faction-smelter"
     type: alloy_smelter

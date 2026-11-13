@@ -813,6 +813,8 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       recipe_id: recipeId,
       damaged_display: formatYesNo(row.damaged),
       dismantling_display: formatYesNo(row.dismantling),
+      // Finite number or bigint, including 0. An omitted key stays blank and is not 0.
+      ticks_left_display: noteIntegerText(row.ticks_until_complete),
       rent_cycle_display: !hasAnyField([row], ['rent_per_cycle'])
         ? undefined
         : withPausedRentSuffix(String(row.rent_per_cycle), row),
@@ -865,6 +867,10 @@ function facilityColumns(
   }
   if (hasAnyField(rows, ['under_construction'])) {
     columns.push(['Building', ['under_construction']]);
+  }
+  // Present only when a row sends a finite number or bigint, including 0. Not derived from repair_complete_tick.
+  if (hasAnyField(rows, ['ticks_left_display'])) {
+    columns.push(['Ticks left', ['ticks_left_display']]);
   }
   if (hasAnyField(rows, ['dismantling'])) {
     columns.push(['Dismantling', ['dismantling_display', 'dismantling']]);
@@ -2018,6 +2024,7 @@ export const socialFormatters = [
           damaged_display: formatYesNo(facility.damaged),
           building_display: formatYesNo(facility.under_construction),
           dismantling_display: formatYesNo(facility.dismantling),
+          ticks_left_display: noteIntegerText(facility.ticks_until_complete),
         };
       });
       const columns: Array<[string, string[]]> = [
@@ -2037,6 +2044,9 @@ export const socialFormatters = [
       }
       if (hasAnyField(rows, ['under_construction', 'building_display'])) {
         columns.push(['Building', ['building_display', 'under_construction']]);
+      }
+      if (hasAnyField(rows, ['ticks_left_display'])) {
+        columns.push(['Ticks left', ['ticks_left_display']]);
       }
       if (hasAnyField(rows, ['dismantling', 'dismantling_display'])) {
         columns.push(['Dismantling', ['dismantling_display', 'dismantling']]);

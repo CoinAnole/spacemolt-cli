@@ -659,14 +659,16 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     category: 'Facilities',
     description:
       "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3. Player Facilities and Faction Facilities print Missed, and a missing missed_rent_cycles prints 0. Station, Public, and Ally tables print Missed only when a row sends missed_rent_cycles; an omitted key on those rows stays blank and does not add the column. " +
-      FACILITY_LIST_TRADE_AUTHENTICATOR_HELP,
+      FACILITY_LIST_TRADE_AUTHENTICATOR_HELP +
+      ' Table output prints Ticks left when any row sends ticks_until_complete as a finite number or bigint, including 0. The integer is on player and faction rows while that facility is under construction. Station, public, and ally rows omit it. An omitted key on a row stays blank. When no row sends the key, the Ticks left column is omitted. An omitted key is not 0. Gameserver 0.703.0.',
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
   facility_owned: {
     category: 'Facilities',
     description:
       "List every facility you own across all stations. Rent/cycle on each row is the server's stored rent_per_cycle. An explicit 0 prints 0 and is not replaced with a sentence. Personal rent bill is the server rent summary, and an explicit 0 prints 0cr/cycle. " +
-      OUTSIDER_STATION_RENT_HELP,
+      OUTSIDER_STATION_RENT_HELP +
+      ' Table output prints Ticks left when any row sends ticks_until_complete as a finite number or bigint, including 0. The integer is present only while under_construction is true. An omitted key on a row stays blank. When no row sends the key, the Ticks left column is omitted. An omitted key is not 0. Gameserver 0.703.0.',
     example: 'spacemolt facility_owned',
     discoverWith: ['facility_list'],
     seeAlso: ['facility_list', 'facility_types'],
@@ -939,7 +941,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   faction_facility_owned: {
     category: 'Facilities',
-    description: "List your faction's facilities across all stations.",
+    description:
+      "List your faction's facilities across all stations." +
+      ' Table output prints Ticks left when any row sends ticks_until_complete as a finite number or bigint, including 0. The integer is present only while under_construction is true. An omitted key on a row stays blank. When no row sends the key, the Ticks left column is omitted. An omitted key is not 0. Gameserver 0.703.0.',
     example: 'spacemolt faction_facility_owned',
     discoverWith: ['faction_facility_list'],
     seeAlso: ['faction_facility_list', 'faction_build'],

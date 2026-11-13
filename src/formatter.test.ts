@@ -12309,9 +12309,11 @@ describe('structuredContent formatters', () => {
 
       === Player Facilities ===
 
-        Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Missed | Owner
-        -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+--------+------
-        Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse | 0      |
+        Name               | ID              | Level | Category   | Maint | Damaged | Building | Ticks left | Price/unit | Recycler | Recipe           | Missed | Owner
+        -------------------+-----------------+-------+------------+-------+---------+----------+------------+------------+----------+------------------+--------+------
+        Ore Refinery       | player-refinery | 2     | production | true  | yes     |          |            | 0.25cr     | true     | iron_ore_reverse | 0      |
+        Shipyard Berth     | player-berth    | 1     | production |       |         | true     | 0          |            |          |                  | 0      |
+        Player Fuel Bunker | player-bunker   | 1     | service    |       |         |          |            |            |          |                  | 0      |
 
       === Faction Facilities ===
 
@@ -12376,9 +12378,11 @@ describe('structuredContent formatters', () => {
       "
       === Faction Facilities ===
 
-        Name                   | Type                   | ID             | Station       | System | Rent    | Missed | Arrears | Labor/run
-        -----------------------+------------------------+----------------+---------------+--------+---------+--------+---------+----------
-        Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1 | Earth Station | sol    | 1,200cr | 2      | 2,400cr | 60cr
+        Name                   | Type                   | ID              | Station       | System | Building | Ticks left | Rent         | Missed | Arrears | Labor/run
+        -----------------------+------------------------+-----------------+---------------+--------+----------+------------+--------------+--------+---------+----------
+        Faction Shipyard Berth | faction_shipyard_berth | faction-yard-1  | Earth Station | sol    |          |            | 1,200cr      | 2      | 2,400cr | 60cr
+        Zero Berth             | faction_shipyard_berth | faction-berth-0 | Earth Station |        | yes      | 0          | 0cr (paused) |        |         | 0cr
+        Faction Fuel Bunker    | fuel_bunker            | faction-bunker  | Mars Station  | sol    |          |            | 80cr         |        |         | 10cr
 
       Faction rent bill: 1,200cr/cycle
       Facilities: 1

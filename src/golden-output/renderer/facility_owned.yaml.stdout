@@ -8,6 +8,20 @@ facilities:
     base_id: earth_station
     base_name: "Earth Station"
     rent_per_cycle: 120
+  - facility_id: "player-berth"
+    type: shipyard_berth
+    name: "Shipyard Berth"
+    base_id: earth_station
+    base_name: "Earth Station"
+    rent_per_cycle: 0
+    under_construction: true
+    ticks_until_complete: 0
+  - facility_id: "player-bunker"
+    type: fuel_bunker
+    name: "Fuel Bunker"
+    base_id: earth_station
+    base_name: "Earth Station"
+    rent_per_cycle: 40
 rent:
   facilities: 1
   total_rent_per_cycle: 120

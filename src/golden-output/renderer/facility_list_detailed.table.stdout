@@ -39,9 +39,11 @@ Service pools:
 
 === Player Facilities ===
 
-  Name         | ID              | Level | Category   | Maint | Damaged | Price/unit | Recycler | Recipe           | Missed | Owner
-  -------------+-----------------+-------+------------+-------+---------+------------+----------+------------------+--------+------
-  Ore Refinery | player-refinery | 2     | production | true  | yes     | 0.25cr     | true     | iron_ore_reverse | 0      |      
+  Name               | ID              | Level | Category   | Maint | Damaged | Building | Ticks left | Price/unit | Recycler | Recipe           | Missed | Owner
+  -------------------+-----------------+-------+------------+-------+---------+----------+------------+------------+----------+------------------+--------+------
+  Ore Refinery       | player-refinery | 2     | production | true  | yes     |          |            | 0.25cr     | true     | iron_ore_reverse | 0      |      
+  Shipyard Berth     | player-berth    | 1     | production |       |         | true     | 0          |            |          |                  | 0      |      
+  Player Fuel Bunker | player-bunker   | 1     | service    |       |         |          |            |            |          |                  | 0      |      
 
 === Faction Facilities ===
 

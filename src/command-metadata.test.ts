@@ -3577,8 +3577,15 @@ describe('command metadata', () => {
       expect(text).toContain('not a property of that notice');
       expect(text).toContain('explicit 0 prints 0');
       expect(text).toContain('0cr/cycle');
+      expect(text).toContain('Ticks left');
+      expect(text).toContain('ticks_until_complete');
+      expect(text).toContain('present only while under_construction is true');
+      expect(text).toContain('including 0');
+      expect(text).toContain('An omitted key is not 0');
+      expect(text).toContain('Gameserver 0.703.0');
       expect(text).not.toContain('production facility you personally own');
       expect(text).not.toContain('not an OpenAPI field');
+      expect(text).not.toContain('building (');
     }
   });
 
@@ -3661,12 +3668,37 @@ describe('command metadata', () => {
       expect(text).toContain('does not split that quantity into stock and a charge');
       expect(text).toContain('An omitted key still adds no column');
       expect(text).toContain('Gameserver 0.658.0');
+      expect(text).toContain('Ticks left');
+      expect(text).toContain('ticks_until_complete');
+      expect(text).toContain('player and faction rows');
+      expect(text).toContain('under construction');
+      expect(text).toContain('Station, public, and ally rows omit it');
+      expect(text).toContain('including 0');
+      expect(text).toContain('An omitted key is not 0');
+      expect(text).toContain('Gameserver 0.703.0');
       expect(text).not.toContain('maintenance_fuel');
+      expect(text).not.toContain('building (');
     }
 
     const factionEdit = captureHelp('faction edit');
     expect(factionEdit).toContain('ally_facility_access');
     expect(factionEdit).not.toContain('Ally Facilities');
+  });
+
+  test('faction facility_owned help documents construction ticks', () => {
+    const description = COMMERCE_FACILITY_COMMAND_OVERRIDES.faction_facility_owned?.description;
+    expect(description).toBe(COMMANDS.faction_facility_owned?.description);
+    const help = captureHelp('faction facility_owned');
+    for (const text of [description, help]) {
+      expect(text).toContain('Ticks left');
+      expect(text).toContain('ticks_until_complete');
+      expect(text).toContain('present only while under_construction is true');
+      expect(text).toContain('including 0');
+      expect(text).toContain('An omitted key is not 0');
+      expect(text).toContain('Gameserver 0.703.0');
+      expect(text).not.toContain('building (');
+      expect(text).not.toContain('station, public, and ally');
+    }
   });
 
   test('faction facility_list help points at grace without a cycle count', () => {
