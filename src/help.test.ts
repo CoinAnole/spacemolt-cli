@@ -1126,6 +1126,11 @@ describe('help output branches', () => {
     expect(output).toContain('joined_fleet');
     expect(output).toContain('boss_ship');
     expect(output).toContain('empire_gift_ship');
+    expect(output).toContain('faction_garage_store');
+    expect(output).toContain('cannot_gift, printed as the server sent it');
+    expect(output).toContain('not_qualified, printed as the server sent it');
+    expect(output).toContain('cannot_garage no longer occurs');
+    expect(output).toContain('The pilots do not need to be in the same faction.');
     expect(output).toContain('An empire station does not take ships.');
     expect(output).toContain('A starter ship is scrapped, earns no goodwill, and omits fleet and petition fields.');
     expect(output).toContain('does not detect a starter hull');

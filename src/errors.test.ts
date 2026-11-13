@@ -584,6 +584,22 @@ describe('field_jobs_queued', () => {
   });
 });
 
+describe('prestige hull gift and garage refusals', () => {
+  test('cannot_gift, not_qualified, and cannot_garage have no client handler', () => {
+    for (const code of ['cannot_gift', 'not_qualified', 'cannot_garage']) {
+      expect(ERROR_REGISTRY[code]).toBeUndefined();
+      expect(getErrorSuggestion(code)).toBeUndefined();
+      expect(getErrorSuggestion(code, 'storage deposit')).toBeUndefined();
+      expect(getErrorSuggestion(code, 'switch_ship')).toBeUndefined();
+      expect(isKnownErrorCode(code)).toBe(false);
+      expect(ERROR_CODES).not.toContain(code);
+      expect(isRetryableError(code)).toBe(true);
+      expect(isAuthError(code)).toBe(false);
+      expect(getRelatedCommands(code)).toEqual([]);
+    }
+  });
+});
+
 describe('target_cloaked', () => {
   test('is no longer a known code', () => {
     expect(ERROR_REGISTRY.target_cloaked).toBeUndefined();

@@ -152,7 +152,7 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
   },
   faction_garages: {
     description:
-      "View your faction's full ship-garage roster across all stations. Use get_ship <id> (or get_ship id=...) from anywhere to inspect a pooled hull's fit without docking or claiming it. Claiming still requires switch_ship while docked at that station.",
+      "View your faction's full ship-garage roster across all stations. Use get_ship <id> (or get_ship id=...) from anywhere to inspect a pooled hull's fit without docking or claiming it. Claiming still requires switch_ship while docked at that station. A personal-achievement prestige hull can be stored with storage deposit target=faction. The response action is faction_garage_store. There is no send_gift command. Only a member who has earned the achievement can claim it. An unqualified claim is refused with not_qualified, printed as the server sent it. A garaged ship stays in the garage if the owner leaves the faction. cannot_garage no longer occurs. The client does not refuse the claim (gameserver 0.690.0).",
     example: 'spacemolt faction garages; spacemolt get_ship id=ship-garage',
     seeAlso: ['list_ships', 'switch_ship', 'get_ship'],
     category: 'Factions',

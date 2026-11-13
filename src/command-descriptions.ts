@@ -150,7 +150,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Join a faction via invitation. You must have a pending invite. While you fight in a battle against one of that faction's stations, join_faction returns own_faction_station. Leave the battle first, then retry.",
   leave_faction: 'Leave your faction',
   list_ship_for_sale:
-    'List a stored ship for sale on the exchange. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.',
+    'List a stored ship for sale on the exchange. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first. The server refuses a prestige hull. The client does not refuse it and does not keep a list of hull ids.',
   list_ships:
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',
@@ -186,7 +186,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   set_drone_name: 'Set or clear a display name for a drone.',
   place_ship_buy_order: 'Place a standing buy order for a ship class at this station',
   sell_ship_to_order:
-    'Sell a stored ship directly into a buy order at this station. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first.',
+    'Sell a stored ship directly into a buy order at this station. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first. The server refuses a prestige hull. The client does not refuse it and does not keep a list of hull ids.',
   set_home_base: 'Set your home station for respawning',
   set_status: 'Set your status message and clan tag',
   storage: 'Run station and faction storage actions.',
@@ -202,7 +202,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Donate one material type to a stuck commission from cargo then station storage. Table output lists material names with needed/gathered progress.',
   survey_system: 'Read ore at charted POIs and scan the current system for hidden POIs',
   switch_ship:
-    "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. At a station, cargo from your current ship moves to station storage. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. Undocked at a faction-mate's carrier POI, switch_ship of your ship in the bay swaps hulls in one action: your current ship goes into the bay and the bay ship undocks. Each ship keeps its cargo, modules, and crew. No shipyard is required for that swap. The swap is refused in battle, in transit, with an aggression timer, while towing, when your current ship has passengers, or when the bay has no room for your current ship.",
+    "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. At a station, cargo from your current ship moves to station storage. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. Undocked at a faction-mate's carrier POI, switch_ship of your ship in the bay swaps hulls in one action: your current ship goes into the bay and the bay ship undocks. Each ship keeps its cargo, modules, and crew. No shipyard is required for that swap. The swap is refused in battle, in transit, with an aggression timer, while towing, when your current ship has passengers, or when the bay has no room for your current ship. Claiming a ship from the faction garage uses this command while docked at that station. A personal-achievement prestige hull can be claimed only by a member who has earned that achievement. An unqualified claim is refused with not_qualified, printed as the server sent it. The client does not refuse the claim. A garaged ship stays in the garage if the owner leaves the faction. cannot_garage no longer occurs (gameserver 0.690.0).",
   tow_wreck: 'Attach a tow line to a wreck for hauling',
   transfer_personnel: 'Transfer fit or injured crew and marines to an allied ship at the same POI',
   treat_personnel:
