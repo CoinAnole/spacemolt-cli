@@ -214,6 +214,9 @@ test('formatCatalogYesNo maps booleans only', () => {
   expect(formatCatalogYesNo(true)).toBe('yes');
   expect(formatCatalogYesNo(false)).toBe('no');
   expect(formatCatalogYesNo(undefined)).toBeUndefined();
+  expect(formatCatalogYesNo(0)).toBeUndefined();
+  expect(formatCatalogYesNo('')).toBeUndefined();
+  expect(formatCatalogYesNo([])).toBeUndefined();
 });
 
 test('summarizeBonusPerLevel joins finite numeric entries as key n parts', () => {
@@ -222,6 +225,11 @@ test('summarizeBonusPerLevel joins finite numeric entries as key n parts', () =>
 
 test('bonus per level 0 prints miningYield 0', () => {
   expect(summarizeBonusPerLevel({ miningYield: 0 })).toBe('miningYield 0');
+});
+
+test('empty-string and empty-array miningYield print miningYield 0', () => {
+  expect(summarizeBonusPerLevel({ miningYield: '' })).toBe('miningYield 0');
+  expect(summarizeBonusPerLevel({ miningYield: [] })).toBe('miningYield 0');
 });
 
 test('summarizeBonusPerLevel returns undefined for empty objects, arrays, and strings', () => {
@@ -920,6 +928,16 @@ test('string mobile_base services print Mobile base and Ship modules: yes withou
   expect(stdout).not.toContain('market');
 });
 
+test('numeric service 0 prints Services: none and not Services: 0', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ mobile_base: { services: [0] } }, {}), {
+    plain: true,
+  });
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Services: none');
+  expect(stdout).not.toContain('Services: 0');
+});
+
 test('null built-in facility is omitted and the named row prints Built-in: Reactor (reactor)', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(
@@ -943,6 +961,19 @@ test('empty-string built-in facility name prints Built-in: reactor', () => {
   const stdout = buffer.stdout.join('\n');
   expect(stdout).toContain('Built-in: reactor');
   expect(stdout).not.toContain('(reactor)');
+});
+
+test('numeric built-in facility id 0 prints Built-in: none', () => {
+  const buffer = { stdout: [] as string[], stderr: [] as string[] };
+  withDisplayRenderBuffer(
+    buffer,
+    () => emitCatalogShipDetail({ mobile_base: { built_in_facilities: [{ id: 0, name: 'Reactor' }] } }, {}),
+    { plain: true },
+  );
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Built-in: none');
+  expect(stdout).not.toContain('Reactor');
+  expect(stdout).not.toContain('0');
 });
 
 test('empire is preferred when it differs from faction', () => {

@@ -337,7 +337,7 @@ function formatMissionDialog(value: unknown): string | undefined {
 
   for (const key of ['complete', 'content', 'text', 'message', 'offer', 'accept', 'decline']) {
     const text = value[key];
-    if (text !== undefined && text !== null && text !== '') return String(text);
+    if (rowsHaveValue([value], [key])) return String(text);
   }
 
   return formatMissionObjectText(value);

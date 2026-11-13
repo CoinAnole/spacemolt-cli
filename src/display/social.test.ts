@@ -6667,6 +6667,20 @@ test('get_battle_status prints intercept combat state that blocks escape', () =>
   expect(stdout).not.toContain('Latch:');
 });
 
+test('get_battle_status prints EM Disrupted 0 ticks when disruption_ticks is 0', () => {
+  const stdout = renderBattleStatus({
+    battle_id: 'battle-1',
+    system_id: 'sol',
+    is_participant: true,
+    combat_state: {
+      em_disrupted: true,
+      disruption_ticks: 0,
+    },
+  });
+
+  expect(stdout).toContain('EM Disrupted: yes (0 ticks)');
+});
+
 function renderLatchStatus(latchStatus: unknown): string {
   const fixture = structuredClone(battleStatusLatchStatusFixture);
   const combatState = fixture.combat_state as Record<string, unknown>;

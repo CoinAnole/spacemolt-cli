@@ -3304,6 +3304,109 @@ test('get_location prints pathfinder drift details', () => {
   expect(stdout).toContain('Stars thin out behind you.');
 });
 
+test('get_location prints a zero transit arrival tick', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        in_transit: true,
+        transit_type: 'travel',
+        transit_arrival_tick: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Arrival tick: 0');
+});
+
+test('get_location travel transit prefers the POI dest when both dests are present', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        in_transit: true,
+        transit_type: 'travel',
+        transit_dest_poi_id: 'sol-station',
+        transit_dest_poi_name: 'Sol Station',
+        transit_dest_system_id: 'antares',
+        transit_dest_system_name: 'Antares',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Transit: travel → Sol Station (sol-station)');
+  expect(stdout).not.toContain('Antares (antares)');
+});
+
+test('get_location jump transit prefers the system dest when both dests are present', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        in_transit: true,
+        transit_type: 'jump',
+        transit_dest_poi_id: 'sol-station',
+        transit_dest_poi_name: 'Sol Station',
+        transit_dest_system_id: 'antares',
+        transit_dest_system_name: 'Antares',
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Transit: jump → Antares (antares)');
+  expect(stdout).not.toContain('Sol Station (sol-station)');
+});
+
+test('get_location prints a zero transit bearing', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        in_transit: true,
+        transit_type: 'pathfinder',
+        transit_bearing: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Bearing: 0°');
+});
+
+test('get_location omits Position when only transit_x is set', () => {
+  const stdout = renderStructuredResult(
+    'get_location',
+    {
+      location: {
+        system_id: 'sol',
+        system_name: 'Sol',
+        in_transit: true,
+        transit_type: 'pathfinder',
+        transit_x: 12.5,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Location ===');
+  expect(stdout).toContain('Transit: pathfinder');
+  expect(stdout).not.toContain('Position:');
+});
+
 test('get_location prints bare in-transit location output', () => {
   const stdout = renderStructuredResult(
     'get_location',
@@ -5951,6 +6054,16 @@ test('get_location prints every nearby player row when the count matches the arr
   expect(stdout).not.toContain('... and');
 });
 
+test('get_location prints a nearby-player remainder when nearby_player_count exceeds the rows', () => {
+  const fixture = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
+  fixture.location.nearby_players = [{ username: 'Pilot 1' }];
+  fixture.location.nearby_player_count = 6;
+  const stdout = renderStructuredResult('get_location', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('Nearby Players (6):');
+  expect(stdout).toContain('... and 5 more');
+});
+
 test('get_location prints location.offline_collapsed including 0 before prizes and pirates', () => {
   const positive = structuredClone(getLocationFixture) as { location: Record<string, unknown> };
   positive.location.offline_collapsed = 4;
@@ -6693,6 +6806,18 @@ test('get_state prints empire NPC rows and combat only for the fighting contact'
   expect(warden).toBe('  Warden [npc-1] (Aegis / enforcer) - patrol - solarian - in combat');
   expect(clerk).toBe('  Clerk [npc-2] (Quill / courier) - customs - solarian');
   expect(clerk).not.toContain('in combat');
+});
+
+test('get_state prints an empire-NPC remainder when nearby_empire_npc_count exceeds the rows', () => {
+  const fixture = structuredClone(getStateSnapshotFixture) as {
+    location: { nearby_empire_npcs: unknown[]; nearby_empire_npc_count: number };
+  };
+  const rows = fixture.location.nearby_empire_npcs.length;
+  fixture.location.nearby_empire_npc_count = rows + 4;
+  const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain(`Nearby Empire NPCs (${rows + 4}):`);
+  expect(stdout).toContain('... and 4 more');
 });
 
 test('get_state prints one ship token when empire NPC ship name and class match', () => {

@@ -1441,6 +1441,16 @@ test('faction_query_intel prints Police: 0', () => {
   expect(stdout).toContain('Police: 0');
 });
 
+test('faction_query_intel with an empty empire prints the system heading and omits Empire:', () => {
+  const fixture = cloneIntelFixture();
+  const entry = firstIntelEntry(fixture) as IntelResult['entries'][number] & { empire?: string };
+  entry.empire = '';
+  const stdout = renderIntel(fixture);
+
+  expect(stdout).toContain('Sol (sol)');
+  expect(stdout).not.toContain('Empire:');
+});
+
 test('faction_query_intel --format text uses the description lines', () => {
   const fixture = cloneIntelFixture();
   firstIntelEntry(fixture).description = '  Birthplace system  ';
@@ -2027,6 +2037,22 @@ test('commission_status count mismatch prints count 0 when the array is non-empt
   ).stdout.join('\n');
 
   expect(stdout).toContain('count 0');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('commission_quote with shipyard_tier_here and no required tier prints Shipyard tier: 2/?', () => {
+  const stdout = renderStructuredResult(
+    'commission_quote',
+    {
+      ship_class: 'prospector',
+      can_commission: true,
+      shipyard_tier_here: 2,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Shipyard tier: 2/?');
   expect(stdout).not.toContain('=== Response ===');
 });
 
@@ -3114,6 +3140,51 @@ test('browse_ships with omitted base fields prints Ships for Sale @ Station', ()
   expect(stdout).toContain('@ Station');
 });
 
+test('browse_ships with base_id and no base_name prints Ships for Sale @ earth_station', () => {
+  const stdout = renderBrowseShips({
+    base_id: 'earth_station',
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale @ earth_station ===');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('browse_ships with a legacy base prints Ships for Sale @ Legacy Yard before order stations', () => {
+  const stdout = renderBrowseShips({
+    base: 'Legacy Yard',
+    listings: [
+      {
+        ship_id: 'ship-1',
+        ship_name: 'Lucky Strike',
+        class_id: 'prospector',
+        price: 125000,
+        listing_id: 'listing-1',
+      },
+    ],
+    buy_orders: [
+      {
+        order_id: 'ship-order-1',
+        class_id: 'prospector',
+        class_name: 'Prospector',
+        base_name: 'Earth Station',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Ships for Sale @ Legacy Yard ===');
+  expect(stdout).not.toContain('@ Earth Station');
+  expect(stdout).not.toContain('@ Station');
+});
+
 test('browse_ships omits an absent page key and keeps a single-station header name', () => {
   const stdout = renderBrowseShips({
     base_id: 'earth_station',
@@ -3411,4 +3482,19 @@ test('faction bulk buy bigint price_each prints the exact locale digits', () => 
 
   expect(stdout).toContain(`${priceEach.toLocaleString()} cr`);
   expect(stdout).not.toContain('9007199254740992');
+});
+
+test('analyze_market with skill_level 0 prints Trading skill: 0', () => {
+  const stdout = renderStructuredResult(
+    'analyze_market',
+    {
+      insights: [],
+      skill_level: 0,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Trading skill: 0');
+  expect(stdout).not.toContain('=== Response ===');
 });

@@ -135,6 +135,16 @@ test('renders dock satisfaction without condition text', () => {
   expect(stdout).toContain('Station condition: unknown (82%)');
 });
 
+test('dock station condition prints satisfaction 0', () => {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  const stationCondition = fixture.station_condition as Record<string, unknown>;
+  delete stationCondition.condition_text;
+  delete stationCondition.condition;
+  stationCondition.satisfaction_pct = 0;
+  const stdout = renderStructuredResult('dock', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('Station condition: unknown (0%)');
+});
+
 test('dock station condition omits the percent when satisfaction_pct is absent', () => {
   const fixture = structuredClone(dockFixture) as Record<string, unknown>;
   const stationCondition = fixture.station_condition as Record<string, unknown>;
@@ -4906,6 +4916,33 @@ test('bulk craft results use the Craft Results heading', () => {
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('=== Craft Results ===');
+});
+
+test('bulk craft results print no when success is false', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      details: {
+        action: 'bulk',
+        mode: 'craft',
+        results: [
+          {
+            index: 0,
+            success: false,
+            job_id: 'bulk-fail-1',
+            recipe: 'Refine Steel',
+            message: 'Rejected.',
+          },
+        ],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('| no |');
 });
 
 test('renders a missing craft summary count when succeeded is omitted', () => {

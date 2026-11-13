@@ -3186,7 +3186,7 @@ function formatBattleSidesDigest(value: unknown): string | undefined {
 }
 
 function formatPlayerScanDigest(players: unknown, limit = 6): string {
-  const rows = Array.isArray(players) ? players.filter(isRecord) : [];
+  const rows = records(players);
   const entries: string[] = [];
   for (const row of rows) {
     const name = nonEmptyString(row.username) ?? nonEmptyString(row.id);
@@ -3208,7 +3208,7 @@ function surveyRemainingLabel(remaining: unknown): string | undefined {
 }
 
 function formatSurveyResourceDigest(resources: unknown, limit = 6): string {
-  const rows = Array.isArray(resources) ? resources.filter(isRecord) : [];
+  const rows = records(resources);
   const entries: string[] = [];
   for (const row of rows) {
     const resourceId = nonEmptyString(row.resource_id);

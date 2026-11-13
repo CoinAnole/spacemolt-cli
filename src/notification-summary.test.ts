@@ -1149,6 +1149,41 @@ describe('notification presentation', () => {
     expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('Cleared the jump gate.');
   });
 
+  test('blank result.message falls through to the action line', () => {
+    const undock = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:00.000Z',
+      data: {
+        command: 'undock',
+        tick: 1434600,
+        result: { details: { action: 'undock' } },
+      },
+    };
+    const jumpWithBlankResultMessage = {
+      type: 'action_result',
+      msg_type: 'action_result',
+      timestamp: '2026-07-24T19:13:05.000Z',
+      data: {
+        command: 'jump',
+        tick: 1434601,
+        result: {
+          message: '   ',
+          details: {
+            action: 'jumped',
+            system: 'Sol',
+          },
+        },
+      },
+    };
+
+    const presented = presentNotifications([undock, jumpWithBlankResultMessage]);
+    const summary = presented.notifications[0];
+
+    expect(summary?.msg_type).toBe('action_result_summary');
+    expect((summary?.data as { latest_message?: string } | undefined)?.latest_message).toBe('jumped → Sol');
+  });
+
   test('details.message is latest_message when result has no message', () => {
     const undock = {
       type: 'action_result',

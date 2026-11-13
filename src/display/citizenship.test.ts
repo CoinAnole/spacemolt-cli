@@ -386,6 +386,15 @@ test('citizenship apply prints an explicit zero fee paid', () => {
   expect(stdout).toContain('Fee paid: 0 cr');
 });
 
+test('citizenship apply omits a non-finite fee paid', () => {
+  const stdout = stdoutOf('citizenship_apply', {
+    fee_paid: Number.NaN,
+  });
+
+  expect(stdout).not.toContain('Fee paid');
+  expect(stdout).not.toContain('NaN');
+});
+
 test('citizenship apply prints an explicit zero status', () => {
   const stdout = stdoutOf('citizenship_apply', {
     empire_id: 'solarian',

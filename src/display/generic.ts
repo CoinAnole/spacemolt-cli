@@ -218,9 +218,9 @@ function issuedMissionLabel(mission: Record<string, unknown>): string {
     (typeof mission.name === 'string' && mission.name.trim()) ||
     '';
   const id =
-    (typeof mission.mission_id === 'string' && mission.mission_id) ||
-    (typeof mission.id === 'string' && mission.id) ||
-    (typeof mission.template_id === 'string' && mission.template_id) ||
+    missionPointerText(mission.mission_id) ||
+    missionPointerText(mission.id) ||
+    missionPointerText(mission.template_id) ||
     '';
   if (title && id) return `${title} (${id})`;
   return title || id || 'Mission';
@@ -556,7 +556,6 @@ function formatYesNo(value: unknown): string | undefined {
   return undefined;
 }
 
-/** Finite numbers and bigints, including 0. Strings are not coerced. -0 prints as 0. */
 function formatFiniteNumberOrBigint(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
@@ -904,7 +903,7 @@ function bulkGiftAmountCell(value: unknown): string | undefined {
   ) {
     return String(value);
   }
-  if (isRecord(value) || Array.isArray(value)) return stringifyApiJson(value);
+  if (isRecordOrArray(value)) return stringifyApiJson(value);
   return String(value);
 }
 

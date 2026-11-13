@@ -10536,6 +10536,14 @@ describe('notification formatting', () => {
       expect(xp.headline).toBe('+5 XP in mining (0/0)');
     });
 
+    test('skill_xp_gain uses xp when xp_gained is null', () => {
+      const xp = formatNotificationPreview({
+        msg_type: 'skill_xp_gain',
+        data: { skill_id: 'mining', xp_gained: null, xp: 7 },
+      });
+      expect(xp.headline).toBe('+7 XP in mining (?/?)');
+    });
+
     test('drone_update / drone_destroyed pure previews', () => {
       expect(
         formatNotificationPreview({
@@ -10567,6 +10575,14 @@ describe('notification formatting', () => {
       expect(reconnected.tag).toBe('RECONNECTED');
       expect(reconnected.headline).toBe('Back online');
       expect(reconnected.details.some((d) => d.includes('recovered with 2 ticks'))).toBe(true);
+    });
+
+    test('reconnected was_pilotless false omits the recovery detail', () => {
+      const reconnected = formatNotificationPreview({
+        msg_type: 'reconnected',
+        data: { message: 'Back online', was_pilotless: false, ticks_remaining: 2 },
+      });
+      expect(reconnected.details).toEqual([]);
     });
 
     test('pilotless_ship prints unknown ship and explicit 0 ticks', () => {

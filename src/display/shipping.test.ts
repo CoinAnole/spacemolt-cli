@@ -891,6 +891,23 @@ test('omits malformed optional active freight fields without diagnostic tokens',
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('shipping_active with one shipment and no message prints the contracts table', () => {
+  const stdout = output('shipping_active', {
+    action: 'active',
+    tick: 500,
+    shipments: [
+      {
+        contract: { id: 'shipment-one-1', package_id: 'package-one-1' },
+        role: 'carrier',
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Contracts ===');
+  expect(stdout).toContain('shipment-one-1');
+  expect(stdout).not.toContain('No active freight contracts.');
+});
+
 test('formats active destination as name-only or contract base id when system is missing', () => {
   const stdout = output('shipping_active', {
     action: 'active',
