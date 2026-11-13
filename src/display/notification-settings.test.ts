@@ -500,6 +500,26 @@ test('prints an explicit zero msg_type as 0', () => {
   expect(typeCell).not.toBe('notification');
 });
 
+test('prints a system notification message and drops a string sibling', () => {
+  const stdout = stdoutOf('get_notifications', {
+    count: 1,
+    notifications: [
+      {
+        id: 'notif-1',
+        type: 'system',
+        msg_type: 'system',
+        timestamp: '2026-05-23T18:59:39.049Z',
+        data: { message: 'Server maintenance scheduled.' },
+      },
+      'sibling-string-token',
+    ],
+  });
+
+  expect(stdout).toContain('Server maintenance scheduled.');
+  expect(stdout).not.toContain('sibling-string-token');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('prints data.type in the Type cell when msg_type and type are omitted', () => {
   const stdout = stdoutOf('get_notifications', {
     count: 1,

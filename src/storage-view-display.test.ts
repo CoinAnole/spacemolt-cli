@@ -169,6 +169,18 @@ describe('rewriteStorageViewHint', () => {
     expect(rewritten.hint).toBe('0 items in storage at alpha (100 total across 2 stations)');
   });
 
+  test('empty inventoryItems array ignores content.items quantity 40', () => {
+    const rewritten = rewriteStorageViewHint(
+      {
+        hint: '100 items in storage at alpha, beta',
+        items: [{ item_id: 'ore', quantity: 40 }],
+      },
+      { requestedStationId: 'alpha', inventoryItems: [] },
+    );
+
+    expect(rewritten.hint).toBe('0 items in storage at alpha (100 total across 2 stations)');
+  });
+
   test('rewrites a multi-station hint for a non-array items field', () => {
     const rewritten = rewriteStorageViewHint(
       {
@@ -233,6 +245,15 @@ describe('enrichStorageViewStructuredContent', () => {
     );
 
     expect(enriched.target).toBeUndefined();
+  });
+
+  test('copies an empty-string payload target', () => {
+    const enriched = enrichStorageViewStructuredContent(
+      { hint: '12 items in storage at earth_station' },
+      { payloadTarget: '' },
+    );
+
+    expect(enriched.target).toBe('');
   });
 });
 

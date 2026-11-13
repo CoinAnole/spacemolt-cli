@@ -332,6 +332,20 @@ test('all-loot row with item_id 1500 prints 1500 in the item cell', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('all-loot row with item_id 0 prints 0 in the item cell', () => {
+  const stdout = stdoutOf(
+    'loot_wreck',
+    withDetails(lootWreckAllCargoFixture, (details) => {
+      details.looted = [{ item_id: 0 }];
+    }),
+  );
+
+  expect(stdout).toContain('=== Looted ===');
+  expect(stdout).toMatch(/0\s+\|/);
+  expect(stdout).not.toMatch(/^\s+\|/m);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('all-loot row with item_id null blanks the item cell', () => {
   const stdout = stdoutOf(
     'loot_wreck',
@@ -659,6 +673,21 @@ test('single-item xp prints Skill XP under the scalar lines for items and module
     expect(json).not.toContain('Skill XP:');
     expect(json).not.toContain('=== Loot Wreck ===');
   }
+});
+
+test('single-item loot empty tags array prints Tags: 0 item(s)', () => {
+  const stdout = stdoutOf('loot_wreck', {
+    details: {
+      action: 'loot_wreck',
+      item_id: 'adamant_tooth',
+      quantity: 4,
+      wreck_empty: false,
+      tags: [],
+      xp_gained: { scanning: 2 },
+    },
+  });
+
+  expect(stdout).toContain('Tags: 0 item(s)');
 });
 
 test('empty and zero xp maps claim single-item scalar lines without Skill XP', () => {

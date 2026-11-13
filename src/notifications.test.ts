@@ -9759,6 +9759,15 @@ describe('notification formatting', () => {
       expect(preview.details).toEqual([]);
     });
 
+    test('base_destroyed prints wreck_id 0', () => {
+      const preview = formatNotificationPreview({
+        type: 'base',
+        msg_type: 'base_destroyed',
+        data: { wreck_id: 0 },
+      });
+      expect(preview.details).toEqual(['Wreck ID for looting: 0']);
+    });
+
     test('base_raid_update pure preview is compact HP line', () => {
       const preview = formatNotificationPreview({
         type: 'base',
@@ -10042,6 +10051,15 @@ describe('notification formatting', () => {
       expect(preview.headline).toBe('Server restart in 60s');
       expect(preview.headline).not.toContain('()');
       expect(preview.details).toEqual(['Finish or park in-flight actions.']);
+    });
+
+    test('restart countdown prints seconds_until_restart 0', () => {
+      const preview = formatNotificationPreview({
+        type: 'system',
+        msg_type: 'server_restart_warning',
+        data: { seconds_until_restart: 0 },
+      });
+      expect(preview.headline).toBe('Server restart in 0s');
     });
 
     test('tableMessageFromPreview keeps countdown when the server message is longer than 80 characters', () => {

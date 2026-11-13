@@ -92,3 +92,4 @@
 {"family":"test","file":"src/display/status.test.ts","line":6714,"quote":"test('get_state prints Ship: (none) when ship and riding are absent', () => {"}
 {"family":"comment","file":"src/display/generic.ts","line":75,"quote":"// A blank counting-base string adds nothing. A non-blank string is printed as sent."}
 {"family":"presence","file":"src/display/market.ts","line":1150,"quote":"if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);"}
+{"family":"test","file":"src/display/ship.test.ts","line":848,"quote":"expect(stdout.indexOf('Location: Parked at Nova Terra')).toBeLessThan(stdout.indexOf(line));"}

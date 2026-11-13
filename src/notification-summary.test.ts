@@ -509,6 +509,29 @@ describe('notification presentation', () => {
     });
   });
 
+  test('summarizes two system jump notifications with arrival_tick 0', () => {
+    const jumpEarlier = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:15.000Z',
+      data: { action: 'jump', arrival_tick: 1433950, destination: 'lacaille_9352', is_wormhole: false },
+    };
+    const jumpLater = {
+      type: 'system',
+      msg_type: 'system',
+      timestamp: '2026-07-24T19:05:35.000Z',
+      data: { action: 'jump', arrival_tick: 0, destination: 'grumium', is_wormhole: false },
+    };
+
+    const presented = presentNotifications([jumpEarlier, jumpLater]);
+
+    expect(presented.summarizedCount).toBe(2);
+    expect(presented.notifications[0]).toMatchObject({
+      msg_type: 'system_progress_summary',
+      data: { latest_arrival_tick: 0 },
+    });
+  });
+
   test('keeps non-allowlisted action_result individual while summarizing travel commands', () => {
     const buyListedShip = {
       type: 'action_result',

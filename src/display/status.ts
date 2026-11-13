@@ -1476,7 +1476,6 @@ function emitPoiInteraction(value: unknown): void {
   emitMissionOffer(value.mission, false);
 }
 
-/** Title and note_id only. An omitted or empty array, or an entry with neither key, prints nothing. */
 function emitNotesReceived(notes: unknown): void {
   if (!Array.isArray(notes) || notes.length === 0) return;
   const lines: string[] = [];

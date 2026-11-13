@@ -213,6 +213,16 @@ describe('emitStationLifeSupport', () => {
     expect(buffer.stdout.join('\n')).toContain('Upkeep: Oxygen x?');
   });
 
+  test('life support upkeep prints quantity_per_cycle explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitStationLifeSupport({ maintenance: [{ name: 'Oxygen', quantity_per_cycle: 0, quantity: 5 }] }),
+      { plain: true },
+    );
+    expect(buffer.stdout.join('\n')).toContain('Upkeep: Oxygen x0');
+  });
+
   test('life support upkeep uses item_id when name is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(
@@ -240,6 +250,14 @@ describe('emitStationLifeSupport', () => {
     expect(stdout).not.toContain('Upkeep every 100 ticks:');
   });
 
+  test('life support prints maintenance_cycle_ticks explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ supply: 40, maintenance_cycle_ticks: 0 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Upkeep every 0 ticks');
+  });
+
   test('life support prints a question mark when demand is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ supply: 40 }), { plain: true });
@@ -258,6 +276,12 @@ describe('emitStationLifeSupport', () => {
     expect(buffer.stdout.join('\n')).toContain('Slots: 35/? used');
   });
 
+  test('life support prints supply explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ demand: 35, supply: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Slots: 35/0 used');
+  });
+
   test('plants online prints explicit 0', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationLifeSupport({ plants: 0 }), { plain: true });
@@ -273,6 +297,14 @@ describe('emitStationPower', () => {
     expect(buffer.stdout.join('\n')).toContain('Power: 95/120 draw');
   });
 
+  test('station power prints current_draw explicit 0 instead of draw', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ current_draw: 0, draw: 95, supply: 120 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Power: 0/120 draw');
+  });
+
   test('station power prints a question mark when draw is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ supply: 120 }), { plain: true });
@@ -285,6 +317,12 @@ describe('emitStationPower', () => {
     expect(buffer.stdout.join('\n')).toContain('Power: 95/? draw');
   });
 
+  test('station power prints supply explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ draw: 95, supply: 0 }), { plain: true });
+    expect(buffer.stdout.join('\n')).toContain('Power: 95/0 draw');
+  });
+
   test('station power prints a battery question mark when stored is absent', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ battery_capacity: 600 }), { plain: true });
@@ -295,6 +333,14 @@ describe('emitStationPower', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ battery_stored: 420 }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Battery: 420/?');
+  });
+
+  test('station power prints battery capacity explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitStationPower({ battery_stored: 420, battery_capacity: 0 }), {
+      plain: true,
+    });
+    expect(buffer.stdout.join('\n')).toContain('Battery: 420/0');
   });
 
   test('station power prints battery stored 0', () => {
@@ -324,6 +370,16 @@ describe('emitStationPower', () => {
     withDisplayRenderBuffer(buffer, () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity: 0 }] }), {
       plain: true,
     });
+    expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 0 Fuel Cell');
+  });
+
+  test('station power fuel inputs print quantity_per_cycle explicit 0', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity_per_cycle: 0, quantity: 5 }] }),
+      { plain: true },
+    );
     expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 0 Fuel Cell');
   });
 

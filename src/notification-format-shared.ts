@@ -1700,7 +1700,7 @@ function previewChatMessage(
 function previewId(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const line = firstLine(value);
-  return line.length > 0 ? line : undefined;
+  return nonEmptyString(line) ? line : undefined;
 }
 
 function previewIntegerCredits(value: unknown): string | undefined {

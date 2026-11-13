@@ -579,7 +579,7 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
 
   if (typeof result.message === 'string') {
     const message = result.message.trim();
-    if (message !== '') emitLine(`${c.dim}${message}${c.reset}`);
+    if (hazardTypeText(result.message) !== undefined) emitLine(`${c.dim}${message}${c.reset}`);
   }
   return true;
 }

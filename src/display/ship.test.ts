@@ -2869,6 +2869,11 @@ describe('emitCargoHold', () => {
     expect(stdout).not.toContain('?/');
   });
 
+  test('missing bay capacity prints Carrier bay: 1/?', () => {
+    const { stdout } = renderCargoHold({ bay_used: 1 });
+    expect(stdout).toContain('Carrier bay: 1/?');
+  });
+
   test('carried-ship scale and slots columns print 0 cells', () => {
     const cargo = structuredClone(cargoFixture) as {
       carried_ships: Array<Record<string, unknown>>;

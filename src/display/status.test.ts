@@ -1722,6 +1722,16 @@ test('get_player prints arena record and XP after skill stats', () => {
   expect(stdout.indexOf('Arena trials:')).toBeLessThan(stdout.indexOf('Arena XP today'));
 });
 
+test('get_player home_base record prints name and id', () => {
+  const stdout = renderStructuredResult(
+    'get_player',
+    { player: { username: 'Marlowe', home_base: { name: 'Earth Station', id: 'earth_station' } } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Home Station: Earth Station (earth_station)');
+});
+
 test('get_player omits arena stats at 0/0/0 with no XP', () => {
   const fixture = structuredClone(playerProfileFixture) as {
     player: { stats: Record<string, unknown> };
@@ -5085,6 +5095,14 @@ test('get_system_agents prints a server warning above an empty agents table', ()
   expect(stdout).toContain('count 0');
 });
 
+test('get_system_agents missing system_id prints current system', () => {
+  const fixture = cloneSystemAgents();
+  delete fixture.system_id;
+  const stdout = renderSystemAgents(fixture);
+
+  expect(stdout).toContain('=== System Agents: current system ===');
+});
+
 test('get_system_agents omits Warning when warning is missing or blank', () => {
   for (const warning of [undefined, '', '   '] as const) {
     const fixture = cloneSystemAgents();
@@ -6803,6 +6821,17 @@ test('get_state prints grouped State credits only when they differ from the play
   expect(topOnly).not.toContain('=== Response ===');
 });
 
+test('get_state record player.credits omits the Credits line', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { player: { username: 'Marlowe', credits: { amount: 4242 } } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Username:');
+  expect(stdout).not.toContain('Credits:');
+});
+
 test('get_state prints an empty queue when has_pending is false', () => {
   const stdout = renderStructuredResult(
     'get_state',
@@ -7048,6 +7077,16 @@ test('get_state prints faction id, clan tag, and rank', () => {
   expect(stdout).toContain('Faction: smc [SMC] (captain)');
 });
 
+test('get_state clan tag without faction_id prints None', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    { player: { username: 'Marlowe', clan_tag: 'SMC' } },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Faction: None [SMC]');
+});
+
 test('get_state prints both player color strings', () => {
   const stdout = renderStructuredResult(
     'get_state',
@@ -7246,6 +7285,30 @@ test('get_state nested module stat object prints inner JSON', () => {
   ).stdout.join('\n');
 
   expect(stdout).toContain('wrap (inner {"a":1})');
+});
+
+test('get_state bigint module stat prints ungrouped bonus text', () => {
+  const stdout = renderStructuredResult(
+    'get_state',
+    {
+      modules: [
+        {
+          module_id: 'bigint-1',
+          name: 'Oversize Shield',
+          type: 'defense',
+          slot: 'defense',
+          size: 10,
+          cpu_usage: 5,
+          power_usage: 10,
+          stats: { bonus: 9007199254740993n },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('bonus 9007199254740993');
 });
 
 const SHORT_DOCKED_NO = '  Docked: No';
@@ -8112,6 +8175,15 @@ test('view_completed_mission participants objective branch prints joined names',
     objectives: [{ description: 'Meet', participants: ['Alice', 'Bob'] }],
   });
   expect(stdout).toContain('Meet (participants Alice, Bob)');
+});
+
+test('view_completed_mission matching target_player and target_player_id omits the id token', () => {
+  const stdout = renderStatusTable('view_completed_mission', {
+    title: 'Done',
+    objectives: [{ description: 'Destroy', target_player: 'Kestrel', target_player_id: 'Kestrel' }],
+  });
+  expect(stdout).toContain('target Kestrel');
+  expect(stdout).not.toContain('id Kestrel');
 });
 
 test('view_completed_mission objective title fallback prints the title', () => {

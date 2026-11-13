@@ -313,8 +313,7 @@ function emitTradeStationSale(trade: Record<string, unknown>): void {
 
 function pendingTradeNote(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
-  const text = value.replace(/[\r\n]+/g, ' ').trim();
-  return text.length > 0 ? text : undefined;
+  return trimmedIntelText(value.replace(/[\r\n]+/g, ' '));
 }
 
 function emitPendingTradeOffer(trade: Record<string, unknown>): void {

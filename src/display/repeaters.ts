@@ -32,7 +32,6 @@ function formatRepeaterLine(row: Record<string, unknown>): string {
   return `${name}${classText}${ratioSegment('hull', row.hull, row.max_hull)}${ratioSegment('shield', row.shield, row.max_shield)}${battleSegment(row.in_battle)}${idSuffix}`;
 }
 
-/** A missing or non-finite count is not a total. Count 0 with an empty list prints nothing. */
 export function emitRepeaterSection(repeaters: unknown, repeaterCount: unknown, title: string): boolean {
   const rows = Array.isArray(repeaters) ? repeaters.filter(isRecord) : [];
   const finiteCount =

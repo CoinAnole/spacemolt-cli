@@ -897,3 +897,22 @@ test('prints property tax brackets when a bracket has lower and upper bounds', (
   const propertyLine = stdout.split('\n').find((line) => line.startsWith('Property tax:'));
   expect(propertyLine).toContain('brackets 10-250');
 });
+
+test('prints property tax brackets 0-0 when upper_bound is 0', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      property_tax: [
+        {
+          brackets: [{ upper_bound: 0 }],
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const propertyLine = stdout.split('\n').find((line) => line.startsWith('Property tax:'));
+  expect(propertyLine).toContain('brackets 0-0');
+  expect(propertyLine).not.toContain('0+');
+});

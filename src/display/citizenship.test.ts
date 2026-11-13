@@ -433,6 +433,27 @@ test('citizenship list omits Reason when empires have no ineligible_reason', () 
   expect(stdout).not.toContain('Reason');
 });
 
+test('citizenship list prints Reason 0 when an empire ineligible_reason is 0', () => {
+  const stdout = stdoutOf('citizenship_list', {
+    empires: [
+      {
+        empire_name: 'Solarian',
+        empire_id: 'solarian',
+        ineligible_reason: 0,
+      },
+    ],
+  });
+
+  const header = stdout.split('\n').find((line) => line.includes('|') && line.includes('Reason'));
+  const row = stdout
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Solarian') && !line.includes('Reason'));
+  const headers = header?.split('|').map((cell) => cell.trim()) ?? [];
+  const cells = row?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(headers).toContain('Reason');
+  expect(cells[headers.indexOf('Reason')]).toBe('0');
+});
+
 test('citizenship list omits the Empires table when empires is empty', () => {
   const stdout = stdoutOf('citizenship_list', {
     origin: 'nebula',

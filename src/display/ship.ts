@@ -316,8 +316,8 @@ function formatShipLabel(result: Record<string, unknown>): string {
   const shipId = result.ship_id ?? result.item_id;
   const name = result.ship_name ?? result.custom_name ?? result.name ?? result.class_name;
   const classId = result.class_id;
-  if (name !== undefined && name !== null && name !== '') {
-    const classText = classId !== undefined && classId !== null && classId !== '' ? ` (${classId})` : '';
+  if (hasAnyField([{ name }], ['name'])) {
+    const classText = hasAnyField([{ classId }], ['classId']) ? ` (${classId})` : '';
     return `${name}${classText}`;
   }
   return String(shipId ?? 'unknown');
@@ -350,7 +350,7 @@ function droneTableColumns(rows: Array<Record<string, unknown>>, options: { incl
 }
 
 export interface CargoHoldOptions {
-  credits?: boolean; // default true
+  credits?: boolean;
   usage?: boolean;
   emptyItems?: 'table' | 'none'; // default 'table'
 }
@@ -560,7 +560,7 @@ function emitPilotingXp(value: unknown): void {
 // Finite number or bigint, including 0, as sent. Omitted, non-number, and non-finite print nothing.
 function formatModuleDraw(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
-  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  if (isStrictFiniteNumber(value)) return Object.is(value, -0) ? '0' : String(value);
   return undefined;
 }
 

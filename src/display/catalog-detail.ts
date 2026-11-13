@@ -119,8 +119,7 @@ export function formatProducedByFacilities(value: unknown): string | undefined {
     const id = entry.definition_id;
     const name = entry.name;
     if (typeof id !== 'string' || id === '' || typeof name !== 'string' || name === '') continue;
-    const level = typeof entry.level === 'number' && Number.isFinite(entry.level) ? entry.level : undefined;
-    parts.push(level === undefined ? `${name} (${id})` : `${name} (${id}, L${level})`);
+    parts.push(formatFiniteNumberAsSent(entry.level) ? `${name} (${id}, L${entry.level})` : `${name} (${id})`);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
@@ -363,7 +362,7 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
 
   emitCatalogNumber('Shipyard tier', entry.shipyard_tier);
   emitCatalogNumber('Build time', entry.build_time);
-  if (typeof entry.price === 'number' && Number.isFinite(entry.price)) emitLine(`Price: ${entry.price}`);
+  if (formatFiniteNumberAsSent(entry.price)) emitLine(`Price: ${entry.price}`);
 
   const loadout = joinStringIds(entry.default_modules);
   if (loadout) emitLine(`Default loadout: ${loadout}`);
