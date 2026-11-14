@@ -1292,7 +1292,7 @@ describe('command metadata', () => {
     expect(CURATED_COMMAND_DESCRIPTIONS.get_chat_history).toBeUndefined();
 
     expect(config.description).toBe(
-      "Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, missed-rent warnings, repossessions, and returned facilities. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0). DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's sender_id as target_id (gameserver 0.679.0).",
+      "Read recent chat messages from a local, system, faction, private, or emergency channel. emergency is read-only MAYDAY history for every system within 5 jumps, the same range as a live distress call; use it to reread distress text. The mission_id for accept_mission comes from the live emergency broadcast, not from this history (gameserver 0.608.0). Shipyard, Ship Exchange, and Station Authority notices are private DMs: ship deliveries, filled buy orders, and missed-rent warnings. Notices that were waiting in a station mailbox are in those DMs. Read them from anywhere with get_chat_history private; omit target_id; docking is not required (gameserver 0.626.0). DMs from the Interstellar Revenue Service and empire authorities open on the private channel by passing that message's sender_id as target_id (gameserver 0.679.0).",
     );
     expect(config.description).not.toContain('channel=private');
     expect(config.description).toContain('emergency');
@@ -1328,9 +1328,17 @@ describe('command metadata', () => {
     expect(config.example).not.toContain('not from this history');
     expect(config.example).not.toContain('gameserver 0.608.0');
 
+    expect(config.description).toContain('missed-rent warnings');
+    expect(config.description).not.toContain('returned facilities');
+    expect(config.description).not.toContain('repossessions');
+    expect(config.description).not.toContain('rent_amnesty');
+
     const forbidden = [
       '`',
       'auto-assign',
+      'returned facilities',
+      'repossessions',
+      'rent_amnesty',
       'mute_notifications',
       'chat.emergency',
       'get_notifications',
@@ -3523,12 +3531,12 @@ describe('command metadata', () => {
       'rent-free at once',
       'any unpaid rent on them is cleared',
       'tenancies that pay it rent each cycle',
-      'roughly 3 days',
-      'not a property of that notice',
-      'passes to that faction',
-      "tenant's storage there",
-      'cannot cover is forgiven',
-      'base_id, base_name, facilities, faction_id, and message',
+      'missed_rent_cycles above 0',
+      'does not produce or provide its service',
+      'storage, fuel bunkers, and ship garages',
+      'Status stays the sent enum',
+      'does not build new arrears',
+      'Gameserver 0.708.0',
       'faction facility types are accepted',
       'package_ids',
       'flat on/off effect',
@@ -3553,11 +3561,12 @@ describe('command metadata', () => {
       for (const phrase of required) expect(text).toContain(phrase);
       for (const phrase of forbidden) expect(text).not.toContain(phrase);
       const joinAt = text?.indexOf('faction join') ?? -1;
-      const changelogAt = text?.indexOf('Changelog 0.618.2') ?? -1;
-      const gameserverAt = text?.indexOf('Gameserver 0.618.2') ?? -1;
+      const arrearsAt = text?.indexOf('missed_rent_cycles above 0') ?? -1;
       expect(joinAt).toBeGreaterThan(-1);
-      expect(changelogAt).toBeGreaterThan(joinAt);
-      expect(gameserverAt).toBeGreaterThan(joinAt);
+      expect(arrearsAt).toBeGreaterThan(joinAt);
+      expect(text).not.toContain('facility_reclaimed');
+      expect(text).not.toContain('roughly 3 days');
+      expect(text).not.toContain('repossess');
     }
   });
 
@@ -3573,8 +3582,15 @@ describe('command metadata', () => {
       expect(text).toContain('every facility you own');
       expect(text).toContain('rent-free at once');
       expect(text).toContain('tenancies');
-      expect(text).toContain("tenant's storage there");
-      expect(text).toContain('not a property of that notice');
+      expect(text).toContain('missed_rent_cycles above 0');
+      expect(text).toContain('does not produce or provide its service');
+      expect(text).toContain('storage, fuel bunkers, and ship garages');
+      expect(text).toContain('Status stays the sent enum');
+      expect(text).toContain('does not build new arrears');
+      expect(text).toContain('Gameserver 0.708.0');
+      expect(text).not.toContain('facility_reclaimed');
+      expect(text).not.toContain('roughly 3 days');
+      expect(text).not.toContain('repossess');
       expect(text).toContain('explicit 0 prints 0');
       expect(text).toContain('0cr/cycle');
       expect(text).toContain('Ticks left');
@@ -3603,8 +3619,15 @@ describe('command metadata', () => {
       expect(text).toContain('no rent quote');
       expect(text).toContain('rent-free at once');
       expect(text).toContain('tenancies');
-      expect(text).toContain("tenant's storage there");
-      expect(text).toContain('not a property of that notice');
+      expect(text).toContain('missed_rent_cycles above 0');
+      expect(text).toContain('does not produce or provide its service');
+      expect(text).toContain('storage, fuel bunkers, and ship garages');
+      expect(text).toContain('Status stays the sent enum');
+      expect(text).toContain('does not build new arrears');
+      expect(text).toContain('Gameserver 0.708.0');
+      expect(text).not.toContain('facility_reclaimed');
+      expect(text).not.toContain('roughly 3 days');
+      expect(text).not.toContain('repossess');
       expect(text).toContain('explicit 0');
       expect(text).toContain('Buildable as yes or no');
       expect(text).toContain('including an explicit false');
@@ -3701,7 +3724,7 @@ describe('command metadata', () => {
     }
   });
 
-  test('faction facility_list help points at grace without a cycle count', () => {
+  test('faction facility_list help prints sent grace without a repossession window', () => {
     const description = COMMERCE_FACILITY_COMMAND_OVERRIDES.faction_facility_list?.description;
     expect(description).toBe(CURATED_COMMAND_DESCRIPTIONS.faction_facility_list);
     expect(description).toBe(COMMANDS.faction_facility_list?.description);
@@ -3711,11 +3734,35 @@ describe('command metadata', () => {
       expect(text).toContain('explicit 0');
       expect(text).toContain('Missed column is omitted');
       expect(text).toContain('An omitted key is not 0');
-      expect(text).toContain('Grace remaining');
-      expect(text).toContain('grace_cycles');
+      expect(text).toContain('Grace remaining prints when the faction rent bill sends grace_cycles');
+      expect(text).toContain('finite number or bigint, including 0');
+      expect(text).toContain('An omitted grace_cycles prints nothing and is not 0');
+      expect(text).toContain('Current bills omit grace_cycles');
       expect(text).toContain('no cycle count');
+      expect(text).not.toContain('repossession');
       expect(text).not.toContain('arrears_owed');
       expect(text).not.toMatch(/\b\d+\s+cycles?\b/);
+    }
+  });
+
+  test('facility transfer and list_for_sale help refuse unpaid rent only on the server', () => {
+    const cases = [
+      ['facility_transfer', 'facility transfer', 'cannot be transferred'],
+      ['facility_list_for_sale', 'facility list_for_sale', 'cannot be listed'],
+    ] as const;
+    for (const [name, command, phrase] of cases) {
+      const description = COMMANDS[name]?.description ?? '';
+      expect(description).toBe(COMMERCE_FACILITY_COMMAND_OVERRIDES[name]?.description ?? '');
+      const help = captureHelp(command);
+      for (const text of [description, help]) {
+        expect(text).toContain('A facility that owes rent');
+        expect(text).toContain(phrase);
+        expect(text).toContain('The server message prints as sent');
+        expect(text).toContain('The client does not refuse the call');
+        expect(text).not.toContain('error code');
+        expect(text).not.toContain('facility_reclaimed');
+      }
+      expect(description).not.toContain('_');
     }
   });
 
@@ -6332,9 +6379,9 @@ describe('command metadata', () => {
 
   test('get_action_log advertises explicit event arrays and polling cursors', () => {
     const description =
-      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount — table columns Pilot, Base, Fuel when data carries them). event_type=faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet movements (service fee, insurance premium kept after an accepted contract ends, claim paid from that wallet, and freight debt repaid — station manager, or the owning faction treasury at a player station; pass faction_id= when reading the faction log, the same way as faction.refuel); event_type=shipping.claim_paid for the shipper insurance claim (table columns Station paid and Shortfall when data carries station_paid and shortfall; the shipper still receives the full covered value; not ShipmentContract.claim_paid and not a deliver/return/cancel field); event_type=trading.escrow_refunded for the difference plus extra sales tax returned when modify_order raises a buy over a cheaper sell (that amount is not on the modify_order response). event_type=combat.pirate_destroyed for a pirate kill whose logged bounty includes the bounty-skill bonus (table column Credits only on that event when data carries credits_earned; 0 prints 0cr; the summary is not parsed). event_type=other.rent_warning and event_type=faction.rent_warning for missed-rent warnings (gameserver 0.620.1; personal facilities log other.rent_warning, faction-owned facilities log faction.rent_warning; pass faction_id= when reading the faction log). Table columns Owed, Missed, Grace, and Facilities appear only on those two events when data carries credits_owed, missed_cycles, grace_cycles, and facilities_behind. Owed uses the same credit formatting as the Credits column, and 0 prints 0cr. Missed, Grace, and Facilities print grouped integers, and 0 prints 0. Grace is the missed-cycle count at which the station repossesses. Base stays the existing column filled from base_name or base_id. The summary sentence is not parsed. event_type=mission.completed for a shipyard procurement mission payout when the commission owner supplies the material directly (gameserver 0.628.3). Table column Direct supplied appears only on that event when data carries direct_supplied set to true; the cell prints yes. The summary sentence is not parsed. event_type=trading.exchange_fill for an exchange fill (gameserver 0.630.0). Table column Order appears only on that event when order_id is a non-empty string; the cell prints that string with surrounding whitespace removed, first line only. A value longer than 80 characters is cut to 77 characters followed by '...'. order_id is omitted on a spot buy or sell where you had no resting order, and the column is omitted when no row qualifies. Base stays the existing column filled from base_name or base_id. Order is not the ID column; ID is the action-log entry id. Non-strings do not print. The summary sentence is not parsed. event_type=combat.flagship_reclaimed for pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost (gameserver 0.643.0; no extra table columns until OpenAPI defines the data keys for that event; the summary is not parsed). event_type=mining.ammo_consumed for one charge spent by each loaded mining gun on a successful ore extraction (gameserver 0.647.0; no extra table columns until OpenAPI defines the data keys for that event; the summary is not parsed). event_type=crafting.lost for one entry per input when a boarding plunder ends a field-workshop job and returns the inputs to the hold before the boarders take cargo, or when a customs seizure ends the jobs that hold contraband (gameserver 0.678.0; no extra data columns; the Event column already prints event_type). Table columns Item ID and Quantity appear when an entry or its data sends item_id or quantity, including an explicit 0. An omitted key stays blank, and each column is omitted when no row sends it. Item ID prints that item id as sent and is not the entry ID column. No ammunition name and no storage destination are added. The summary is not parsed (gameserver 0.677.5). event_type=salvage.ship_recovered for a tow (gameserver 0.696.0). Table column Requested appears only on that event when requested on the entry or its data is a boolean, including false. The cell prints yes or no. The column is omitted when no such row sends a boolean. Other event types do not gain this column. No fee column. The summary sentence is not parsed. Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll. If next_since_id is absent, keep the current cursor. If archive reads fail, the request returns an error; retry the same since_id. Table output prints an ID column for each entry id: entry id 1500 prints 1500, not 1,500; 0 prints 0; a negative id keeps its minus sign. A missing or non-integer id is left blank, and the column is omitted when no entry has an integer id.";
+      "Retrieve your or your faction's persistent action history; use event_type=session.daily_balance for UTC-day credit snapshots (book balancing / reconciliation); event_type=other.jettison_dispersed for jettison-container despawn receipts (what settled back vs what was lost); event_type=faction.refuel with faction_id= for faction bunker fuel withdrawals by members and allies (pilot, station, amount — table columns Pilot, Base, Fuel when data carries them). event_type=faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet movements (service fee, insurance premium kept after an accepted contract ends, claim paid from that wallet, and freight debt repaid — station manager, or the owning faction treasury at a player station; pass faction_id= when reading the faction log, the same way as faction.refuel); event_type=shipping.claim_paid for the shipper insurance claim (table columns Station paid and Shortfall when data carries station_paid and shortfall; the shipper still receives the full covered value; not ShipmentContract.claim_paid and not a deliver/return/cancel field); event_type=trading.escrow_refunded for the difference plus extra sales tax returned when modify_order raises a buy over a cheaper sell (that amount is not on the modify_order response). event_type=combat.pirate_destroyed for a pirate kill whose logged bounty includes the bounty-skill bonus (table column Credits only on that event when data carries credits_earned; 0 prints 0cr; the summary is not parsed). event_type=other.rent_warning and event_type=faction.rent_warning for missed-rent warnings (gameserver 0.620.1; personal facilities log other.rent_warning, faction-owned facilities log faction.rent_warning; pass faction_id= when reading the faction log). Table columns Owed, Missed, and Facilities appear only on those two events when data carries credits_owed, missed_cycles, and facilities_behind. Grace prints only when that row sends grace_cycles. Current warnings omit it. An omitted key is not 0. Owed uses the same credit formatting as the Credits column, and 0 prints 0cr. Missed, Grace, and Facilities print grouped integers, and 0 prints 0. Base stays the existing column filled from base_name or base_id. The summary sentence is not parsed. event_type=mission.completed for a shipyard procurement mission payout when the commission owner supplies the material directly (gameserver 0.628.3). Table column Direct supplied appears only on that event when data carries direct_supplied set to true; the cell prints yes. The summary sentence is not parsed. event_type=trading.exchange_fill for an exchange fill (gameserver 0.630.0). Table column Order appears only on that event when order_id is a non-empty string; the cell prints that string with surrounding whitespace removed, first line only. A value longer than 80 characters is cut to 77 characters followed by '...'. order_id is omitted on a spot buy or sell where you had no resting order, and the column is omitted when no row qualifies. Base stays the existing column filled from base_name or base_id. Order is not the ID column; ID is the action-log entry id. Non-strings do not print. The summary sentence is not parsed. event_type=combat.flagship_reclaimed for pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost (gameserver 0.643.0; no extra table columns until OpenAPI defines the data keys for that event; the summary is not parsed). event_type=mining.ammo_consumed for one charge spent by each loaded mining gun on a successful ore extraction (gameserver 0.647.0; no extra table columns until OpenAPI defines the data keys for that event; the summary is not parsed). event_type=crafting.lost for one entry per input when a boarding plunder ends a field-workshop job and returns the inputs to the hold before the boarders take cargo, or when a customs seizure ends the jobs that hold contraband (gameserver 0.678.0; no extra data columns; the Event column already prints event_type). Table columns Item ID and Quantity appear when an entry or its data sends item_id or quantity, including an explicit 0. An omitted key stays blank, and each column is omitted when no row sends it. Item ID prints that item id as sent and is not the entry ID column. No ammunition name and no storage destination are added. The summary is not parsed (gameserver 0.677.5). event_type=salvage.ship_recovered for a tow (gameserver 0.696.0). Table column Requested appears only on that event when requested on the entry or its data is a boolean, including false. The cell prints yes or no. The column is omitted when no such row sends a boolean. Other event types do not gain this column. No fee column. The summary sentence is not parsed. Page-based queries return newest-first; since_id requests newer entries oldest-first. Use the returned next_since_id for the next poll. If next_since_id is absent, keep the current cursor. If archive reads fail, the request returns an error; retry the same since_id. Table output prints an ID column for each entry id: entry id 1500 prints 1500, not 1,500; 0 prints 0; a negative id keeps its minus sign. A missing or non-integer id is left blank, and the column is omitted when no entry has an integer id.";
     const eventTypeDescription =
-      'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts; faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet receipts — pass faction_id= when reading the faction log; shipping.claim_paid for a shipper insurance claim (columns Station paid and Shortfall); trading.escrow_refunded for a modify_order buy-cross refund; combat.pirate_destroyed for a pirate-kill bounty (column Credits only on that event); other.rent_warning and faction.rent_warning for missed-rent warnings (columns Owed, Missed, Grace, and Facilities only on those two events); mission.completed for a shipyard procurement payout when the commission owner supplies the material directly (column Direct supplied only on that event when direct_supplied is true); trading.exchange_fill for an exchange fill (column Order only on that event when order_id is a non-empty string; order_id is omitted on a spot buy or sell with no resting order; Order is not the ID column); combat.flagship_reclaimed for pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost (no extra table columns until OpenAPI defines the data keys for that event); mining.ammo_consumed for one charge spent by each loaded mining gun on a successful ore extraction (no extra table columns until OpenAPI defines the data keys for that event); crafting.lost for one entry per input when a boarding plunder ends a field-workshop job and returns the inputs to the hold before the boarders take cargo, or when a customs seizure ends the jobs that hold contraband (no extra data columns; the Event column already prints event_type); Item ID and Quantity columns appear when an entry or its data sends item_id or quantity, including an explicit 0; an omitted key stays blank and each column is omitted when no row sends it (gameserver 0.677.5); salvage.ship_recovered for a tow (column Requested only on that event when requested on the entry or its data is a boolean, including false; the cell prints yes or no; the column is omitted when no such row sends a boolean; other event types do not gain this column; no fee column) (gameserver 0.696.0)). Comma-separated on the CLI or --payload-json.';
+      'Exact event_type or array of types (e.g. session.daily_balance for UTC-day credit balance snapshots; faction.production_cycle for production history; faction.refuel for faction bunker fuel withdrawals — pass faction_id=; other.jettison_dispersed for jettison-container despawn receipts; faction.freight_fee_earned, faction.freight_premium_earned, faction.freight_claim_paid, and faction.freight_debt_repaid for origin-station freight wallet receipts — pass faction_id= when reading the faction log; shipping.claim_paid for a shipper insurance claim (columns Station paid and Shortfall); trading.escrow_refunded for a modify_order buy-cross refund; combat.pirate_destroyed for a pirate-kill bounty (column Credits only on that event); other.rent_warning and faction.rent_warning for missed-rent warnings (columns Owed, Missed, and Facilities only on those two events; Grace prints only when that row sends grace_cycles; current warnings omit it; an omitted key is not 0); mission.completed for a shipyard procurement payout when the commission owner supplies the material directly (column Direct supplied only on that event when direct_supplied is true); trading.exchange_fill for an exchange fill (column Order only on that event when order_id is a non-empty string; order_id is omitted on a spot buy or sell with no resting order; Order is not the ID column); combat.flagship_reclaimed for pirates who wreck the station where their boss flagship is docked and take the ship, including from a faction garage, and the log includes the cargo lost (no extra table columns until OpenAPI defines the data keys for that event); mining.ammo_consumed for one charge spent by each loaded mining gun on a successful ore extraction (no extra table columns until OpenAPI defines the data keys for that event); crafting.lost for one entry per input when a boarding plunder ends a field-workshop job and returns the inputs to the hold before the boarders take cargo, or when a customs seizure ends the jobs that hold contraband (no extra data columns; the Event column already prints event_type); Item ID and Quantity columns appear when an entry or its data sends item_id or quantity, including an explicit 0; an omitted key stays blank and each column is omitted when no row sends it (gameserver 0.677.5); salvage.ship_recovered for a tow (column Requested only on that event when requested on the entry or its data is a boolean, including false; the cell prints yes or no; the column is omitted when no such row sends a boolean; other event types do not gain this column; no fee column) (gameserver 0.696.0)). Comma-separated on the CLI or --payload-json.';
     expect(COMMANDS.get_action_log).toMatchObject({
       usage: '[category=...] [event_type=type[,type...]] [faction_id=...] [page=...] [page_size=...] [since_id=...]',
       example:

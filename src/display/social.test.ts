@@ -4740,6 +4740,20 @@ test('faction_info pluralizes grace cycles', () => {
   expect(stdout).not.toContain('Grace remaining: 2 cycle\n');
 });
 
+test('faction_info prints bigint grace including 0 and skips an omitted key', () => {
+  const zero = factionInfoWithRent();
+  (zero.faction_rent as Record<string, unknown>).grace_cycles = 0n;
+  expect(renderFactionInfo(zero)).toContain('Grace remaining: 0 cycles');
+
+  const one = factionInfoWithRent();
+  (one.faction_rent as Record<string, unknown>).grace_cycles = 1n;
+  expect(renderFactionInfo(one)).toContain('Grace remaining: 1 cycle');
+
+  const omitted = factionInfoWithRent();
+  delete (omitted.faction_rent as Record<string, unknown>).grace_cycles;
+  expect(renderFactionInfo(omitted)).not.toContain('Grace remaining');
+});
+
 test('faction_info prints faction_rent when the facilities array is absent', () => {
   const fixture = factionInfoWithRent();
   delete fixture.facilities;

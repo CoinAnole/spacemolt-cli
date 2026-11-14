@@ -3226,6 +3226,18 @@ function formatSurveyResourceDigest(resources: unknown, limit = 6): string {
   return `${shown}${extra}`;
 }
 
+function headlineAlreadyHasCount(headline: string, line: string): boolean {
+  let from = 0;
+  while (from < headline.length) {
+    const index = headline.indexOf(line, from);
+    if (index < 0) return false;
+    const before = index === 0 ? '' : headline[index - 1];
+    if (!before || !/\d/.test(before)) return true;
+    from = index + 1;
+  }
+  return false;
+}
+
 function previewFacilityRentWarning(
   data: Record<string, unknown>,
   _notification: NormalizedNotification,
@@ -3248,11 +3260,11 @@ function previewFacilityRentWarning(
     const line = `${owed} owed`;
     if (!headline.includes(line)) details.push(line);
   }
-  const missed = finiteNumber(data.missed_cycles);
-  const grace = finiteNumber(data.grace_cycles);
-  if (missed !== undefined && grace !== undefined) {
-    const line = `${missed}/${grace} cycles missed`;
-    if (!headline.includes(line)) details.push(line);
+  // Finite number or bigint, including 0. Grace is not printed. "260 cycles missed" is not "0 cycles missed".
+  const missed = formatIntegerText(data.missed_cycles);
+  if (missed !== undefined) {
+    const line = `${missed} cycles missed`;
+    if (!headlineAlreadyHasCount(headline, line)) details.push(line);
   }
   const behind = positiveFinite(data.facilities_behind);
   if (behind !== undefined) {

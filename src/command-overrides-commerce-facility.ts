@@ -16,17 +16,13 @@ const FACTION_BUILD_BUCKET_DESCRIPTION =
 const FACTION_MEMBERSHIP_FACILITY_RENT_HELP =
   "Joining that faction makes your facilities at its stations rent-free at once, and any unpaid rent on them is cleared (faction join). Leaving makes your facilities at the faction's stations tenancies that pay it rent each cycle (faction leave). A kicked player's facilities at the faction's stations become tenancies and pay it rent each cycle (faction kick).";
 
-const FACILITY_RECLAIMED_PLAYER_STATION_HELP =
-  "Gameserver 0.618.2, facility_reclaimed notification description (Notification_facility_reclaimed), not a property of that notice: at another faction's station, a repossessed production facility passes to that faction and any other facility is removed, with its build materials returned to the tenant's storage there, after the owning faction takes enough of them to cover the unpaid rent. Any rent the materials cannot cover is forgiven. The notice properties are base_id, base_name, facilities, faction_id, and message.";
-
 const JETTISON_POI_CONVERSION_HELP =
   'At a POI, purified_water, liquid_nitrogen, liquid_ammonia, and liquid_methane convert at 4 input to 3 output (water_ice, nitrogen_ice, ammonia_ice, and methane_ice); liquid_oxygen converts to oxygen_ice at 4 to 2; coolant_fluid converts to water_ice at 3 to 1. All input is removed, and a partial batch is lost. Table output prints conversion.output_item_id and conversion.output_quantity, including 0.';
 
 const OUTSIDER_STATION_RENT_HELP =
   "Anyone outside a faction who owns a facility at that faction's player station pays rent each cycle to the faction's treasury. The faction and its members pay nothing there, so quotes and rent totals for them are 0, not an omitted field. " +
   FACTION_MEMBERSHIP_FACILITY_RENT_HELP +
-  ' Changelog 0.618.2: arrears warnings and eviction match an NPC station (roughly 3 days). ' +
-  FACILITY_RECLAIMED_PLAYER_STATION_HELP;
+  ' An active facility with missed_rent_cycles above 0 does not produce or provide its service until the arrears are paid, except storage, fuel bunkers, and ship garages. Status stays the sent enum. An inactive owner does not build new arrears, and a faction builds none while no member is active. Gameserver 0.708.0.';
 
 const FACILITY_COPY_LIMIT_HELP =
   'Station infrastructure with a flat on/off effect is limited to one copy per station, the same idea as dining and leisure. Power plants, life support, capacitor banks, and fuel tank expansions still stack. Gameserver 0.648.3.';
@@ -900,6 +896,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_transfer: {
     category: 'Facilities',
+    description:
+      'Transfer a facility you own. A facility that owes rent cannot be transferred. The server message prints as sent. The client does not refuse the call.',
     apiRoute: 'POST /api/v2/spacemolt_facility/transfer',
     positionals: ['facility_id', 'direction', 'player_id'],
     schemaExtensions: {
@@ -932,7 +930,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   faction_facility_list: {
     category: 'Facilities',
     description:
-      'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling). Table output prints Missed when any row sends missed_rent_cycles, including an explicit 0. An omitted key on a row stays blank. When no row sends the key, the Missed column is omitted. An omitted key is not 0. Grace remaining on the faction rent bill is the repossession window (grace_cycles). This help states no cycle count.',
+      'List faction facilities at the current station, including status (active, damaged, repairing, under construction, dismantling). Table output prints Missed when any row sends missed_rent_cycles, including an explicit 0. An omitted key on a row stays blank. When no row sends the key, the Missed column is omitted. An omitted key is not 0. Grace remaining prints when the faction rent bill sends grace_cycles as a finite number or bigint, including 0. An omitted grace_cycles prints nothing and is not 0. Current bills omit grace_cycles. This help states no cycle count.',
     example: 'spacemolt faction facility_list',
     discoverWith: ['faction_facility_owned', 'facility_repair', 'facility_list'],
     seeAlso: ['faction_facility_owned', 'facility_repair', 'faction_build', 'facility_list'],
@@ -998,6 +996,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_list_for_sale: {
     usage: '<facility_id> <price>  (list a facility for sale)',
+    description:
+      'List a facility for sale. A facility that owes rent cannot be listed. The server message prints as sent. The client does not refuse the call.',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/list_for_sale',
     positionals: ['facility_id', 'price'],

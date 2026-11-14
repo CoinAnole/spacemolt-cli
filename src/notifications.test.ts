@@ -577,7 +577,7 @@ describe('notification formatting', () => {
         'Rent is overdue on your facilities.',
         'Earth Station (earth_station)',
         '12,000cr owed',
-        '3/260 cycles missed',
+        '3 cycles missed',
         '2 facilities behind',
       ],
     },
@@ -4134,9 +4134,11 @@ describe('notification formatting', () => {
         expect(preview.details).toEqual([
           'Earth Station (earth_station)',
           '12,000cr owed',
-          '3/260 cycles missed',
+          '3 cycles missed',
           '2 facilities behind',
         ]);
+        expect(previewText(preview)).not.toContain('260');
+        expect(previewText(preview)).not.toContain('grace');
         const output = stripAnsi(formatNotification(notification).join('\n'));
         expect(output).toContain('[RENT]');
         expect(output).not.toContain('[FACILITY_RENT_WARNING]');
@@ -4206,7 +4208,7 @@ describe('notification formatting', () => {
         expect(preview.details).toContain('Haven Exchange (haven_exchange)');
       });
 
-      test('grace_cycles alone is omitted; both missed and grace print the pair', () => {
+      test('prints missed cycles without grace, including 0 and bigint', () => {
         const graceOnly = formatNotificationPreview(
           note('facility_rent_warning', {
             message: 'Rent is overdue.',
@@ -4222,8 +4224,8 @@ describe('notification formatting', () => {
             missed_cycles: 3,
           }),
         );
-        expect(missedOnly.details.join('\n')).not.toContain('3');
-        expect(missedOnly.details.join('\n')).not.toContain('cycles');
+        expect(missedOnly.details).toContain('3 cycles missed');
+        expect(missedOnly.details.join('\n')).not.toContain('grace');
 
         const both = formatNotificationPreview(
           note('facility_rent_warning', {
@@ -4232,18 +4234,56 @@ describe('notification formatting', () => {
             grace_cycles: 260,
           }),
         );
-        expect(both.details).toContain('0/260 cycles missed');
+        expect(both.details).toContain('0 cycles missed');
+        expect(both.details.join('\n')).not.toContain('260');
+        expect(both.details.join('\n')).not.toContain('/');
+
+        const bigint = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            missed_cycles: 0n,
+            grace_cycles: 260n,
+          }),
+        );
+        expect(bigint.details).toContain('0 cycles missed');
+        expect(bigint.details.join('\n')).not.toContain('260');
+
+        const omitted = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+          }),
+        );
+        expect(omitted.details.join('\n')).not.toContain('cycles missed');
+
+        const text = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: 'Rent is overdue.',
+            missed_cycles: '3',
+          }),
+        );
+        expect(text.details.join('\n')).not.toContain('cycles missed');
       });
 
       test('facility_rent_warning omits cycles missed when the headline already includes it', () => {
         const preview = formatNotificationPreview(
+          note('facility_rent_warning', {
+            message: '0 cycles missed',
+            missed_cycles: 0,
+            grace_cycles: 260,
+          }),
+        );
+        expect(preview.details).toEqual([]);
+        expect(preview.headline).toBe('0 cycles missed');
+
+        const stored = formatNotificationPreview(
           note('facility_rent_warning', {
             message: '0/260 cycles missed',
             missed_cycles: 0,
             grace_cycles: 260,
           }),
         );
-        expect(preview.details).toEqual([]);
+        expect(stored.headline).toBe('0/260 cycles missed');
+        expect(stored.details).toEqual(['0 cycles missed']);
       });
 
       test('non-string faction_id and object credits_owed do not dump', () => {

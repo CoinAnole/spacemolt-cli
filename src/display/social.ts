@@ -164,6 +164,9 @@ function formatActionLogIntegerDigits(value: unknown): string | undefined {
 }
 
 function formatCycles(value: unknown): string | undefined {
+  if (typeof value === 'bigint') {
+    return `${value.toLocaleString()} ${value === 1n ? 'cycle' : 'cycles'}`;
+  }
   const number = formatNumber(value);
   if (number === undefined) return undefined;
   return `${number} ${Number(value) === 1 ? 'cycle' : 'cycles'}`;
