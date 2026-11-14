@@ -1528,6 +1528,13 @@ describe('command metadata', () => {
       );
       expect(text).toContain('Your drones no longer open a side against it.');
       expect(text).toContain('Joining against a pilot whose grant of safe passage binds you returns safe_passage.');
+      expect(text).toContain(
+        'Engaging calls your fleet, faction and mutual allies undocked in the system to your side.',
+      );
+      expect(text).toContain(
+        'Allies that set ally_battle_opt_out stay out, and they can still join with battle_engage.',
+      );
+      expect(text).toContain('A pilot who has left a battle is not called back.');
       expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('faction_id');
       expect(text).toContain('Does not cost a tick');
