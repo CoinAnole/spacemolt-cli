@@ -1,4 +1,4 @@
-import { WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
+import { PIRATE_SUPPORT_SHIP_HELP, WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
 import type { CommandOverride } from './commands';
 
 export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
@@ -71,7 +71,8 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   battle_engage: {
     usage: '[side_id]  (optional numeric side; omit for faction-based auto-assignment)',
     description:
-      "Join an existing battle. This command cannot start a battle. Pass side_id to choose a side. A passed side_id is not re-picked. A side_id that opposes your own faction's station returns own_faction_station. Omit side_id for faction-based auto-assignment. Omitting side_id joins your station's side when your faction's station is in the battle. When side_id is omitted, side selection no longer changes at random. Pirates join the lowest-numbered NPC side. If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's. 0.630.5 does not say whether an ally still comes first when that disagrees with those two sentences. Fleet and faction auto-joins no longer pull you into a fight against your own faction's station. Your drones no longer open a side against it. Does not cost a tick — only reload does. Joining against a pilot whose grant of safe passage binds you returns safe_passage. Engaging calls your fleet, faction and mutual allies undocked in the system to your side. Allies that set ally_battle_opt_out stay out, and they can still join with battle_engage. A pilot who has left a battle is not called back.",
+      "Join an existing battle. This command cannot start a battle. Pass side_id to choose a side. A passed side_id is not re-picked. A side_id that opposes your own faction's station returns own_faction_station. Omit side_id for faction-based auto-assignment. Omitting side_id joins your station's side when your faction's station is in the battle. When side_id is omitted, side selection no longer changes at random. Pirates join the lowest-numbered NPC side. If your faction is at war with a faction in a battle with three or more sides, you join the lowest-numbered side that is not the enemy's. 0.630.5 does not say whether an ally still comes first when that disagrees with those two sentences. Fleet and faction auto-joins no longer pull you into a fight against your own faction's station. Your drones no longer open a side against it. Does not cost a tick — only reload does. Joining against a pilot whose grant of safe passage binds you returns safe_passage. Engaging calls your fleet, faction and mutual allies undocked in the system to your side. Allies that set ally_battle_opt_out stay out, and they can still join with battle_engage. A pilot who has left a battle is not called back. " +
+      PIRATE_SUPPORT_SHIP_HELP,
     example: 'spacemolt battle_engage 1',
     discoverWith: ['get_battle_status'],
     seeAlso: ['attack', 'get_battle_status', 'battle_target', 'battle_stance'],

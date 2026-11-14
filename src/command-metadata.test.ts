@@ -11,7 +11,12 @@ import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
 import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
-import { CORE_COMMAND_OVERRIDES, TIERED_MODULE_RECIPE_HELP, WILDLIFE_FLEE_WINDOW_HELP } from './command-overrides-core';
+import {
+  CORE_COMMAND_OVERRIDES,
+  PIRATE_SUPPORT_SHIP_HELP,
+  TIERED_MODULE_RECIPE_HELP,
+  WILDLIFE_FLEE_WINDOW_HELP,
+} from './command-overrides-core';
 import { FACTION_SOCIAL_COMMAND_OVERRIDES } from './command-overrides-faction-social';
 import {
   NOTIFICATION_TYPE_ENUM,
@@ -1465,6 +1470,8 @@ describe('command metadata', () => {
       expect(text).toContain('target_unavailable');
       expect(text).toContain('until the crew has a new ship');
       expect(text).toContain('A target whose grant of safe passage binds you returns safe_passage.');
+      expect(text).toContain(PIRATE_SUPPORT_SHIP_HELP);
+      expect(text.indexOf('until the crew has a new ship')).toBeLessThan(text.indexOf(PIRATE_SUPPORT_SHIP_HELP));
       expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('faction_id');
       expect(text).not.toContain('granted_tick');
@@ -1535,6 +1542,10 @@ describe('command metadata', () => {
         'Allies that set ally_battle_opt_out stay out, and they can still join with battle_engage.',
       );
       expect(text).toContain('A pilot who has left a battle is not called back.');
+      expect(text).toContain(PIRATE_SUPPORT_SHIP_HELP);
+      expect(text.indexOf('A pilot who has left a battle is not called back.')).toBeLessThan(
+        text.indexOf(PIRATE_SUPPORT_SHIP_HELP),
+      );
       expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('faction_id');
       expect(text).toContain('Does not cost a tick');
