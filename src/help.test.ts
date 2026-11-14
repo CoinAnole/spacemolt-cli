@@ -1149,6 +1149,9 @@ describe('help output branches', () => {
     expect(output).toContain('faction_garage_store');
     expect(output).toContain('cannot_gift, printed as the server sent it');
     expect(output).toContain('not_qualified, printed as the server sent it');
+    expect(output).toContain('the faction holds its faction achievement');
+    expect(output).toContain('for a leader-only hull, the member leads the faction');
+    expect(output).not.toContain('Only a member who has earned the achievement');
     expect(output).toContain('cannot_garage no longer occurs');
     expect(output).toContain('The pilots do not need to be in the same faction.');
     expect(output).toContain('An empire station does not take ships.');
