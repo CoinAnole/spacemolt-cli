@@ -943,6 +943,7 @@ export const empireInfoFixture = {
   empires: [
     {
       bounty_attack: 500,
+      bounty_customs_evasion: 1000,
       bounty_kill: 2000,
       bounty_rep_restoration_bps: 5000,
       bounty_rep_restoration_cap: 10,
@@ -956,7 +957,6 @@ export const empireInfoFixture = {
       customs_fine_multiplier_bps: 20000,
       default_foreign_sales_tax_bps: 300,
       empire_id: 'solarian',
-      eviction_grace_cycles: 2,
       faction_income_tax_bps: 250,
       foreign_sales_tax_bps: {
         crimson: 200,
@@ -973,6 +973,7 @@ export const empireInfoFixture = {
       rep_baseline_outsider: 10,
       rep_decay_amount: 1,
       rep_penalty_attack: 5,
+      rep_penalty_customs_evasion: 8,
       rep_penalty_kill: 10,
       rep_trade_fill_cap: 2,
       rep_trade_fill_divisor: 200,
@@ -986,6 +987,7 @@ export const empireInfoFixture = {
     },
     {
       bounty_attack: 500,
+      bounty_customs_evasion: 0,
       bounty_kill: 2000,
       bounty_rep_restoration_bps: 5000,
       bounty_rep_restoration_cap: 10,
@@ -999,7 +1001,6 @@ export const empireInfoFixture = {
       customs_fine_multiplier_bps: 20000,
       default_foreign_sales_tax_bps: 0,
       empire_id: 'voidborn',
-      eviction_grace_cycles: 2,
       faction_income_tax_bps: 100,
       fuel_tax_per_unit: 2,
       income_tax_bps: 200,
@@ -1011,6 +1012,7 @@ export const empireInfoFixture = {
       rep_baseline_outsider: 10,
       rep_decay_amount: 1,
       rep_penalty_attack: 5,
+      rep_penalty_customs_evasion: 0,
       rep_penalty_kill: 10,
       rep_trade_fill_cap: 2,
       rep_trade_fill_divisor: 200,

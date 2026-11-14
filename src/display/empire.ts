@@ -17,6 +17,10 @@ function formatCredits(value: unknown): string | undefined {
   return number === undefined ? undefined : `${number} cr`;
 }
 
+function isFiniteOrBigint(value: unknown): value is number | bigint {
+  return typeof value === 'bigint' || (typeof value === 'number' && Number.isFinite(value));
+}
+
 function formatBps(value: unknown): string | undefined {
   const number = numberValue(value);
   if (number === undefined) return undefined;
@@ -322,12 +326,10 @@ function emitStatement(statement: Record<string, unknown>): void {
 }
 
 function formatFees(policy: Record<string, unknown>): string {
-  const evictionGrace = formatNumber(policy.eviction_grace_cycles);
   return joinParts([
     formatBps(policy.listing_fee_bps) && `Listing ${formatBps(policy.listing_fee_bps)}`,
     formatBps(policy.ship_listing_fee_bps) && `ship ${formatBps(policy.ship_listing_fee_bps)}`,
     formatBps(policy.facility_rent_multiplier_bps) && `rent ${formatBps(policy.facility_rent_multiplier_bps)}`,
-    evictionGrace === undefined ? undefined : `eviction grace ${evictionGrace} cycles`,
   ]);
 }
 
@@ -345,10 +347,14 @@ function formatCosts(policy: Record<string, unknown>): string {
 function formatLaw(policy: Record<string, unknown>): string {
   const attackBounty = formatCredits(policy.bounty_attack);
   const killBounty = formatCredits(policy.bounty_kill);
+  const customsEvasionBounty = isFiniteOrBigint(policy.bounty_customs_evasion)
+    ? formatCredits(policy.bounty_customs_evasion)
+    : undefined;
   const delinquencyBounty = formatNumber(policy.tax_delinquency_bounty_per_credit);
   return joinParts([
     attackBounty === undefined ? undefined : `Attack bounty ${attackBounty}`,
     killBounty === undefined ? undefined : `kill bounty ${killBounty}`,
+    customsEvasionBounty === undefined ? undefined : `customs evasion bounty ${customsEvasionBounty}`,
     delinquencyBounty === undefined ? undefined : `tax delinquency ${delinquencyBounty}/credit`,
   ]);
 }
@@ -367,6 +373,9 @@ function formatEnforcement(policy: Record<string, unknown>): string {
 function formatReputation(policy: Record<string, unknown>): string {
   const attackPenalty = formatNumber(policy.rep_penalty_attack);
   const killPenalty = formatNumber(policy.rep_penalty_kill);
+  const customsEvasionPenalty = isFiniteOrBigint(policy.rep_penalty_customs_evasion)
+    ? formatNumber(policy.rep_penalty_customs_evasion)
+    : undefined;
   const restore = formatBps(policy.bounty_rep_restoration_bps);
   const restoreCap = formatNumber(policy.bounty_rep_restoration_cap);
   const decay = formatNumber(policy.rep_decay_amount);
@@ -377,6 +386,7 @@ function formatReputation(policy: Record<string, unknown>): string {
   return joinParts([
     attackPenalty === undefined ? undefined : `Attack -${attackPenalty}`,
     killPenalty === undefined ? undefined : `kill -${killPenalty}`,
+    customsEvasionPenalty === undefined ? undefined : `customs evasion -${customsEvasionPenalty}`,
     restore === undefined ? undefined : `restore ${restore}${restoreCap === undefined ? '' : ` cap ${restoreCap}`}`,
     decay === undefined ? undefined : `decay ${decay}`,
     tradeFillCap === undefined || tradeFillDivisor === undefined

@@ -455,6 +455,110 @@ test('prints the facility rent multiplier as a Fees rent percentage', () => {
   expect(stdout).toContain('Fees: rent 150%');
 });
 
+test('prints customs evasion bounty and reputation loss, including 0, and not eviction grace', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          bounty_attack: 500,
+          bounty_kill: 2000,
+          bounty_customs_evasion: 1000,
+          bounty_hold: 40,
+          bounty_plunder: 70,
+          rep_penalty_attack: 5,
+          rep_penalty_kill: 10,
+          rep_penalty_customs_evasion: 8,
+          rep_penalty_hold: 3,
+          rep_penalty_plunder: 6,
+          eviction_grace_cycles: 2,
+          listing_fee_bps: 200,
+        },
+        {
+          empire_id: 'voidborn',
+          bounty_attack: 500,
+          bounty_kill: 2000,
+          bounty_customs_evasion: 0,
+          rep_penalty_attack: 5,
+          rep_penalty_kill: 10,
+          rep_penalty_customs_evasion: 0,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Bounties: Attack bounty 500 cr, kill bounty 2,000 cr, customs evasion bounty 1,000 cr');
+  expect(stdout).toContain('Bounties: Attack bounty 500 cr, kill bounty 2,000 cr, customs evasion bounty 0 cr');
+  expect(stdout).toContain('Reputation: Attack -5, kill -10, customs evasion -8');
+  expect(stdout).toContain('Reputation: Attack -5, kill -10, customs evasion -0');
+  expect(stdout).toContain('Fees: Listing 2%');
+  expect(stdout).not.toContain('eviction grace');
+  expect(stdout).not.toContain('hold');
+  expect(stdout).not.toContain('plunder');
+  expect(stdout).not.toContain('customs evasion +');
+  expect(stdout).not.toContain('customs_evasion_policed_space');
+});
+
+test('prints customs evasion bounty and reputation for bigint values, including 0', () => {
+  const bounty = 1000n;
+  const penalty = 0n;
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          bounty_customs_evasion: bounty,
+          rep_penalty_customs_evasion: penalty,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain(`Bounties: customs evasion bounty ${bounty.toLocaleString()} cr`);
+  expect(stdout).toContain(`Reputation: customs evasion -${penalty.toLocaleString()}`);
+  expect(stdout).not.toContain('customs evasion +');
+});
+
+test('omits customs evasion and eviction grace when the keys are missing or not finite numbers', () => {
+  const stdout = renderStructuredResult(
+    'get_empire_info',
+    {
+      empires: [
+        {
+          empire_id: 'solarian',
+          bounty_attack: 500,
+          bounty_kill: 2000,
+          rep_penalty_attack: 5,
+          rep_penalty_kill: 10,
+          eviction_grace_cycles: 2,
+        },
+        {
+          empire_id: 'voidborn',
+          bounty_customs_evasion: '0',
+          rep_penalty_customs_evasion: Number.NaN,
+          bounty_hold: 40,
+          bounty_plunder: 70,
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Bounties: Attack bounty 500 cr, kill bounty 2,000 cr');
+  expect(stdout).toContain('Reputation: Attack -5, kill -10');
+  expect(stdout).not.toContain('customs evasion');
+  expect(stdout).not.toContain('eviction grace');
+  expect(stdout).not.toContain('hold');
+  expect(stdout).not.toContain('plunder');
+});
+
 test('prints a near-integer sales tax bps as a whole percent', () => {
   const stdout = renderStructuredResult(
     'get_empire_info',
