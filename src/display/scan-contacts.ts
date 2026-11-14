@@ -1,6 +1,7 @@
 import { isAliasCopiedDumpKey } from './dock-state.ts';
 import { c, emitLine, formatLiveryName, isRecord, pirateCrewLabel, printCompactTable } from './helpers.ts';
 import { emitLeviathanContacts } from './leviathans.ts';
+import { emitRepeaterSection } from './repeaters.ts';
 
 function hasAnyField(rows: Array<Record<string, unknown>>, fields: string[]): boolean {
   return rows.some((row) =>
@@ -22,6 +23,7 @@ const SCAN_CONSUMED_KEYS = new Set([
   'npcs',
   'pirates',
   'leviathans',
+  'repeaters',
 ]);
 
 const SHIP_ALIAS_DUMP_KEYS = new Set(['fuel_now', 'fuel_max']);
@@ -179,11 +181,16 @@ function emitFactionScanLeftovers(result: Record<string, unknown>): void {
   }
 }
 
+export function emitScanRepeaters(result: Record<string, unknown>): boolean {
+  return emitRepeaterSection(nativeScanField(result, 'repeaters'), undefined, 'Repeaters');
+}
+
 export function emitFactionScanPoi(result: Record<string, unknown>): void {
   emitFactionScanHeader(result);
   emitFactionScanContacts(result);
   emitFactionScanNpcs(result);
   emitFactionScanPirates(result);
   emitLeviathanContacts(nativeScanField(result, 'leviathans'), 'Leviathans');
+  emitScanRepeaters(result);
   emitFactionScanLeftovers(result);
 }

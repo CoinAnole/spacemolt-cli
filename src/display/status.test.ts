@@ -352,6 +352,109 @@ test('remote poi scan treats empty contact arrays like omitted keys', () => {
   expect(renderScan(emptyLists)).toBe(renderScan(scanPoiEmptyFixture));
 });
 
+const scanRepeaterQuiet = {
+  repeater_id: 'rep-sliver-1',
+  name: 'Repeater Sliver',
+  ship_class: 'sliver',
+  hull: 0,
+  max_hull: 40,
+  shield: 0,
+  max_shield: 12,
+  in_battle: false,
+};
+const scanRepeaterFighting = {
+  repeater_id: 'rep-pane-2',
+  name: 'Repeater Pane',
+  ship_class: 'pane',
+  hull: 80,
+  max_hull: 80,
+  shield: 20,
+  max_shield: 20,
+  in_battle: true,
+};
+const scanRepeaterQuietLine = '  Repeater Sliver (sliver) - hull 0/40 - shield 0/12 - in battle no [rep-sliver-1]';
+const scanRepeaterFightingLine = '  Repeater Pane (pane) - hull 80/80 - shield 20/20 - in battle yes [rep-pane-2]';
+
+test('remote poi scan prints repeater lines after leviathans', () => {
+  const fixture = structuredClone(scanPoiFixture) as Record<string, unknown>;
+  fixture.repeaters = [scanRepeaterQuiet, 'skip', null, scanRepeaterFighting];
+  const stdout = renderScan(fixture);
+
+  expect(stdout).toContain('Repeaters (2):');
+  expect(stdout).toContain(scanRepeaterQuietLine);
+  expect(stdout).toContain(scanRepeaterFightingLine);
+  expect(stdout.indexOf(scanRepeaterFightingLine)).toBeGreaterThan(stdout.indexOf(scanRepeaterQuietLine));
+  expect(stdout.indexOf('Leviathans (1):')).toBeLessThan(stdout.indexOf('Repeaters (2):'));
+  expect(stdout.indexOf('Repeaters (2):')).toBeLessThan(stdout.indexOf('Revealed:'));
+  expect(stdout).not.toContain('... and');
+  expect(stdout).not.toContain('loot');
+  expect(stdout).not.toContain('Attack');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('remote poi scan keeps an explicit 0 and blanks an omitted repeater key', () => {
+  const stdout = renderScan({
+    ...structuredClone(scanPoiEmptyFixture),
+    repeaters: [
+      {
+        name: 'Repeater Sliver',
+        ship_class: 'sliver',
+        hull: 0,
+        max_hull: 40,
+        shield: 0,
+        max_shield: 12,
+      },
+    ],
+  });
+  const line = stdout.split('\n').find((entry) => entry.includes('Repeater Sliver'));
+
+  expect(line).toBe('  Repeater Sliver (sliver) - hull 0/40 - shield 0/12');
+  expect(line).not.toContain('in battle');
+  expect(line).not.toContain('[');
+});
+
+test('remote poi scan prints nothing for an omitted, empty, or non-array repeaters', () => {
+  const omitted = renderScan(scanPoiEmptyFixture);
+  expect(omitted).not.toContain('Repeaters');
+
+  for (const repeaters of [[], 'rep-1', 2, { repeater_id: 'rep-1' }, [null, 'skip']]) {
+    const stdout = renderScan({ ...structuredClone(scanPoiEmptyFixture), repeaters });
+    expect(stdout).toBe(omitted);
+  }
+});
+
+test('scan prints repeaters on a ship target and ignores location nearby_repeaters', () => {
+  const stdout = renderScan({
+    details: { ...structuredClone(scanFixture), repeaters: [scanRepeaterQuiet] },
+    location: { nearby_repeaters: [scanRepeaterFighting] },
+  });
+
+  expect(stdout).toContain('Target: Ibis (player-2)');
+  expect(stdout).toContain('Hull: 180');
+  expect(stdout).toContain(scanRepeaterQuietLine);
+  expect(stdout).not.toContain('rep-pane-2');
+  expect(stdout).not.toContain('... and');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('scan prints repeaters beside a sensed line and stays quiet without rows', () => {
+  const withRows = renderScan({ signature_detected: true, repeaters: [scanRepeaterQuiet] });
+  expect(withRows.startsWith(SENSED_SIGNATURE_LINE)).toBe(true);
+  expect(withRows).toContain('Repeaters (1):');
+  expect(withRows).toContain(scanRepeaterQuietLine);
+  expect(withRows).not.toContain('=== Scan Result ===');
+  expect(withRows).not.toContain('=== Response ===');
+
+  expect(renderScan({ signature_detected: true, repeaters: [] })).toBe(SENSED_SIGNATURE_LINE);
+  expect(renderScan({ signature_detected: true, repeaters: 'rep-1' })).toBe(SENSED_SIGNATURE_LINE);
+
+  const rowsOnly = renderScan({ repeaters: [scanRepeaterFighting] });
+  expect(rowsOnly).toContain(scanRepeaterFightingLine);
+  expect(rowsOnly).not.toContain(SENSED_SIGNATURE_LINE);
+  expect(rowsOnly).not.toContain('=== Response ===');
+  expect(rowsOnly).not.toContain('... and');
+});
+
 test('remote poi scan drops top-level ship and branded fields', () => {
   const stdout = renderScan({
     success: true,

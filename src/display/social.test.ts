@@ -9963,6 +9963,106 @@ test('faction_scan_poi omits leviathans when the array is empty', () => {
   expect(stdout).toContain('Pirates (1):');
 });
 
+const factionRepeaterQuiet = {
+  repeater_id: 'rep-sliver-1',
+  name: 'Repeater Sliver',
+  ship_class: 'sliver',
+  hull: 0,
+  max_hull: 40,
+  shield: 0,
+  max_shield: 12,
+  in_battle: false,
+};
+const factionRepeaterFighting = {
+  repeater_id: 'rep-pane-2',
+  name: 'Repeater Pane',
+  ship_class: 'pane',
+  hull: 80,
+  max_hull: 80,
+  shield: 20,
+  max_shield: 20,
+  in_battle: true,
+};
+const factionRepeaterQuietLine = '  Repeater Sliver (sliver) - hull 0/40 - shield 0/12 - in battle no [rep-sliver-1]';
+const factionRepeaterFightingLine = '  Repeater Pane (pane) - hull 80/80 - shield 20/20 - in battle yes [rep-pane-2]';
+
+function scanWithRepeaters(repeaters: unknown): Record<string, unknown> {
+  const fixture = structuredClone(factionScanPoiFixture) as { details: Record<string, unknown> };
+  fixture.details.repeaters = repeaters;
+  return fixture;
+}
+
+test('faction_scan_poi prints repeater lines after pirates and skips a non-object', () => {
+  const stdout = renderFactionScan(scanWithRepeaters([factionRepeaterQuiet, 'skip', null, factionRepeaterFighting]));
+
+  expect(stdout).toContain('Repeaters (2):');
+  expect(stdout).toContain(factionRepeaterQuietLine);
+  expect(stdout).toContain(factionRepeaterFightingLine);
+  expect(stdout.indexOf(factionRepeaterFightingLine)).toBeGreaterThan(stdout.indexOf(factionRepeaterQuietLine));
+  expect(stdout.indexOf('Pirates (1):')).toBeLessThan(stdout.indexOf('Repeaters (2):'));
+  expect(stdout).not.toContain('... and');
+  expect(stdout).not.toContain('loot');
+  expect(stdout).not.toContain('Attack');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_scan_poi keeps an explicit 0 and blanks an omitted repeater key', () => {
+  const stdout = renderFactionScan(
+    scanWithRepeaters([{ name: 'Repeater Sliver', hull: 0, max_hull: 40, shield: 0, max_shield: 12 }]),
+  );
+  const line = stdout.split('\n').find((entry) => entry.includes('Repeater Sliver'));
+
+  expect(line).toBe('  Repeater Sliver - hull 0/40 - shield 0/12');
+  expect(line).not.toContain('in battle');
+  expect(line).not.toContain('(');
+});
+
+test('faction_scan_poi prints in battle no for an explicit false', () => {
+  const stdout = renderFactionScan(scanWithRepeaters([{ repeater_id: 'rep-bare', in_battle: false }]));
+  const line = stdout.split('\n').find((entry) => entry.includes('rep-bare'));
+
+  expect(line).toBe('  rep-bare - in battle no');
+});
+
+test('faction_scan_poi prints nothing for an omitted, empty, or non-array repeaters', () => {
+  const omitted = renderFactionScan(structuredClone(factionScanPoiFixture));
+  expect(omitted).not.toContain('Repeaters');
+
+  for (const repeaters of [[], 'rep-1', 3, true, { repeater_id: 'rep-1' }, [null, 'skip']]) {
+    expect(renderFactionScan(scanWithRepeaters(repeaters))).toBe(omitted);
+  }
+});
+
+test('faction_scan_poi prints repeaters after leviathans and before leftovers', () => {
+  const fixture = structuredClone(factionScanPoiLeviathansFixture) as { details: Record<string, unknown> };
+  fixture.details.repeaters = [factionRepeaterQuiet];
+  fixture.details.foo_bar = 1;
+  const stdout = renderFactionScan(fixture);
+
+  expect(stdout.indexOf('Leviathans (2):')).toBeLessThan(stdout.indexOf('Repeaters (1):'));
+  expect(stdout.indexOf('Repeaters (1):')).toBeLessThan(stdout.indexOf('Foo Bar: 1'));
+  expect(stdout).toContain(factionRepeaterQuietLine);
+  expect(stdout).not.toContain('... and');
+});
+
+test('faction_scan_poi ignores envelope location nearby_repeaters', () => {
+  const stdout = renderFactionScan({
+    details: {
+      poi_id: 'sol_central',
+      facility_level: 1,
+      scan_power: 8,
+      hops: 0,
+      message: 'Scan complete.',
+      repeaters: [factionRepeaterQuiet],
+    },
+    location: { nearby_repeaters: [factionRepeaterFighting] },
+  });
+
+  expect(stdout).toContain(factionRepeaterQuietLine);
+  expect(stdout).not.toContain('rep-pane-2');
+  expect(stdout).not.toContain('Nearby Repeaters');
+});
+
 test('faction_scan_poi prints leviathans after pirates', () => {
   const fixture = structuredClone(factionScanPoiLeviathansFixture) as { details: Record<string, unknown> };
   fixture.details.foo_bar = 1;

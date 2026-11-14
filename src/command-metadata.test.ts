@@ -693,7 +693,7 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('[target_id]');
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
     expect(config?.description).toContain(
-      'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. It is not a target id and it is not the Target: row. false and an omitted field print nothing. A blank or null target_id still prints the line and does not invent a Target: row. A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true.',
+      'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. It is not a target id and it is not the Target: row. false and an omitted field print nothing. A blank or null target_id still prints the line and does not invent a Target: row. A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true and repeaters is omitted, empty, or not an array.',
     );
     expect(config?.description).toContain('creature');
     expect(config?.description).toContain('intact prize');
@@ -715,7 +715,7 @@ describe('command metadata', () => {
     expect(help).toContain('not the Target: row');
     expect(help).toContain('A blank or null target_id still prints the line and does not invent a Target: row.');
     expect(help).toContain(
-      'A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true.',
+      'A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true and repeaters is omitted, empty, or not an array.',
     );
     expect(help).toContain('creature');
     expect(help).toContain('intact prize');
@@ -732,6 +732,11 @@ describe('command metadata', () => {
     expect(config?.description).toContain('holds the target for 5 ticks');
     expect(config?.description).toContain('prints an empty hold');
     expect(config?.description).toContain('does not invent an empty hold');
+    expect(config?.description).toContain(
+      'The repeaters array is repeaters at the POI and is omitted when none are here.',
+    );
+    expect(config?.description).not.toContain('repeater_count');
+    expect(help).toContain('The repeaters array is repeaters at the POI and is omitted when none are here.');
     expect(help).toContain('mode=cargo');
     expect(help).toContain('over 3 ticks');
     expect(help).toContain('5 ticks');
@@ -7652,7 +7657,7 @@ describe('command metadata', () => {
     const factionSensed =
       'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. false and an omitted field print nothing.';
     const scan =
-      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel. " +
+      "Run a long-range sensor scan from your faction's sensor facility coverage. For a station, pass its station base ID or station POI ID. Also lists leviathans at that POI when any are there. aggressive means that stage attacks ships at the POI and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. The repeaters array is repeaters at the POI and is omitted when none are here. A hidden POI your faction has not charted returns poi_not_found, the same as an unknown id. Chart it with survey_system, by arriving, or through faction intel. " +
       factionSensed;
     const status =
       'Inspect player, ship, current system, current POI, dock state, cargo/fuel, and nearby players. ' +
@@ -7674,6 +7679,8 @@ describe('command metadata', () => {
     expect(scan).toContain('poi_not_found');
     expect(scan).toContain('survey_system');
     expect(scan).toContain('faction intel');
+    expect(scan).toContain('The repeaters array is repeaters at the POI and is omitted when none are here.');
+    expect(scan).not.toContain('repeater_count');
     expect(scan).not.toContain('faction_scan_poi');
     expect(scan).not.toContain('target_id');
     expect(scan).not.toContain('Target:');

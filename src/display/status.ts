@@ -47,6 +47,7 @@ import {
   emitFactionScanHeader,
   emitFactionScanNpcs,
   emitFactionScanPirates,
+  emitScanRepeaters,
   emitSignatureDetectedLine,
   nativeRemotePoiId,
   nativeScanField,
@@ -2075,17 +2076,17 @@ export const statusFormatters = [
         emitFactionScanNpcs(r);
         emitFactionScanPirates(r);
         emitLeviathanContacts(nativeScanField(r, 'leviathans'), 'Leviathans');
+        emitScanRepeaters(r);
         emitScanRevealedInfo(r);
         if (r.success === false) emitLine('Success: false');
         if (nativeScanField(r, 'mode') === 'cargo') emitCargoScan(r, { printSuccess: false });
         return true;
       }
       if (r.target_id === undefined && r.username === undefined && r.ship_class === undefined) {
-        if (nativeScanField(r, 'signature_detected') === true) {
-          emitSignatureDetectedLine();
-          return true;
-        }
-        return false;
+        const sensed = nativeScanField(r, 'signature_detected') === true;
+        if (sensed) emitSignatureDetectedLine();
+        const printedRepeaters = emitScanRepeaters(r);
+        return sensed || printedRepeaters;
       }
       emitLine(`\n${c.bright}=== Scan Result ===${c.reset}`);
       if (nativeScanField(r, 'signature_detected') === true) emitSignatureDetectedLine();
@@ -2114,6 +2115,7 @@ export const statusFormatters = [
       }
       emitScanRevealedInfo(r);
       if (nativeScanField(r, 'mode') === 'cargo') emitCargoScan(r);
+      emitScanRepeaters(r);
       return true;
     },
     { commands: ['scan'] },
