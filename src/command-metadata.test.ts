@@ -3205,9 +3205,27 @@ describe('command metadata', () => {
 
     expect(jump?.usage).toBe('<id>');
     expect(jump?.description).toContain('ManageBases');
+    expect(jump?.description).toContain('An adjacent public system does not require a visit.');
+    expect(jump?.description).toContain('A frontier destination must be charted by the commander or the faction.');
+    expect(jump?.description).toContain('returns unknown_system');
+    expect(jump?.description).toContain('The server message prints as sent.');
+    expect(jump?.description).toContain('does not decide whether a system is public or frontier');
+    expect(jump?.description).toContain('does not refuse the call');
+    expect(jump?.description).toContain('fully repaired and stationary');
+    expect(jump?.description).toContain('90-tick preparation');
+    expect(jump?.description).toContain('540-tick isolated jump');
+    expect(jump?.description).toContain('escrowed');
     expect(jump?.description).toContain('faction cancel_mobile_base_jump');
+    expect(jump?.description).not.toContain('personally knows');
     expect(jump?.description).not.toContain('dark_matter_cell');
     expect(jump?.description).not.toContain('`');
+    expect(jump?.schema?.id?.description).toContain('An adjacent public system does not require a visit.');
+    expect(jump?.schema?.id?.description).toContain(
+      'A frontier destination must be charted by the commander or the faction.',
+    );
+    expect(jump?.schema?.id?.description).not.toBe(
+      'Adjacent destination system charted by the commander or the faction',
+    );
     expect(jump?.example).toBe('spacemolt faction jump_mobile_base neighbor_system');
     expect(jump?.args).toEqual(['id']);
     expect(jump?.required).toEqual(['id']);
@@ -3259,6 +3277,15 @@ describe('command metadata', () => {
     const moveHelp = captureHelp('faction move_mobile_base');
     expect(moveHelp).toContain('x=<au> y=<au>');
     expect(moveHelp).toContain('x, y');
+
+    const jumpHelp = captureHelp('faction jump_mobile_base');
+    expect(jumpHelp).toContain('An adjacent public system does not require a visit.');
+    expect(jumpHelp).toContain('A frontier destination must be charted by the commander or the faction.');
+    expect(jumpHelp).toContain('returns unknown_system');
+    expect(jumpHelp).toContain('The server message prints as sent.');
+    expect(jumpHelp).toContain('does not refuse the call');
+    expect(jumpHelp).not.toContain('personally knows');
+    expect(jumpHelp).not.toContain('`');
 
     const publicStdout: string[] = [];
     expect(

@@ -98,9 +98,15 @@ export const FACTION_SOCIAL_COMMAND_OVERRIDES: Record<string, CommandOverride> =
     category: 'Factions',
     usage: '<id>',
     description:
-      'Prepare an inter-system jump for the faction mobile base. Requires ManageBases. id is an adjacent system the commander personally knows. The base must be fully repaired and stationary. A 90-tick preparation is followed by a 540-tick isolated jump. The archetype resource is escrowed from faction storage and consumed when isolation starts. Combat during preparation cancels the jump and refunds escrow. Cancel with faction cancel_mobile_base_jump only during preparation. During isolation, docking and navigation to or from the base stop, docked ships ride, and other ships go to the nearest static origin POI.',
+      'Prepare an inter-system jump for the faction mobile base. Requires ManageBases. An adjacent public system does not require a visit. A frontier destination must be charted by the commander or the faction. A destination that fails that rule returns unknown_system. The server message prints as sent. The client does not decide whether a system is public or frontier and does not refuse the call. The base must be fully repaired and stationary. A 90-tick preparation is followed by a 540-tick isolated jump. The archetype resource is escrowed from faction storage and consumed when isolation starts. Combat during preparation cancels the jump and refunds escrow. Cancel with faction cancel_mobile_base_jump only during preparation. During isolation, docking and navigation to or from the base stop, docked ships ride, and other ships go to the nearest static origin POI.',
     example: 'spacemolt faction jump_mobile_base neighbor_system',
     apiRoute: 'POST /api/v2/spacemolt_faction/jump_mobile_base',
+    schemaExtensions: {
+      id: {
+        description:
+          'Adjacent destination system. An adjacent public system does not require a visit. A frontier destination must be charted by the commander or the faction.',
+      },
+    },
   },
   faction_cancel_mobile_base_jump: {
     category: 'Factions',
