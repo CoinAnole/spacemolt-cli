@@ -408,6 +408,15 @@ function formatActionLogQuantity(value: unknown): string | undefined {
   return undefined;
 }
 
+/** Scalar as sent. An empty string is omitted. Do not map a token to a sentence. */
+function formatActionLogSentScalar(value: unknown): string | undefined {
+  if (typeof value === 'string') return value === '' ? undefined : value;
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return undefined;
+}
+
 function formatYesFlags(flags: Array<[string, unknown]>): string | undefined {
   const parts = flags.filter(([, value]) => value === true).map(([label]) => label);
   return parts.length ? parts.join(' ') : undefined;
@@ -1661,6 +1670,16 @@ export const socialFormatters = [
         // requested is an extra boolean; only salvage.ship_recovered lifts it. No fee column.
         const shipRecovered = eventType === 'salvage.ship_recovered';
         const requestedDisplay = shipRecovered ? formatYesNo(scalarFrom('requested')) : undefined;
+        // Only combat.customs_inspection. Bounty is not Credits. customs_seizure adds no columns.
+        const customsInspection = eventType === 'combat.customs_inspection';
+        const customsOutcomeDisplay = customsInspection ? formatActionLogSentScalar(scalarFrom('outcome')) : undefined;
+        const customsBountyDisplay = customsInspection ? noteIntegerText(scalarFrom('bounty')) : undefined;
+        const customsOfficerDisplay = customsInspection
+          ? formatActionLogSentScalar(scalarFrom('officer_name'))
+          : undefined;
+        const customsEmpireDisplay = customsInspection ? formatActionLogSentScalar(scalarFrom('empire_id')) : undefined;
+        const customsSystemDisplay = customsInspection ? formatActionLogSentScalar(scalarFrom('system_id')) : undefined;
+        const customsPoiDisplay = customsInspection ? formatActionLogSentScalar(scalarFrom('poi_id')) : undefined;
         const exchangeFill = eventType === 'trading.exchange_fill';
         const orderDisplay = exchangeFill ? formatActionLogOrderId(scalarFrom('order_id')) : undefined;
         const itemIdDisplay = formatActionLogOrderId(scalarFrom('item_id'));
@@ -1713,6 +1732,18 @@ export const socialFormatters = [
         if (quantityDisplay !== undefined) row.quantity_display = quantityDisplay;
         delete row.requested_display;
         if (requestedDisplay !== undefined) row.requested_display = requestedDisplay;
+        delete row.outcome_display;
+        delete row.bounty_display;
+        delete row.officer_display;
+        delete row.empire_display;
+        delete row.system_display;
+        delete row.poi_display;
+        if (customsOutcomeDisplay !== undefined) row.outcome_display = customsOutcomeDisplay;
+        if (customsBountyDisplay !== undefined) row.bounty_display = customsBountyDisplay;
+        if (customsOfficerDisplay !== undefined) row.officer_display = customsOfficerDisplay;
+        if (customsEmpireDisplay !== undefined) row.empire_display = customsEmpireDisplay;
+        if (customsSystemDisplay !== undefined) row.system_display = customsSystemDisplay;
+        if (customsPoiDisplay !== undefined) row.poi_display = customsPoiDisplay;
         return row;
       });
       const columns: Array<[string, string[]]> = [];
@@ -1763,6 +1794,12 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['item_id_display'])) columns.push(['Item ID', ['item_id_display']]);
       if (hasAnyField(rows, ['quantity_display'])) columns.push(['Quantity', ['quantity_display']]);
       if (hasAnyField(rows, ['requested_display'])) columns.push(['Requested', ['requested_display']]);
+      if (hasAnyField(rows, ['outcome_display'])) columns.push(['Outcome', ['outcome_display']]);
+      if (hasAnyField(rows, ['bounty_display'])) columns.push(['Bounty', ['bounty_display']]);
+      if (hasAnyField(rows, ['officer_display'])) columns.push(['Officer', ['officer_display']]);
+      if (hasAnyField(rows, ['empire_display'])) columns.push(['Empire', ['empire_display']]);
+      if (hasAnyField(rows, ['system_display'])) columns.push(['System', ['system_display']]);
+      if (hasAnyField(rows, ['poi_display'])) columns.push(['POI', ['poi_display']]);
       emitLine(`${c.dim}category ${category}${c.reset}`);
       printCompactTable('Entries', rows, columns, { maxCellWidth: 80 });
       if (r.has_more) emitLine(`${c.dim}More entries available.${c.reset}`);

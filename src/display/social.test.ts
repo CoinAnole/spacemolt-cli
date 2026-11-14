@@ -1744,6 +1744,328 @@ test('omits Requested for non-boolean requested values and does not parse the su
   expect(poisoned).not.toContain('poison');
 });
 
+const CUSTOMS_COLUMNS = ['Outcome', 'Bounty', 'Officer', 'Empire', 'System', 'POI'] as const;
+
+function customsEntry(
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 921,
+    created_at: '2026-11-13T12:00:00.000Z',
+    event_type: 'combat.customs_inspection',
+    category: 'combat',
+    summary: 'Customs inspected the hold.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
+function expectNoCustomsColumns(stdout: string): void {
+  const columns = actionLogHeaderColumns(stdout);
+  for (const column of CUSTOMS_COLUMNS) expect(columns, column).not.toContain(column);
+}
+
+test('prints customs inspection columns from the entry or its data, including bounty 0', () => {
+  const full = renderActionLog(
+    actionLogPage([
+      customsEntry({
+        outcome: '  clean  ',
+        bounty: 0,
+        officer_name: '  Cutter Ada  ',
+        empire_id: 'sol_empire',
+        system_id: 'sol',
+        poi_id: 'earth_station',
+      }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(full)).toEqual(expect.arrayContaining([...CUSTOMS_COLUMNS, 'Summary']));
+  expectHeaderColumnsInOrder(actionLogHeader(full), [...CUSTOMS_COLUMNS]);
+  expect(actionLogCell(full, 'combat.customs_inspection', 'Outcome')).toBe('clean');
+  expect(full).toContain('  clean  ');
+  expect(actionLogCell(full, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(full).toContain('  Cutter Ada  ');
+  expect(actionLogCell(full, 'Customs inspected', 'Officer')).toBe('Cutter Ada');
+  expect(actionLogCell(full, 'Customs inspected', 'Empire')).toBe('sol_empire');
+  expect(actionLogCell(full, 'Customs inspected', 'System')).toBe('sol');
+  expect(actionLogCell(full, 'Customs inspected', 'POI')).toBe('earth_station');
+  expect(actionLogCell(full, 'Customs inspected', 'Summary')).toBe('Customs inspected the hold.');
+  expect(actionLogHeaderColumns(full)).not.toContain('Credits');
+  expect(full).not.toContain('0cr');
+  expect(full).not.toContain('outcome_display');
+
+  const fromEntry = renderActionLog(
+    actionLogPage([
+      customsEntry(undefined, {
+        outcome: false,
+        bounty: 1500n,
+        officer_name: 7,
+        empire_id: 0,
+        system_id: -0,
+        poi_id: true,
+      }),
+    ]),
+  );
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'Outcome')).toBe('false');
+  expect(fromEntry).not.toContain('no');
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'Bounty')).toBe('1500');
+  expect(fromEntry).not.toContain('1,500');
+  expect(fromEntry).not.toContain('cr');
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'Officer')).toBe('7');
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'Empire')).toBe('0');
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'System')).toBe('0');
+  expect(actionLogCell(fromEntry, 'Customs inspected', 'POI')).toBe('true');
+});
+
+test('prints a fractional or bigint customs bounty as sent, including 0', () => {
+  const fraction = renderActionLog(actionLogPage([customsEntry({ bounty: 1.5, outcome: 'fine' })]));
+  expect(actionLogCell(fraction, 'fine', 'Bounty')).toBe('1.5');
+  expect(actionLogHeaderColumns(fraction)).not.toContain('Credits');
+
+  const huge = 9007199254740993n;
+  const big = renderActionLog(actionLogPage([customsEntry({ bounty: huge })]));
+  expect(actionLogCell(big, 'Customs inspected', 'Bounty')).toBe(huge.toString());
+  expect(actionLogHeaderColumns(big)).not.toContain('Outcome');
+
+  const negativeZero = renderActionLog(actionLogPage([customsEntry({ bounty: -0 })]));
+  expect(actionLogCell(negativeZero, 'Customs inspected', 'Bounty')).toBe('0');
+
+  const zeroN = renderActionLog(actionLogPage([customsEntry({ bounty: 0n })]));
+  expect(actionLogCell(zeroN, 'Customs inspected', 'Bounty')).toBe('0');
+});
+
+test('omits a customs inspection column when that row does not send it', () => {
+  const pages = [
+    customsEntry(undefined),
+    customsEntry({}),
+    customsEntry({ outcome: null, bounty: null, officer_name: '', empire_id: undefined }),
+    customsEntry({ bounty: '0', outcome: '', officer_name: null }),
+  ];
+  for (const entry of pages) {
+    const stdout = renderActionLog(actionLogPage([entry]));
+    expectNoCustomsColumns(stdout);
+    expect(stdout).toContain('Customs inspected the hold.');
+  }
+
+  const partial = renderActionLog(
+    actionLogPage([
+      customsEntry({ outcome: 'seized' }, { id: 1, summary: 'First inspection.' }),
+      customsEntry({ bounty: 0 }, { id: 2, summary: 'Second inspection.' }),
+      customsEntry({ officer_name: 'Ada' }, { id: 3, summary: 'Third inspection.' }),
+    ]),
+  );
+  expect(actionLogHeaderColumns(partial)).toEqual(expect.arrayContaining(['Outcome', 'Bounty', 'Officer']));
+  expect(actionLogHeaderColumns(partial)).not.toContain('Empire');
+  expect(actionLogHeaderColumns(partial)).not.toContain('System');
+  expect(actionLogHeaderColumns(partial)).not.toContain('POI');
+  expect(actionLogCell(partial, 'First inspection.', 'Outcome')).toBe('seized');
+  expect(actionLogCell(partial, 'First inspection.', 'Bounty')).toBe('');
+  expect(actionLogCell(partial, 'Second inspection.', 'Outcome')).toBe('');
+  expect(actionLogCell(partial, 'Second inspection.', 'Bounty')).toBe('0');
+  expect(actionLogCell(partial, 'Third inspection.', 'Officer')).toBe('Ada');
+  expect(actionLogCell(partial, 'Third inspection.', 'Bounty')).toBe('');
+  expect(partial).not.toContain('Customs seized');
+});
+
+test('does not lift customs inspection columns off other events, including seizure', () => {
+  const fields = {
+    outcome: 'seized',
+    bounty: 9,
+    officer_name: 'Ada',
+    empire_id: 'sol_empire',
+    system_id: 'sol',
+    poi_id: 'gate',
+    credits: 4242,
+    fine_assessed: 5151,
+  };
+  for (const eventType of [
+    'combat.customs_seizure',
+    'combat.pirate_destroyed',
+    'combat.hold_started',
+    'combat.customs_inspection.extra',
+    'COMBAT.CUSTOMS_INSPECTION',
+  ]) {
+    const stdout = renderActionLog(
+      actionLogPage([customsEntry(fields, { event_type: eventType, summary: `${eventType} summary` })]),
+    );
+    expectNoCustomsColumns(stdout);
+    expect(stdout, eventType).toContain(`${eventType} summary`);
+    expect(stdout, eventType).not.toContain('seized');
+    expect(stdout, eventType).not.toContain('4242');
+    expect(stdout, eventType).not.toContain('5151');
+    expect(stdout, eventType).not.toContain('sol_empire');
+    expect(actionLogHeaderColumns(stdout), eventType).not.toContain('Credits');
+  }
+});
+
+test('lifts customs inspection fields from the entry or data, including a trimmed event type', () => {
+  const entryWins = renderActionLog(
+    actionLogPage([
+      customsEntry(
+        { outcome: 'clean', bounty: 80, officer_name: 'Data', empire_id: 'data', system_id: 'data', poi_id: 'data' },
+        {
+          outcome: 'seized',
+          bounty: 0,
+          officer_name: 'Entry',
+          empire_id: 'entry',
+          system_id: 'entry',
+          poi_id: 'entry',
+        },
+      ),
+    ]),
+  );
+  expect(actionLogCell(entryWins, 'Customs inspected', 'Outcome')).toBe('seized');
+  expect(actionLogCell(entryWins, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(actionLogCell(entryWins, 'Customs inspected', 'Officer')).toBe('Entry');
+  expect(actionLogCell(entryWins, 'Customs inspected', 'Empire')).toBe('entry');
+  expect(actionLogCell(entryWins, 'Customs inspected', 'System')).toBe('entry');
+  expect(actionLogCell(entryWins, 'Customs inspected', 'POI')).toBe('entry');
+
+  const nullFallsThrough = renderActionLog(
+    actionLogPage([
+      customsEntry(
+        { outcome: 'clean', bounty: 0, officer_name: 'Ada', empire_id: 'sol', system_id: 'sol', poi_id: 'poi' },
+        { outcome: null, bounty: null, officer_name: '', empire_id: null, system_id: '', poi_id: null },
+      ),
+    ]),
+  );
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'Outcome')).toBe('clean');
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'Officer')).toBe('Ada');
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'Empire')).toBe('sol');
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'System')).toBe('sol');
+  expect(actionLogCell(nullFallsThrough, 'Customs inspected', 'POI')).toBe('poi');
+
+  const whitespaceBlocks = renderActionLog(
+    actionLogPage([customsEntry({ outcome: 'clean', bounty: 5 }, { outcome: '   ', bounty: '   ' })]),
+  );
+  expect(actionLogHeaderColumns(whitespaceBlocks)).toContain('Outcome');
+  expect(actionLogCell(whitespaceBlocks, 'Customs inspected', 'Outcome')).toBe('');
+  expect(whitespaceBlocks).toContain('   ');
+  expect(actionLogHeaderColumns(whitespaceBlocks)).not.toContain('Bounty');
+  expect(whitespaceBlocks).not.toContain('clean');
+
+  const fromType = customsEntry({ outcome: 'clean' }, { type: 'combat.customs_inspection' });
+  delete fromType.event_type;
+  const typeStdout = renderActionLog(actionLogPage([fromType]));
+  expect(actionLogCell(typeStdout, 'combat.customs_inspection', 'Event')).toBe('combat.customs_inspection');
+  expect(actionLogCell(typeStdout, 'Customs inspected', 'Outcome')).toBe('clean');
+
+  const trimmed = renderActionLog(
+    actionLogPage([customsEntry({ bounty: 0 }, { event_type: ' combat.customs_inspection ' })]),
+  );
+  expect(actionLogCell(trimmed, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(actionLogCell(trimmed, 'Customs inspected', 'Event')).toBe('combat.customs_inspection');
+});
+
+test('omits customs bounty for non-numeric bounty and does not parse the summary', () => {
+  const badBounties: unknown[] = ['0', '1500', true, false, 'true', {}, [], Number.NaN, Number.POSITIVE_INFINITY];
+  for (const value of badBounties) {
+    const label = typeof value === 'bigint' ? `${value}n` : JSON.stringify(value);
+    const onData = renderActionLog(actionLogPage([customsEntry({ bounty: value, outcome: 'clean' })]));
+    expect(actionLogHeaderColumns(onData), label).not.toContain('Bounty');
+    expect(actionLogCell(onData, 'Customs inspected', 'Outcome'), label).toBe('clean');
+
+    const onEntry = renderActionLog(actionLogPage([customsEntry({ bounty: 0, outcome: 'clean' }, { bounty: value })]));
+    expect(actionLogHeaderColumns(onEntry), `entry ${label}`).not.toContain('Bounty');
+    expect(actionLogCell(onEntry, 'Customs inspected', 'Outcome'), `entry ${label}`).toBe('clean');
+  }
+
+  const sentOutcome = renderActionLog(actionLogPage([customsEntry({ outcome: '0', bounty: '0' })]));
+  expect(actionLogCell(sentOutcome, 'Customs inspected', 'Outcome')).toBe('0');
+  expect(actionLogHeaderColumns(sentOutcome)).not.toContain('Bounty');
+
+  const badOutcomes: unknown[] = [{}, [], Number.NaN, Number.POSITIVE_INFINITY];
+  for (const value of badOutcomes) {
+    const label = typeof value === 'number' ? String(value) : JSON.stringify(value);
+    const onData = renderActionLog(actionLogPage([customsEntry({ outcome: value, bounty: 0 })]));
+    expect(actionLogHeaderColumns(onData), label).not.toContain('Outcome');
+    expect(actionLogCell(onData, 'Customs inspected', 'Bounty'), label).toBe('0');
+    expect(onData, label).not.toContain('[object Object]');
+
+    const onEntry = renderActionLog(actionLogPage([customsEntry({ outcome: 'clean', bounty: 1 }, { outcome: value })]));
+    expect(actionLogHeaderColumns(onEntry), `entry ${label}`).not.toContain('Outcome');
+    expect(actionLogCell(onEntry, 'Customs inspected', 'Bounty'), `entry ${label}`).toBe('1');
+    expect(onEntry, `entry ${label}`).not.toContain('clean');
+  }
+
+  const summary = 'outcome: seized bounty 99 officer Ada';
+  const summaryOnly = renderActionLog(actionLogPage([customsEntry(undefined, { summary })]));
+  expectNoCustomsColumns(summaryOnly);
+  expect(summaryOnly).toContain(summary);
+
+  const poisoned = renderActionLog(
+    actionLogPage([
+      customsEntry(
+        { outcome: 'clean', bounty: 0 },
+        { outcome_display: 'poison', bounty_display: '1,500cr', officer_display: 'nope' },
+      ),
+    ]),
+  );
+  expect(actionLogCell(poisoned, 'Customs inspected', 'Outcome')).toBe('clean');
+  expect(actionLogCell(poisoned, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(poisoned).not.toContain('poison');
+  expect(poisoned).not.toContain('1,500cr');
+  expect(poisoned).not.toContain('nope');
+});
+
+test('keeps customs columns off seizure, credits, and a player hold source', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      pirateEntry({ credits_earned: 1500, outcome: 'seized', bounty: 1500 }),
+      customsEntry({
+        outcome: 'seized',
+        bounty: 0,
+        officer_name: 'Ada',
+        empire_id: 'sol_empire',
+        system_id: 'sol',
+        poi_id: 'border',
+        credits_earned: 99,
+      }),
+      customsEntry(
+        {
+          outcome: 'seized',
+          bounty: 9,
+          credits: 4242,
+          fine_assessed: 5151,
+          officer_name: 'Ada',
+          empire_id: 'sol_empire',
+          system_id: 'sol',
+          poi_id: 'border',
+        },
+        { id: 922, event_type: 'combat.customs_seizure', summary: 'Customs seized the cargo.' },
+      ),
+      customsEntry(
+        { source: 'customs', reason: 'scan_over', outcome: 'clean', bounty: 4 },
+        { id: 923, event_type: 'combat.hold_ended', summary: 'Hold ended.' },
+      ),
+    ]),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  for (const header of ['Credits', ...CUSTOMS_COLUMNS, 'Source', 'Summary']) {
+    expect(columns).toContain(header);
+  }
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Credits', 'Source', ...CUSTOMS_COLUMNS]);
+  expect(actionLogCell(stdout, 'Corsair', 'Credits')).toBe('1,500cr');
+  expect(actionLogCell(stdout, 'Corsair', 'Bounty')).toBe('');
+  expect(actionLogCell(stdout, 'Corsair', 'Outcome')).toBe('');
+  expect(actionLogCell(stdout, 'Customs inspected', 'Bounty')).toBe('0');
+  expect(actionLogCell(stdout, 'Customs inspected', 'Credits')).toBe('');
+  expect(actionLogCell(stdout, 'Customs inspected', 'Outcome')).toBe('seized');
+  expect(actionLogCell(stdout, 'Customs inspected', 'Summary')).toBe('Customs inspected the hold.');
+  expect(actionLogCell(stdout, 'Customs seized', 'Outcome')).toBe('');
+  expect(actionLogCell(stdout, 'Customs seized', 'Bounty')).toBe('');
+  expect(actionLogCell(stdout, 'Customs seized', 'Officer')).toBe('');
+  expect(actionLogCell(stdout, 'Customs seized', 'Summary')).toBe('Customs seized the cargo.');
+  expect(actionLogCell(stdout, 'Hold ended.', 'Source')).toBe('customs');
+  expect(actionLogCell(stdout, 'Hold ended.', 'Outcome')).toBe('');
+  expect(actionLogCell(stdout, 'Hold ended.', 'Bounty')).toBe('');
+  expect(stdout).not.toContain('scan_over');
+  expect(stdout).not.toContain('4242');
+  expect(stdout).not.toContain('5151');
+  expect(stdout).not.toContain('99');
+});
+
 test('keeps Direct supplied beside rent columns on a mixed action-log page', () => {
   const refuel = structuredClone(actionLogFactionRefuelFixture);
   const marlowe = refuel.entries[0];
