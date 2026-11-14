@@ -137,6 +137,25 @@ export function formatFacilityMaintenanceUpkeep(row: Record<string, unknown>): s
   return parts.length ? parts.join(', ') : undefined;
 }
 
+/** Item id and finite number as sent. Empty, non-object, or no finite entry prints nothing. */
+export function maintenanceAverageBurnRows(value: unknown): Array<Record<string, string>> | undefined {
+  if (!isRecord(value)) return undefined;
+  const rows: Array<Record<string, string>> = [];
+  for (const [itemId, amount] of Object.entries(value)) {
+    if (!isPrintableId(itemId)) continue;
+    const average = formatFiniteNumberAsSent(amount);
+    if (average === undefined) continue;
+    rows.push({ item_id: itemId, average });
+  }
+  return rows.length ? rows : undefined;
+}
+
+export function formatMaintenanceAverageBurn(value: unknown): string | undefined {
+  const rows = maintenanceAverageBurnRows(value);
+  if (!rows) return undefined;
+  return rows.map((row) => `${row.item_id} ${row.average}`).join(', ');
+}
+
 /** True when this facility is not accruing new rent. Allowlist — not `status != 'active'`. */
 export function facilityBillingPaused(row: Record<string, unknown>): boolean {
   if (row.damaged === true || row.under_construction === true || row.dismantling === true) return true;
@@ -412,14 +431,20 @@ function formatPercent(value: unknown): string {
   return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
 }
 
+function quantityWithAverageBurn(item: Record<string, unknown>): string {
+  const quantity = item.quantity_per_cycle ?? item.quantity;
+  const listed = formatDisplayNumber(quantity ?? '?');
+  const average = formatFiniteNumberAsSent(item.average_burn_per_cycle);
+  return average === undefined ? listed : `${listed} (avg ${average})`;
+}
+
 function summarizePowerFuelInputs(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
   const parts = value
     .filter(isRecord)
     .map((item) => {
-      const quantity = item.quantity_per_cycle ?? item.quantity;
       const name = item.name ?? item.item_id ?? 'item';
-      return `${formatDisplayNumber(quantity ?? '?')} ${name}`;
+      return `${quantityWithAverageBurn(item)} ${name}`;
     })
     .filter(Boolean);
   return parts.length ? parts.join(', ') : undefined;
@@ -750,9 +775,8 @@ function summarizeLifeSupportMaintenance(value: unknown): string | undefined {
   const parts = value
     .filter(isRecord)
     .map((item) => {
-      const quantity = item.quantity_per_cycle ?? item.quantity;
       const name = item.name ?? item.item_id ?? 'item';
-      return `${name} x${formatDisplayNumber(quantity ?? '?')}`;
+      return `${name} x${quantityWithAverageBurn(item)}`;
     })
     .filter(Boolean);
   return parts.length ? parts.join(', ') : undefined;

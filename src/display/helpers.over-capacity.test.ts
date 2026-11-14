@@ -288,6 +288,70 @@ describe('emitStationLifeSupport', () => {
     const line = buffer.stdout.find((entry) => entry.includes('Plants online'));
     expect(line).toBe('  Plants online: 0');
   });
+
+  test('life support prints average burn beside the listed quantity, including 0 and a fraction', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () =>
+        emitStationLifeSupport({
+          maintenance: [
+            { name: 'Oxygen', quantity_per_cycle: 1, average_burn_per_cycle: 0.033 },
+            { name: 'Water', quantity_per_cycle: 0, average_burn_per_cycle: 0 },
+          ],
+          starved: [{ name: 'Oxygen', quantity_per_cycle: 1, average_burn_per_cycle: 0.1 }],
+        }),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Upkeep: Oxygen x1 (avg 0.033), Water x0 (avg 0)');
+    expect(stdout).toContain('Short of upkeep: Oxygen x1 (avg 0.1)');
+    expect(stdout).not.toContain('0.03)');
+    expect(stdout).not.toContain('3.3');
+    expect(stdout).not.toContain('missing');
+    expect(stdout).not.toContain('deficit');
+  });
+
+  test('life support omits a missing, non-number, or non-finite average and does not copy the quantity', () => {
+    const omitted = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      omitted,
+      () => emitStationLifeSupport({ maintenance: [{ name: 'Oxygen', quantity_per_cycle: 5 }] }),
+      { plain: true },
+    );
+    expect(omitted.stdout.join('\n')).toContain('Upkeep: Oxygen x5');
+    expect(omitted.stdout.join('\n')).not.toContain('(avg');
+    expect(omitted.stdout.join('\n')).not.toContain('Short of upkeep');
+
+    for (const average_burn_per_cycle of [Number.NaN, Number.POSITIVE_INFINITY, '0.033', null, {}, 1n]) {
+      const buffer = { stdout: [] as string[], stderr: [] as string[] };
+      withDisplayRenderBuffer(
+        buffer,
+        () =>
+          emitStationLifeSupport({ maintenance: [{ name: 'Oxygen', quantity_per_cycle: 2, average_burn_per_cycle }] }),
+        { plain: true },
+      );
+      const stdout = buffer.stdout.join('\n');
+      expect(stdout, String(average_burn_per_cycle)).toContain('Upkeep: Oxygen x2');
+      expect(stdout, String(average_burn_per_cycle)).not.toContain('(avg');
+      expect(stdout, String(average_burn_per_cycle)).not.toContain('?');
+    }
+  });
+
+  test('an omitted starved array prints nothing', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () =>
+        emitStationLifeSupport({
+          maintenance: [{ name: 'Oxygen', quantity_per_cycle: 2, average_burn_per_cycle: 0 }],
+        }),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Upkeep: Oxygen x2 (avg 0)');
+    expect(stdout).not.toContain('Short of upkeep');
+  });
 });
 
 describe('emitStationPower', () => {
@@ -395,6 +459,49 @@ describe('emitStationPower', () => {
     const buffer = { stdout: [] as string[], stderr: [] as string[] };
     withDisplayRenderBuffer(buffer, () => emitStationPower({ fuel_inputs: [{ quantity: 2 }] }), { plain: true });
     expect(buffer.stdout.join('\n')).toContain('Fuel Inputs: 2 item');
+  });
+
+  test('station power fuel inputs print average burn beside the listed quantity', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      buffer,
+      () =>
+        emitStationPower({
+          fuel_inputs: [
+            { name: 'Fuel Cell', quantity_per_cycle: 1, average_burn_per_cycle: 0.033 },
+            { name: 'Deuterium', quantity_per_cycle: 0, average_burn_per_cycle: 0 },
+          ],
+        }),
+      { plain: true },
+    );
+    const stdout = buffer.stdout.join('\n');
+    expect(stdout).toContain('Fuel Inputs: 1 (avg 0.033) Fuel Cell, 0 (avg 0) Deuterium');
+    expect(stdout).not.toContain('0.03)');
+    expect(stdout).not.toContain('3.3');
+  });
+
+  test('station power fuel inputs omit a missing or non-finite average and do not copy the quantity', () => {
+    const omitted = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(
+      omitted,
+      () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity_per_cycle: 4 }] }),
+      { plain: true },
+    );
+    expect(omitted.stdout.join('\n')).toContain('Fuel Inputs: 4 Fuel Cell');
+    expect(omitted.stdout.join('\n')).not.toContain('(avg');
+
+    for (const average_burn_per_cycle of [Number.NaN, Number.POSITIVE_INFINITY, '1', null]) {
+      const buffer = { stdout: [] as string[], stderr: [] as string[] };
+      withDisplayRenderBuffer(
+        buffer,
+        () => emitStationPower({ fuel_inputs: [{ name: 'Fuel Cell', quantity_per_cycle: 4, average_burn_per_cycle }] }),
+        { plain: true },
+      );
+      const stdout = buffer.stdout.join('\n');
+      expect(stdout, String(average_burn_per_cycle)).toContain('Fuel Inputs: 4 Fuel Cell');
+      expect(stdout, String(average_burn_per_cycle)).not.toContain('(avg');
+      expect(stdout, String(average_burn_per_cycle)).not.toContain('?');
+    }
   });
 
   test('station power efficiency above 1 is not rescaled', () => {

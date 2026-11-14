@@ -3822,6 +3822,55 @@ test('facility_types detail prints Req. stock and (None) for an empty maintenanc
   expect(stdout).not.toContain('55');
 });
 
+function averageBurnCell(stdout: string, itemId: string): string | undefined {
+  const section = sectionAfter(stdout, 'Avg burn');
+  const lines = section.split('\n');
+  const header = lines.find((line) => line.includes('Item ID') && line.includes('|') && line.includes('Avg'));
+  const row = lines.find((line) => line.includes('|') && line.includes(itemId) && !line.includes('---'));
+  if (!header || !row) return undefined;
+  const headers = header.split('|').map((part) => part.trim());
+  const cells = row.split('|').map((part) => part.trim());
+  const index = headers.indexOf('Avg');
+  return index >= 0 ? cells[index] : undefined;
+}
+
+test('facility_types detail prints average burn next to Req. stock as item id and number', () => {
+  const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  fixture.maintenance_per_cycle = [{ item_id: 'fuel', name: 'Station Tank Fuel', quantity: 3 }];
+  fixture.maintenance_average_burn_per_cycle = { fuel: 0.033, oxygen: 0 };
+  const lines = facilityTypeDetailLines(fixture);
+  const stdout = lines.join('\n');
+  const stockIndex = lines.findIndex((line) => line.includes('=== Req. stock ==='));
+  const burnIndex = lines.findIndex((line) => line.includes('=== Avg burn ==='));
+  const poolIndex = lines.findIndex((line) => line.startsWith('Service pool:'));
+  expect(stockIndex).toBeGreaterThanOrEqual(0);
+  expect(burnIndex).toBeGreaterThan(stockIndex);
+  expect(poolIndex).toBeGreaterThan(burnIndex);
+  expect(averageBurnCell(stdout, 'fuel')).toBe('0.033');
+  expect(averageBurnCell(stdout, 'oxygen')).toBe('0');
+  const burnSection = sectionAfter(stdout, 'Avg burn', 'Service pool:');
+  expect(burnSection).not.toContain('Station Tank Fuel');
+  expect(burnSection).not.toContain('example_key');
+  expect(stdout).not.toContain('0.03\n');
+});
+
+test('facility_types detail prints nothing for an omitted, empty, or non-object average burn', () => {
+  const omitted = facilityTypeDetailLines(structuredClone(facilityTypesDetailFixture) as Record<string, unknown>).join(
+    '\n',
+  );
+  expect(omitted).not.toContain('Avg burn');
+  expect(omitted).not.toContain('example_key');
+
+  for (const maintenance_average_burn_per_cycle of [{}, null, 'fuel', [], { fuel: Number.NaN, oxygen: '0' }]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.maintenance_average_burn_per_cycle = maintenance_average_burn_per_cycle;
+    const stdout = facilityTypeDetailLines(fixture).join('\n');
+    expect(stdout).toContain('=== Facility type: Crew Office ===');
+    expect(stdout).not.toContain('Avg burn');
+    expect(stdout).not.toContain('example_key');
+  }
+});
+
 test('facility_types detail upkeep stays off json, yaml, structured, and compact output', () => {
   const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
   fixture.maintenance_per_cycle = [{ item_id: 'trade_authenticator', name: 'Trade Authenticator', quantity: 0 }];
@@ -4159,6 +4208,28 @@ test('facility_types list and discovery do not add an upkeep column', () => {
   expect(discovered).not.toContain('77');
 });
 
+test('facility_types list does not print an average-burn column', () => {
+  const listed = renderFacilityTypes(
+    facilityTypeListFixture([
+      {
+        id: 'trade_concourse',
+        name: 'Trade Concourse',
+        category: 'service',
+        level: 1,
+        build_cost: 1000,
+        buildable: true,
+        maintenance_average_burn_per_cycle: { fuel: 0.033, example_key: 1 },
+      },
+    ]),
+  );
+  const listSection = sectionAfter(listed, 'Facility types');
+  expect(listSection).toContain('Trade Concourse');
+  expect(listSection).not.toContain('Avg burn');
+  expect(listSection).not.toContain('fuel');
+  expect(listSection).not.toContain('example_key');
+  expect(listSection).not.toContain('0.033');
+});
+
 test('renders facility list item req. stock and labor per cycle', () => {
   const rendered = renderStructuredResult('facility_list', structuredClone(facilityListFixture), options, context);
   const stdout = rendered.stdout.join('\n');
@@ -4279,6 +4350,110 @@ test('renders facility maintenance_inputs when maintenance_per_cycle is absent',
   expect(stationTableHeader).toContain('Req. stock');
   expect(stdout).toContain('3 Steel Plate');
   expect(stdout).toContain('2 durasteel_plate');
+});
+
+test('facility list prints average burn on a row and leaves owned commands alone', () => {
+  const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const stationFacilities = facilityList.station_facilities as Array<Record<string, unknown>>;
+  const depot = stationFacilities.find((row) => row.facility_id === 'station-depot');
+  if (!depot) throw new Error('Station depot fixture is incomplete.');
+  depot.maintenance_average_burn_per_cycle = { fuel: 0, fuel_cell: 0.033 };
+  const stdout = renderStructuredResult('facility_list', facilityList, options, context).stdout.join('\n');
+  const station = sectionAfter(stdout, 'Station Facilities', 'Player Facilities');
+  expect(tableCell(station, 'Confederacy Fleet Depot', 'Avg burn')).toBe('fuel 0, fuel_cell 0.033');
+  expect(tableCell(station, 'Fuel Bunker', 'Avg burn')).toBe('');
+  expect(station).not.toContain('example_key');
+  expect(station).not.toContain('Fuel Cell 0.033');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  expect(player).not.toContain('Avg burn');
+
+  const life = structuredClone(facilityListFixture) as Record<string, unknown>;
+  const support = life.life_support as Record<string, unknown>;
+  const power = life.power as Record<string, unknown>;
+  support.maintenance = [{ name: 'Oxygen', quantity_per_cycle: 1, average_burn_per_cycle: 0.033 }];
+  support.starved = [{ name: 'Oxygen', quantity_per_cycle: 1, average_burn_per_cycle: 0 }];
+  power.fuel_inputs = [{ name: 'Fuel Cell', quantity_per_cycle: 4, average_burn_per_cycle: 1 }];
+  const withDraw = renderStructuredResult('facility_list', life, options, context).stdout.join('\n');
+  expect(withDraw).toContain('Upkeep every 100 ticks: Oxygen x1 (avg 0.033)');
+  expect(withDraw).toContain('Short of upkeep: Oxygen x1 (avg 0)');
+  expect(withDraw).toContain('Fuel Inputs: 4 (avg 1) Fuel Cell');
+
+  for (const maintenance_average_burn_per_cycle of [undefined, {}, null, 'fuel', { fuel: Number.NaN }]) {
+    const bare = structuredClone(facilityListFixture) as Record<string, unknown>;
+    bare.station_facilities = [
+      {
+        facility_id: 'bare-facility',
+        type: 'fuel_bunker',
+        name: 'Bare Bunker',
+        category: 'service',
+        level: 1,
+        ...(maintenance_average_burn_per_cycle === undefined ? {} : { maintenance_average_burn_per_cycle }),
+      },
+    ];
+    bare.player_facilities = [];
+    bare.faction_facilities = [];
+    bare.public_facilities = [];
+    const bareStdout = renderStructuredResult('facility_list', bare, options, context).stdout.join('\n');
+    const header = sectionAfter(bareStdout, 'Station Facilities')
+      .split('\n')
+      .find((line) => line.includes('Name') && line.includes('Level'));
+    expect(header, String(maintenance_average_burn_per_cycle)).not.toContain('Avg burn');
+  }
+
+  const owned = structuredClone(facilityOwnedFixture) as Record<string, unknown>;
+  const ownedRows = owned.facilities as Array<Record<string, unknown>>;
+  const ownedRow = ownedRows[0];
+  if (!ownedRow) throw new Error('Owned facility fixture is incomplete.');
+  ownedRow.maintenance_average_burn_per_cycle = { fuel: 0.033 };
+  const ownedStdout = renderStructuredResult('facility_owned', owned, options, context).stdout.join('\n');
+  expect(sectionAfter(ownedStdout, 'Facilities')).not.toContain('Avg burn');
+  expect(ownedStdout).not.toContain('0.033');
+
+  const factionOwned = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  const factionRows = factionOwned.facilities as Array<Record<string, unknown>>;
+  const factionRow = factionRows[0];
+  if (!factionRow) throw new Error('Faction owned facility fixture is incomplete.');
+  factionRow.maintenance_average_burn_per_cycle = { fuel: 1 };
+  const factionStdout = renderStructuredResult('faction_facility_owned', factionOwned, options, context).stdout.join(
+    '\n',
+  );
+  expect(sectionAfter(factionStdout, 'Faction Facilities')).not.toContain('Avg burn');
+  expect(factionStdout).not.toContain('fuel 1');
+});
+
+test('facility upgrades prints average burn from upgrade_to when that object is present', () => {
+  const present = renderStructuredResult(
+    'facility_upgrades',
+    {
+      upgrades: [
+        {
+          current_level: 1,
+          upgrade_to: { name: 'Ore Refinery II', maintenance_average_burn_per_cycle: { fuel: 0.033, oxygen: 0 } },
+        },
+        {
+          current_level: 2,
+          upgrade_to: { name: 'Diner', maintenance_per_cycle: [{ item_id: 'rations', quantity: 2 }] },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const section = sectionAfter(present, 'Available Upgrades');
+  const header = section.split('\n').find((line) => line.includes('Current') && line.includes('To'));
+  expect(header).toContain('Avg burn');
+  expect(section).toContain('fuel 0.033, oxygen 0');
+  expect(section).not.toContain('example_key');
+  expect(section).not.toContain('rations');
+
+  const omitted = renderStructuredResult(
+    'facility_upgrades',
+    { upgrades: [{ current_level: 1, upgrade_to: { name: 'Ore Refinery II' } }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(sectionAfter(omitted, 'Available Upgrades')).not.toContain('Avg burn');
+  expect(omitted).not.toContain('example_key');
 });
 
 test('omits facility table Req. stock column when no maintenance fields are present', () => {

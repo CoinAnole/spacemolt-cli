@@ -31,11 +31,18 @@ const FACILITY_BUILDABLE_PRINT_HELP =
   'Detail output prints Buildable as yes or no when buildable is a boolean, including an explicit false. The types list prints a Buildable column when any row sends that boolean. An omitted buildable key prints nothing. ' +
   FACILITY_COPY_LIMIT_HELP;
 
+const FACILITY_CYCLE_DRAW_HELP =
+  'A facility needs on hand only what it draws each cycle, about maintenance_average_burn_per_cycle, except a dining or leisure venue, which must hold a share of its menu. A short facility comes back at the next cycle once at least one of each upkeep item is in storage. The client does not decide maintenance_satisfied and does not invent an offline charge.';
+
 const FACILITY_TYPE_UPKEEP_PRINT_HELP =
-  "Detail output prints Req. stock when maintenance_per_cycle is an array: one row per item with name, item id, and quantity, including an explicit quantity 0. An empty array prints Req. stock and (None). An omitted maintenance_per_cycle prints nothing. A fuel line is one of those items. There is no separate fuel field. The types list and the discovery table do not add an upkeep column. For a market that uses trade_authenticator, such as trade_concourse, the trade_authenticator quantity adds a charge that grows with the docked station's recent market trade volume and burns in full each cycle. Gameserver 0.658.0.";
+  'Detail output prints Req. stock when maintenance_per_cycle is an array: one row per item with name, item id, and quantity, including an explicit quantity 0. An empty array prints Req. stock and (None). An omitted maintenance_per_cycle prints nothing. A fuel line is one of those items. There is no separate fuel field. The types list and the discovery table do not add an upkeep column. Detail output prints Avg burn next to Req. stock when maintenance_average_burn_per_cycle is a non-empty object: the item id and the number as sent, including 0 and a fraction. An omitted key, a non-object, or an empty object prints nothing and is not 0. ' +
+  FACILITY_CYCLE_DRAW_HELP +
+  " For a market that uses trade_authenticator, such as trade_concourse, the trade_authenticator quantity adds a charge that grows with the docked station's recent market trade volume and burns in full each cycle. That market still draws that authenticator quantity in full each cycle, including the charge that grows with recent market trade volume. Gameserver 0.658.0. Gameserver 0.713.0.";
 
 const FACILITY_LIST_TRADE_AUTHENTICATOR_HELP =
-  "Req. stock prints maintenance_per_cycle as quantity and name. An omitted key still adds no column. A market's trade_authenticator quantity is its declared stock plus a charge that grows with this station's recent market trade volume. The market burns that charge in full each cycle, and on a player station it goes offline when faction storage cannot cover the whole quantity. The column does not split that quantity into stock and a charge. Gameserver 0.658.0.";
+  'Req. stock prints maintenance_per_cycle as quantity and name. An omitted key still adds no column. Avg burn prints maintenance_average_burn_per_cycle on a row when that object is present: the item id and the number as sent, including 0 and a fraction. An omitted key, a non-object, or an empty object adds no column and is not 0. ' +
+  FACILITY_CYCLE_DRAW_HELP +
+  " A market's trade_authenticator quantity is its declared stock plus a charge that grows with this station's recent market trade volume. A market that uses trade_authenticator, such as trade_concourse, still draws that authenticator quantity in full each cycle, including the charge that grows with recent market trade volume. The market burns that charge in full each cycle. The column does not split that quantity into stock and a charge. Gameserver 0.658.0. Gameserver 0.713.0.";
 
 const OUTPOST_FOUNDING_FEE_HELP =
   'outpost_founding_fee is the outpost fee. It is not founding_fee. founding_fee remains the station fee. The outpost fee is charged by build_outpost on top of the Outpost Kit, taken from the faction treasury first, then the wallet, and dismantle does not refund it.';

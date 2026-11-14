@@ -16,8 +16,10 @@ import {
   formatExactGroupedInteger,
   formatFacilityMaintenanceUpkeep,
   formatIntegerText,
+  formatMaintenanceAverageBurn,
   formatter,
   isRecord,
+  maintenanceAverageBurnRows,
   namedFormatter,
   printCompactTable,
   sumNumericField,
@@ -305,6 +307,16 @@ function emitFacilityTypeMaintenance(value: unknown): void {
   ]);
 }
 
+// Item id and number as sent. Not a catalog name. Empty or non-object prints nothing.
+function emitMaintenanceAverageBurn(value: unknown): void {
+  const rows = maintenanceAverageBurnRows(value);
+  if (!rows) return;
+  printCompactTable('Avg burn', rows, [
+    ['Item ID', ['item_id']],
+    ['Avg', ['average']],
+  ]);
+}
+
 function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   const typeId = typeof r.type_id === 'string' ? r.type_id.trim() : '';
   if (!typeId) return false;
@@ -328,6 +340,7 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   }
   emitDefinedLine('Description', r.description);
   emitFacilityTypeMaintenance(r.maintenance_per_cycle);
+  emitMaintenanceAverageBurn(r.maintenance_average_burn_per_cycle);
   const pool = formatFacilityTypeServicePool(r);
   if (pool) {
     emitLine('');
@@ -815,6 +828,8 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
         typeof row.maintenance_satisfied === 'boolean' ? row.maintenance_satisfied : undefined,
       // Defensive: FacilityEntry schema omits maintenance_fuel; catalog FacilityDefinition has it.
       maintenance_display: formatFacilityMaintenanceUpkeep(row),
+      // Item id and number as sent. Not a catalog name. Omitted or empty stays blank.
+      average_burn_display: formatMaintenanceAverageBurn(row.maintenance_average_burn_per_cycle),
       labor_cycle_display: formatCredits(row.labor_per_cycle),
       output_price_per_unit: outputPricePerUnit,
       output_price_per_unit_display: formatCredits(outputPricePerUnit),
@@ -854,7 +869,7 @@ function withOmittedMissedRentAsZero(row: Record<string, unknown>): Record<strin
 
 function facilityColumns(
   rows: Array<Record<string, unknown>>,
-  options: { grouped?: boolean; includeType?: boolean; missedRent?: 'zero' | 'present' } = {},
+  options: { grouped?: boolean; includeType?: boolean; missedRent?: 'zero' | 'present'; averageBurn?: boolean } = {},
 ) {
   const columns: Array<[string, string[]]> = [['Name', ['name_display']]];
   if (options.includeType) columns.push(['Type', ['type_display']]);
@@ -894,6 +909,10 @@ function facilityColumns(
       'Req. stock',
       ['maintenance_display', 'maintenance_per_cycle', 'maintenance_fuel', 'maintenance_inputs'],
     ]);
+  }
+  // FacilityEntry and a flat facility list only. Owned rows do not declare this map.
+  if (options.averageBurn && hasAnyField(rows, ['average_burn_display'])) {
+    columns.push(['Avg burn', ['average_burn_display']]);
   }
   if (hasAnyField(rows, ['labor_cycle_display', 'labor_per_cycle'])) {
     columns.push(['Labor/cycle', ['labor_cycle_display', 'labor_per_cycle']]);
@@ -2199,7 +2218,10 @@ export const socialFormatters = [
       printCompactTable(
         'Facilities',
         rows,
-        facilityColumns(rows, { includeType: commandNameEquals(command, 'facility_owned') }),
+        facilityColumns(rows, {
+          includeType: commandNameEquals(command, 'facility_owned'),
+          averageBurn: commandNameEquals(command, 'facility_list'),
+        }),
       );
       if (commandNameEquals(command, 'facility_owned')) {
         emitFacilityRentSummaries(r);
@@ -2237,7 +2259,11 @@ export const socialFormatters = [
         const source = projectFee ? rows.map(projectAllyRentalFee) : rows;
         const rentRows = missedRent === 'zero' ? source.map(withOmittedMissedRentAsZero) : source;
         const displayRows = facilityRows(rentRows);
-        printCompactTable(title, displayRows, facilityColumns(displayRows, { grouped: true, missedRent }));
+        printCompactTable(
+          title,
+          displayRows,
+          facilityColumns(displayRows, { grouped: true, missedRent, averageBurn: true }),
+        );
       }
       emitFacilityRentSummaries(r);
       return true;
@@ -2261,16 +2287,19 @@ export const socialFormatters = [
           cost: to.build_cost,
           time: to.build_time,
           labor: to.labor_cost,
+          average_burn_display: formatMaintenanceAverageBurn(to.maintenance_average_burn_per_cycle),
         };
       });
-      printCompactTable('Available Upgrades', rows, [
+      const columns: Array<[string, string[]]> = [
         ['Current', ['current_level', 'current']],
         ['To', ['target_name', 'upgrade_to.name', 'name']],
         ['Cost', ['cost', 'build_cost']],
         ['Ticks', ['time', 'build_time']],
         ['Labor', ['labor', 'labor_cost']],
         ['Requires', ['requires']],
-      ]);
+      ];
+      if (hasAnyField(rows, ['average_burn_display'])) columns.push(['Avg burn', ['average_burn_display']]);
+      printCompactTable('Available Upgrades', rows, columns);
       const hint = r.hint ?? r.faction_upgrade_hint;
       if (hint) emitLine(`\n${hint}`);
       return true;
