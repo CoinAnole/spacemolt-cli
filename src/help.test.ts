@@ -2252,6 +2252,13 @@ describe('help output branches', () => {
       } else {
         expect(output).toContain('before boarding');
         expect(output).not.toContain('seller must refit');
+        expect(output).toContain('A garage claim needs no shipyard.');
+        expect(output).toContain('A stored-ship swap at a station still requires shipyard service.');
+        expect(output).toContain('No shipyard is required for that swap.');
+        expect(output).toContain('the member holds its personal achievement');
+        expect(output).toContain('the faction holds its faction achievement');
+        expect(output).toContain('the member leads the faction');
+        expect(output).not.toContain('garages rule');
       }
     }
   });

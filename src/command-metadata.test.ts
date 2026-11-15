@@ -5837,7 +5837,7 @@ describe('command metadata', () => {
 
   test('switch_ship, buy_listed_ship, and complete_mission help are curated descriptions', () => {
     const switchShip =
-      "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. At a station, cargo from your current ship moves to station storage. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. Undocked at a faction-mate's carrier POI, switch_ship of your ship in the bay swaps hulls in one action: your current ship goes into the bay and the bay ship undocks. Each ship keeps its cargo, modules, and crew. No shipyard is required for that swap. The swap is refused in battle, in transit, with an aggression timer, while towing, when your current ship has passengers, or when the bay has no room for your current ship. Claiming a ship from the faction garage uses this command while docked at that station. A prestige hull can be claimed only by a member who qualifies: the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction (gameserver 0.713.1). An unqualified claim is refused with not_qualified, printed as the server sent it. The client does not parse not_qualified, does not refuse the claim, and does not keep a list of hull ids or achievement ids. A garaged ship stays in the garage if the owner leaves the faction. cannot_garage no longer occurs (gameserver 0.690.0).";
+      "Switch to a different ship stored at this station. Fitted CPU and power must fit your Engineering skill before boarding. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. At a station, cargo from your current ship moves to station storage. A stored-ship swap at a station still requires shipyard service. Switching hulls releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. Undocked at a faction-mate's carrier POI, switch_ship of your ship in the bay swaps hulls in one action: your current ship goes into the bay and the bay ship undocks. Each ship keeps its cargo, modules, and crew. No shipyard is required for that swap. The swap is refused in battle, in transit, with an aggression timer, while towing, when your current ship has passengers, or when the bay has no room for your current ship. Claiming a ship from the faction garage uses this command while docked at that station. A garage claim needs no shipyard. A prestige hull can be claimed only by a member who qualifies: the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction (gameserver 0.713.1). An unqualified claim is refused with not_qualified, printed as the server sent it. The client does not parse not_qualified, does not refuse the claim, and does not keep a list of hull ids or achievement ids. A garaged ship stays in the garage if the owner leaves the faction. cannot_garage no longer occurs (gameserver 0.690.0).";
     const buyListed =
       "Purchase a ship from the exchange. Fitted CPU and power must fit your Engineering skill before payment or boarding. The seller must refit an incompatible listing. A stored ship that does not fit is unloaded with uninstall_mod and optional ship_id while docked at that ship's station. Buying a listed ship releases a towed wreck where it lies. Returns already_towing while you tow a ship. Unload that ship first with storage withdraw <ship_id>. The ship must be at the same station, and that withdraw can auto-dock first. A listed ship in a bay or under tow cannot be bought.";
     const completeMission =
@@ -5902,10 +5902,20 @@ describe('command metadata', () => {
     expect(COMMANDS.switch_ship?.usage).toContain('cargo moved to station storage');
     expect(COMMANDS.switch_ship?.usage).toContain('claim a faction-garage ship');
     expect(COMMANDS.switch_ship?.usage).toContain(
-      'a prestige hull in the garage can be claimed only by a member who qualifies: the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction',
+      'A prestige hull in the garage can be claimed only by a member who qualifies: the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction',
     );
     expect(COMMANDS.switch_ship?.usage).not.toContain('earned that achievement');
     expect(COMMANDS.switch_ship?.usage).toContain('each ship keeps its cargo, modules, and crew');
+    expect(COMMANDS.switch_ship?.usage).toContain('A garage claim needs no shipyard.');
+    expect(COMMANDS.switch_ship?.usage).toContain('A stored-ship swap at a station still requires shipyard service.');
+    expect(COMMANDS.switch_ship?.usage).not.toContain('garages rule');
+    expect(switchShip).toContain('A garage claim needs no shipyard.');
+    expect(switchShip).toContain('A stored-ship swap at a station still requires shipyard service.');
+    expect(switchShip).toContain('No shipyard is required for that swap.');
+    expect(switchShip).toContain(
+      'the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction',
+    );
+    expect(switchShip).not.toContain('garages rule');
     expect(switchShip).toContain('not_qualified');
     expect(switchShip).toContain('cannot_garage no longer occurs');
     expect(switchShip).toContain('printed as the server sent it');
@@ -6032,6 +6042,7 @@ describe('command metadata', () => {
     expect(config.description).toContain('There is no send_gift command.');
     expect(config.description).not.toContain('ship_id=');
     expect(config.description).not.toContain('cannot_gift');
+    expect(config.description).not.toContain('shipyard');
     expect(config.example).toContain('spacemolt faction garages');
     expect(config.example).toMatch(/get_ship id=/);
     expect(config.seeAlso).toEqual(['list_ships', 'switch_ship', 'get_ship']);
