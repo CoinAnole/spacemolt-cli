@@ -177,9 +177,9 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   },
   scan: {
     usage:
-      '[target_id]  (player, NPC, pirate, creature, intact prize, charted POI id, or station base id; omit to sweep your location for cloaked ships)',
+      '[target_id]  (player, NPC, pirate, creature, intact prize, repeater_id from get_nearby, charted POI id, or station base id; omit to sweep your location for cloaked ships)',
     description:
-      'Scan a nearby player, NPC, pirate, creature, or intact prize. Pass a charted POI id or a station base id in your system to scan the ships at that POI (players, empire NPCs, pirates, and leviathans; not wildlife). That remote scan needs a ship scanner (sensor rating above 0). At a POI other than your own it uses 10 less power. Charted POI ids come from get_system. Omit the target to run an area sensor sweep. A leviathan line\'s id is the creature_id for hunt while you are at that POI. The repeaters array is repeaters at the POI and is omitted when none are here. A branded creature scan prints Branded, the owner, and the ranch. See hunt for the kill rules. When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. It is not a target id and it is not the Target: row. false and an omitted field print nothing. A blank or null target_id still prints the line and does not invent a Target: row. A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true and repeaters is omitted, empty, or not an array. Pass mode=cargo with a player target to read that player\'s hold over 3 ticks. A cargo scan never returns credits. A ship with a warp scrambler also holds the target for 5 ticks. Table output prints the cargo table, capacity, and used space. A successful cargo scan with no cargo prints an empty hold. A failed scan prints reason as sent and does not invent an empty hold. hold and hold_cancelled print only when true. When success is false, table output prints Success: false.',
+      'Scan a nearby player, NPC, pirate, creature, or intact prize. A repeater_id from get_nearby is also accepted. That target no longer returns invalid_target. Pass a charted POI id or a station base id in your system to scan the ships at that POI (players, empire NPCs, pirates, and leviathans; not wildlife). That remote scan needs a ship scanner (sensor rating above 0). At a POI other than your own it uses 10 less power. Charted POI ids come from get_system. Omit the target to run an area sensor sweep. A leviathan line\'s id is the creature_id for hunt while you are at that POI. The repeaters array is repeaters at the POI and is omitted when none are here. A branded creature scan prints Branded, the owner, and the ranch. See hunt for the kill rules. When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. It is not a target id and it is not the Target: row. false and an omitted field print nothing. A blank or null target_id still prints the line and does not invent a Target: row. A body with no poi_id and no target_id, username, or ship_class prints only that line when the flag is true and repeaters is omitted, empty, or not an array. Pass mode=cargo with a player target to read that player\'s hold over 3 ticks. A cargo scan never returns credits. A ship with a warp scrambler also holds the target for 5 ticks. Table output prints the cargo table, capacity, and used space. A successful cargo scan with no cargo prints an empty hold. A failed scan prints reason as sent and does not invent an empty hold. hold and hold_cancelled print only when true. When success is false, table output prints Success: false.',
     example: 'spacemolt scan',
     discoverWith: ['get_nearby'],
     seeAlso: ['hunt', 'attack', 'get_ship', 'get_system'],
@@ -188,6 +188,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     positionals: ['target_id'],
     aliases: {
       target_id: 'id',
+    },
+    schemaExtensions: {
+      id: {
+        description:
+          'Player ID/username, NPC ID/name, wildlife creature ID, or intact-prize actor ID to scan. Prize actor IDs come from get_nearby. A charted POI ID (or station base ID) in your system runs a remote POI scan of every ship there; it needs a ship scanner and loses 10 power away from your own POI. Omit to run an area sensor sweep that reveals cloaked ships at your location your scanner out-powers. A repeater_id from get_nearby is also accepted. That target no longer returns invalid_target.',
+      },
     },
   },
   cloak: {

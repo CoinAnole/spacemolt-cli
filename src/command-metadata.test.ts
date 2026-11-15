@@ -689,7 +689,7 @@ describe('command metadata', () => {
   });
 
   test('scan help documents optional area sweeps', () => {
-    const config = BUNDLED_COMMAND_REGISTRY.allCommands.scan;
+    const config = BUNDLED_COMMAND_REGISTRY.commands.scan;
     expect(config?.required ?? []).toEqual([]);
     expect(config?.usage).toContain('[target_id]');
     expect(config?.description).toContain('Omit the target to run an area sensor sweep');
@@ -741,6 +741,24 @@ describe('command metadata', () => {
     expect(help).toContain('mode=cargo');
     expect(help).toContain('over 3 ticks');
     expect(help).toContain('5 ticks');
+    expect(config?.usage).toContain('repeater_id from get_nearby');
+    expect(config?.description).toContain('A repeater_id from get_nearby is also accepted.');
+    expect(config?.description).toContain('That target no longer returns invalid_target.');
+    expect(config?.description).toContain('Pass mode=cargo with a player target');
+    expect(config?.description).not.toMatch(/mode=cargo[^.]{0,80}repeater|repeater[^.]{0,80}mode=cargo/i);
+    expect(help).toContain('repeater_id from get_nearby');
+    expect(help).toContain(
+      'A repeater_id from get_nearby is also accepted. That target no longer returns invalid_target.',
+    );
+    const generatedId = GENERATED_API_ROUTES['POST /api/v2/spacemolt/scan']?.schema?.id?.description ?? '';
+    expect(generatedId).not.toBe('');
+    expect(config?.schema?.id?.description).toContain(generatedId);
+    expect(config?.schema?.id?.description).toContain(
+      'A repeater_id from get_nearby is also accepted. That target no longer returns invalid_target.',
+    );
+    expect(config?.schema?.id?.description).not.toBe(generatedId);
+    expect(config?.schema?.mode?.description).toContain('a player undocked at your POI');
+    expect(config?.schema?.mode?.description).not.toMatch(/repeater/i);
   });
 
   test('dock help names station_under_attack and faction-station join rules', () => {
