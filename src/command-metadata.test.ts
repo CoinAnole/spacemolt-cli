@@ -13,6 +13,7 @@ import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-sh
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
 import {
   CORE_COMMAND_OVERRIDES,
+  PIRATE_SALVAGER_WRECK_APPROACH_HELP,
   PIRATE_SUPPORT_SHIP_HELP,
   TIERED_MODULE_RECIPE_HELP,
   WILDLIFE_FLEE_WINDOW_HELP,
@@ -1477,6 +1478,10 @@ describe('command metadata', () => {
       expect(text).toContain('A target whose grant of safe passage binds you returns safe_passage.');
       expect(text).toContain(PIRATE_SUPPORT_SHIP_HELP);
       expect(text.indexOf('until the crew has a new ship')).toBeLessThan(text.indexOf(PIRATE_SUPPORT_SHIP_HELP));
+      expect(text).toContain(PIRATE_SALVAGER_WRECK_APPROACH_HELP);
+      expect(text.indexOf(PIRATE_SUPPORT_SHIP_HELP)).toBeLessThan(text.indexOf(PIRATE_SALVAGER_WRECK_APPROACH_HELP));
+      expect(text).toContain('about an hour');
+      expect(text).not.toMatch(/about an hour[^.]*ticks/);
       expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('faction_id');
       expect(text).not.toContain('granted_tick');
@@ -1551,6 +1556,10 @@ describe('command metadata', () => {
       expect(text.indexOf('A pilot who has left a battle is not called back.')).toBeLessThan(
         text.indexOf(PIRATE_SUPPORT_SHIP_HELP),
       );
+      expect(text).toContain(PIRATE_SALVAGER_WRECK_APPROACH_HELP);
+      expect(text.indexOf(PIRATE_SUPPORT_SHIP_HELP)).toBeLessThan(text.indexOf(PIRATE_SALVAGER_WRECK_APPROACH_HELP));
+      expect(text).toContain('about an hour');
+      expect(text).not.toMatch(/about an hour[^.]*ticks/);
       expect(text).not.toContain('grantor_id');
       expect(text).not.toContain('faction_id');
       expect(text).toContain('Does not cost a tick');
@@ -2996,6 +3005,12 @@ describe('command metadata', () => {
     expect(description).not.toContain('`');
     expect(description).toContain('A wreck or carcass stays at the POI where it died, including a hidden POI');
     expect(description).toContain('pirate salvagers do not get a report for a hidden-POI wreck');
+    expect(description).toContain(PIRATE_SALVAGER_WRECK_APPROACH_HELP);
+    expect(description.indexOf('pirate salvagers do not get a report for a hidden-POI wreck')).toBeLessThan(
+      description.indexOf(PIRATE_SALVAGER_WRECK_APPROACH_HELP),
+    );
+    expect(description).toContain('about an hour');
+    expect(description).not.toMatch(/about an hour[^.]*ticks/);
     expect(description).toContain('an uncharted location');
     expect(description).toContain('until that POI is charted');
     expect(description).toContain('that phrase is the server message');
@@ -3014,6 +3029,12 @@ describe('command metadata', () => {
     expect(help).not.toContain('`');
     expect(help).toContain('A wreck or carcass stays at the POI where it died, including a hidden POI');
     expect(help).toContain('pirate salvagers do not get a report for a hidden-POI wreck');
+    expect(help).toContain(PIRATE_SALVAGER_WRECK_APPROACH_HELP);
+    expect(help.indexOf('pirate salvagers do not get a report for a hidden-POI wreck')).toBeLessThan(
+      help.indexOf(PIRATE_SALVAGER_WRECK_APPROACH_HELP),
+    );
+    expect(help).toContain('about an hour');
+    expect(help).not.toMatch(/about an hour[^.]*ticks/);
     expect(help).toContain('an uncharted location');
     expect(help).toContain('until that POI is charted');
     expect(help).toContain('that phrase is the server message');
