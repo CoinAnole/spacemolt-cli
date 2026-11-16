@@ -647,6 +647,28 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.login?.schema?.username?.description).toBe('Your username');
   });
 
+  test('register empire field help names each OpenAPI focus and not specialty percents', () => {
+    const generated = GENERATED_API_ROUTES['POST /api/v2/spacemolt_auth/register']?.schema?.empire?.description ?? '';
+    const curated = BUNDLED_COMMAND_REGISTRY.commands.register?.schema?.empire?.description;
+    expect(generated).toBe('Your starting empire (solarian, voidborn, crimson, nebula, outerrim)');
+    expect(curated).toContain(generated);
+    expect(curated).toContain(
+      'Empires: solarian (balanced), voidborn (stealth/shields), crimson (combat), nebula (cargo), outerrim (speed).',
+    );
+    expect(curated).not.toBe(generated);
+    expect(curated).not.toMatch(/\+|%|bonus|secondary/i);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.register?.schema?.empire?.enum).toEqual([
+      'solarian',
+      'voidborn',
+      'crimson',
+      'nebula',
+      'outerrim',
+    ]);
+    expect(CORE_COMMAND_OVERRIDES.register?.description).toBe('Create a player using a dashboard registration code.');
+    expect(CORE_COMMAND_OVERRIDES.register?.description).not.toContain('balanced');
+    expect(CORE_COMMAND_OVERRIDES.register?.schemaExtensions?.empire?.description).toBe(curated);
+  });
+
   test('repair help does not advertise unsupported target positional syntax', () => {
     const config = BUNDLED_COMMAND_REGISTRY.allCommands.repair;
     expect(config?.args).toEqual(['id', 'quantity']);

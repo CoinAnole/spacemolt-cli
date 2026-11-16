@@ -1113,6 +1113,15 @@ describe('help output branches', () => {
     expect(usernameField).toContain('whole name only');
     expect(usernameField).toContain('contain a station word');
     expect(output).not.toContain('Create a player using a dashboard registration code. A new username');
+    const empireField = output.split('\n').find((line) => /^\s*empire \(/.test(line));
+    expect(empireField).toContain(
+      'Your starting empire (solarian, voidborn, crimson, nebula, outerrim). Empires: solarian (balanced), voidborn (stealth/shields), crimson (combat), nebula (cargo), outerrim (speed).',
+    );
+    expect(empireField).not.toMatch(/\+|%|bonus/i);
+    expect(output).toContain('Create a player using a dashboard registration code.');
+    expect(
+      output.split('\n').find((line) => line.includes('Create a player using a dashboard registration code.')),
+    ).not.toContain('balanced');
   });
 
   test('showCommandHelp documents gifting via storage deposit with source', () => {
