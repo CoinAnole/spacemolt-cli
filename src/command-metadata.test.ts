@@ -2459,6 +2459,13 @@ describe('command metadata', () => {
     expect(config?.schema?.refresh?.description).toContain('Not a query parameter');
     expect(config?.seeAlso).toEqual(['catalog', 'get_guide', 'get_version']);
     expect(config?.description).toContain('1 request/minute/IP');
+    expect(config?.description).toContain(
+      'A revalidation which sends If-None-Match and receives 304 does not count against that 1-per-minute limit.',
+    );
+    expect(config?.description).toContain('Only a full download does.');
+    expect(config?.description).toContain(
+      'A full download that is refused is still 429, Rate limited — 1 request per minute per IP.',
+    );
     expect(config?.description).toContain('cached locally for one hour');
     expect(config?.description).toContain('refresh=true');
     expect(config?.description).toContain('get_version');
@@ -2473,6 +2480,11 @@ describe('command metadata', () => {
 
     const help = captureHelp('catalog_dump');
     expect(help).toContain('1 request/minute/IP');
+    expect(help).toContain(
+      'A revalidation which sends If-None-Match and receives 304 does not count against that 1-per-minute limit.',
+    );
+    expect(help).toContain('Only a full download does.');
+    expect(help).toContain('A full download that is refused is still 429, Rate limited — 1 request per minute per IP.');
     expect(help).toContain('refresh');
     expect(help).toContain('Public endpoint');
     expect(help).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');

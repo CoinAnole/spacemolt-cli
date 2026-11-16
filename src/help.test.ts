@@ -2525,6 +2525,13 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('Public endpoint');
     expect(output).toContain('1 request/minute/IP');
+    expect(output).toContain(
+      'A revalidation which sends If-None-Match and receives 304 does not count against that 1-per-minute limit.',
+    );
+    expect(output).toContain('Only a full download does.');
+    expect(output).toContain(
+      'A full download that is refused is still 429, Rate limited — 1 request per minute per IP.',
+    );
     expect(output).toContain('cached locally for one hour');
     expect(output).toContain('refresh=true');
     expect(output).toContain('get_guide miner');

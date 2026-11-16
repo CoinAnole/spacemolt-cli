@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `catalog_dump` help says a revalidation which sends If-None-Match and receives 304 does not count against the 1 request per minute per IP limit. Only a full download does. A full download that is refused is still 429, Rate limited — 1 request per minute per IP (gameserver 0.715.5).
+
 - `get_ship` help says `cargo_used` may be greater than `cargo_capacity` until you unload, and no cargo is lost. `get_ship`, `get_state`, and short `get_status` still print both numbers as sent and append `(over capacity)` when used is greater than capacity. Neither number is clamped. No lost-cargo line, cause field, or notification is added (gameserver 0.715.3).
 
 - `register` empire field help names each starting empire's focus from the register operation: solarian (balanced), voidborn (stealth/shields), crimson (combat), nebula (cargo), and outerrim (speed). The five ids stay. Specialty percents are not listed. The client does not apply empire bonuses and does not keep the old secondary bonuses (gameserver 0.715.3).
