@@ -2763,6 +2763,40 @@ test('renders catalog ship Tow speed from tow_speed_bonus, including 0, and omit
   expect(omitted).not.toContain('Tow speed');
 });
 
+test('renders catalog ship Piloting from piloting_required, including 0, and omits an absent key', () => {
+  const bonus = renderStructuredResult(
+    'catalog',
+    {
+      type: 'ships',
+      items: [{ id: 'escort', name: 'Escort', class: 'Escort', required_reputation: 4, piloting_required: 20 }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(bonus).toContain('Details');
+  expect(bonus).toContain('Piloting: 20');
+  expect(bonus.indexOf('Piloting: 20')).toBeLessThan(bonus.indexOf('Reputation: 4'));
+  expect(bonus).toContain('Pilot');
+
+  const zero = renderStructuredResult(
+    'catalog',
+    { type: 'ships', items: [{ id: 'escort', name: 'Escort', class: 'Escort', piloting_required: 0 }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Piloting: 0');
+
+  const omitted = renderStructuredResult(
+    'catalog',
+    { type: 'ships', items: [{ id: 'hauler', name: 'Hauler', class: 'Hauler', base_speed: 4 }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('Speed: 4');
+  expect(omitted).toContain('Pilot');
+  expect(omitted).not.toContain('Piloting:');
+});
+
 test('does not render catalog ship Details for a multi-row list', () => {
   const rendered = renderStructuredResult('catalog', structuredClone(catalogShipsFixture), options, context);
   const stdout = rendered.stdout.join('\n');

@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `catalog` and `inspect` ship detail print `Piloting:` from `piloting_required` when that value is a finite number, including 0, as sent. An omitted key prints nothing and is not 0. The ship list Pilot column is unchanged. `catalog`, `commission_ship`, and `commission_quote` help say a hull which omits `piloting_required` needs no Piloting skill, and that Piloting still applies when the catalog sends a level. The client does not check Piloting, the achievement, or the five hull ids. `buy_ship_license` still says a prestige hull cannot be licensed. Lock, faction achievement, capabilities, latch resistance, boarding defense, and passive recipes are unchanged (gameserver 0.718.0).
+
 - `catalog` and `inspect` ship detail print `Tow speed:` from `tow_speed_bonus` when that value is a finite number, including 0, as sent. An omitted key prints nothing. The label is not a tow penalty. No haul time is computed, and the client does not keep a list of hull ids. Module detail still prints `tow_speed_penalty` as `Tow penalty` (gameserver 0.718.0).
 
 - `get_tax_estimate` help says a starter ship and its fitted modules add 0 to assessed property value, and the property-by-ship line prints that 0. A row with value 0 is kept. No starter flag is added; the row has `ship_id` and `value` only. Insurance, salvage, and leaderboard ship values are unchanged (gameserver 0.717.1).

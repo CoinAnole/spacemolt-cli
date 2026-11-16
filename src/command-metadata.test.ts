@@ -2275,7 +2275,7 @@ describe('command metadata', () => {
     expect(commission?.description).toContain('required_reputation');
     expect(commission?.description).toContain("your faction's own station");
     expect(commission?.description).toContain(
-      "A faction buy_ship_license for this hull covers required_reputation at your faction's own station; Piloting still applies to flyable hulls; shipyard tier and materials still apply.",
+      "A faction buy_ship_license for this hull covers required_reputation at your faction's own station; Piloting still applies to flyable hulls when the catalog sends a level; a hull which omits piloting_required needs no Piloting skill; shipyard tier and materials still apply. The client does not check Piloting, the achievement, or the five hull ids.",
     );
     const commissionDescription = commission?.description ?? '';
     const commissionAlliedAt = commissionDescription.indexOf('Members of an allied faction');
@@ -2288,7 +2288,7 @@ describe('command metadata', () => {
     expect(commissionAllied).toContain('their own treasury pays labor and the empire royalty');
     expect(commissionAllied).toContain('ManageTreasury in their own faction');
     expect(commissionAllied).toContain("The station owner's treasury and storage are not charged.");
-    expect(commissionAllied).toContain('They still need the piloting level.');
+    expect(commissionAllied).toContain('They still need the piloting level when the catalog sends a level.');
     expect(commissionAllied).toContain('Prestige hulls still need their own achievements.');
     expect(commissionAllied).toContain('Mobile bases stay members-only.');
     expect(commissionAllied).toContain(
@@ -2313,7 +2313,7 @@ describe('command metadata', () => {
     expect(commission?.schema?.bare_hull?.type).toBe('boolean');
     expect(commission?.schema?.source_missing_materials?.type).toBe('boolean');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_ship).toBe(
-      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls. A mobile-base blueprint is a faction station: faction-funded at a tier-four faction yard with fund_from_faction=true, or player-funded at that empire's capital in any normal payment mode. The capital order needs faction membership and ManageBases and reserves the one mobile-base slot. bare_hull does not apply to mobile bases. Ship modules and piloting do not apply, and the arguments are unchanged.",
+      "Commission a ship at this shipyard. Default fitted; optional bare_hull. Empire/NPC: credits, provide_materials, or source_missing_materials (not both). Faction yards: fund_from_faction=true (ManageTreasury), no market sourcing. A faction license covers required_reputation at your faction's own station; Piloting still applies to flyable hulls when the catalog sends a level. A hull which omits piloting_required needs no Piloting skill. A mobile-base blueprint is a faction station: faction-funded at a tier-four faction yard with fund_from_faction=true, or player-funded at that empire's capital in any normal payment mode. The capital order needs faction membership and ManageBases and reserves the one mobile-base slot. bare_hull does not apply to mobile bases. Ship modules and piloting do not apply, and the arguments are unchanged.",
     );
     expect(commission?.description).toContain('fund_from_faction=true still applies');
     expect(commission?.description).toContain("player-funded at that empire's capital");
@@ -2354,7 +2354,12 @@ describe('command metadata', () => {
     expect(commissionHelp).toContain('If true, commission only the hull without its default module loadout.');
     expect(commissionHelp).toContain('Do not combine with provide_materials.');
     expect(commissionHelp).toContain('spacemolt commission_ship viper source_missing_materials=true');
-    expect(commissionHelp).toContain('Piloting still applies to flyable hulls');
+    expect(commissionHelp).toContain('Piloting still applies to flyable hulls when the catalog sends a level');
+    expect(commissionHelp).toContain('a hull which omits piloting_required needs no Piloting skill');
+    expect(commissionHelp).toContain('The client does not check Piloting, the achievement, or the five hull ids.');
+    expect(commissionHelp).not.toContain('Small Claims');
+    expect(commissionHelp).not.toContain('Write-Off');
+    expect(commissionHelp).not.toContain('No Fixed Address');
     expect(commissionHelp).toContain('do not apply to those mobile-base blueprints');
     expect(commissionHelp).toContain("player-funded at that empire's capital");
     expect(commissionHelp).toContain('bare_hull does not apply to mobile bases');
@@ -2392,14 +2397,24 @@ describe('command metadata', () => {
     );
     expect(catalog?.description).not.toContain('Hazard resistance uses only the strongest');
     expect(catalog?.description).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
+    expect(catalog?.description).toContain('A hull which omits piloting_required needs no Piloting skill.');
+    expect(catalog?.description).toContain('Piloting still applies when the catalog sends a level.');
+    expect(catalog?.description).toContain(
+      'The client does not check Piloting, the achievement, or the five hull ids.',
+    );
+    expect(catalog?.description).not.toContain('Small Claims');
+    expect(catalog?.description).not.toContain('Write-Off');
+    expect(catalog?.description).not.toContain('No Fixed Address');
     expect(catalog?.schema?.commissionable?.type).toBe('boolean');
     expect(catalog?.schema?.commissionable?.description).toContain('licensed with buy_ship_license');
     expect(catalog?.schema?.commissionable?.description).toContain("your faction's own station");
     expect(catalog?.schema?.commissionable?.description).toContain('reputation waived');
     expect(catalog?.schema?.commissionable?.description).toContain(
-      "At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting and yard tier still apply).",
+      "At your faction's own station this includes hulls licensed with buy_ship_license (reputation waived; Piloting still applies when the catalog sends a level, and yard tier still applies). A hull which omits piloting_required needs no Piloting skill.",
     );
-    expect(catalog?.schema?.commissionable?.description).toContain('Piloting and yard tier still apply');
+    expect(catalog?.schema?.commissionable?.description).toContain(
+      'Piloting still applies when the catalog sends a level, and yard tier still applies',
+    );
     const catalogCommissionable = catalog?.schema?.commissionable?.description ?? '';
     const catalogAlliedAt = catalogCommissionable.indexOf('Members of an allied faction');
     expect(catalogAlliedAt).toBeGreaterThan(catalogCommissionable.indexOf('reputation waived'));
@@ -2411,7 +2426,7 @@ describe('command metadata', () => {
     expect(catalogAllied).toContain('their own treasury pays labor and the empire royalty');
     expect(catalogAllied).toContain('ManageTreasury in their own faction');
     expect(catalogAllied).toContain("The station owner's treasury and storage are not charged.");
-    expect(catalogAllied).toContain('They still need the piloting level.');
+    expect(catalogAllied).toContain('They still need the piloting level when the catalog sends a level.');
     expect(catalogAllied).toContain('Prestige hulls still need their own achievements.');
     expect(catalogAllied).toContain('Mobile bases stay members-only.');
     expect(catalogAllied).toContain(
@@ -2434,8 +2449,12 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.get_skills?.seeAlso).toEqual(['catalog']);
 
     const help = captureHelp('catalog');
+    expect(help).toContain('A hull which omits piloting_required needs no Piloting skill.');
+    expect(help).toContain('Piloting still applies when the catalog sends a level.');
+    expect(help).toContain('The client does not check Piloting, the achievement, or the five hull ids.');
     expect(help).toContain('licensed with buy_ship_license');
     expect(help).toContain('reputation waived');
+    expect(help).toContain('Piloting still applies when the catalog sends a level, and yard tier still applies');
     expect(help).toContain('ally_shipyard_access');
     expect(help).toContain('catalog type=ships commissionable=true lists the hulls an ally can build at that station.');
     const catalogHelpAllied = help.slice(help.indexOf('Members of an allied faction'));
@@ -2512,7 +2531,7 @@ describe('command metadata', () => {
     );
     expect(config?.description).not.toContain('`');
     expect(CURATED_COMMAND_DESCRIPTIONS.commission_quote).toBe(
-      "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot. A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need. commission_ship still requires that level.",
+      "Get a cost estimate for commissioning a ship, including bare-hull and partial-sourcing previews. The same ship_class quotes a mobile-base blueprint; the quote is the construction bill, not the jump resource. A mobile-base quote at an empire capital also checks that the caller can reserve the faction's mobile-base slot. A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need. commission_ship still requires that level. A hull which omits piloting_required needs no Piloting skill. Piloting still applies when the catalog sends a level.",
     );
     expect(config?.description).toContain("reserve the faction's mobile-base slot");
     expect(config?.description).toContain('A refusal is the error the server returns');
@@ -2543,6 +2562,12 @@ describe('command metadata', () => {
       'A quote for a ship you cannot fly yet still returns the full price, can_commission is false, and blockers names the Piloting level you need.',
     );
     expect(help).toContain('commission_ship still requires that level');
+    expect(help).toContain('A hull which omits piloting_required needs no Piloting skill.');
+    expect(help).toContain('Piloting still applies when the catalog sends a level.');
+    expect(help).toContain('The client does not check Piloting, the achievement, or the five hull ids.');
+    expect(help).not.toContain('Small Claims');
+    expect(help).not.toContain('Write-Off');
+    expect(help).not.toContain('No Fixed Address');
     expect(help).not.toContain('`');
     expect(help).toContain('Default quotes a fitted hull');
     expect(help).toContain('faction yards do not market-source missing materials');

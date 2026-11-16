@@ -2487,6 +2487,9 @@ describe('help output branches', () => {
     );
     expect(output).not.toContain('Hazard resistance uses only the strongest');
     expect(output).toContain('This does not change ship Piloting, recipe gates, or facility gates.');
+    expect(output).toContain('A hull which omits piloting_required needs no Piloting skill.');
+    expect(output).toContain('Piloting still applies when the catalog sends a level.');
+    expect(output).toContain('The client does not check Piloting, the achievement, or the five hull ids.');
     expect(output).toContain('commissionable');
     expect(output).toContain('(ships|skills|recipes|items|facilities)');
     expect(output).toContain('type=skills id=refining');

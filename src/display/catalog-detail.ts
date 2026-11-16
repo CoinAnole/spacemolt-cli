@@ -372,6 +372,8 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
   const requiredItems = summarizeNamedItemQuantities(entry.required_items);
   if (requiredItems) emitLine(`Required items: ${requiredItems}`);
 
+  const pilotingRequired = formatFiniteNumberAsSent(entry.piloting_required);
+  if (pilotingRequired !== undefined) emitLine(`Piloting: ${pilotingRequired}`);
   emitCatalogNumber('Reputation', entry.required_reputation);
   emitCatalogOptional('Achievement', entry.required_achievement);
   emitCatalogOptional('Faction achievement', entry.required_faction_achievement);

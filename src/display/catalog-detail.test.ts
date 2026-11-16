@@ -591,6 +591,54 @@ test('catalog ship detail prints Tow speed from tow_speed_bonus, including 0, an
   expect(detail({})).not.toContain('Tow speed');
 });
 
+test('catalog ship detail prints Piloting from piloting_required, including 0, and omits an absent key', () => {
+  const detail = (entry: Record<string, unknown>): string => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail(entry, {}), { plain: true });
+    return buffer.stdout.join('\n');
+  };
+
+  const level = detail({
+    piloting_required: 30,
+    required_reputation: 10,
+    required_faction_achievement: 'imperial_footprint',
+    prestige_lock: 'Locked: example',
+    latch_resistance: 1,
+    boarding_defense_bonus_pct: 10,
+    passive_recipes: ['refine_steel'],
+    inherent_capabilities: [{ type: 'cloak', value: 2 }],
+  });
+  expect(level.indexOf('Piloting: 30')).toBeLessThan(level.indexOf('Reputation: 10'));
+  expect(level).toContain('Faction achievement: imperial_footprint');
+  expect(level).toContain('Lock: Locked: example');
+  expect(level).toContain('Latch resistance: 1');
+  expect(level).toContain('Boarding defense: 10%');
+  expect(level).toContain('Passive recipes: refine_steel');
+  expect(level).toContain('Capabilities: cloak 2');
+  expect(detail({ piloting_required: 0 })).toContain('Piloting: 0');
+  expect(detail({ piloting_required: -0 })).toContain('Piloting: 0');
+  expect(detail({ piloting_required: -4 })).toContain('Piloting: -4');
+  expect(detail({ piloting_required: 1.5 })).toContain('Piloting: 1.5');
+
+  for (const piloting_required of [
+    undefined,
+    null,
+    '30',
+    '',
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    true,
+    false,
+    30n,
+  ]) {
+    const stdout = detail({ required_reputation: 10, piloting_required });
+    expect(stdout).toContain('Reputation: 10');
+    expect(stdout).not.toContain('Piloting');
+  }
+  expect(detail({})).not.toContain('Piloting');
+});
+
 test('hidden module prints Hidden: yes', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ hidden: true }, {}), { plain: true });
