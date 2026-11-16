@@ -6042,6 +6042,23 @@ describe('command metadata', () => {
     }
   });
 
+  test('get_ship help says cargo_used may exceed cargo_capacity until unload', () => {
+    const sentence = 'cargo_used may be greater than cargo_capacity until you unload, and no cargo is lost';
+    const description = COMMANDS.get_ship?.description ?? '';
+    expect(description).toContain(sentence);
+    expect(description).not.toContain('`');
+
+    const help = captureHelp('get_ship');
+    expect(help).toContain(sentence);
+    expect(help).not.toContain('`');
+
+    for (const command of ['get_status', 'get_state'] as const) {
+      const text = COMMANDS[command]?.description ?? '';
+      expect(text).not.toContain(sentence);
+      expect(captureHelp(command)).not.toContain(sentence);
+    }
+  });
+
   test('faction_garages documents remote get_ship as the fit path', () => {
     const config = COMMANDS.faction_garages;
     expect(config).toBeDefined();

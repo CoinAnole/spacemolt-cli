@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_ship` help says `cargo_used` may be greater than `cargo_capacity` until you unload, and no cargo is lost. `get_ship`, `get_state`, and short `get_status` still print both numbers as sent and append `(over capacity)` when used is greater than capacity. Neither number is clamped. No lost-cargo line, cause field, or notification is added (gameserver 0.715.3).
+
 - `register` empire field help names each starting empire's focus from the register operation: solarian (balanced), voidborn (stealth/shields), crimson (combat), nebula (cargo), and outerrim (speed). The five ids stay. Specialty percents are not listed. The client does not apply empire bonuses and does not keep the old secondary bonuses (gameserver 0.715.3).
 
 - `switch_ship` usage and help say a garage claim needs no shipyard. A stored-ship swap at a station still requires shipyard service. The carrier swap still needs no shipyard. A prestige hull can be claimed only by a member who qualifies: the member holds its personal achievement, the faction holds its faction achievement, or, for a leader-only hull, the member leads the faction. An unqualified claim stays `not_qualified`, printed as the server sent it. The client does not parse that error and does not refuse the call. No error code is added for a missing shipyard. `faction garages` help is unchanged (gameserver 0.715.2).
