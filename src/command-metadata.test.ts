@@ -6268,6 +6268,9 @@ describe('command metadata', () => {
     expect(config.description).toContain('weekly statement');
     expect(config.description).toContain('inactivity_exempt');
     expect(config.description).toContain('pay_bounty');
+    expect(config.description).toContain(
+      'A starter ship and its fitted modules add 0 to assessed property value, and the property-by-ship line prints that 0.',
+    );
     expect(config.seeAlso).toEqual(expect.arrayContaining(['pay_bounty', 'prepay_tax']));
     expect(config.example).toBe('spacemolt get_tax_estimate');
   });

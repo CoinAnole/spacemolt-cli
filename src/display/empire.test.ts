@@ -847,6 +847,24 @@ test('prints an assessed_property_by_ship string withheld instead of the raw res
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('prints a property-by-ship row of 0 cr and keeps it', () => {
+  const stdout = renderStructuredResult(
+    'get_tax_estimate',
+    {
+      income_tax: '',
+      assessed_property_by_ship: [
+        { ship_id: 'ship-starter', value: 0 },
+        { ship_id: 'ship-2', value: 125000 },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const propertyLine = stdout.split('\n').find((line) => line.startsWith('Property by ship:'));
+  expect(propertyLine).toBe('Property by ship: ship-starter 0 cr, ship-2 125,000 cr');
+});
+
 test('prints Property by ship: ship when assessed_property_by_ship is [{}]', () => {
   const stdout = renderStructuredResult(
     'get_tax_estimate',

@@ -1849,6 +1849,9 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('inactivity_exempt');
     expect(output).toContain('See also: pay_bounty');
+    expect(output).toContain(
+      'A starter ship and its fitted modules add 0 to assessed property value, and the property-by-ship line prints that 0.',
+    );
   });
 
   test('generated ship_* personnel names do not resolve as curated personnel help', () => {

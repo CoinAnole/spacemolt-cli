@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `get_tax_estimate` help says a starter ship and its fitted modules add 0 to assessed property value, and the property-by-ship line prints that 0. A row with value 0 is kept. No starter flag is added; the row has `ship_id` and `value` only. Insurance, salvage, and leaderboard ship values are unchanged (gameserver 0.717.1).
+
 - `craft` usage and `facility_id` help say a call with no recipe takes optional `facility_id` and lists only your jobs at that venue, including a Station Workshop id `workshop:<player_id>:<base_id>`. The filter runs before the 200-job limit, and `total_jobs` counts only the matching jobs. The client does not filter the rows locally. `facility_id` stays a named field, not a positional. A field-workshop craft still refuses `facility_id`. Human output still prints `total_jobs` as sent, including 0, and adds `(showing N)` when the printed rows are fewer than that total (gameserver 0.717.0).
 
 - `facility_job_list` help says a Station Workshop id `workshop:<player_id>:<base_id>` is accepted and lists only your jobs there. The client does not require the id to match `workshop:`, does not reject other ids, and does not build the id (gameserver 0.717.0).
