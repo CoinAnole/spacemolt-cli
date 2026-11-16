@@ -4261,6 +4261,18 @@ describe('command metadata', () => {
     expect(help).toContain('fuel bunkers');
     expect(help).toContain('The server refuses while the outpost has a ranch');
     expect(help).not.toContain('faction_dismantle');
+    expect(config?.description).toContain('Founding fee is not refunded');
+    expect(config?.description).toContain('You are undocked afterward');
+    const gatePath = (config?.description ?? '').split('At a jump gate end')[1] ?? '';
+    expect(gatePath).toContain('both ends come down and the lane closes');
+    expect(gatePath).toContain('no Outpost Kit comes back');
+    expect(gatePath).toContain('lane_anchor');
+    expect(gatePath).toContain('founding fees and construction materials are not refunded');
+    expect(gatePath).toContain("both ends' faction storage must be empty");
+    expect(gatePath).not.toContain('ranch');
+    expect(help).toContain('At a jump gate end');
+    expect(help).toContain('both ends come down and the lane closes');
+    expect(help).toContain('lane_anchor');
 
     expect(COMMANDS.build_outpost?.seeAlso).toContain('dismantle_outpost');
   });
@@ -4316,12 +4328,27 @@ describe('command metadata', () => {
     expect(found?.description).toContain('2,500,000 credits per end');
     expect(found?.description).toContain('faction treasury first, then the wallet');
     expect(found?.description).toContain('one unfinished pair');
-    expect(found?.description).toContain('cannot be dismantled');
+    expect(found?.description).toContain('members-only faction base');
+    expect(found?.description).toContain('eight-outpost cap');
+    expect(found?.description).toContain('gate method');
+    expect(found?.description).toContain('Both ends must be lawless');
+    expect(found?.description).toContain('far_system must be charted');
+    expect(found?.description).toContain('dismantle_outpost at either end');
+    expect(found?.description).toContain('both ends come down');
+    expect(found?.description).toContain('lane_anchor');
+    expect(found?.description).not.toContain('members-only faction outpost');
+    expect(found?.description).not.toContain('cannot be dismantled');
+    expect(found?.description).not.toContain('five-station');
     expect(found?.description).not.toContain('`');
     const foundHelp = captureHelp('found_gate_site');
     expect(foundHelp).toContain('<name> <far_system>');
     expect(foundHelp).toContain('1235 GU');
-    expect(foundHelp).toContain('cannot be dismantled');
+    expect(foundHelp).toContain('members-only faction base');
+    expect(foundHelp).toContain('eight-outpost cap');
+    expect(foundHelp).toContain('dismantle_outpost at either end');
+    expect(foundHelp).toContain('lane_anchor');
+    expect(foundHelp).not.toContain('cannot be dismantled');
+    expect(foundHelp).not.toContain('five-station');
     expect(foundHelp).not.toContain('`');
 
     const access = COMMANDS.set_gate_access;
