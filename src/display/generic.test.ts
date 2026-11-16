@@ -801,6 +801,7 @@ test('renders dismantle_outpost kit refund and details-only auto-undocked field 
   expect(stdout).toContain('Auto-undocked: yes');
   expect(stdout).toContain('You are adrift at the former outpost point of interest.');
   expect(stdout).not.toContain('=== Response ===');
+  expect(stdout).not.toContain('Items returned');
   // Formatter must not re-emit the cyan envelope banner from details-only flag
   expect(stdout).not.toContain('[AUTO-UNDOCKED]');
 });
@@ -846,6 +847,189 @@ test('renders dismantle_outpost kit refund without kit returned when kit_item is
   const stdout = rendered.stdout.join('\n');
   expect(stdout).toContain('Kit refunded: yes');
   expect(stdout).not.toContain('Kit returned');
+});
+
+test('dismantle_outpost prints items_returned in key order, including 0, and keeps the outpost header', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'gate_north',
+        name: 'North End',
+        kit_item: 'outpost_kit',
+        kit_refunded: true,
+        fee_refunded: 0,
+        items_returned: { lane_anchor: 0, outpost_kit: 1 },
+        hint: 'You are adrift at the former outpost point of interest.',
+        auto_undocked: true,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Items returned: lane_anchor x0, outpost_kit x1');
+  expect(stdout).toContain('Kit returned: outpost_kit');
+  expect(stdout).toContain('Kit refunded: yes');
+  expect(stdout).toContain('Fee refunded: 0cr');
+  expect(stdout).toContain('Auto-undocked: yes');
+  expect(stdout).toContain('You are adrift at the former outpost point of interest.');
+  expect(stdout.indexOf('Kit refunded: yes')).toBeLessThan(stdout.indexOf('Items returned:'));
+  expect(stdout.indexOf('Items returned:')).toBeLessThan(stdout.indexOf('Fee refunded:'));
+  expect(stdout).not.toContain('Lane Anchor');
+  expect(stdout).not.toContain('Jump Gate');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('dismantle_outpost prints a receipt from items_returned when both kit fields are absent', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'gate_north',
+        name: 'North End',
+        fee_refunded: 0,
+        items_returned: { lane_anchor: 2n },
+        hint: 'Lane closed.',
+        auto_undocked: false,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Outpost: North End');
+  expect(stdout).toContain('Base ID: gate_north');
+  expect(stdout).toContain('Items returned: lane_anchor x2');
+  expect(stdout).toContain('Fee refunded: 0cr');
+  expect(stdout).toContain('Auto-undocked: no');
+  expect(stdout).toContain('Lane closed.');
+  expect(stdout).not.toContain('Kit returned');
+  expect(stdout).not.toContain('Kit refunded');
+  expect(stdout).not.toContain('outpost_kit');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('dismantle_outpost still prints the receipt for an empty items_returned without kit fields', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'gate_north',
+        name: 'North End',
+        items_returned: {},
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Outpost: North End');
+  expect(stdout).toContain('Base ID: gate_north');
+  expect(stdout).not.toContain('Items returned');
+  expect(stdout).not.toContain('Kit returned');
+  expect(stdout).not.toContain('outpost_kit');
+});
+
+test('dismantle_outpost omits a blank kit_item and does not rewrite it as outpost_kit', () => {
+  for (const kitItem of ['', '   ']) {
+    const stdout = renderStructuredResult(
+      'dismantle_outpost',
+      {
+        details: {
+          base_id: 'gate_north',
+          name: 'North End',
+          kit_item: kitItem,
+          kit_refunded: false,
+          items_returned: { lane_anchor: 1 },
+        },
+      },
+      options,
+      context,
+    ).stdout.join('\n');
+
+    expect(stdout).toContain('=== Outpost Dismantled ===');
+    expect(stdout).toContain('Kit refunded: no');
+    expect(stdout).toContain('Items returned: lane_anchor x1');
+    expect(stdout).not.toContain('Kit returned');
+    expect(stdout).not.toContain('outpost_kit');
+  }
+});
+
+test('dismantle_outpost omits items returned for a non-object, an empty object, or a non-finite quantity', () => {
+  const base = {
+    base_id: 'gate_north',
+    name: 'North End',
+    kit_item: 'outpost_kit',
+    kit_refunded: true,
+  };
+  const cases = [
+    {},
+    [],
+    'lane_anchor',
+    0,
+    null,
+    { lane_anchor: Number.NaN },
+    { lane_anchor: Number.POSITIVE_INFINITY },
+    { lane_anchor: '1' },
+  ];
+  for (const itemsReturned of cases) {
+    const stdout = renderStructuredResult(
+      'dismantle_outpost',
+      { details: { ...base, items_returned: itemsReturned } },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout).toContain('=== Outpost Dismantled ===');
+    expect(stdout).toContain('Kit returned: outpost_kit');
+    expect(stdout).not.toContain('Items returned');
+    expect(stdout).not.toContain('x0');
+    expect(stdout).not.toContain('lane_anchor');
+  }
+});
+
+test('dismantle_outpost keeps a finite zero and skips a non-finite items_returned quantity', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'gate_north',
+        name: 'North End',
+        items_returned: { lane_anchor: 0, outpost_kit: Number.NaN, spare: Number.POSITIVE_INFINITY },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Outpost Dismantled ===');
+  expect(stdout).toContain('Items returned: lane_anchor x0');
+  expect(stdout).not.toContain('outpost_kit');
+  expect(stdout).not.toContain('spare');
+  expect(stdout).not.toContain('NaN');
+  expect(stdout).not.toContain('Infinity');
+});
+
+test('dismantle_outpost does not print a receipt when kit fields and items_returned are absent', () => {
+  const stdout = renderStructuredResult(
+    'dismantle_outpost',
+    {
+      details: {
+        base_id: 'gate_north',
+        name: 'North End',
+        fee_refunded: 0,
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).not.toContain('=== Outpost Dismantled ===');
+  expect(stdout).not.toContain('Items returned');
+  expect(stdout).not.toContain('outpost_kit');
 });
 
 test('prints compact undock state after a details auto-undock receipt', () => {

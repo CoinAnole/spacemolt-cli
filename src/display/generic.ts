@@ -1197,6 +1197,21 @@ function emitActiveMissionView(result: Record<string, unknown>): boolean {
   return printedTable || printedAccount;
 }
 
+// Same id x quantity text as Items recovered. A non-finite quantity is omitted, not printed as 0.
+function itemsReturnedLine(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  const items = Object.entries(value).flatMap(([item, quantity]) => {
+    const text =
+      typeof quantity === 'bigint'
+        ? String(quantity)
+        : typeof quantity === 'number' && Number.isFinite(quantity)
+          ? quantity.toLocaleString()
+          : undefined;
+    return text === undefined ? [] : [`${item} x${text}`];
+  });
+  return items.length ? `Items returned: ${items.join(', ')}` : undefined;
+}
+
 export const genericFormatters = [
   formatter(
     (r) => {
@@ -1870,20 +1885,25 @@ export const genericFormatters = [
     },
   ),
 
-  // Outpost dismantle — kit refund (distinct schema from facility/faction dismantle)
+  // Outpost and jump-gate dismantle. No kind field; the header is not chosen from item ids.
   formatter(
     (r, command) => {
       if (!commandNameEquals(command, 'dismantle_outpost')) return false;
       if (typeof r.base_id !== 'string' || typeof r.name !== 'string') return false;
-      if (r.kit_item === undefined && r.kit_refunded === undefined) return false;
+      if (r.kit_item === undefined && r.kit_refunded === undefined && !Object.hasOwn(r, 'items_returned')) {
+        return false;
+      }
 
       emitLine(`\n${c.bright}=== Outpost Dismantled ===${c.reset}`);
       emitLine(`Outpost: ${r.name}`);
       emitLine(`Base ID: ${r.base_id}`);
-      if (r.kit_item !== undefined) emitLine(`Kit returned: ${r.kit_item}`);
+      const kitItem = sentNonBlankString(r.kit_item);
+      if (kitItem !== undefined) emitLine(`Kit returned: ${kitItem}`);
       if (r.kit_refunded !== undefined) {
         emitLine(`Kit refunded: ${formatYesNo(r.kit_refunded) ?? r.kit_refunded}`);
       }
+      const returned = itemsReturnedLine(r.items_returned);
+      if (returned !== undefined) emitLine(returned);
       if (r.fee_refunded !== undefined) {
         emitLine(`Fee refunded: ${formatCount(r.fee_refunded) ?? r.fee_refunded}cr`);
       }
