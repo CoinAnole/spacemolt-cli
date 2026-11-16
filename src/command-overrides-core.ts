@@ -252,7 +252,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<player> [credits=N] [offer_items=JSON] [request_items=JSON] [request_credits=N] [station_id=BASE_ID]  (player trade or faction station sale; use get_trades for pending offers)',
     description:
-      'Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries.',
+      "Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries. A jump gate end sells together with its partner end for one price and one set of fees. Gate ends do not count toward the buyer's five-station cap or eight-outpost cap. A faction that is building a gate pair cannot buy an unfinished one, and the error is gate_in_progress. The server message prints as sent. The client does not refuse the call and does not add an error suggestion.",
     example: `spacemolt trade_offer Marlowe offer_items='[{"item_id":"iron_ore","quantity":50}]' request_credits=1000`,
     seeAlso: ['get_trades', 'trade_accept', 'trade_decline', 'trade_cancel'],
     category: 'P2P Trading',
@@ -261,6 +261,12 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     aliases: {
       target_id: 'target',
       credits: 'offer_credits',
+    },
+    schemaExtensions: {
+      station_id: {
+        description:
+          "Optional exact Base ID of an assembled stationary faction station or outpost. Leaders only. Includes seller-faction facilities and storage at acceptance. request_credits is paid between faction treasuries. No items or offer_credits. Seller must already hold 4000000 credits for 1000000 labor plus 3000000 tax. A jump gate end sells together with its partner end for one price and one set of fees. Gate ends do not count toward the buyer's five-station cap or eight-outpost cap. A faction that is building a gate pair cannot buy an unfinished one, and the error is gate_in_progress. The server message prints as sent. The client does not refuse the call and does not add an error suggestion.",
+      },
     },
   },
   trade_accept: {

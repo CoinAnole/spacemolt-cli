@@ -7762,18 +7762,54 @@ describe('command metadata', () => {
     expect(COMMANDS.trade_accept?.description).toBe('Accept a trade offer');
     expect(CURATED_COMMAND_DESCRIPTIONS.trade_accept).toBe('Accept a trade offer');
     expect(tradeOffer?.description).toBe(
-      'Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries.',
+      "Offer a P2P trade or a faction station sale. credits= is what you give (offer_credits). Pass offer_items/request_items as JSON arrays of {item_id, quantity}. station_id is the exact Base ID of an assembled stationary station or outpost; request_credits is paid between faction treasuries. A jump gate end sells together with its partner end for one price and one set of fees. Gate ends do not count toward the buyer's five-station cap or eight-outpost cap. A faction that is building a gate pair cannot buy an unfinished one, and the error is gate_in_progress. The server message prints as sent. The client does not refuse the call and does not add an error suggestion.",
     );
     expect(COMMANDS.trade_offer?.description).toBe(tradeOffer?.description);
     expect(CURATED_COMMAND_DESCRIPTIONS.trade_offer).toBe('Offer a trade or faction station sale to another player');
     expect(tradeOffer?.usage).toContain('station_id=BASE_ID');
     expect(tradeOffer?.usage).toContain('faction station sale');
+    expect(tradeOffer?.description).toContain('one price and one set of fees');
+    expect(tradeOffer?.description).toContain("buyer's five-station cap or eight-outpost cap");
+    expect(tradeOffer?.description).toContain('gate_in_progress');
+    expect(tradeOffer?.description).toContain('The server message prints as sent.');
+    expect(tradeOffer?.description).toContain('does not refuse the call');
+    expect(tradeOffer?.description).toContain('does not add an error suggestion');
     expect(tradeOffer?.description).not.toContain('`');
+    const generatedStationId =
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_transfer/trade_offer']?.schema?.station_id?.description ?? '';
+    expect(generatedStationId).toBe(
+      'Optional exact Base ID of an assembled stationary faction station or outpost. Leaders only. Includes seller-faction facilities and storage at acceptance. request_credits is paid between faction treasuries. No items or offer_credits. Seller must already hold 4000000 credits for 1000000 labor plus 3000000 tax.',
+    );
+    const stationId = COMMANDS.trade_offer?.schema?.station_id?.description ?? '';
+    expect(CORE_COMMAND_OVERRIDES.trade_offer?.schemaExtensions?.station_id?.description).toBe(stationId);
+    expect(stationId).toContain(generatedStationId);
+    expect(stationId).not.toBe(generatedStationId);
+    expect(stationId).toContain('Leaders only');
+    expect(stationId).toContain('facilities and storage at acceptance');
+    expect(stationId).toContain('request_credits is paid between faction treasuries');
+    expect(stationId).toContain('No items or offer_credits');
+    expect(stationId).toContain('4000000 credits for 1000000 labor plus 3000000 tax');
+    expect(stationId).toContain('one price and one set of fees');
+    expect(stationId).toContain("buyer's five-station cap or eight-outpost cap");
+    expect(stationId).toContain('gate_in_progress');
+    expect(stationId).toContain('The server message prints as sent.');
+    expect(stationId).toContain('does not refuse the call');
+    expect(stationId).toContain('does not add an error suggestion');
+    expect(COMMANDS.trade_offer?.schema?.station_id?.type).toBe('string');
+    expect(COMMANDS.trade_offer?.required ?? []).not.toContain('station_id');
     const tradeOfferHelp = captureHelp('trade offer');
     expect(tradeOfferHelp).toContain('faction station sale');
     expect(tradeOfferHelp).toContain('station_id=BASE_ID');
     expect(tradeOfferHelp).toContain('request_credits is paid between faction treasuries');
     expect(tradeOfferHelp).toContain('exact Base ID');
+    expect(tradeOfferHelp).toContain('one price and one set of fees');
+    expect(tradeOfferHelp).toContain("buyer's five-station cap or eight-outpost cap");
+    expect(tradeOfferHelp).toContain('gate_in_progress');
+    expect(tradeOfferHelp).toContain('4000000 credits for 1000000 labor plus 3000000 tax');
+    expect(tradeOfferHelp).toContain('does not add an error suggestion');
+    const tradeAcceptHelp = captureHelp('trade accept');
+    expect(tradeAcceptHelp).not.toContain('gate');
+    expect(tradeAcceptHelp).not.toContain('gate_in_progress');
     expect(CORE_COMMAND_OVERRIDES.trade_offer?.seeAlso).toEqual([
       'get_trades',
       'trade_accept',

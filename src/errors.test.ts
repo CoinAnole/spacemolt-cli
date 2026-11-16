@@ -177,6 +177,19 @@ describe('station_in_battle', () => {
   });
 });
 
+describe('gate_in_progress', () => {
+  test('is not a client suggestion and is not a known error code', () => {
+    expect(ERROR_REGISTRY.gate_in_progress).toBeUndefined();
+    expect(isKnownErrorCode('gate_in_progress')).toBe(false);
+    expect(ERROR_CODES).not.toContain('gate_in_progress');
+    expect(getErrorSuggestion('gate_in_progress')).toBeUndefined();
+    expect(getErrorSuggestion('gate_in_progress', 'trade_offer')).toBeUndefined();
+    expect(getErrorSuggestion('gate_in_progress', 'trade offer')).toBeUndefined();
+    expect(getErrorSuggestion('gate_in_progress', 'trade_accept')).toBeUndefined();
+    expect(getRelatedCommands('gate_in_progress')).toEqual([]);
+  });
+});
+
 describe('fit capacity errors', () => {
   test('cpu_exceeded is not retryable and is not an authentication error', () => {
     expect(ERROR_REGISTRY.cpu_exceeded?.retryable).toBe(false);
