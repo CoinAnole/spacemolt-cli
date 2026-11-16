@@ -1124,6 +1124,86 @@ test('faction_query_intel prints a faction-intel POI with no type', () => {
   expect(stdout).not.toContain('Bare Rock (');
 });
 
+test('faction_query_intel prints Hazard before Read at tick when type and severity are both present', () => {
+  const fixture = cloneIntelFixture();
+  const poi = firstIntelPoi(fixture);
+  poi.description = 'A thin cloud';
+  poi.hazard = { type: 'radiation', severity: 0, hull_percent: 25 };
+  firstIntelEntry(fixture).pois.push({
+    id: 'sol_belt',
+    type: 'asteroid',
+    name: 'Sol Belt',
+    description: 'A quiet belt',
+    read_at_tick: 900680,
+    hazard: { type: 'debris' },
+  });
+  const stdout = renderIntel(fixture);
+  const nameAt = stdout.indexOf('Sol Gas Cloud');
+  const descriptionAt = stdout.indexOf('    Description: A thin cloud');
+  const hazardAt = stdout.indexOf('    Hazard: radiation 0');
+  const readAt = stdout.indexOf('    Read at tick: unverified');
+  const beltAt = stdout.indexOf('Sol Belt');
+  const beltReadAt = stdout.indexOf('    Read at tick: 900680, snapshot, age 10 ticks');
+
+  expect(nameAt).toBeGreaterThan(-1);
+  expect(descriptionAt).toBeGreaterThan(nameAt);
+  expect(hazardAt).toBeGreaterThan(descriptionAt);
+  expect(readAt).toBeGreaterThan(hazardAt);
+  expect(beltAt).toBeGreaterThan(readAt);
+  expect(beltReadAt).toBeGreaterThan(beltAt);
+  expect(stdout.split('Hazard:')).toHaveLength(2);
+  expect(stdout).not.toContain('hull');
+  expect(stdout).not.toContain('25');
+  expect(stdout).not.toContain('scan penalty');
+  expect(stdout).not.toMatch(/\blow\b/);
+  expect(stdout).not.toMatch(/\blethal\b/);
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('faction_query_intel prints hazard type and severity as sent', () => {
+  const spaced = cloneIntelFixture();
+  firstIntelPoi(spaced).hazard = { type: ' gravity_well ', severity: ' high ' };
+  expect(stdoutLine(renderIntel(spaced), 'Hazard:')).toBe('    Hazard:  gravity_well   high ');
+
+  const textZero = cloneIntelFixture();
+  firstIntelPoi(textZero).hazard = { type: 'ion_storm', severity: '0' };
+  expect(stdoutLine(renderIntel(textZero), 'Hazard:')).toBe('    Hazard: ion_storm 0');
+
+  const bigintZero = cloneIntelFixture();
+  firstIntelPoi(bigintZero).hazard = { type: 'scar_dust', severity: 0n };
+  expect(stdoutLine(renderIntel(bigintZero), 'Hazard:')).toBe('    Hazard: scar_dust 0');
+});
+
+test('faction_query_intel prints nothing for an omitted or partial POI hazard', () => {
+  const omitted = renderIntel(cloneIntelFixture());
+  expect(omitted).toContain('    Read at tick: unverified');
+  expect(omitted).not.toContain('Hazard:');
+
+  for (const hazard of [
+    undefined,
+    null,
+    'radiation',
+    0,
+    [],
+    { type: 'radiation' },
+    { severity: 0 },
+    { type: ' ', severity: 2 },
+    { type: 'radiation', severity: '' },
+    { type: 'radiation', severity: '   ' },
+    { type: 1, severity: 2 },
+    { severity: '4' },
+  ]) {
+    const fixture = cloneIntelFixture();
+    const poi = firstIntelPoi(fixture);
+    if (hazard === undefined) delete poi.hazard;
+    else poi.hazard = hazard;
+    const stdout = renderIntel(fixture);
+    expect(stdout).not.toContain('Hazard:');
+    expect(stdout).toContain('    Read at tick: unverified');
+    expect(stdout).toContain('Sol Gas Cloud (gas_cloud) [deep core] sol_gas_cloud');
+  }
+});
+
 test('faction_query_intel prints the POI id when name is absent', () => {
   const fixture = cloneIntelFixture();
   const id = 'sol_bare';

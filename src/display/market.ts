@@ -7,6 +7,7 @@ import {
   firstArray,
   formatDeepCoreMark,
   formatDepletionRemainingSuffix,
+  formatHazardTypeSeverity,
   formatIntegerText,
   formatter,
   isRecord,
@@ -1791,6 +1792,8 @@ export const marketFormatters = [
           const poiId = poi.id ? ` ${c.dim}${poi.id}${c.reset}` : '';
           emitLine(`  ${poiName}${poiType}${formatDeepCoreMark(poi.deep_core)}${poiId}`);
           emitIntelDescription(poi.description, '    ', printedMessage);
+          const hazard = formatHazardTypeSeverity(poi.hazard);
+          if (hazard !== undefined) emitLine(`    Hazard: ${hazard}`);
           const readAt = poi.read_at_tick;
           if (isMissingDisplayValue(readAt)) {
             emitLine('    Read at tick: unverified');
