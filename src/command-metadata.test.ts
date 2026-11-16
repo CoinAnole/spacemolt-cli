@@ -5186,6 +5186,21 @@ describe('command metadata', () => {
     }
 
     const facilityActions = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions;
+    const jobList = facilityActions?.job_list?.config;
+    expect(jobList?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.facility_job_list);
+    expect(jobList?.description).toContain('workshop:<player_id>:<base_id>');
+    expect(jobList?.description).toContain('lists only your jobs there');
+    expect(jobList?.description).toContain('does not require the id to match workshop:');
+    expect(jobList?.description).toContain('does not reject other ids');
+    expect(jobList?.description).toContain('does not build the id');
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.facility_job_list?.schemaExtensions).toBeUndefined();
+    expect(jobList?.schema?.facility_id?.description).toContain(
+      "job_list' (also accepts your own Station Workshop id workshop:<player_id>:<base_id>)",
+    );
+    const jobListHelp = captureHelp(facilityActions?.job_list?.displayName || 'facility job_list');
+    expect(jobListHelp).toContain('workshop:<player_id>:<base_id>');
+    expect(jobListHelp).toContain('lists only your jobs there');
+    expect(jobListHelp).toContain('does not reject other ids');
     expect(facilityActions?.job_add?.config.usage).toContain('faction:<bucket>');
     expect(facilityActions?.job_add?.config.usage).toContain('items=JSON');
     expect(facilityActions?.job_add?.config.usage).toContain('package_id');

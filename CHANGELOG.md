@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `facility_job_list` help says a Station Workshop id `workshop:<player_id>:<base_id>` is accepted and lists only your jobs there. The client does not require the id to match `workshop:`, does not reject other ids, and does not build the id (gameserver 0.717.0).
+
 - `faction query_intel` prints `Hazard:` on each POI from `hazard.type` and `hazard.severity` when both are present, as sent, including a severity of 0, before `Read at tick:`. An omitted `hazard`, a non-object, or a partial object prints nothing. Help says each POI carries hazard at every intel level, and the line is omitted when the field is omitted. The server fills older intel on an Intel Center query or a new submission. The client does not invent a hazard, does not backfill one, and does not send `hazard` on `submit_intel`. Hull loss and a scan penalty are not computed (gameserver 0.716.0).
 
 - `catalog_dump` help says a revalidation which sends If-None-Match and receives 304 does not count against the 1 request per minute per IP limit. Only a full download does. A full download that is refused is still 429, Rate limited — 1 request per minute per IP (gameserver 0.715.5).

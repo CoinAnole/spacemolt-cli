@@ -815,7 +815,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   facility_job_list: {
     usage: '<facility_id>',
-    description: 'List queued production jobs on a facility you own.',
+    description:
+      'List queued production jobs on a facility you own. A Station Workshop id of the form workshop:<player_id>:<base_id> is accepted and lists only your jobs there. The client does not require the id to match workshop:, does not reject other ids, and does not build the id (gameserver 0.717.0).',
     example: 'spacemolt facility_job_list facility-1',
     discoverWith: ['facility_list', 'facility_owned'],
     seeAlso: ['facility_job_add', 'facility_job_cancel', 'facility_job_reorder'],
