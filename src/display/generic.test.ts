@@ -2729,6 +2729,40 @@ test('renders catalog ship Details with a full untruncated loadout for a one-row
   expect(stdout).not.toContain('Mobile base:');
 });
 
+test('renders catalog ship Tow speed from tow_speed_bonus, including 0, and omits an absent key', () => {
+  const bonus = renderStructuredResult(
+    'catalog',
+    {
+      type: 'ships',
+      items: [{ id: 'salvage_tug', name: 'Salvage Tug', class: 'Salvage', base_speed: 4, tow_speed_bonus: 30 }],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(bonus).toContain('Details');
+  expect(bonus).toContain('Speed: 4');
+  expect(bonus).toContain('Tow speed: 30');
+  expect(bonus).not.toContain('Tow speed: 30%');
+  expect(bonus).not.toContain('Tow penalty');
+
+  const zero = renderStructuredResult(
+    'catalog',
+    { type: 'ships', items: [{ id: 'salvage_tug', name: 'Salvage Tug', class: 'Salvage', tow_speed_bonus: 0 }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Tow speed: 0');
+
+  const omitted = renderStructuredResult(
+    'catalog',
+    { type: 'ships', items: [{ id: 'hauler', name: 'Hauler', class: 'Hauler', base_speed: 4 }] },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).toContain('Speed: 4');
+  expect(omitted).not.toContain('Tow speed');
+});
+
 test('does not render catalog ship Details for a multi-row list', () => {
   const rendered = renderStructuredResult('catalog', structuredClone(catalogShipsFixture), options, context);
   const stdout = rendered.stdout.join('\n');

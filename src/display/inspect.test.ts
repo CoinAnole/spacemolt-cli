@@ -3723,6 +3723,30 @@ test('ship-class inspect prints marine capacity 0 and omits zero boarding defens
   expect(stdout).not.toContain('Boarding defense:');
 });
 
+test('ship-class inspect prints Tow speed from tow_speed_bonus, including 0, and omits an absent key', () => {
+  const bonus = renderCatalogInspect({
+    type: 'ships',
+    items: [{ id: 'salvage_tug', name: 'Salvage Tug', class: 'Salvage', base_speed: 4, tow_speed_bonus: 30 }],
+  });
+  expect(bonus).toContain('Speed: 4');
+  expect(bonus).toContain('Tow speed: 30');
+  expect(bonus).not.toContain('Tow speed: 30%');
+  expect(bonus).not.toContain('Tow penalty');
+
+  const zero = renderCatalogInspect({
+    type: 'ships',
+    items: [{ id: 'salvage_tug', name: 'Salvage Tug', class: 'Salvage', tow_speed_bonus: 0 }],
+  });
+  expect(zero).toContain('Tow speed: 0');
+
+  const omitted = renderCatalogInspect({
+    type: 'ships',
+    items: [{ id: 'hauler', name: 'Hauler', class: 'Hauler', base_speed: 4 }],
+  });
+  expect(omitted).toContain('Speed: 4');
+  expect(omitted).not.toContain('Tow speed');
+});
+
 test('ship-class inspect still emits details when default_modules is missing', () => {
   const stdout = renderCatalogInspect({
     type: 'ships',

@@ -342,6 +342,8 @@ export function emitCatalogShipDetail(entry: Record<string, unknown>, _catalog: 
   }
   emitCatalogNumber('Armor', entry.base_armor);
   emitCatalogNumber('Speed', entry.base_speed);
+  const towSpeed = formatFiniteNumberAsSent(entry.tow_speed_bonus);
+  if (towSpeed !== undefined) emitLine(`Tow speed: ${towSpeed}`);
   emitCatalogNumber('Fuel', entry.base_fuel);
   emitCatalogNumber('Cargo', entry.cargo_capacity);
   emitCatalogNumber('CPU', entry.cpu_capacity);

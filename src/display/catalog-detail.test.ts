@@ -339,7 +339,9 @@ test('remote repair bonus prints Remote repair: 6', () => {
 test('tow penalty prints Tow penalty: 30', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogModuleDetail({ tow_speed_penalty: 30 }, {}), { plain: true });
-  expect(buffer.stdout.join('\n')).toContain('Tow penalty: 30');
+  const stdout = buffer.stdout.join('\n');
+  expect(stdout).toContain('Tow penalty: 30');
+  expect(stdout).not.toContain('Tow speed');
 });
 
 function moduleDetail(entry: Record<string, unknown>): string {
@@ -551,6 +553,42 @@ test('required reputation 0 prints Reputation: 0', () => {
   const buffer = { stdout: [] as string[], stderr: [] as string[] };
   withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail({ required_reputation: 0 }, {}), { plain: true });
   expect(buffer.stdout.join('\n')).toContain('Reputation: 0');
+});
+
+test('catalog ship detail prints Tow speed from tow_speed_bonus, including 0, and omits a non-number', () => {
+  const detail = (entry: Record<string, unknown>): string => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    withDisplayRenderBuffer(buffer, () => emitCatalogShipDetail(entry, {}), { plain: true });
+    return buffer.stdout.join('\n');
+  };
+
+  const bonus = detail({ base_speed: 6, base_fuel: 900, tow_speed_bonus: 30 });
+  expect(bonus.indexOf('Speed: 6')).toBeLessThan(bonus.indexOf('Tow speed: 30'));
+  expect(bonus.indexOf('Tow speed: 30')).toBeLessThan(bonus.indexOf('Fuel: 900'));
+  expect(bonus).not.toContain('Tow speed: 30%');
+  expect(bonus).not.toContain('Tow penalty');
+  expect(detail({ tow_speed_bonus: 0 })).toContain('Tow speed: 0');
+  expect(detail({ tow_speed_bonus: -0 })).toContain('Tow speed: 0');
+  expect(detail({ tow_speed_bonus: -4 })).toContain('Tow speed: -4');
+  expect(detail({ tow_speed_bonus: 1.5 })).toContain('Tow speed: 1.5');
+
+  for (const tow_speed_bonus of [
+    undefined,
+    null,
+    '30',
+    '',
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    true,
+    false,
+    30n,
+  ]) {
+    const stdout = detail({ base_speed: 6, tow_speed_bonus });
+    expect(stdout).toContain('Speed: 6');
+    expect(stdout).not.toContain('Tow speed');
+  }
+  expect(detail({})).not.toContain('Tow speed');
 });
 
 test('hidden module prints Hidden: yes', () => {
