@@ -2669,8 +2669,16 @@ describe('command metadata', () => {
     expect(help).toContain('deliver_to=storage|faction|faction:<bucket>|cargo');
     expect(config?.usage).toContain('cargo on source/target is for package recipes');
     expect(config?.usage).toContain('docked ordinary craft uses storage or faction');
+    expect(config?.usage).toContain('[facility_id=<id>]');
+    expect(config?.usage).toContain('pass facility_id=<id> with no recipe');
+    expect(config?.usage).toContain('workshop:<player_id>:<base_id>');
+    expect(config?.usage).toContain('before the 200-job limit');
+    expect(config?.usage).toContain('total_jobs counts only the matching jobs');
+    expect(config?.usage).toContain('does not filter the rows locally');
     expect(config?.usage).toContain('undocked field-workshop craft omits source and deliver_to or sets them to cargo');
+    expect(config?.usage).toContain('refuses facility_id');
     expect(config?.usage).toContain('cannot be redirected');
+    expect(config?.args).not.toContain('facility_id');
     expect(config?.description).toContain('Docked ordinary production');
     expect(config?.description).toContain('a field-workshop hull can craft hand-craftable recipes');
     expect(config?.description).toContain(
@@ -2747,10 +2755,21 @@ describe('command metadata', () => {
     expect(config?.description).toContain('only your own rented job pauses');
     expect(config?.description).toContain("other renters' jobs on the same facility keep running");
     expect(config?.schema?.facility_id?.description).toContain('owned or public rental facility');
+    expect(config?.schema?.facility_id?.description).toContain('With no recipe_id, lists only your jobs at that venue');
+    expect(config?.schema?.facility_id?.description).toContain('workshop:<player_id>:<base_id>');
+    expect(config?.schema?.facility_id?.description).toContain('before the 200-job limit');
+    expect(config?.schema?.facility_id?.description).toContain('total_jobs counts only the matching jobs');
+    expect(config?.schema?.facility_id?.description).toContain('gameserver 0.717.0');
+    expect(config?.schema?.facility_id?.description).toContain('does not filter the rows locally');
+    expect(config?.schema?.facility_id?.description).toContain('A field-workshop craft still refuses facility_id');
     expect(config?.schema?.facility_id?.description).toContain("someone else's fuel facility");
     expect(config?.schema?.facility_id?.description).toContain('no_fuel_bunker');
     expect(config?.schema?.facility_id?.description).toContain('auto-routing skips that facility');
     expect(config?.schema?.facility_id?.description).not.toContain('only your own rented job pauses');
+    expect(help).toContain('before the 200-job limit');
+    expect(help).toContain('total_jobs counts only the matching jobs');
+    expect(help).toContain('workshop:<player_id>:<base_id>');
+    expect(help).toContain('does not filter the rows locally');
     expect(help).toContain("someone else's fuel facility");
     expect(help).toContain('no_fuel_bunker');
     expect(help).toContain('auto-routing skips that facility');

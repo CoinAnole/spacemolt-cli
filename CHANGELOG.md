@@ -8,6 +8,8 @@ https://github.com/CoinAnole/spacemolt-cli/releases.
 
 ## Unreleased
 
+- `craft` usage and `facility_id` help say a call with no recipe takes optional `facility_id` and lists only your jobs at that venue, including a Station Workshop id `workshop:<player_id>:<base_id>`. The filter runs before the 200-job limit, and `total_jobs` counts only the matching jobs. The client does not filter the rows locally. `facility_id` stays a named field, not a positional. A field-workshop craft still refuses `facility_id`. Human output still prints `total_jobs` as sent, including 0, and adds `(showing N)` when the printed rows are fewer than that total (gameserver 0.717.0).
+
 - `facility_job_list` help says a Station Workshop id `workshop:<player_id>:<base_id>` is accepted and lists only your jobs there. The client does not require the id to match `workshop:`, does not reject other ids, and does not build the id (gameserver 0.717.0).
 
 - `faction query_intel` prints `Hazard:` on each POI from `hazard.type` and `hazard.severity` when both are present, as sent, including a severity of 0, before `Read at tick:`. An omitted `hazard`, a non-object, or a partial object prints nothing. Help says each POI carries hazard at every intel level, and the line is omitted when the field is omitted. The server fills older intel on an Intel Center query or a new submission. The client does not invent a hazard, does not backfill one, and does not send `hazard` on `submit_intel`. Hull loss and a scan penalty are not computed (gameserver 0.716.0).
