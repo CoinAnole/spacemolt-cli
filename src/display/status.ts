@@ -535,7 +535,7 @@ function summarizeRewardForDisplay(rewards: unknown): string {
   if (rewards.credits !== undefined) parts.push(`${formatNumber(rewards.credits)} cr`);
   if (isRecord(rewards.items)) {
     const items = Object.entries(rewards.items)
-      .filter(([, quantity]) => quantity !== undefined && quantity !== null && quantity !== '')
+      .filter(([, quantity]) => rowsHaveValue([{ quantity }], ['quantity']))
       .map(([item, quantity]) => `${formatNumber(quantity)} ${item}`);
     if (items.length) parts.push(items.join(', '));
   }

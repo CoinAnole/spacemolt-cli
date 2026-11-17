@@ -491,6 +491,21 @@ test('list_ships prints the message line when message is non-empty', () => {
   expect(stdout).toContain('Fleet roster ready');
 });
 
+test('storage_carrier_load prints the carrier-load message', () => {
+  const stdout = renderStructuredResult(
+    'storage_carrier_load',
+    {
+      action: 'deposit',
+      item_id: 'ship-1',
+      message: 'Bay clear.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('Bay clear.');
+});
+
 function renderShip(fixture: Record<string, unknown>) {
   return renderStructuredResult('get_ship', structuredClone(fixture), options, context);
 }
@@ -1323,6 +1338,20 @@ test('get_wrecks json passes carrion through without a Carrion label', () => {
 function renderSellWreck(fixture: Record<string, unknown>) {
   return renderStructuredResult('sell_wreck', structuredClone(fixture), options, context);
 }
+
+test('load_ship_into_carrier_bay prints the carrier bay header', () => {
+  const stdout = renderStructuredResult(
+    'storage_carrier_load',
+    {
+      action: 'load_ship_into_carrier_bay',
+      item_id: 'ship-1',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== Load Ship Into Carrier Bay ===');
+});
 
 test('sell_wreck prints Offer and Paid when they match', () => {
   const stdout = renderSellWreck(sellWreckFixture).stdout.join('\n');

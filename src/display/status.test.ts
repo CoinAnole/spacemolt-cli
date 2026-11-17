@@ -8537,6 +8537,23 @@ test('view_completed_mission string dialog prints the dialog line', () => {
   expect(stdout).toContain('Dialog: Come back anytime.');
 });
 
+test('decline_mission template-id header prints the template id when title is omitted', () => {
+  const stdout = renderStatusTable('decline_mission', {
+    template_id: 'pirate_sweep',
+    message: 'Perhaps another time, captain.',
+  });
+  expect(stdout).toContain('=== Mission Declined: pirate_sweep ===');
+});
+
+test('decline_mission empty message omits the Mission Declined banner', () => {
+  const stdout = renderStatusTable('decline_mission', {
+    template_id: 'pirate_sweep',
+    title: 'Pirate Sweep',
+    message: '',
+  });
+  expect(stdout).not.toContain('=== Mission Declined:');
+});
+
 test('view_completed_mission giver label and id prints title, name, and id', () => {
   const stdout = renderStatusTable('view_completed_mission', {
     title: 'Done',

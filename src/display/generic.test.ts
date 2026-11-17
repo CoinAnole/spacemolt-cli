@@ -4408,6 +4408,23 @@ test('recycle job_id prints Recycle Queued', () => {
   expect(stdout).toContain('=== Recycle Queued ===');
 });
 
+test('recycle jobs array prints Recycle Queue', () => {
+  const rendered = renderStructuredResult(
+    'recycle',
+    {
+      details: {
+        jobs: [{ recipe: 'Recycle Power Cell' }],
+      },
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recycle Queue ===');
+});
+
 test('renders package pack job with action package label and eta', () => {
   const rendered = renderStructuredResult(
     'craft',

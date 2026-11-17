@@ -133,3 +133,6 @@
 {"op":"drop","family":"test","file":"src/display/status.test.ts","line":6714,"quote":"test('get_state prints Ship: (none) when ship and riding are absent', () => {"}
 {"op":"drop","family":"comment","file":"src/display/generic.ts","line":75,"quote":"// A blank counting-base string adds nothing. A non-blank string is printed as sent."}
 {"op":"drop","family":"presence","file":"src/display/status.ts","line":327,"quote":"value.title === undefined || value.title === null || value.title === '' ? undefined : String(value.title);"}
+{"family":"comment","file":"src/display/generic.ts","line":81,"quote":"// Appended after the target slot. Neither string is labeled as an id."}
+{"family":"test","file":"src/display/helpers.resource-workability.test.ts","line":97,"quote":"withDisplayRenderBuffer(buffer, () => emitResourceInfoLines([{ resource_id: 'ore_iron' }]), { plain: true });"}
+{"family":"test","file":"src/storage-view-display.test.ts","line":79,"quote":"test('pooled faction hint keeps the faction label and bunker suffix', () => {"}

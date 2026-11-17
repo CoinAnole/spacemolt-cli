@@ -770,24 +770,6 @@ function emitCraftRentalDetails(result: Record<string, unknown>): void {
   }
 }
 
-function craftJobRows(
-  jobs: Array<Record<string, unknown>>,
-  result: Record<string, unknown>,
-): Array<Record<string, unknown>> {
-  return jobs.map((job) => ({
-    ...job,
-    station_display:
-      formatCraftStation(job) ?? stationFromWorkshopFacilityId(job.facility_id) ?? formatCraftStation(result),
-    runs_display:
-      job.runs_total === undefined
-        ? undefined
-        : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
-    output_display: summarizeNamedItemQuantities(job.produces),
-    rental_display: craftRentalDisplay(job),
-    escrow_display: formatCreditsAmount(craftEscrowCredits(job)),
-  }));
-}
-
 function isStationTarget(value: unknown): boolean {
   return typeof value === 'string' && value.trim().toLowerCase().startsWith('station:');
 }
@@ -1292,7 +1274,18 @@ export const genericFormatters = [
 
       const jobs = firstArray(r, ['jobs']);
       if (jobs) {
-        const rows = craftJobRows(jobs, r);
+        const rows = jobs.map((job) => ({
+          ...job,
+          station_display:
+            formatCraftStation(job) ?? stationFromWorkshopFacilityId(job.facility_id) ?? formatCraftStation(r),
+          runs_display:
+            job.runs_total === undefined
+              ? undefined
+              : `${job.runs_done ?? 0}/${job.runs_total} (${job.runs_remaining ?? 0} left)`,
+          output_display: summarizeNamedItemQuantities(job.produces),
+          rental_display: craftRentalDisplay(job),
+          escrow_display: formatCreditsAmount(craftEscrowCredits(job)),
+        }));
         const columns: Array<[string, string[]]> = [
           ['Job', ['job_id']],
           ['Recipe', ['recipe']],

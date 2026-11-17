@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { rawColors } from './ansi.ts';
 import {
+  emitCreditBalance,
   emitStationDefences,
   emitStationFuelPricing,
   emitStationIds,
@@ -590,5 +591,14 @@ describe('emitStationPower', () => {
     const printed = withDisplayRenderBuffer(buffer, () => emitStationPower({ remediation: '  ' }), { plain: true });
     expect(printed).toBe(false);
     expect(buffer.stdout.join('\n')).not.toContain('Power:');
+  });
+});
+
+describe('emitCreditBalance', () => {
+  test('emitCreditBalance omits an empty credits string', () => {
+    const buffer = { stdout: [] as string[], stderr: [] as string[] };
+    const printed = withDisplayRenderBuffer(buffer, () => emitCreditBalance({ credits: '' }), { plain: true });
+    expect(printed).toBe(false);
+    expect(buffer.stdout.join('\n')).toBe('');
   });
 });

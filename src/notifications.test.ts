@@ -10617,6 +10617,15 @@ describe('notification formatting', () => {
       ).toContain('combat drone was destroyed! (ID: drone_1)');
     });
 
+    test('drone_update with damage omitted', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'drone_update',
+          data: { drone_type: 'combat', target_id: 'pirate' },
+        }).headline,
+      ).toBe('Your combat drone dealt 0 damage to pirate');
+    });
+
     test('pilotless_ship and reconnected use details for secondary lines', () => {
       const pilotless = formatNotificationPreview({
         msg_type: 'pilotless_ship',
@@ -10703,6 +10712,15 @@ describe('notification formatting', () => {
       ).toBe('Server version: 0');
     });
 
+    test('version_info with omitted version', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'version_info',
+          data: {},
+        }).headline,
+      ).toBe('Server version: unknown');
+    });
+
     test('queue_cleared without a reason', () => {
       expect(
         formatNotificationPreview({
@@ -10710,6 +10728,15 @@ describe('notification formatting', () => {
           data: {},
         }).headline,
       ).toBe('Action queue cleared');
+    });
+
+    test('queue_cleared reason 0', () => {
+      expect(
+        formatNotificationPreview({
+          msg_type: 'queue_cleared',
+          data: { reason: 0 },
+        }).headline,
+      ).toBe('Action queue cleared: 0');
     });
 
     test('inline layout-only: remainder types render via pure preview (no writeLine registry)', () => {
