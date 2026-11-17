@@ -39,8 +39,11 @@ let meta = #{
 // {"op":"drop","family","file","line","quote"}. This workflow still appends
 // only the four-key row.
 // Rejected sites are handed off before Clean, including when apply is false.
-// An editor refusal is the same four-key row in scratch/refusals.json when apply
-// is true. apply false, "false", "no", and "report" write no refusal file.
+// An editor refusal is the same four-key keep row. When apply is true and
+// ledger_note returns a new row, GATE append-refusals runs after Check.
+// scratch/refusals.json is the keep request that gate consumes. It is not a
+// file for an operator to append later. apply false, "false", "no", and
+// "report" clear refusals and write no refusal file.
 // A test rejection or refusal whose reason says the branch is still unlocked
 // is not written.
 // A comment that names a command, payload, or caller the following code does
@@ -592,7 +595,7 @@ fn ledger_note(entries, file, family, line_no, quote) {
     return #{ entries: next, row: row };
 }
 
-fn parse_keep_slot(text) {
+fn parse_keep_slot(text, expected_op) {
     let bad = #{ ok: false, file_bytes: -1, file_sum: -1, file_sha256: "", active_count: -1, appended: -1 };
     if type_of(text) != "string" {
         return bad;
@@ -612,7 +615,7 @@ fn parse_keep_slot(text) {
         values.push(field.value);
         i += 1;
     }
-    if values[0] != "append-rejections" || values[1] != "keep" || parse_u32(values[2]) != 0 {
+    if values[0] != expected_op || values[1] != "keep" || parse_u32(values[2]) != 0 {
         return bad;
     }
     let file_bytes = parse_u32(values[3]);
@@ -1675,7 +1678,7 @@ if reject_rows.len() > 0 {
     write_scratch_file("append-rejections.result", "PENDING\n");
     await_user("verification", "GATE append-rejections. Program: .grok/review_pattern_ledger.py plan, then append, then read. Request: scratch/append-rejections.json. Result slot: scratch/append-rejections.result (now PENDING). From the repository root, run python3 .grok/review_pattern_ledger.py. Do not retype the ledger. Do not edit .grok/review-pattern-ledger.jsonl by hand. Writer stdout is not evidence. Run plan with the request on stdin. If plan exits 3, do not append and do not resume. Run append with the same stdin. If append exits with anything other than 0, do not resume. If append exits 4, the file may be partial; do not truncate it. Resume only if append exits 0 and a following read shows ok true, file_sha256 equal to plan next_file_sha256, and active_count equal to plan next_active_count. Replace the result slot with the eight-line payload from that read, then resume this run. MODE keep.");
     let reject_slot = read_scratch_file("append-rejections.result");
-    let reject_parsed = parse_keep_slot(reject_slot);
+    let reject_parsed = parse_keep_slot(reject_slot, "append-rejections");
     if reject_parsed.ok != true || reject_parsed.active_count != ledger.len() {
         pause("verification", "GATE append-rejections was not accepted. Stop this run and start a new one. Do not edit.");
     }
@@ -2025,7 +2028,7 @@ for item in refused_items {
 }
 let refusal_count = refusal_rows.len();
 let refusals_path = ();
-if refusal_count > 0 {
+if do_apply && refusal_count > 0 {
     let refusal_request = #{
         mode: "keep",
         expect_bytes: ledger_file_bytes,
@@ -2034,6 +2037,20 @@ if refusal_count > 0 {
         rows: refusal_rows,
     };
     refusals_path = write_scratch_file("refusals.json", json_encode(refusal_request));
+    write_scratch_file("refusals.result", "PENDING\n");
+    await_user("verification", "GATE append-refusals. Program: .grok/review_pattern_ledger.py plan, then append, then read. Request: scratch/refusals.json. Result slot: scratch/refusals.result (now PENDING). From the repository root, run python3 .grok/review_pattern_ledger.py. Do not retype the ledger. Do not edit .grok/review-pattern-ledger.jsonl by hand. Writer stdout is not evidence. Run plan with the request on stdin. If plan exits 3, do not append and do not resume. Run append with the same stdin. If append exits with anything other than 0, do not resume. If append exits 4, the file may be partial; do not truncate it. Resume only if append exits 0 and a following read shows ok true, file_sha256 equal to plan next_file_sha256, and active_count equal to plan next_active_count. Replace the result slot with this eight-line payload from that read, one trailing newline, no extra blank line, then resume this run. MODE keep. OP append-refusals.\nOP append-refusals\nMODE keep\nEXIT 0\nFILE_BYTES <read.file_bytes>\nFILE_SUM <read.file_sum>\nFILE_SHA256 <read.file_sha256>\nACTIVE_COUNT <read.active_count>\nAPPENDED <row count, or 0 when plan.already>\n");
+    let refusal_slot = read_scratch_file("refusals.result");
+    let refusal_parsed = parse_keep_slot(refusal_slot, "append-refusals");
+    if refusal_parsed.ok != true || refusal_parsed.active_count != ledger.len() {
+        pause("verification", "GATE append-refusals was not accepted. Stop this run and start a new one. Resume does not retry a bad slot. Do not edit.");
+    }
+    log("APPENDED " + refusal_parsed.appended.to_string());
+    ledger_file_bytes = refusal_parsed.file_bytes;
+    ledger_file_sum = refusal_parsed.file_sum;
+    ledger_file_sha256 = refusal_parsed.file_sha256;
+    ledger_count = refusal_parsed.active_count;
+    ledger_wrote = true;
+    log("Ledger now has " + ledger_count.to_string() + " site(s), " + refusal_rows.len().to_string() + " new.");
 }
 let run_golden = false;
 if do_apply {
@@ -2069,14 +2086,14 @@ if incomplete_sample.len() > 0 {
     report += "Incomplete sample: " + join_ids(incomplete_sample) + "\n";
 }
 report += "Ledger entries loaded: " + ledger_loaded.to_string() + "\n";
-report += "Ledger entries added: " + reject_rows.len().to_string() + "\n";
+report += "Ledger entries added: " + (reject_rows.len() + refusal_rows.len()).to_string() + "\n";
 if ledger_wrote {
     report += "Ledger write: saved\n";
 } else {
     report += "Ledger write: unchanged\n";
 }
 if refusal_count > 0 {
-    report += "Refusals: scratch/refusals.json\n";
+    report += "Refusals: saved\n";
 } else {
     report += "Refusals: none\n";
 }
