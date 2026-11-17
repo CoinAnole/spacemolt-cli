@@ -520,26 +520,16 @@ def diff_header(ok: bool, paths: list[str]) -> list[str]:
     return lines
 
 
-def diff_text(ok: bool, paths: list[str]) -> bytes:
-    return ("\n".join(diff_header(ok, paths)) + "\n").encode()
-
-
 def command_diff(root: str) -> None:
     found = git_name_lists(root)
     if found is None:
         finish(1, "spawn")
     ok, paths = found
-    finish(0, "", diff_text(ok, paths))
+    finish(0, "", ("\n".join(diff_header(ok, paths)) + "\n").encode())
 
 
 def unique_paths(paths: list[str]) -> list[str]:
-    found: list[str] = []
-    seen: set[str] = set()
-    for path in paths:
-        if path not in seen:
-            seen.add(path)
-            found.append(path)
-    return found
+    return list(dict.fromkeys(paths))
 
 
 def added_files(before: list[str], after: list[str]) -> list[str]:
@@ -562,22 +552,11 @@ def select_files(
 ) -> list[str]:
     if op == "check":
         if baseline_succeeded and after_ok:
-            files = added_files(baseline_files, after_files)
-            for path in edited:
-                if editable(path) and path in after_files and path not in files:
-                    files.append(path)
-            return files
-        found: list[str] = []
-        for path in edited:
-            if editable(path) and path not in found:
-                found.append(path)
-        return found
-    files = unique_paths(check_files)
-    if baseline_succeeded and after_ok:
-        for path in added_files(baseline_files, after_files):
-            if path not in files:
-                files.append(path)
-    return files
+            edited_hit = [path for path in edited if editable(path) and path in after_files]
+            return unique_paths([*added_files(baseline_files, after_files), *edited_hit])
+        return [path for path in unique_paths(edited) if editable(path)]
+    extra = added_files(baseline_files, after_files) if baseline_succeeded and after_ok else []
+    return unique_paths([*check_files, *extra])
 
 
 def string_list(value: Any) -> list[str] | None:
@@ -756,12 +735,6 @@ def read_stdin_json() -> Any:
         finish(2, "invalid", INVALID)
 
 
-def resolve_under(cwd: str, path: str) -> str:
-    if os.path.isabs(path):
-        return path
-    return os.path.join(cwd, path)
-
-
 def main(argv: list[str]) -> None:
     if not argv or argv[0] not in COMMANDS:
         finish(1, "usage")
@@ -784,12 +757,12 @@ def main(argv: list[str]) -> None:
             root = value
         index += 2
     cwd = os.getcwd()
-    root_dir = resolve_under(cwd, root) if root is not None else cwd
+    root_dir = os.path.join(cwd, root) if root is not None else cwd
     if ledger is None:
         path = os.path.join(cwd, ".grok", "review-pattern-ledger.jsonl")
         explicit = False
     else:
-        path = resolve_under(cwd, ledger)
+        path = os.path.join(cwd, ledger)
         explicit = True
     if command == "read":
         command_read(path, explicit, root_dir)
