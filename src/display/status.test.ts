@@ -4314,6 +4314,7 @@ test('get_map system detail prints labeled chart fields including Description', 
   expect(stdout).toContain('  - sol');
   expect(stdout).toContain('  - barnards_star');
   expect(stdout).not.toContain('Stronghold');
+  expect(stdout).not.toContain('Gate connections');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
@@ -4461,6 +4462,7 @@ test('get_map list without descriptions stays a Name/System ID table', () => {
   expect(stdout).toContain('alpha_centauri');
   expect(stdout).toContain('total 2');
   expect(stdout).not.toContain('Chart descriptions');
+  expect(stdout).not.toContain('Gate connections');
   expect(stdout).not.toContain('Description:');
   expect(stdout).not.toContain('=== Response ===');
 });
@@ -4568,6 +4570,161 @@ test('get_map list ignores empty-string and whitespace descriptions when filteri
   expect(chartSection).toContain('Veiled Reach');
   expect(chartSection).not.toContain('sol');
   expect(chartSection).not.toContain('Blank Lane');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map system detail prints kept gate connections after Connections', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      ...getMapSystemFixture,
+      frontier_tier: 2,
+      connections: ['sol', 'barnards_star'],
+      gate_connections: [
+        'nope',
+        null,
+        ['sol'],
+        { system_id: '   ' },
+        { system_id: 12, online: false },
+        { online: true },
+        { system_id: 'deep_1', online: false },
+        { system_id: 'sol', online: true },
+        { system_id: '  veil  ' },
+        { system_id: 'barnards_star', online: 'no' },
+        { system_id: 'alpha', online: 0 },
+        { system_id: 'beta', online: null },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const gatesAt = stdout.indexOf('Gate connections:');
+  const connectionsBlock = stdout.slice(stdout.indexOf('Connections:'), gatesAt);
+  expect(connectionsBlock).toBe('Connections:\n  - sol\n  - barnards_star\n\n');
+  expect(stdout).toContain('Frontier tier: 2');
+  expect(stdout).toContain('Online: 0');
+  expect(stdout.indexOf('Frontier tier: 2')).toBeLessThan(gatesAt);
+  const gatePart = stdout.slice(gatesAt);
+  expect(gatePart).toContain('  - deep_1 no\n  - sol yes\n  -   veil  \n  - barnards_star\n  - alpha\n  - beta');
+  expect(gatePart).not.toMatch(/barnards_star (yes|no)/);
+  expect(gatePart).not.toMatch(/alpha (yes|no)/);
+  expect(gatePart).not.toMatch(/beta (yes|no)/);
+  expect(stdout).not.toContain('  - nope');
+  expect(stdout).not.toContain('toll');
+  expect(stdout).not.toContain('Toll');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map system detail omits Gate connections when none are kept', () => {
+  const cases: Array<Record<string, unknown>> = [
+    { ...getMapSystemFixture, connections: ['sol'], gate_connections: [] },
+    { ...getMapSystemFixture, connections: ['sol'], gate_connections: { system_id: 'deep_1', online: false } },
+    {
+      ...getMapSystemFixture,
+      connections: ['sol'],
+      gate_connections: [null, 1, 'deep_1', { system_id: '  \n' }, { system_id: '' }, { online: false }],
+    },
+  ];
+  const omitted: Record<string, unknown> = { ...getMapSystemFixture, connections: ['sol'] };
+  delete omitted.gate_connections;
+  cases.push(omitted);
+
+  for (const fixture of cases) {
+    const stdout = renderStructuredResult('get_map', fixture, options, context).stdout.join('\n');
+    expect(stdout).toContain('Connections:');
+    expect(stdout).toContain('  - sol');
+    expect(stdout).not.toContain('Gate connections');
+    expect(stdout).not.toContain('deep_1');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('get_map system detail prints an offline gate when Connections is empty', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    { ...getMapSystemFixture, connections: [], gate_connections: [{ system_id: 'deep_1', online: false }] },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  expect(stdout).toContain('=== System: Veiled Reach ===');
+  expect(stdout).not.toContain('Connections:');
+  expect(stdout).toContain('Gate connections:');
+  expect(stdout).toContain('  - deep_1 no');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('get_map list prints a Gate connections table for kept links only', () => {
+  const stdout = renderStructuredResult(
+    'get_map',
+    {
+      systems: [
+        { system_id: 'sol', name: 'Sol', connections: ['alpha'], frontier_tier: 1 },
+        {
+          system_id: 'veil_2',
+          name: 'Veil Two',
+          frontier_tier: 2,
+          connections: ['sol'],
+          gate_connections: [{ system_id: 'deep_1', online: false }],
+        },
+        { system_id: 'bad', name: 'Bad Links', gate_connections: [null, { system_id: '' }, { online: true }] },
+        {
+          system_id: 'alpha',
+          name: 'Alpha',
+          gate_connections: [
+            { system_id: 'sol', online: true },
+            { system_id: 'barnards_star' },
+            { system_id: 'nope', online: 'yes' },
+            'lane',
+          ],
+        },
+      ],
+      total_count: 4,
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+
+  const gatesAt = stdout.indexOf('=== Gate connections ===');
+  expect(gatesAt).toBeGreaterThan(-1);
+  const systemsPart = stdout.slice(0, gatesAt);
+  expect(systemsPart).toContain('=== Systems ===');
+  expect(systemsPart).toContain('Sol');
+  expect(systemsPart).toContain('Veil Two');
+  expect(systemsPart).toContain('veil_2');
+  expect(systemsPart).toContain('Bad Links');
+  expect(systemsPart).toContain('Alpha');
+  expect(systemsPart).toContain('alpha');
+  expect(stdout.indexOf('total 4')).toBeGreaterThan(-1);
+  expect(stdout.indexOf('total 4')).toBeLessThan(gatesAt);
+  expect(systemsPart).not.toContain('deep_1');
+  expect(systemsPart).not.toContain('Far system');
+  expect(systemsPart).not.toContain('Online');
+  expect(systemsPart).not.toContain('Frontier tier:');
+  expect(systemsPart).not.toContain('near');
+  expect(systemsPart).not.toContain('deep');
+
+  const gatePart = stdout.slice(gatesAt);
+  expect(gatePart).toContain('Name');
+  expect(gatePart).toContain('System ID');
+  expect(gatePart).toContain('Far system ID');
+  expect(gatePart).toContain('Online');
+  expect(gatePart).toContain('Veil Two');
+  expect(gatePart).toContain('veil_2');
+  expect(gatePart).toMatch(/deep_1\s+\|\s+no\s*$/m);
+  expect(gatePart).toContain('Alpha');
+  expect(gatePart).toMatch(/\bsol\s+\|\s+yes\s*$/m);
+  expect(gatePart).toMatch(/barnards_star\s+\|\s*$/m);
+  expect(gatePart).toMatch(/nope\s+\|\s*$/m);
+  expect(gatePart).not.toMatch(/nope\s+\|\s+yes/);
+  expect(gatePart).not.toContain('Bad Links');
+  expect(gatePart).not.toContain('Sol');
+  expect(gatePart).not.toContain('lane');
+  expect(gatePart).not.toContain('false');
+  expect(gatePart).not.toContain('true');
+  expect(gatePart).not.toContain('toll');
+  expect(gatePart).not.toContain('Chart descriptions');
   expect(stdout).not.toContain('=== Response ===');
 });
 

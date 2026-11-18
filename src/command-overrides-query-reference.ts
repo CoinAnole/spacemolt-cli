@@ -172,7 +172,7 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_map: {
     usage: '[system_id]  (omit for all systems)',
     description:
-      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
+      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description. gate_connections lists player-built jump gates and their online state; an online gate is also in connections; an offline gate is not. The client does not decide that a cluster is public, does not hide an offline gate, and does not invent a toll.",
     example: 'spacemolt get_map; spacemolt get_map sol',
     seeAlso: ['get_system', 'search_systems', 'find_route', 'get_location'],
     category: 'Query commands',

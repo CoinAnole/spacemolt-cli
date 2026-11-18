@@ -680,6 +680,48 @@ function formatGalacticPosition(value: unknown): string | undefined {
   return `(${value.x}, ${value.y})`;
 }
 
+type MapGateLinkLine = { system_id: string; online: 'yes' | 'no' | undefined };
+
+/** Kept player-built gates. A non-object or blank system_id is skipped. online is yes or no only when boolean, including false. */
+function keptMapGateLinks(value: unknown): MapGateLinkLine[] {
+  if (!Array.isArray(value)) return [];
+  const links: MapGateLinkLine[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const systemId = entry.system_id;
+    if (typeof systemId !== 'string' || systemId.trim() === '') continue;
+    links.push({
+      system_id: systemId,
+      online: entry.online === true ? 'yes' : entry.online === false ? 'no' : undefined,
+    });
+  }
+  return links;
+}
+
+function emitMapGateConnections(value: unknown): void {
+  const links = keptMapGateLinks(value);
+  if (links.length === 0) return;
+  emitLine(`\n${c.bright}Gate connections:${c.reset}`);
+  for (const link of links) {
+    emitLine(`  - ${link.system_id}${link.online === undefined ? '' : ` ${link.online}`}`);
+  }
+}
+
+function mapGateConnectionRows(systems: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  for (const system of systems) {
+    for (const link of keptMapGateLinks(system.gate_connections)) {
+      rows.push({
+        name: system.name,
+        system_id: system.system_id,
+        far_system_id: link.system_id,
+        online_display: link.online ?? '',
+      });
+    }
+  }
+  return rows;
+}
+
 /** Finite `frontier_tier` as sent, including 0. An omitted or non-numeric key prints nothing. */
 function emitFrontierTier(value: unknown, options?: { color?: boolean }): void {
   if (typeof value !== 'number' || !Number.isFinite(value)) return;
@@ -709,6 +751,7 @@ function emitMapSystemInfo(result: Record<string, unknown>): void {
     emitLine(`\n${c.bright}Connections:${c.reset}`);
     for (const connection of connections) emitLine(`  - ${connection}`);
   }
+  emitMapGateConnections(result.gate_connections);
 }
 
 function emitRemoteScanTargetLine(result: Record<string, unknown>): void {
@@ -1782,6 +1825,15 @@ export const statusFormatters = [
           ['System ID', ['system_id']],
         ]);
         if (r.total_count !== undefined) emitLine(`${c.dim}total ${r.total_count}${c.reset}`);
+        const gateRows = mapGateConnectionRows(rows);
+        if (gateRows.length) {
+          printCompactTable('Gate connections', gateRows, [
+            ['Name', ['name']],
+            ['System ID', ['system_id']],
+            ['Far system ID', ['far_system_id']],
+            ['Online', ['online_display']],
+          ]);
+        }
         const chartRows = rows.flatMap((row) => {
           const description = chartDescription(row.description);
           return description ? [{ ...row, description }] : [];

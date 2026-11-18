@@ -2314,6 +2314,12 @@ describe('help output branches', () => {
     expect(output).toContain('omit for all systems');
     expect(output).not.toContain('<args...>');
     expect(output).toContain('spacemolt get_map sol');
+    expect(output).toContain('gate_connections lists player-built jump gates and their online state');
+    expect(output).toContain('an online gate is also in connections');
+    expect(output).toContain('an offline gate is not');
+    expect(output).toContain('does not decide that a cluster is public');
+    expect(output).toContain('does not hide an offline gate');
+    expect(output).toContain('does not invent a toll');
     expect(output).not.toContain('`');
   });
 

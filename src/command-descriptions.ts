@@ -128,7 +128,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   get_drone: 'Get full details for a specific drone, including script and memory.',
   get_insurance_quote: 'Get a risk-based insurance quote for your current ship',
   get_map:
-    "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
+    "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description. gate_connections lists player-built jump gates and their online state; an online gate is also in connections; an offline gate is not. The client does not decide that a cluster is public, does not hide an offline gate, and does not invent a toll.",
   get_missions: 'Get available missions at your current station, including the server-issued description.',
   get_nearby: 'Show visible nearby players, NPCs, creatures, and intact prizes',
   get_notes: 'List all your note documents',

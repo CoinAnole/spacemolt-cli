@@ -6084,7 +6084,7 @@ describe('command metadata', () => {
     expect(config.usage).toBe('[system_id]  (omit for all systems)');
     expect(config.usage).not.toContain(config.description);
     expect(config.description).toBe(
-      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description.",
+      "View the galaxy chart: all systems, or one system's coordinates, connections, visit state, and chart description. gate_connections lists player-built jump gates and their online state; an online gate is also in connections; an offline gate is not. The client does not decide that a cluster is public, does not hide an offline gate, and does not invent a toll.",
     );
     expect(CURATED_COMMAND_DESCRIPTIONS.get_map).toBe(config.description);
     expect(config.example).toBe('spacemolt get_map; spacemolt get_map sol');
@@ -6096,6 +6096,12 @@ describe('command metadata', () => {
     expect(help).toContain('omit for all systems');
     expect(help).not.toContain('<args...>');
     expect(help).toContain('spacemolt get_map sol');
+    expect(help).toContain('gate_connections lists player-built jump gates and their online state');
+    expect(help).toContain('an online gate is also in connections');
+    expect(help).toContain('an offline gate is not');
+    expect(help).toContain('does not decide that a cluster is public');
+    expect(help).toContain('does not hide an offline gate');
+    expect(help).toContain('does not invent a toll');
     expect(help).not.toContain('`');
   });
 
