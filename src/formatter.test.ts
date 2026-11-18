@@ -12447,11 +12447,11 @@ describe('structuredContent formatters', () => {
 
       === Route ===
 
-        System         | ID             | Jumps | Wormhole | Entrance
-        ---------------+----------------+-------+----------+-------------------
-        Sol            | sol            | 0     |          |
-        Alpha Centauri | alpha_centauri | 1     | yes      | sol_wormhole_alpha
-        Tau Ceti       | tau_ceti       | 2     |          |
+        System         | ID             | Jumps | Wormhole | Entrance           | Gate
+        ---------------+----------------+-------+----------+--------------------+-----
+        Sol            | sol            | 0     |          |                    |
+        Alpha Centauri | alpha_centauri | 1     | yes      | sol_wormhole_alpha |
+        Tau Ceti       | tau_ceti       | 2     |          |                    |
 
       === Fleet Fuel ===
 

@@ -1,6 +1,7 @@
 import {
   c,
   emitLine,
+  formatFiniteNumberAsSent,
   formatIntegerText,
   isRecord,
   namedFormatter,
@@ -29,6 +30,7 @@ const ROUTE_COLUMNS: Array<[string, string[]]> = [
   ['Jumps', ['jumps']],
   ['Wormhole', ['wormhole']],
   ['Entrance', ['entrance']],
+  ['Gate', ['gate']],
 ];
 
 const FLEET_COLUMNS: Array<[string, string[]]> = [
@@ -115,9 +117,20 @@ function entranceCell(step: Record<string, unknown>): string {
   return stringCell(step.entrance_poi, '');
 }
 
+function tollCell(step: Record<string, unknown>): string {
+  if (!Object.hasOwn(step, 'gate_toll') || step.gate_toll === undefined) return '';
+  return formatFiniteNumberAsSent(step.gate_toll) ?? '(invalid)';
+}
+
+function routeColumns(route: unknown[]): Array<[string, string[]]> {
+  const showToll = route.some((step) => isRecord(step) && formatFiniteNumberAsSent(step.gate_toll) !== undefined);
+  if (!showToll) return ROUTE_COLUMNS;
+  return [...ROUTE_COLUMNS, ['Toll', ['toll']]];
+}
+
 function projectStep(value: unknown): Record<string, unknown> {
   if (!isRecord(value)) {
-    return { system: '(invalid)', id: '', jumps: '', wormhole: '', entrance: '' };
+    return { system: '(invalid)', id: '', jumps: '', wormhole: '', entrance: '', gate: '', toll: '' };
   }
   return {
     system: stringCell(value.name, ''),
@@ -125,6 +138,8 @@ function projectStep(value: unknown): Record<string, unknown> {
     jumps: integerCell(value.jumps),
     wormhole: yesNoCell(value, 'via_wormhole'),
     entrance: entranceCell(value),
+    gate: yesNoCell(value, 'via_gate'),
+    toll: tollCell(value),
   };
 }
 
@@ -187,7 +202,7 @@ function emitHop(result: Record<string, unknown>, status: RouteStatus): void {
     return;
   }
   if (route.length > 0 && (status === 'found' || status === '(invalid)')) {
-    printCompactTable('Route', route.map(projectStep), ROUTE_COLUMNS, { maxCellWidth: 64 });
+    printCompactTable('Route', route.map(projectStep), routeColumns(route), { maxCellWidth: 64 });
     const first = route[0];
     if (isRecord(first) && first.via_wormhole === true) {
       emitLine('Wormhole on the first step has no previous system.');

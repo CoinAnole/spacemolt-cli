@@ -952,6 +952,11 @@ describe('command metadata', () => {
     expect(COMMANDS.find_route?.description).toContain('fuel_per_jump times total_jumps');
     expect(COMMANDS.find_route?.description).toContain('fuel_on_arrival');
     expect(COMMANDS.find_route?.description).toContain('including yours');
+    expect(COMMANDS.find_route?.description).toContain('via_gate true');
+    expect(COMMANDS.find_route?.description).toContain('gate_toll when the hop is not free');
+    expect(COMMANDS.find_route?.description).toContain("normal jump to that step's system");
+    expect(COMMANDS.find_route?.description).toContain('does not check gate access');
+    expect(COMMANDS.find_route?.description).toContain('does not pay the toll');
     expect(COMMANDS.find_route?.description).toBe(CURATED_COMMAND_DESCRIPTIONS.find_route);
     expect(COMMANDS.cloak?.description).toContain('in_battle');
     expect(COMMANDS.cloak?.description).toContain('Attacking, engaging, or a fleet pull into a battle');

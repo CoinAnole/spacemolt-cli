@@ -88,6 +88,14 @@ function cells(line: string): string[] {
   return line.split('|').map((cell) => cell.trim());
 }
 
+function tableHeader(stdout: string, heading: string): string[] {
+  const line = section(stdout, heading)
+    .split('\n')
+    .find((entry) => entry.includes('|') && !entry.includes('-+-'));
+  if (!line) throw new Error(`missing header under ${heading}`);
+  return cells(line);
+}
+
 function cloneRoute(steps: Array<Record<string, unknown>>): Record<string, unknown> {
   const fixture = structuredClone(findRouteHighValueFixture);
   fixture.route = steps;
@@ -345,6 +353,152 @@ describe('find_route formatter', () => {
       }),
     );
     expect(cells(rowByText(stdout, 'Route', 'Sol'))[3]).toBe('(invalid)');
+  });
+
+  test('prints Gate with the same yes, no, blank, and invalid rules as Wormhole', () => {
+    const omitted = stdoutOf(findRouteHighValueFixture);
+    expect(tableHeader(omitted, 'Route')).toEqual(['System', 'ID', 'Jumps', 'Wormhole', 'Entrance', 'Gate']);
+    expect(cells(rowByText(omitted, 'Route', 'Alpha Centauri'))[5]).toBe('');
+    expect(section(omitted, 'Route')).not.toContain('Toll');
+
+    const no = stdoutOf(
+      cloneRoute([
+        { system_id: 'sol', name: 'Sol', jumps: 0, via_gate: false },
+        { system_id: 'alpha_centauri', name: 'Alpha Centauri', jumps: 1, via_wormhole: false, via_gate: false },
+      ]),
+    );
+    const noRow = cells(rowByText(no, 'Route', 'Alpha Centauri'));
+    expect(noRow[3]).toBe('no');
+    expect(noRow[5]).toBe('no');
+
+    const yes = stdoutOf(
+      cloneRoute([
+        { system_id: 'sol', name: 'Sol', jumps: 0 },
+        { system_id: 'alpha_centauri', name: 'Alpha Centauri', jumps: 1, via_gate: true },
+      ]),
+    );
+    expect(cells(rowByText(yes, 'Route', 'Sol'))[5]).toBe('');
+    expect(cells(rowByText(yes, 'Route', 'Alpha Centauri'))[5]).toBe('yes');
+
+    const invalid = stdoutOf(
+      foundBody({
+        route: [{ system_id: 'sol', name: 'Sol', jumps: 0, via_gate: 'yes', via_wormhole: 1 }],
+      }),
+    );
+    const invalidRow = cells(rowByText(invalid, 'Route', 'Sol'));
+    expect(invalidRow[3]).toBe('(invalid)');
+    expect(invalidRow[5]).toBe('(invalid)');
+  });
+
+  test('does not warn on a gate in the first step and keeps the wormhole line', () => {
+    const gateOnly = stdoutOf(
+      foundBody({
+        route: [
+          { system_id: 'sol', name: 'Sol', jumps: 0, via_gate: true, gate_toll: 40 },
+          { system_id: 'proxima', name: 'Proxima', jumps: 1 },
+        ],
+        total_jumps: 1,
+        target_system: 'proxima',
+      }),
+    );
+    expect(gateOnly).not.toContain(FIRST_STEP_WARNING);
+    expect(gateOnly).not.toContain('no previous system');
+    expect(cells(rowByText(gateOnly, 'Route', 'Sol'))[5]).toBe('yes');
+    expect(cells(rowByText(gateOnly, 'Route', 'Sol'))[6]).toBe('40');
+
+    const both = stdoutOf(
+      foundBody({
+        route: [
+          {
+            system_id: 'sol',
+            name: 'Sol',
+            jumps: 0,
+            via_wormhole: true,
+            entrance_poi: 'unexpected_mouth',
+            via_gate: true,
+          },
+        ],
+      }),
+    );
+    expect(both).toContain(FIRST_STEP_WARNING);
+    expect(both.split(FIRST_STEP_WARNING)).toHaveLength(2);
+    expect(both).toContain('unexpected_mouth');
+    expect(cells(rowByText(both, 'Route', 'Sol'))[5]).toBe('yes');
+  });
+
+  test('prints Toll for a finite gate_toll, including 0, and leaves an omitted toll blank', () => {
+    const none = stdoutOf(
+      foundBody({
+        route: [
+          { system_id: 'sol', name: 'Sol', jumps: 0, via_gate: true },
+          { system_id: 'alpha', name: 'Alpha', jumps: 1, via_gate: true, gate_toll: Number.NaN },
+        ],
+        total_jumps: 1,
+        target_system: 'alpha',
+      }),
+    );
+    expect(tableHeader(none, 'Route')).not.toContain('Toll');
+
+    const zero = stdoutOf(
+      foundBody({
+        route: [
+          { system_id: 'sol', name: 'Sol', jumps: 0 },
+          { system_id: 'alpha', name: 'Alpha', jumps: 1, via_gate: true, gate_toll: 0 },
+          { system_id: 'tau', name: 'Tau', jumps: 2, via_gate: true },
+        ],
+        total_jumps: 2,
+        target_system: 'tau',
+        fuel_per_jump: 6,
+        estimated_fuel: 12,
+        fuel_available: 85,
+      }),
+    );
+    expect(tableHeader(zero, 'Route')).toEqual(['System', 'ID', 'Jumps', 'Wormhole', 'Entrance', 'Gate', 'Toll']);
+    expect(cells(rowByText(zero, 'Route', 'Alpha'))[6]).toBe('0');
+    expect(cells(rowByText(zero, 'Route', 'Sol'))[6]).toBe('');
+    expect(cells(rowByText(zero, 'Route', 'Tau'))[6]).toBe('');
+    expect(cells(rowByText(zero, 'Route', 'Tau'))[6]).not.toBe('0');
+    expect(zero.split('\n')).toContain('Estimated fuel: 12');
+    expect(zero.split('\n')).toContain('Fuel per jump: 6');
+    expect(zero.split('\n')).toContain('Fuel available: 85');
+  });
+
+  test('prints a finite gate_toll as sent and a non-finite toll as (invalid) without changing fuel', () => {
+    const stdout = stdoutOf(
+      foundBody({
+        route: [
+          { system_id: 'sol', name: 'Sol', jumps: 0 },
+          { system_id: 'alpha', name: 'Alpha', jumps: 1, via_gate: true, gate_toll: 1500 },
+          { system_id: 'beta', name: 'Beta', jumps: 2, via_gate: true, gate_toll: Number.NaN },
+          { system_id: 'gamma', name: 'Gamma', jumps: 3, gate_toll: '40' },
+          { system_id: 'delta', name: 'Delta', jumps: 4, gate_toll: Number.POSITIVE_INFINITY },
+          { system_id: 'epsilon', name: 'Epsilon', jumps: 5, gate_toll: null },
+          { system_id: 'zeta', name: 'Zeta', jumps: 6, gate_toll: 10n },
+          { system_id: 'eta', name: 'Eta', jumps: 7, gate_toll: -0 },
+        ],
+        total_jumps: 7,
+        target_system: 'eta',
+        fuel_per_jump: 6,
+        estimated_fuel: 24,
+        fuel_available: 85,
+      }),
+    );
+    expect(cells(rowByText(stdout, 'Route', 'Alpha'))[6]).toBe('1500');
+    expect(stdout).not.toContain('1,500');
+    expect(cells(rowByText(stdout, 'Route', 'Beta'))[6]).toBe('(invalid)');
+    expect(cells(rowByText(stdout, 'Route', 'Gamma'))[6]).toBe('(invalid)');
+    expect(cells(rowByText(stdout, 'Route', 'Delta'))[6]).toBe('(invalid)');
+    expect(cells(rowByText(stdout, 'Route', 'Epsilon'))[6]).toBe('(invalid)');
+    expect(cells(rowByText(stdout, 'Route', 'Zeta'))[6]).toBe('(invalid)');
+    expect(cells(rowByText(stdout, 'Route', 'Eta'))[6]).toBe('0');
+    expect(cells(rowByText(stdout, 'Route', 'Sol'))[6]).toBe('');
+    expect(stdout.split('\n')).toContain('Estimated fuel: 24');
+    expect(stdout.split('\n')).toContain('Fuel per jump: 6');
+    expect(stdout.split('\n')).toContain('Fuel available: 85');
+    expect(stdout).not.toContain('1524');
+    expect(stdout).not.toContain('Credits');
+    expect(stdout).not.toContain('balance');
+    expect(stdout).not.toContain(FIRST_STEP_WARNING);
   });
 
   test('prints the documented missing route as not found with Steps: 0 and no hop table', () => {
