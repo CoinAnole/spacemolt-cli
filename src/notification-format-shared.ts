@@ -1818,6 +1818,7 @@ function previewExchangeFill(
   const total = formatCreditsAmount(data.total);
   const baseId = firstLine(nonEmptyString(data.base_id) ?? '');
   const orderId = firstLine(nonEmptyString(data.order_id) ?? '');
+  const counterparty = firstLine(nonEmptyString(data.counterparty) ?? '');
 
   let economics: string | undefined;
   if (item !== undefined && quantity !== undefined) economics = `${item} x${quantity}`;
@@ -1832,6 +1833,7 @@ function previewExchangeFill(
   if (economics !== undefined && place !== undefined) headline = `${stem}: ${economics} ${place}`;
   else if (economics !== undefined) headline = `${stem}: ${economics}`;
   else if (place !== undefined) headline = `${stem} ${place}`;
+  if (counterparty) headline = `${headline} from ${counterparty}`;
 
   if (!orderId) return headlinePreview('FILL', headline, options);
   return detailPreview('FILL', headline, [`order_id=${orderId}`], options);

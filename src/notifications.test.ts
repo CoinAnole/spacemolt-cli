@@ -14526,6 +14526,84 @@ describe('notification formatting', () => {
         details: ['order_id=ord_resting_1'],
       },
       {
+        name: 'counterparty after the station',
+        data: { ...fullSell, counterparty: 'Mara' },
+        headline: `${fullSellHeadline} from Mara`,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'Station Market prints as sent',
+        data: { ...fullSell, counterparty: 'Station Market' },
+        headline: `${fullSellHeadline} from Station Market`,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'NPC is not rewritten',
+        data: { ...fullSell, counterparty: 'NPC' },
+        headline: `${fullSellHeadline} from NPC`,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'counterparty whitespace is trimmed',
+        data: { ...fullSell, counterparty: '  Station Market  ' },
+        headline: `${fullSellHeadline} from Station Market`,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'blank counterparty adds nothing',
+        data: { ...fullSell, counterparty: '' },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'whitespace counterparty adds nothing',
+        data: { ...fullSell, counterparty: '   ' },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'non-string counterparty adds nothing',
+        data: { ...fullSell, counterparty: 1 },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'object counterparty adds nothing',
+        data: { ...fullSell, counterparty: { name: 'Mara' } },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'null counterparty adds nothing',
+        data: { ...fullSell, counterparty: null },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
+        name: 'counterparty without a station',
+        data: { type: 'sell_filled', quantity: 12, counterparty: 'Mara' },
+        headline: 'Sell filled: x12 from Mara',
+        details: [],
+      },
+      {
+        name: 'counterparty only',
+        data: { counterparty: 'Mara' },
+        headline: 'Exchange order filled from Mara',
+        details: [],
+      },
+      {
+        name: 'counterparty follows a station-only headline',
+        data: { type: 'sell_filled', base_id: 'haven_exchange', counterparty: 'Mara' },
+        headline: 'Sell filled at haven_exchange from Mara',
+        details: [],
+      },
+      {
+        name: 'boolean counterparty adds nothing',
+        data: { ...fullSell, counterparty: false },
+        headline: fullSellHeadline,
+        details: ['order_id=ord_resting_1'],
+      },
+      {
         name: 'full buy with name equal to id',
         data: {
           type: 'buy_filled',
@@ -14698,6 +14776,8 @@ describe('notification formatting', () => {
       expect(message).toBe(tableMessageFromPreview(atTableWidth));
       expect(message).toBe(`${fullSellHeadline}; order_id=ord_resting_1`);
       expect(message).toContain('; order_id=ord_resting_1');
+      const withParty = fill({ ...fullSell, counterparty: 'Mara' });
+      expect(formatNotificationMessage(withParty)).toBe(`${fullSellHeadline} from Mara; order_id=ord_resting_1`);
 
       const inline = stripAnsi(formatNotification(notification, { noTimestamp: true }).join('\n'));
       expect(inline).toBe(`[FILL] ${fullSellHeadline}\n  order_id=ord_resting_1`);
@@ -14747,9 +14827,10 @@ describe('notification formatting', () => {
           item_id: 'ore_iron\nextra',
           item_name: 'Iron Ore\nsecret',
           quantity: 12,
+          counterparty: '  Mara\nsecret',
         }),
       );
-      expect(preview.headline).toBe('Sell filled: Iron Ore (ore_iron) x12 at haven_exchange');
+      expect(preview.headline).toBe('Sell filled: Iron Ore (ore_iron) x12 at haven_exchange from Mara');
       expect(preview.details).toEqual(['order_id=ord_resting_1']);
       expect(preview.headline).not.toContain('Haven Exchange');
       expect(preview.headline).not.toContain('secret');
