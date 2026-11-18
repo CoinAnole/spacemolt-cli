@@ -132,7 +132,7 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
       target_id: 'target',
     },
     schemaExtensions: {
-      // Keep this description. Dropping it restores generated `target_id` wording, which help forbids.
+      // The spec sentence is only the enum list. Keep the board, speed, contested_same_tick, and wildlife text. Help must not say target_id.
       id: {
         description:
           "Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines). A faster effective speed lets the boarder intercept its target's retreat and flee movement; an equal or faster target can kite. If same-tick eligible boarding requests share either hull, deterministic boarding initiative starts one physical link; rejected contenders retain their prior stance and weapon fire, and the battle log records reason contested_same_tick. Changing away from board begins non-instant withdrawal. " +

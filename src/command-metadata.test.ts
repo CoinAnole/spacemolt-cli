@@ -1923,10 +1923,14 @@ describe('command metadata', () => {
     expect(config?.schema?.marines?.minimum).toBe(1);
 
     const generatedId = GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/stance']?.schema?.id?.description;
-    expect(generatedId).toBeDefined();
-    const adaptedId = generatedId?.replace('requires target_id and marines', 'the server requires target and marines');
-    expect(config?.schema?.id?.description).toBe(`${adaptedId} ${WILDLIFE_FLEE_WINDOW_HELP}`);
-    expect(config?.schema?.id?.description).not.toContain('target_id');
+    expect(generatedId).toBe('Stance: fire, evade, brace, flee or board.');
+    const idDescription = config?.schema?.id?.description ?? '';
+    expect(idDescription).toContain(
+      'Battle stance: fire (100% dmg dealt/taken), evade (0%/50%, costs fuel), brace (0%/25%, shields regen 2x), flee (0%/100%, auto-retreats to escape), or board (0%/100%, automatically closes for repeated latch attempts; the server requires target and marines).',
+    );
+    expect(idDescription).toContain('contested_same_tick');
+    expect(idDescription).toContain(WILDLIFE_FLEE_WINDOW_HELP);
+    expect(idDescription).not.toContain('target_id');
 
     expect(config?.description).toContain('effective speed');
     expect(config?.description).toContain('intercept');
