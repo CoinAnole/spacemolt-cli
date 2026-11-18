@@ -440,8 +440,178 @@ test('dock gifts sit between trade fills and unread chat', () => {
   expect(stdout).toContain('Trade fills: 242 (showing recent, truncated)');
   expect(stdout).toContain('Unread chat: 122');
   expect(stdout).toContain('You have 122 unread chat message(s).');
-  expect(stdout).not.toContain('Iron Ore');
-  expect(stdout).not.toContain('buy_filled');
+  const table = stdout.indexOf('=== Trade fills ===');
+  expect(table).toBeGreaterThan(tradeFills);
+  expect(table).toBeLessThan(gifts);
+  expect(stdout).toContain('buy_filled');
+  expect(stdout).toContain('Iron Ore');
+  expect(stdout).toContain((95040).toLocaleString());
+  expect(stdout).not.toContain('Counterparty');
+});
+
+function dockTradeFillStdout(details: Record<string, unknown>): string {
+  const fixture = structuredClone(dockFixture) as Record<string, unknown>;
+  Object.assign(fixture, details);
+  return renderStructuredResult(
+    'dock',
+    { details: fixture, location: earthStationLocation('earth_station') },
+    options,
+    context,
+  ).stdout.join('\n');
+}
+
+function tradeFillTableLines(stdout: string): string[] {
+  const lines = stdout.split('\n');
+  const start = lines.findIndex((line) => line.includes('=== Trade fills ==='));
+  if (start < 0) return [];
+  const body: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('=== ') || /^[A-Za-z].*:/.test(line)) break;
+    body.push(line);
+  }
+  return body;
+}
+
+function tradeFillCells(line: string): string[] {
+  return line.split('|').map((cell) => cell.trim());
+}
+
+test('dock trade fills print object rows after the count', () => {
+  const stdout = dockTradeFillStdout({
+    trade_fills_count: 4,
+    trade_fills_truncated: true,
+    trade_fills: [
+      null,
+      'skip',
+      {
+        type: 'sell_filled',
+        item_name: 'Iron Ore',
+        item_id: 'ore_iron',
+        quantity: 12,
+        price_each: 1500,
+        total: 999,
+        timestamp: '2026-11-17T00:00:00Z',
+        counterparty: '  Station Market  ',
+      },
+      {
+        type: 'buy_filled',
+        item_name: 'fuel_cell',
+        item_id: 'fuel_cell',
+        quantity: 0,
+        price_each: 0,
+        total: 0,
+        timestamp: ' 2026-11-17T01:00:00Z ',
+        counterparty: 'NPC',
+      },
+      {
+        type: ' ',
+        item_id: ' ore ',
+        quantity: 1.5,
+        price_each: 1.5,
+        total: -5,
+      },
+    ],
+  });
+  const count = stdout.indexOf('Trade fills: 4 (showing recent, truncated)');
+  const table = stdout.indexOf('=== Trade fills ===');
+  expect(count).toBeGreaterThanOrEqual(0);
+  expect(table).toBeGreaterThan(count);
+  expect(stdout).not.toContain('18,000');
+  expect(stdout).not.toContain(`${(12 * 1500).toLocaleString()}cr`);
+  const lines = tradeFillTableLines(stdout);
+  const header = tradeFillCells(lines.find((line) => line.includes('Type')) ?? '');
+  expect(header).toEqual(['Type', 'Item', 'Quantity', 'Price', 'Total', 'Timestamp', 'Counterparty']);
+  const data = lines.filter((line) => line.includes('|') && !line.includes('-+-') && !line.includes('Type'));
+  expect(data).toHaveLength(3);
+  expect(tradeFillCells(data[0] ?? '')).toEqual([
+    'sell_filled',
+    'Iron Ore (ore_iron)',
+    (12).toLocaleString(),
+    `${(1500).toLocaleString()}cr`,
+    `${(999).toLocaleString()}cr`,
+    '2026-11-17T00:00:00Z',
+    'Station Market',
+  ]);
+  expect(tradeFillCells(data[1] ?? '')).toEqual([
+    'buy_filled',
+    'fuel_cell',
+    (0).toLocaleString(),
+    `${(0).toLocaleString()}cr`,
+    `${(0).toLocaleString()}cr`,
+    '2026-11-17T01:00:00Z',
+    'NPC',
+  ]);
+  expect(data[1]).toContain(' 2026-11-17T01:00:00Z ');
+  expect(tradeFillCells(data[2] ?? '')).toEqual([
+    '',
+    'ore',
+    (1.5).toLocaleString(),
+    `${(1.5).toLocaleString()}cr`,
+    `${(-5).toLocaleString()}cr`,
+    '',
+    '',
+  ]);
+  expect(data[2]).toContain(' ore ');
+  expect(stdout).not.toContain('fuel_cell (fuel_cell)');
+  expect(stdout).not.toContain('Station Market  ');
+  expect(stdout).toContain('NPC');
+});
+
+test('dock trade fills omit the table for an empty, omitted, or non-object array', () => {
+  const empty = dockTradeFillStdout({ trade_fills_count: 2, trade_fills: [], trade_fills_truncated: true });
+  expect(empty).toContain('Trade fills: 2 (showing recent, truncated)');
+  expect(empty).not.toContain('=== Trade fills ===');
+
+  const omitted = dockTradeFillStdout({ trade_fills_count: 5, trade_fills_truncated: true });
+  expect(omitted).toContain('Trade fills: 5 (showing recent, truncated)');
+  expect(omitted).not.toContain('=== Trade fills ===');
+
+  const skipped = dockTradeFillStdout({
+    trade_fills_count: 3,
+    trade_fills: [null, 'nope', 1, ['buy_filled']],
+  });
+  expect(skipped).toContain('Trade fills: 3');
+  expect(skipped).not.toContain('(showing recent, truncated)');
+  expect(skipped).not.toContain('=== Trade fills ===');
+  expect(skipped).not.toContain('buy_filled');
+});
+
+test('dock trade fills skip blank counterparties and non-finite amounts', () => {
+  const noParty = dockTradeFillStdout({
+    trade_fills: [
+      {
+        type: ' buy_filled ',
+        item_name: 'Iron Ore',
+        quantity: '12',
+        price_each: { amount: 1 },
+        total: Number.NaN,
+        timestamp: '2026-11-17T00:00:00Z',
+        counterparty: '   ',
+      },
+    ],
+  });
+  expect(noParty).toContain('Trade fills: 1');
+  expect(noParty).not.toContain('Counterparty');
+  expect(noParty).toContain(' buy_filled ');
+  expect(noParty).toContain('Iron Ore');
+  expect(noParty).not.toContain('Iron Ore (');
+  expect(noParty).toContain('2026-11-17T00:00:00Z');
+  expect(noParty).not.toContain('2026-11-17 00:00');
+  const row = tradeFillTableLines(noParty).find((line) => line.includes('buy_filled'));
+  expect(tradeFillCells(row ?? '')).toEqual(['buy_filled', 'Iron Ore', '', '', '', '2026-11-17T00:00:00Z']);
+
+  const bigintOnly = dockTradeFillStdout({
+    trade_fills: [{ quantity: 9007199254740993n, price_each: 9007199254740993n, total: 9007199254740993n }],
+  });
+  expect(bigintOnly).toContain('=== Trade fills ===');
+  expect(bigintOnly).not.toContain('9,007,199,254,740,993');
+  expect(bigintOnly).not.toContain('9007199254740993');
+
+  const nameOnly = dockTradeFillStdout({
+    trade_fills: [{ item_name: '  Iron Ore  ', counterparty: 1 }],
+  });
+  expect(nameOnly).toContain('  Iron Ore  ');
+  expect(nameOnly).not.toContain('Counterparty');
 });
 
 test('dock still sums unread_chat and prints unread_chat_note as sent', () => {

@@ -335,6 +335,60 @@ function emitDockSummaryLine(label: string, value: string | undefined, suffix = 
   emitLine(`${label}: ${value}${suffix}`);
 }
 
+function dockTradeFillFinite(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return formatIntegerText(value);
+}
+
+function dockTradeFillCredits(value: unknown): string | undefined {
+  const text = dockTradeFillFinite(value);
+  return text === undefined ? undefined : `${text}cr`;
+}
+
+function dockTradeFillItem(row: Record<string, unknown>): string | undefined {
+  const name = sentNonBlankString(row.item_name);
+  const id = sentNonBlankString(row.item_id);
+  if (name !== undefined && id !== undefined && name !== id) return `${name} (${id})`;
+  return name ?? id;
+}
+
+function dockTradeFillCounterparty(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
+// Rows come from the trade_fills array only. total is not quantity * price.
+function emitDockTradeFillRows(value: unknown): void {
+  if (!Array.isArray(value) || value.length === 0) return;
+  const rows: Array<Record<string, unknown>> = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    rows.push({
+      type_display: sentNonBlankString(entry.type),
+      item_display: dockTradeFillItem(entry),
+      quantity_display: dockTradeFillFinite(entry.quantity),
+      price_display: dockTradeFillCredits(entry.price_each),
+      total_display: dockTradeFillCredits(entry.total),
+      timestamp_display: sentNonBlankString(entry.timestamp),
+      counterparty_display: dockTradeFillCounterparty(entry.counterparty),
+    });
+  }
+  if (rows.length === 0) return;
+  const columns: Array<[string, string[]]> = [
+    ['Type', ['type_display']],
+    ['Item', ['item_display']],
+    ['Quantity', ['quantity_display']],
+    ['Price', ['price_display']],
+    ['Total', ['total_display']],
+    ['Timestamp', ['timestamp_display']],
+  ];
+  if (rows.some((row) => row.counterparty_display !== undefined)) {
+    columns.push(['Counterparty', ['counterparty_display']]);
+  }
+  printCompactTable('Trade fills', rows, columns, { maxCellWidth: Number.POSITIVE_INFINITY });
+}
+
 const GENERIC_LIST_KEYS = [
   'commands',
   'items',
@@ -1518,6 +1572,7 @@ export const genericFormatters = [
       emitDockSummaryLine('Open orders', countFromFieldOrArray(r, 'open_orders_count', 'open_orders'));
       const tradeFillSuffix = r.trade_fills_truncated === true ? ' (showing recent, truncated)' : '';
       emitDockSummaryLine('Trade fills', countFromFieldOrArray(r, 'trade_fills_count', 'trade_fills'), tradeFillSuffix);
+      emitDockTradeFillRows(r.trade_fills);
 
       const giftSuffix = r.gifts_truncated === true ? ' (showing recent, truncated)' : '';
       emitDockSummaryLine('Gifts', countFromFieldOrArray(r, 'gifts_count', 'gifts'), giftSuffix);
