@@ -7423,6 +7423,37 @@ test('get_status and get_state print refit available yes or no and skip an omitt
   }
 });
 
+test('get_state prints a sent default stance and short get_status does not', () => {
+  for (const stance of ['fire', '  flee', 'auto'] as const) {
+    const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+    fixture.ship.default_stance = stance;
+    const state = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+    const line = `Default stance: ${stance}`;
+    expect(state).toContain(line);
+    expect(state.indexOf(line)).toBeLessThan(state.indexOf('Hull: 90/100'));
+    expect(state.split('Default stance:').length - 1).toBe(1);
+
+    const status = renderStructuredResult('get_status', structuredClone(fixture), options, context).stdout.join('\n');
+    expect(status).toContain('  Hull: 90/100');
+    expect(status).not.toContain('Default stance:');
+  }
+
+  const omitted = renderStructuredResult('get_state', structuredClone(getStatusFixture), options, context).stdout.join(
+    '\n',
+  );
+  expect(omitted).toContain('Hull: 90/100');
+  expect(omitted).not.toContain('Default stance:');
+
+  for (const value of ['', ' \t ', null, false, 1]) {
+    const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
+    fixture.ship.default_stance = value;
+    const stdout = renderStructuredResult('get_state', fixture, options, context).stdout.join('\n');
+    expect(stdout).not.toContain('Default stance:');
+    expect(stdout).not.toContain('Stance: fire');
+    expect(stdout).not.toContain('Stance: flee');
+  }
+});
+
 test('get_status prints Armor: 0 when armor is 0', () => {
   const fixture = structuredClone(getStatusFixture) as { ship: Record<string, unknown> };
   fixture.ship.armor = 0;

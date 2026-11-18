@@ -907,6 +907,47 @@ test('get_ship prints refit available yes or no and skips an omitted or non-bool
   expect(renderShip(root).stdout.join('\n')).not.toContain('Refit available:');
 });
 
+test('get_ship prints a sent default stance and does not invent auto', () => {
+  const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown>; modules: unknown };
+  fixture.ship.default_stance = ' brace ';
+  const stdout = renderShip(fixture).stdout.join('\n');
+  const line = 'Default stance:  brace ';
+  expect(stdout).toContain(line);
+  expect(stdout.indexOf('Class:')).toBeLessThan(stdout.indexOf(line));
+  expect(stdout.indexOf(line)).toBeLessThan(stdout.indexOf('Hull: 420/420'));
+  expect(stdout.split('Default stance:').length - 1).toBe(1);
+  expect(stdout).not.toContain('Stance:');
+
+  const omitted = renderShip(shipFixture).stdout.join('\n');
+  expect(omitted).not.toContain('Default stance:');
+  expect(omitted).toContain('Hull: 420/420');
+  expect(Array.isArray(fixture.modules) ? fixture.modules.length : 0).toBeGreaterThan(0);
+
+  for (const value of ['', '   ', '\n', null, 0, true]) {
+    const blank = structuredClone(shipFixture) as { ship: Record<string, unknown> };
+    blank.ship.default_stance = value;
+    expect(renderShip(blank).stdout.join('\n')).not.toContain('Default stance:');
+  }
+
+  const root = structuredClone(shipFixture) as Record<string, unknown>;
+  root.default_stance = 'fire';
+  expect(renderShip(root).stdout.join('\n')).not.toContain('Default stance:');
+});
+
+test('battle_default_stance prints Stance once through the generic action dump', () => {
+  const stdout = renderStructuredResult(
+    'battle_default_stance',
+    { action: 'default_stance', message: 'Opening stance set.', stance: 'auto' },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('=== Default Stance ===');
+  expect(stdout).toContain('Stance: auto');
+  expect(stdout.split('Stance:').length - 1).toBe(1);
+  expect(stdout.split('=== ').length - 1).toBe(1);
+  expect(stdout).not.toContain('Default stance:');
+});
+
 test('get_ship prints Armor: 0 when armor is 0', () => {
   const fixture = structuredClone(shipFixture) as { ship: Record<string, unknown> };
   fixture.ship.armor = 0;

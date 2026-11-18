@@ -524,6 +524,13 @@ export function emitRefitAvailable(ship: Record<string, unknown>, indent = ''): 
   emitLine(`${indent}Refit available: ${ship.refit_available ? 'yes' : 'no'}`);
 }
 
+// Omitted and blank are not rewritten as auto. A sent string prints as sent.
+export function emitDefaultStance(ship: Record<string, unknown>, indent = ''): void {
+  const stance = ship.default_stance;
+  if (typeof stance !== 'string' || stance.trim() === '') return;
+  emitLine(`${indent}Default stance: ${stance}`);
+}
+
 export function emitDroneBay(droneBay: unknown): boolean {
   if (!isRecord(droneBay)) return false;
   emitLine(`\n${c.bright}=== Drone Bay ===${c.reset}`);
@@ -759,6 +766,7 @@ export const shipFormatters = [
       const remoteLocation = nonEmptyString(ship.location);
       if (remoteLocation) emitLine(`Location: ${remoteLocation}`);
       emitRefitAvailable(ship);
+      emitDefaultStance(ship);
       emitLine(`Hull: ${ship.hull ?? '?'}/${ship.max_hull ?? '?'}`);
       emitLine(`Shield: ${ship.shield ?? '?'}/${ship.max_shield ?? '?'} (+${ship.shield_recharge ?? 0}/tick)`);
       emitLine(`Armor: ${ship.armor ?? 0}`);

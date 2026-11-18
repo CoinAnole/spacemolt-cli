@@ -2117,6 +2117,29 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     });
   });
 
+  test('battle_default_stance binds stance to id and keeps board off the enum', () => {
+    const parsed = parseOk(['battle_default_stance', 'auto']);
+    expect(parsed.payload).toEqual({ stance: 'auto' });
+    expect(normalizeParsedPayload('battle_default_stance', parsed.payload)).toEqual({ id: 'auto' });
+    expect(
+      convertPayloadTypes(normalizeParsedPayload('battle_default_stance', parsed.payload), 'battle_default_stance'),
+    ).toEqual({
+      id: 'auto',
+    });
+    expect(parseOk(['battle_default_stance', 'stance=flee']).payload).toEqual({ stance: 'flee' });
+    expect(parseOk(['battle_default_stance', 'id=brace']).payload).toEqual({ id: 'brace' });
+    expect(parseArgs(['battle_default_stance', 'board'])).toEqual({
+      ok: false,
+      errors: [
+        {
+          field: 'stance',
+          message: 'Invalid value "board" for "stance". Expected one of: auto, fire, evade, brace, flee',
+          code: 'invalid_enum',
+        },
+      ],
+    });
+  });
+
   test('battle_stance binds optional target and validates stance/marines locally', () => {
     expect(parseOk(['battle_stance', 'board', 'pirate-1']).payload).toEqual({
       stance: 'board',

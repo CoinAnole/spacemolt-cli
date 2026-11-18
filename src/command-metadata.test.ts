@@ -1981,6 +1981,74 @@ describe('command metadata', () => {
     expect(completionArgs.some((arg) => arg.name === 'target')).toBe(true);
   });
 
+  test('battle_default_stance documents the opening stance and does not add board', () => {
+    const config = BUNDLED_COMMAND_REGISTRY.commands.battle_default_stance;
+    expect(config).toBeDefined();
+    if (!config) throw new Error('battle_default_stance command is missing');
+
+    expect(config.usage).toBe('<stance>');
+    expect(config.args).toEqual(['stance']);
+    expect(config.required).toEqual(['stance']);
+    expect(config.example).toBe('spacemolt battle_default_stance auto');
+    expect(config.seeAlso).toEqual(['get_ship', 'battle_stance']);
+    expect(config.category).toBe('Battle');
+    expect(config.category).not.toBe('Generated API');
+    expect(config.route).toEqual({ tool: 'spacemolt_battle', action: 'default_stance', method: 'POST' });
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_default_stance?.positionals).toEqual(['stance']);
+    expect(BATTLE_SHIPYARD_COMMAND_OVERRIDES.battle_default_stance?.aliases).toEqual({ stance: 'id' });
+    expect(config.aliases).toEqual({ stance: 'id' });
+    expect(config.schema?.id?.enum).toEqual(['auto', 'fire', 'evade', 'brace', 'flee']);
+    expect(config.schema?.id?.enum).not.toContain('board');
+    expect(config.description).not.toContain('board');
+    expect(config.description).not.toContain('`');
+    expect(config.description).not.toBe(GENERATED_API_ROUTES['POST /api/v2/spacemolt_battle/default_stance']?.summary);
+
+    const description = config.description ?? '';
+    const help = captureHelp('battle_default_stance');
+    for (const text of [description, help]) {
+      expect(text).toContain('auto, fire, evade, brace, or flee');
+      expect(text).toContain('auto is fire when the ship has a weapon or a remote repairer, and flee otherwise');
+      expect(text).toContain('A fight you start still opens at fire');
+      expect(text).toContain('works in or out of battle and applies from the next battle');
+      expect(text).toContain('resets to auto when it changes owner');
+      expect(text).toContain('does not read the fit');
+      expect(text).toContain('does not refuse the call');
+      expect(text).toContain('does not reset the value locally');
+      expect(text).not.toContain('board');
+      expect(text).not.toContain('`');
+    }
+    expect(help).toContain('<stance>');
+    expect(help).toContain('stance -> id');
+    expect(help).toContain('See also:');
+    expect(help).toContain('get_ship, battle_stance');
+    expect(help).toContain('spacemolt battle_default_stance auto');
+
+    expect(captureFullHelp()).toContain(
+      'battle_default_stance <stance>  Opening stance when pulled in (auto/fire/evade/brace/flee)',
+    );
+
+    const completionArgs = completionArgsForCommand('battle_default_stance', config);
+    expect(completionArgs.find((arg) => arg.name === 'stance')).toMatchObject({
+      kind: 'enum',
+      values: ['auto', 'fire', 'evade', 'brace', 'flee'],
+    });
+
+    const shipHelp = captureHelp('get_ship');
+    const shipDescription = COMMANDS.get_ship?.description ?? '';
+    for (const text of [shipDescription, shipHelp]) {
+      expect(text).toContain(
+        'An omitted default_stance key means auto: fire with a weapon or remote repairer, else flee.',
+      );
+      expect(text).toContain('battle_default_stance sets it');
+      expect(text).not.toContain('`');
+    }
+    for (const command of ['get_status', 'get_state'] as const) {
+      const text = COMMANDS[command]?.description ?? '';
+      expect(text).not.toContain('battle_default_stance sets it');
+      expect(captureHelp(command)).not.toContain('battle_default_stance sets it');
+    }
+  });
+
   test('battle_target help documents ID or name targeting for any combatant', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.battle_target;
     expect(config?.usage).toContain('target_id_or_name');

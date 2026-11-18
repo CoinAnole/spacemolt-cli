@@ -52,7 +52,14 @@ import {
   nativeRemotePoiId,
   nativeScanField,
 } from './scan-contacts.ts';
-import { emitCargoHold, emitDroneBay, emitInstalledModules, emitModuleDraw, emitRefitAvailable } from './ship.ts';
+import {
+  emitCargoHold,
+  emitDefaultStance,
+  emitDroneBay,
+  emitInstalledModules,
+  emitModuleDraw,
+  emitRefitAvailable,
+} from './ship.ts';
 
 const ZERO_TRADING_RESTRICTION = '0001-01-01T00:00:00Z';
 
@@ -1338,6 +1345,7 @@ function formatGetState(result: Record<string, unknown>, command: string | undef
     if (ship.custom_name) emitLine(`Custom Name: ${ship.custom_name}`);
     if (usableLabel(ship.location)) emitLine(`Ship location: ${ship.location}`);
     emitRefitAvailable(ship);
+    emitDefaultStance(ship);
     emitLine(`Hull: ${ship.hull}/${ship.max_hull}`);
     emitLine(`Shield: ${ship.shield}/${ship.max_shield} (+${ship.shield_recharge}/tick)`);
     emitLine(`Armor: ${ship.armor || 0}`);

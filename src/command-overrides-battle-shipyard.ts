@@ -102,6 +102,19 @@ export const BATTLE_SHIPYARD_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     category: 'Battle',
     apiRoute: 'POST /api/v2/spacemolt_battle/retreat',
   },
+  battle_default_stance: {
+    usage: '<stance>',
+    description:
+      'Set the stance the active ship opens at when a fight it did not choose pulls it in: auto, fire, evade, brace, or flee. auto is fire when the ship has a weapon or a remote repairer, and flee otherwise. A fight you start still opens at fire. The call works in or out of battle and applies from the next battle. The ship resets to auto when it changes owner. The client does not read the fit, does not refuse the call, and does not reset the value locally.',
+    example: 'spacemolt battle_default_stance auto',
+    seeAlso: ['get_ship', 'battle_stance'],
+    category: 'Battle',
+    apiRoute: 'POST /api/v2/spacemolt_battle/default_stance',
+    positionals: ['stance'],
+    aliases: {
+      stance: 'id',
+    },
+  },
   battle_stance: {
     usage: '<stance> [target] [marines=N] [intent=capture|plunder]',
     description:
