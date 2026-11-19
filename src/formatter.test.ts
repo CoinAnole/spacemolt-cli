@@ -11274,6 +11274,70 @@ describe('structuredContent formatters', () => {
     expect(stdout).toContain('=== Station Info ===');
   });
 
+  test('station info prints build access after outsider facilities and does not infer it', () => {
+    const allies = captureStructuredOutput(
+      'station_info',
+      stationConfigBody({ allow_outsider_facilities: false, build_access: 'allies' }),
+    );
+    expect(allies.stderr).toBe('');
+    expect(allies.stdout).toContain('Outsider facilities: no');
+    expect(allies.stdout).toContain('Build access: allies');
+    expect(allies.stdout.indexOf('Outsider facilities: no')).toBeLessThan(
+      allies.stdout.indexOf('Build access: allies'),
+    );
+    expect(allies.stdout.indexOf('Build access: allies')).toBeLessThan(allies.stdout.indexOf('Auto-buy fuel:'));
+    expect(allies.stdout).not.toContain('allow_ally');
+    expect(allies.stdout).not.toContain('Rent');
+
+    const sent = captureStructuredOutput('station_info', stationConfigBody({ build_access: ' allies ' }));
+    expect(sent.stdout).toContain('Build access:  allies ');
+    expect(sent.stdout.split('Build access:').length - 1).toBe(1);
+
+    const omittedBoolean = stationConfigBody({ build_access: 'faction' });
+    delete omittedBoolean.allow_outsider_facilities;
+    const faction = captureStructuredOutput('station_info', omittedBoolean);
+    expect(faction.stdout).not.toContain('Outsider facilities:');
+    expect(faction.stdout).toContain('Build access: faction');
+
+    const inferred = captureStructuredOutput('station_info', stationConfigBody({ allow_outsider_facilities: true }));
+    expect(inferred.stdout).toContain('Outsider facilities: yes');
+    expect(inferred.stdout).not.toContain('Build access:');
+
+    for (const value of ['', '   ', '\n', null, 1, true, false]) {
+      const skipped = captureStructuredOutput('station_info', stationConfigBody({ build_access: value }));
+      expect(skipped.stdout).not.toContain('Build access:');
+      expect(skipped.stdout).toContain('Outsider facilities: no');
+    }
+
+    const extra = captureStructuredOutput(
+      'station_info',
+      stationConfigBody({
+        allow_ally_facilities: true,
+        build_access: 'public',
+        rent_per_cycle: 424242,
+      }),
+    );
+    expect(extra.stdout).toContain('Build access: public');
+    expect(extra.stdout).not.toContain('allow_ally');
+    expect(extra.stdout).not.toContain('424242');
+    expect(extra.stdout).not.toContain('Rent');
+
+    const base = captureStructuredOutput('get_base', {
+      ...baseFixture,
+      base: {
+        ...baseFixture.base,
+        allow_ally_facilities: true,
+        allow_outsider_facilities: false,
+        build_access: 'allies',
+      },
+    });
+    expect(base.stderr).toBe('');
+    expect(base.stdout).toContain('Nova Terra Central');
+    expect(base.stdout).not.toContain('Build access');
+    expect(base.stdout).not.toContain('allow_ally');
+    expect(base.stdout).not.toContain('Outsider facilities');
+  });
+
   function setContrabandDetails(extra: Record<string, unknown> = {}): Record<string, unknown> {
     return {
       action: 'set_contraband',

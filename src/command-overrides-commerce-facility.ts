@@ -1045,7 +1045,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_info: {
     description:
-      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules. When gate is an object, table output prints a Jump gate block: far system name and id, online, faction only, allies only, toll including 0, built, partner built, and partner base id when sent. Allies only prints yes or no when allies_only is a boolean, including false, after faction only. An omitted allies_only prints nothing and is not treated as no. While phase is a number it prints phase, phase name, phases total, cycles done, cycles, labor per cycle including 0, and materials left as item id and quantity including 0. An empty or omitted materials object prints nothing. When built is true, entangler due and upkeep cycles covered print when those keys are numbers, including 0. An omitted gate prints nothing.",
+      "Show the current configuration for your faction's station or outpost. Table output prints Base ID, access, fees, dock lists, build_access, and the contraband policy. Contraband mode and Contraband items use the same lines as get_base. default uses the general rules. custom replaces them with the item ids. Null items are the default rules. An empty list in custom mode allows all items. Smuggling skill still bypasses listed items. Empire customs still apply in empire territory, including aboard a mobile base. Change the list with station set_contraband. station reset_contraband restores the default rules. When gate is an object, table output prints a Jump gate block: far system name and id, online, faction only, allies only, toll including 0, built, partner built, and partner base id when sent. Allies only prints yes or no when allies_only is a boolean, including false, after faction only. An omitted allies_only prints nothing and is not treated as no. While phase is a number it prints phase, phase name, phases total, cycles done, cycles, labor per cycle including 0, and materials left as item id and quantity including 0. An empty or omitted materials object prints nothing. When built is true, entangler due and upkeep cycles covered print when those keys are numbers, including 0. An omitted gate prints nothing.",
     example: 'spacemolt station_info',
     discoverWith: ['get_status', 'get_base'],
     seeAlso: [
@@ -1102,15 +1102,15 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     positionals: ['public'],
   },
   station_set_build_policy: {
-    usage: '<allow_outsiders=true|false>',
+    usage: '[allow_outsiders=true|false] [access=public|allies|faction]',
     description:
-      'Control whether outsiders may build facilities at your faction station. Those tenants pay rent each cycle to your faction treasury. Outposts do not support this action.',
-    example: 'spacemolt station_set_build_policy false',
+      'Set who may build their own facilities at your faction station. access is public, allies, or faction. public lets anyone build, and those outsiders pay rent to the faction treasury. allies lets your faction and its allies build, and allies pay no rent. faction lets only your faction build. allow_outsiders true still means public, and false still means faction. Outposts do not support this action.',
+    example: 'spacemolt station_set_build_policy false; spacemolt station set_build_policy access=allies',
     discoverWith: ['station_info'],
     seeAlso: ['station_info', 'faction_build'],
     category: 'Station management',
     apiRoute: 'POST /api/v2/spacemolt_facility/set_build_policy',
-    positionals: ['allow_outsiders'],
+    positionals: ['allow_outsiders', 'access'],
   },
   station_set_service_access: {
     usage: '<service> <public|allies|faction>',

@@ -4080,9 +4080,31 @@ describe('command metadata', () => {
 
   test('station set_build_policy help states treasury rent without the transfer', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commandGroups.station?.actions.set_build_policy?.config;
-    expect(config?.usage).toContain('allow_outsiders');
+    const generatedAccess = GENERATED_API_ROUTES['POST /api/v2/spacemolt_facility/set_build_policy']?.schema?.access;
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.station_set_build_policy?.positionals).toEqual([
+      'allow_outsiders',
+      'access',
+    ]);
+    expect(config?.args).toEqual(['allow_outsiders', 'access']);
+    expect(config?.required).toBeUndefined();
+    expect(config?.usage).toBe('[allow_outsiders=true|false] [access=public|allies|faction]');
+    expect(config?.example).toContain('spacemolt station_set_build_policy false');
+    expect(config?.example).toContain('spacemolt station set_build_policy access=allies');
+    expect(config?.example).not.toContain('access=public');
+    expect(config?.example).not.toContain('allow_outsiders=false');
+    expect(config?.example).not.toContain('{"access":"public","allow_outsiders":false}');
+    expect(config?.schema?.access?.enum).toEqual(['public', 'allies', 'faction']);
+    expect(config?.schema?.access?.enum).toEqual(generatedAccess?.enum);
+    expect(config?.schema?.access?.description).toBe(generatedAccess?.description);
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.station_set_build_policy?.schemaExtensions).toBeUndefined();
     const help = captureHelp('station set_build_policy');
     expect(help).toContain('allow_outsiders');
+    expect(help).toContain(
+      'spacemolt station set_build_policy [allow_outsiders=true|false] [access=public|allies|faction]',
+    );
+    expect(help).toContain('access (public|allies|faction)');
+    expect(help).toContain('spacemolt station set_build_policy access=allies');
+    expect(help).not.toContain('<allow_outsiders=true|false>');
     const absent = [
       'clears unpaid rent',
       'unpaid rent on them is cleared',
@@ -4094,11 +4116,26 @@ describe('command metadata', () => {
       "tenant's storage",
       '0.618.2',
     ];
+    const phrases = [
+      'public, allies, or faction',
+      'allies pay no rent',
+      'outsiders pay rent to the faction treasury',
+      'public lets anyone build',
+      'allow_outsiders true still means public',
+      'false still means faction',
+      'faction treasury',
+      'Outposts do not support',
+    ];
     for (const text of [config?.description, help]) {
-      expect(text).toContain('faction treasury');
-      expect(text).toContain('Outposts do not support');
+      for (const phrase of phrases) expect(text).toContain(phrase);
       for (const phrase of absent) expect(text).not.toContain(phrase);
     }
+    expect(COMMANDS.station_info?.description).toContain(
+      'Table output prints Base ID, access, fees, dock lists, build_access, and the contraband policy.',
+    );
+    expect(COMMANDS.station_info?.description).not.toContain('allow_ally_facilities');
+    expect(COMMANDS.get_base?.description).not.toContain('allow_ally_facilities');
+    expect(COMMANDS.get_base?.description).not.toContain('build_access');
   });
 
   test('station set_contraband and reset_contraband replace generated facility names', () => {

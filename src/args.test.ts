@@ -1496,6 +1496,59 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(parseInternalOk(['station_remove_faction', 'faction-1']).payload).toEqual({ faction: 'faction-1' });
   });
 
+  test('station set_build_policy keeps allow_outsiders first and sends access', () => {
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_build_policy', 'false']).payload,
+        'station_set_build_policy',
+      ),
+    ).toEqual({
+      allow_outsiders: false,
+    });
+    expect(parseInternalOk(['station_set_build_policy', 'access=allies']).payload).toEqual({
+      access: 'allies',
+    });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_build_policy', 'false', 'allies']).payload,
+        'station_set_build_policy',
+      ),
+    ).toEqual({
+      allow_outsiders: false,
+      access: 'allies',
+    });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_build_policy', 'access=allies', 'false']).payload,
+        'station_set_build_policy',
+      ),
+    ).toEqual({
+      allow_outsiders: false,
+      access: 'allies',
+    });
+    expect(
+      convertInternalPayloadTypes(
+        parseInternalOk(['station_set_build_policy', 'allow_outsiders=false', 'access=public']).payload,
+        'station_set_build_policy',
+      ),
+    ).toEqual({
+      allow_outsiders: false,
+      access: 'public',
+    });
+    expect(parseInternalOk(['station_set_build_policy']).payload).toEqual({});
+
+    const invalid = parseInternalArgs(['station_set_build_policy', 'access=nope']);
+    expect(invalid.ok).toBe(false);
+    if (invalid.ok) throw new Error('expected invalid access');
+    expect(invalid.errors).toEqual([
+      expect.objectContaining({
+        field: 'access',
+        code: 'invalid_enum',
+      }),
+    ]);
+    expect(invalid.errors[0]?.message).toContain('public, allies, faction');
+  });
+
   test('station set_contraband sends one id, a comma list, or [] as a JSON array', () => {
     expect(
       applyPayloadTransforms(

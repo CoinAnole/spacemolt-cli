@@ -590,6 +590,9 @@ export function emitStationConfig(result: Record<string, unknown>): boolean {
 
   emitYesNo('Public access', result.public_access);
   emitYesNo('Outsider facilities', result.allow_outsider_facilities);
+  // Not inferred from allow_outsider_facilities. Blank and non-strings print nothing; a sent string prints as sent.
+  const buildAccess = result.build_access;
+  if (typeof buildAccess === 'string' && buildAccess.trim() !== '') emitLine(`Build access: ${buildAccess}`);
   emitYesNo('Auto-buy fuel', result.auto_buy_fuel);
   emitSafeIntegerLine('Market fee', result.market_fee_bps, 'bps');
   emitSafeIntegerLine('Refuel price', result.refuel_price_each, 'credits');
