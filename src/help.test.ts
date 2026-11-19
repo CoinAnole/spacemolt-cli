@@ -1681,11 +1681,14 @@ describe('help output branches', () => {
     );
 
     const output = capture.stdout.join('\n');
+    expect(output).toContain('You must be docked, and only contracts posted at that station are shown.');
     expect(output).toContain(
-      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown.',
+      'The default board is still contracts the eligible_as carrier can accept at the docked station.',
     );
+    expect(output).toContain('include_ineligible=true also shows runs that carrier cannot accept yet.');
+    expect(output).not.toContain('filter_origin');
     expect(output).toContain(
-      'spacemolt shipping_list [eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+      'spacemolt shipping_list [eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
     );
     expect(output).toContain(
       'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
@@ -1696,10 +1699,46 @@ describe('help output branches', () => {
     expect(output).toContain('Server help:');
     expect(output).toContain('spacemolt server-help shipping_list');
     expect(output).toContain('spacemolt get_status');
-    expect(output).toContain('See also: shipping_active, shipping_quote, shipping_accept, shipping_profile');
+    expect(output).toContain(
+      'See also: shipping_list_all, shipping_active, shipping_quote, shipping_accept, shipping_profile',
+    );
     expect(output).toContain('shipping_active');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/list');
+  });
+
+  test('shipping_list_all help explains the charted-station board', () => {
+    const capture = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_list_all', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_list_all', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = capture.stdout.join('\n');
+    expect(output).toContain('posted freight contracts at charted stations');
+    expect(output).toContain('docked at a station with a mission service');
+    expect(output).toContain('filter_origin limits that board');
+    expect(output).toContain('flying to its origin');
+    expect(output).toContain('does not check the mission service');
+    expect(output).toContain('does not decide which stations are charted');
+    expect(output).toContain('does not filter rows');
+    expect(output).toContain('does not travel');
+    expect(output).toContain(
+      'spacemolt shipping_list_all [eligible_as=player|faction] [filter_destination=...] [filter_origin=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
+    );
+    expect(output).toContain(
+      'spacemolt shipping_list_all filter_origin=sirius_observatory_station include_ineligible=true',
+    );
+    expect(output).toContain('filter_origin');
+    expect(output).toContain('include_ineligible');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help shipping_list_all');
+    expect(output).toContain('spacemolt get_status');
+    expect(output).toContain('See also: shipping_list, shipping_accept');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/list_all');
   });
 
   test('shipping_active help explains the recovery board for live freight contracts', () => {
@@ -2345,6 +2384,8 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('arena_challenge');
     expect(generatedSection).not.toContain('arena status');
     expect(generatedSection).toContain('shipping_accept');
+    expect(generatedSection).not.toContain('shipping_list_all');
+    expect(generatedSection).not.toContain('shipping_list');
     expect(generatedSection).toContain('battle_self_destruct');
     expect(generatedSection).not.toContain('ship_fit_preview');
     expect(generatedSection).not.toContain('ship_recruit_personnel');

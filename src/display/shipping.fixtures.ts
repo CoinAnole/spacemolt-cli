@@ -248,6 +248,45 @@ export const shippingListFixture = {
   total: 2,
 };
 
+export const shippingListAllFixture = {
+  action: 'list_all',
+  shipments: [
+    {
+      contract: shipmentContract({ id: 'shipment-charted-1', base_reward: 9000, reward_escrow: 9000 }),
+      eligible: true,
+      target_ticks: 390,
+      deadline_ticks: 720,
+      recovery_ticks: 2880,
+    },
+    {
+      contract: shipmentContract({
+        id: 'shipment-ineligible-1',
+        package_id: 'package-reactor-1',
+        service_level: 'priority',
+        base_reward: 22000,
+        max_speed_bonus: 4000,
+        reward_escrow: 22000,
+        speed_bonus_escrow: 4000,
+        failure_debt: 72000,
+        reserved_exposure: 72000,
+        policy_status: 'active',
+        insurable: true,
+        risk_band: 'trusted',
+        premium: 1200,
+        covered_value: 65000,
+      }),
+      eligible: false,
+      ineligible_reason: 'unpaid freight debt',
+      target_ticks: 260,
+      deadline_ticks: 480,
+      recovery_ticks: 2880,
+    },
+  ],
+  page: 1,
+  per_page: 20,
+  total: 2,
+};
+
 export const shippingActiveFixture = {
   action: 'active',
   tick: 12450,
@@ -476,6 +515,7 @@ export const shippingHighValueFixtures: Record<string, HighValueFixtureEntry> = 
   shipping_get: shippingEntry('get', shippingGetFixture),
   shipping_accept: shippingEntry('accept', shippingAcceptFixture, 'details'),
   shipping_list: shippingEntry('list', shippingListFixture),
+  shipping_list_all: shippingEntry('list_all', shippingListAllFixture),
   shipping_active: shippingEntry('active', shippingActiveFixture),
   shipping_track: shippingEntry('track', shippingTrackFixture),
   shipping_profile: shippingEntry('profile', shippingProfileFixture),

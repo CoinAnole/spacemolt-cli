@@ -36,6 +36,12 @@ function presentString(value: unknown): string | undefined {
   return value.trim() ? value : undefined;
 }
 
+function trimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function formatActor(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const kind = presentString(value.kind);
@@ -200,12 +206,18 @@ function renderShippingList(result: Record<string, unknown>): boolean {
   const rows: Array<Record<string, unknown>> = [];
   let hazmatSent = false;
   let warningSent = false;
+  let eligibleSent = false;
+  let reasonSent = false;
   for (const listing of shipments) {
     if (!isRecord(listing.contract)) continue;
     const shipment = listing.contract;
     if (Object.hasOwn(shipment, 'requires_hazmat')) hazmatSent = true;
     const warning = presentString(listing.warning);
     if (warning !== undefined) warningSent = true;
+    // Listing fields, not contract. Only a boolean opens Eligible; only a non-blank string opens Reason.
+    if (typeof listing.eligible === 'boolean') eligibleSent = true;
+    const reason = trimmedString(listing.ineligible_reason);
+    if (reason !== undefined) reasonSent = true;
     rows.push({
       id: text(shipment.id),
       status: text(shipment.status),
@@ -216,6 +228,8 @@ function renderShippingList(result: Record<string, unknown>): boolean {
       liability: formatCredits(shipment.failure_debt),
       hazmat: formatBoolean(shipment.requires_hazmat),
       warning,
+      eligible: formatBoolean(listing.eligible),
+      reason,
     });
   }
 
@@ -230,6 +244,8 @@ function renderShippingList(result: Record<string, unknown>): boolean {
   ];
   if (hazmatSent) columns.push(['Hazmat', ['hazmat']]);
   if (warningSent) columns.push(['Warning', ['warning']]);
+  if (eligibleSent) columns.push(['Eligible', ['eligible']]);
+  if (reasonSent) columns.push(['Reason', ['reason']]);
 
   printCompactTable('Listings', rows, columns, { maxCellWidth: 56 });
   return true;
@@ -512,7 +528,7 @@ export const shippingFormatters = [
     },
   ),
   formatter(renderShippingList, {
-    commands: ['shipping_list'],
+    commands: ['shipping_list', 'shipping_list_all'],
     suppressShapeFallbackOnDecline: true,
   }),
   formatter(renderShippingActive, {

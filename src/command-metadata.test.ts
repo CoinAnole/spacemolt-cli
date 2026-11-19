@@ -5739,27 +5739,70 @@ describe('command metadata', () => {
     const shippingList = BUNDLED_COMMAND_REGISTRY.commands.shipping_list;
     if (!shippingList) throw new Error('shipping_list command missing');
     expect(shippingList).toMatchObject({
-      args: ['eligible_as', 'filter_destination', 'filter_service_level', 'filter_shipper', 'page', 'per_page', 'sort'],
+      args: [
+        'eligible_as',
+        'filter_destination',
+        'filter_service_level',
+        'filter_shipper',
+        'include_ineligible',
+        'page',
+        'per_page',
+        'sort',
+      ],
       description:
-        'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown. filter_destination accepts a station base ID or station POI ID.',
+        'List freight contracts from the current station. You must be docked, and only contracts posted at that station are shown. The default board is still contracts the eligible_as carrier can accept at the docked station. include_ineligible=true also shows runs that carrier cannot accept yet. filter_destination accepts a station base ID or station POI ID.',
       usage:
-        '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+        '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
       example:
         'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
       category: 'Missions',
       discoverWith: ['get_status'],
-      seeAlso: ['shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
+      seeAlso: ['shipping_list_all', 'shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
       route: { tool: 'spacemolt_shipping', action: 'list', method: 'POST' },
       schema: {
         eligible_as: { enum: ['player', 'faction'] },
         filter_destination: { type: 'string' },
         filter_service_level: { enum: ['standard', 'priority'] },
         filter_shipper: { type: 'string' },
+        include_ineligible: { type: 'boolean' },
         page: { type: 'integer' },
         per_page: { type: 'integer' },
         sort: { enum: ['reward', 'distance', 'age'] },
       },
     });
+    expect(shippingList.schema?.filter_origin).toBeUndefined();
+    expect(shippingList.description).not.toContain('filter_origin');
+    const shippingListAll = BUNDLED_COMMAND_REGISTRY.commands.shipping_list_all;
+    if (!shippingListAll) throw new Error('shipping_list_all command missing');
+    expect(shippingListAll).toMatchObject({
+      args: [
+        'eligible_as',
+        'filter_destination',
+        'filter_origin',
+        'filter_service_level',
+        'filter_shipper',
+        'include_ineligible',
+        'page',
+        'per_page',
+        'sort',
+      ],
+      description:
+        'List posted freight contracts at charted stations. You must be docked at a station with a mission service. filter_origin limits that board to one origin station, a station base ID or station POI ID. Accepting a contract still means flying to its origin. include_ineligible=true also shows runs the eligible_as carrier cannot accept yet. The client does not check the mission service, does not decide which stations are charted, does not filter rows, and does not travel.',
+      usage:
+        '[eligible_as=player|faction] [filter_destination=...] [filter_origin=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
+      example: 'spacemolt shipping_list_all filter_origin=sirius_observatory_station include_ineligible=true',
+      category: 'Missions',
+      discoverWith: ['get_status'],
+      seeAlso: ['shipping_list', 'shipping_accept'],
+      route: { tool: 'spacemolt_shipping', action: 'list_all', method: 'POST' },
+      schema: {
+        eligible_as: { enum: ['player', 'faction'] },
+        filter_origin: { type: 'string' },
+        include_ineligible: { type: 'boolean' },
+      },
+    });
+    expect(shippingListAll.route.defaults).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_list_all?.category).not.toBe('Generated API');
     expect(Object.keys(shippingList.aliases ?? {})).toHaveLength(0);
     expect(shippingList.route.defaults).toBeUndefined();
     expect(

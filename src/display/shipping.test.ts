@@ -457,6 +457,10 @@ test('declines malformed required shipping roots and preserves the raw fallback'
     action: 'list',
     shipments: 'invalid',
   });
+  expect(rawFallbackJson(output('shipping_list_all', { action: 'list_all', shipments: 'invalid' }))).toEqual({
+    action: 'list_all',
+    shipments: 'invalid',
+  });
   expect(
     rawFallbackJson(output('shipping_list', { action: 'list', shipments: [{ contract: 'invalid', eligible: true }] })),
   ).toEqual({
@@ -505,7 +509,7 @@ test('preserves the complete mutation envelope when a shipping formatter decline
   expect(JSON.parse(stdout.slice(stdout.indexOf('{')))).toEqual(fixture);
 });
 
-test('renders freight-list hazmat and warning and ignores removed eligibility fields', () => {
+test('renders freight-list hazmat, warning, and listing eligibility', () => {
   const stdout = output('shipping_list', {
     action: 'list',
     page: 2,
@@ -536,8 +540,7 @@ test('renders freight-list hazmat and warning and ignores removed eligibility fi
 
   expect(stdout).toContain('=== Freight Contracts ===');
   expect(stdout).toContain('page 2, 3 of 21');
-  expect(stdout).toMatch(/Hazmat\s+\|\s+Warning/);
-  expect(stdout).not.toMatch(/\bEligible\b/);
+  expect(stdout).toMatch(/Hazmat\s+\|\s+Warning\s+\|\s+Eligible/);
   expect(stdout).not.toMatch(/\bReason\b/);
   expect(stdout).toContain('0 cr');
   expect(stdout).toContain('yes');
@@ -578,6 +581,113 @@ test('shipping_list keeps Hazmat when requires_hazmat is false and omits Warning
   expect(stdout).toContain('no');
   expect(stdout).not.toContain('yes');
   expect(stdout).not.toMatch(/\bWarning\b/);
+});
+
+test('freight list prints listing eligible and ineligible_reason without tick columns', () => {
+  const listing = {
+    contract: {
+      ...contract,
+      origin_base_id: 'alpha_port',
+      destination_base_id: 'beta_port',
+      status: 'posted',
+      eligible: false,
+      ineligible_reason: 'from the contract',
+      target_ticks: 111,
+      deadline_ticks: 222,
+      recovery_ticks: 333,
+    },
+    target_ticks: 424242,
+    deadline_ticks: 434343,
+    recovery_ticks: 444444,
+  };
+  const payload = {
+    action: 'list_all',
+    page: 1,
+    total: 4,
+    shipments: [
+      {
+        ...listing,
+        contract: { ...listing.contract, id: 'take-1' },
+        eligible: true,
+        ineligible_reason: '   ',
+      },
+      {
+        ...listing,
+        contract: { ...listing.contract, id: 'skip-1' },
+        eligible: false,
+        ineligible_reason: '  carrier owes 500 cr  ',
+      },
+      {
+        ...listing,
+        contract: { ...listing.contract, id: 'odd-1' },
+        eligible: 'false',
+        ineligible_reason: false,
+      },
+      {
+        ...listing,
+        contract: { ...listing.contract, id: 'bare-1' },
+      },
+    ],
+  };
+
+  for (const command of ['shipping_list', 'shipping_list_all'] as const) {
+    const stdout = output(command, payload);
+    expect(stdout).toContain('=== Freight Contracts ===');
+    expect(stdout).toMatch(/Eligible\s+\|\s+Reason/);
+    expect(stdout).not.toContain('Target');
+    expect(stdout).not.toContain('Deadline');
+    expect(stdout).not.toContain('Recovery');
+    expect(stdout).not.toContain('424242');
+    expect(stdout).not.toContain('434343');
+    expect(stdout).not.toContain('444444');
+    expect(stdout).not.toContain('from the contract');
+    expect(stdout).not.toContain('=== Response ===');
+    const yes = stdout.split('\n').find((line) => line.includes('take-1'));
+    const no = stdout.split('\n').find((line) => line.includes('skip-1'));
+    const blank = stdout.split('\n').find((line) => line.includes('odd-1'));
+    const omitted = stdout.split('\n').find((line) => line.includes('bare-1'));
+    expect(yes).toContain('yes');
+    expect(yes).not.toContain('no');
+    expect(yes).not.toContain('carrier owes 500 cr');
+    expect(no).toContain('no');
+    expect(no).not.toContain('yes');
+    expect(no).toContain('carrier owes 500 cr');
+    expect(no).not.toContain('  carrier owes 500 cr  ');
+    expect(blank).not.toContain('yes');
+    expect(blank).not.toContain('no');
+    expect(blank).not.toContain('false');
+    expect(omitted).not.toContain('yes');
+    expect(omitted).not.toContain('no');
+  }
+});
+
+test('freight list omits Eligible and Reason when no kept row sends them', () => {
+  const stdout = output('shipping_list_all', {
+    action: 'list_all',
+    shipments: [
+      { contract: { ...contract, id: 'odd-eligible' }, eligible: 'true', ineligible_reason: '   ' },
+      { contract: { ...contract, id: 'odd-reason' }, eligible: null, ineligible_reason: 0 },
+      { contract: { ...contract, id: 'plain-row', eligible: true } },
+    ],
+  });
+
+  expect(stdout).not.toMatch(/\bEligible\b/);
+  expect(stdout).not.toMatch(/\bReason\b/);
+  expect(stdout).not.toContain('yes');
+  expect(stdout).not.toContain('true');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('freight list keeps Eligible when eligible is false and omits a blank reason', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [{ contract: { ...contract, id: 'blocked-only' }, eligible: false, ineligible_reason: '' }],
+  });
+
+  expect(stdout).toMatch(/\bEligible\b/);
+  expect(stdout).toContain('no');
+  expect(stdout).not.toContain('yes');
+  expect(stdout).not.toMatch(/\bReason\b/);
 });
 
 test('shipping_list shows a blank Hazmat cell when the key is present but not a boolean', () => {

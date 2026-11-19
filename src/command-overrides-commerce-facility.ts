@@ -147,15 +147,26 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_list: {
     usage:
-      '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [sort=reward|distance|age] [page=...] [per_page=...]',
+      '[eligible_as=player|faction] [filter_destination=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
     description:
-      'List freight contracts you can accept from the current station. You must be docked, and only contracts posted at that station are shown. filter_destination accepts a station base ID or station POI ID.',
+      'List freight contracts from the current station. You must be docked, and only contracts posted at that station are shown. The default board is still contracts the eligible_as carrier can accept at the docked station. include_ineligible=true also shows runs that carrier cannot accept yet. filter_destination accepts a station base ID or station POI ID.',
     example:
       'spacemolt shipping_list filter_destination=sirius_observatory_station filter_service_level=priority sort=distance',
     discoverWith: ['get_status'],
-    seeAlso: ['shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
+    seeAlso: ['shipping_list_all', 'shipping_active', 'shipping_quote', 'shipping_accept', 'shipping_profile'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt_shipping/list',
+  },
+  shipping_list_all: {
+    usage:
+      '[eligible_as=player|faction] [filter_destination=...] [filter_origin=...] [filter_service_level=standard|priority] [filter_shipper=...] [include_ineligible=true/false] [sort=reward|distance|age] [page=...] [per_page=...]',
+    description:
+      'List posted freight contracts at charted stations. You must be docked at a station with a mission service. filter_origin limits that board to one origin station, a station base ID or station POI ID. Accepting a contract still means flying to its origin. include_ineligible=true also shows runs the eligible_as carrier cannot accept yet. The client does not check the mission service, does not decide which stations are charted, does not filter rows, and does not travel.',
+    example: 'spacemolt shipping_list_all filter_origin=sirius_observatory_station include_ineligible=true',
+    discoverWith: ['get_status'],
+    seeAlso: ['shipping_list', 'shipping_accept'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/list_all',
   },
   // Empty body / no args: omit usage entirely (do not set usage: '' — help treats empty string as a blank usage line).
   shipping_active: {
