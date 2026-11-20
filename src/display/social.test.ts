@@ -5035,6 +5035,273 @@ test('facility_list omits Ally Facilities when ally_facilities is null or not an
   }
 });
 
+test('facility_list prints Tenant Facilities after the other tables and before rent', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.player_rent = {
+    facilities: 1,
+    total_rent_per_cycle: 11,
+    est_rent_per_day: 1,
+    arrears_owed: 0,
+  };
+  fixture.public_facilities = [
+    {
+      facility_id: 'public-refinery',
+      name: 'Public Refinery',
+      category: 'production',
+      level: 1,
+    },
+  ];
+  fixture.tenant_facilities = [
+    null,
+    'skip',
+    1,
+    ['nope'],
+    {
+      facility_id: 'ten-player',
+      type: ' ore_refinery ',
+      name: '  Ore Refinery  ',
+      operational: false,
+      rent_per_cycle: 1200,
+      custom_name: '  Glow  ',
+      owner_id: 'player-1',
+      owner_name: 'Ada',
+      missed_rent_cycles: 0,
+    },
+    {
+      facility_id: 'ten-faction',
+      type: 'alloy_smelter',
+      name: 'Alloy Smelter',
+      operational: true,
+      rent_per_cycle: 0,
+      faction_id: 'fac-9',
+      faction_name: 'Drift',
+      faction_tag: 'DRF',
+      missed_rent_cycles: 2,
+    },
+    {
+      facility_id: 'ten-cover',
+      type: '',
+      name: 'Cover Cafe',
+      operational: true,
+      rent_per_cycle: 0,
+    },
+    {
+      facility_id: 'ten-tag',
+      type: 'crew_bunk',
+      name: 'Crew Bunk',
+      operational: true,
+      rent_per_cycle: 11,
+      faction_tag: 'ZZ',
+    },
+    {
+      facility_id: 'ten-norent',
+      type: 'ledger_desk',
+      name: 'Ledger Desk',
+      operational: true,
+    },
+    {
+      facility_id: 'ten-bad',
+      type: 12,
+      name: 'Named Tank',
+      operational: 'yes',
+      rent_per_cycle: Number.POSITIVE_INFINITY,
+      missed_rent_cycles: 3n,
+      custom_name: '',
+      owner_name: '   ',
+    },
+    {
+      facility_id: 'ten-bigint',
+      type: 'crew_bunk',
+      name: 'Big Bunk',
+      operational: true,
+      rent_per_cycle: 10n,
+    },
+  ];
+
+  const stdout = renderFacilityList(fixture);
+  const factionAt = stdout.indexOf('=== Faction Facilities ===');
+  const tenantAt = stdout.indexOf('=== Tenant Facilities ===');
+  const personalAt = stdout.indexOf('Personal rent bill:');
+  const rentAt = stdout.indexOf('Faction rent bill:');
+  const tenant = sectionAfter(stdout, 'Tenant Facilities').split('Personal rent bill:')[0] ?? '';
+  const header = tenant
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Name') && line.includes('Type'));
+
+  expect(factionAt).toBeGreaterThanOrEqual(0);
+  expect(tenantAt).toBeGreaterThan(factionAt);
+  expect(personalAt).toBeGreaterThan(tenantAt);
+  expect(rentAt).toBeGreaterThan(personalAt);
+  expect(stdout.split('=== Tenant Facilities ===')[0]).not.toContain('ten-player');
+  expect(sectionAfter(stdout, 'Player Facilities', 'Faction Facilities')).not.toContain('ten-player');
+  expect(sectionAfter(stdout, 'Faction Facilities', 'Tenant Facilities')).not.toContain('ten-player');
+  expect(sectionAfter(stdout, 'Public Facilities', 'Player Facilities')).not.toContain('ten-player');
+  expectHeaderColumnsInOrder(header, [
+    'Name',
+    'Type',
+    'ID',
+    'Running',
+    'Rent',
+    'Custom',
+    'Owner',
+    'Owner ID',
+    'Faction',
+    'Faction ID',
+    'Missed',
+  ]);
+  expect(header).not.toContain('Disguised');
+  expect(tenant).toContain('  Ore Refinery  ');
+  expect(tenant).toContain(' ore_refinery ');
+  expect(tenant).toContain('  Glow  ');
+  expect(tenant).not.toContain('1,200cr');
+  expect(tenant).not.toContain('(paused)');
+  expect(tableCell(tenant, 'ten-player', 'Name')).toBe('Ore Refinery');
+  expect(tableCell(tenant, 'ten-player', 'Type')).toBe('ore_refinery');
+  expect(tableCell(tenant, 'ten-player', 'Running')).toBe('no');
+  expect(tableCell(tenant, 'ten-player', 'Rent')).toBe('1200');
+  expect(tableCell(tenant, 'ten-player', 'Custom')).toBe('Glow');
+  expect(tableCell(tenant, 'ten-player', 'Owner')).toBe('Ada');
+  expect(tableCell(tenant, 'ten-player', 'Owner ID')).toBe('player-1');
+  expect(tableCell(tenant, 'ten-player', 'Faction')).toBe('');
+  expect(tableCell(tenant, 'ten-player', 'Missed')).toBe('0');
+  expect(tableCell(tenant, 'ten-faction', 'Rent')).toBe('0');
+  expect(tableCell(tenant, 'ten-faction', 'Running')).toBe('yes');
+  expect(tableCell(tenant, 'ten-faction', 'Owner')).toBe('');
+  expect(tableCell(tenant, 'ten-faction', 'Owner ID')).toBe('');
+  expect(tableCell(tenant, 'ten-faction', 'Faction')).toBe('Drift (DRF)');
+  expect(tableCell(tenant, 'ten-faction', 'Faction ID')).toBe('fac-9');
+  expect(tableCell(tenant, 'ten-faction', 'Missed')).toBe('2');
+  expect(tableCell(tenant, 'ten-cover', 'Name')).toBe('Cover Cafe');
+  expect(tableCell(tenant, 'ten-cover', 'Type')).toBe('');
+  expect(tableCell(tenant, 'ten-cover', 'Rent')).toBe('0');
+  expect(tableCell(tenant, 'ten-cover', 'Faction')).toBe('');
+  expect(tableCell(tenant, 'ten-cover', 'Missed')).toBe('');
+  expect(tableCell(tenant, 'ten-tag', 'Faction')).toBe('(ZZ)');
+  expect(tableCell(tenant, 'ten-tag', 'Faction ID')).toBe('');
+  expect(tableCell(tenant, 'ten-norent', 'Rent')).toBe('');
+  expect(tableCell(tenant, 'ten-norent', 'Missed')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Type')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Name')).toBe('Named Tank');
+  expect(tableCell(tenant, 'ten-bad', 'Running')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Rent')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Missed')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Custom')).toBe('');
+  expect(tableCell(tenant, 'ten-bad', 'Owner')).toBe('');
+  expect(tableCell(tenant, 'ten-bigint', 'Rent')).toBe('');
+  expect(tableCell(tenant, 'ten-bigint', 'Missed')).toBe('');
+  expect(tenant).not.toContain('(None)');
+  expect(tenant).not.toContain('skip');
+});
+
+test('facility_list omits Tenant Facilities when nothing is kept', () => {
+  const cases: unknown[] = [
+    undefined,
+    null,
+    { facility_id: 'not-a-list' },
+    'ten-player',
+    0,
+    [],
+    [null, 'skip', 1, ['x']],
+  ];
+  for (const tenantFacilities of cases) {
+    const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+    if (tenantFacilities !== undefined) fixture.tenant_facilities = tenantFacilities;
+    const stdout = renderFacilityList(fixture);
+    expect(stdout).not.toContain('=== Tenant Facilities ===');
+    expect(stdout).not.toContain('(None)');
+    expect(stdout).toContain('=== Faction Facilities ===');
+    expect(stdout).toContain('Faction rent bill:');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+});
+
+test('facility_list prints a blank Tenant Facilities row for an empty object', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.tenant_facilities = [{}];
+  const stdout = renderFacilityList(fixture);
+  const tenant = sectionAfter(stdout, 'Tenant Facilities').split('Faction rent bill:')[0] ?? '';
+  const header = tenant.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+  expect(stdout).toContain('=== Tenant Facilities ===');
+  expect(tenant).not.toContain('(None)');
+  expect(header).toContain('Type');
+  expect(header).toContain('ID');
+  expect(header).not.toContain('Running');
+  expect(header).not.toContain('Rent');
+  expect(header).not.toContain('Custom');
+  expect(header).not.toContain('Owner');
+  expect(header).not.toContain('Faction');
+  expect(header).not.toContain('Missed');
+  expect(header).not.toContain('Disguised');
+});
+
+test('facility_list tenant columns stay closed when values are not printable', () => {
+  const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
+  fixture.tenant_facilities = [
+    {
+      facility_id: 'plain',
+      type: 'ore_refinery',
+      name: 'Ore Refinery',
+      operational: 'no',
+      rent_per_cycle: '0',
+      custom_name: '   ',
+      missed_rent_cycles: '2',
+    },
+  ];
+  const tenant = sectionAfter(renderFacilityList(fixture), 'Tenant Facilities').split('Faction rent bill:')[0] ?? '';
+  const header = tenant.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Running');
+  expect(header).not.toContain('Rent');
+  expect(header).not.toContain('Custom');
+  expect(header).not.toContain('Missed');
+  expect(tableCell(tenant, 'plain', 'Type')).toBe('ore_refinery');
+  expect(tableCell(tenant, 'plain', 'Rent')).toBeUndefined();
+  expect(tableCell(tenant, 'plain', 'Running')).toBeUndefined();
+  expect(tableCell(tenant, 'plain', 'Missed')).toBeUndefined();
+  expect(tenant).not.toContain('(None)');
+});
+
+test('facility owned, faction facility_list, get_base, and inspect do not print Tenant Facilities', () => {
+  const tenant = [
+    {
+      facility_id: 'ten-player',
+      type: 'ore_refinery',
+      name: 'Ore Refinery',
+      operational: true,
+      rent_per_cycle: 10,
+    },
+  ];
+  const list = structuredClone(facilityListFixture) as Record<string, unknown>;
+  list.tenant_facilities = tenant;
+  for (const command of ['facility_owned', 'faction_facility_list', 'get_base', 'inspect']) {
+    const stdout = renderStructuredResult(command, structuredClone(list), options, context).stdout.join('\n');
+    expect(stdout).not.toContain('=== Tenant Facilities ===');
+  }
+
+  const owned = structuredClone(facilityOwnedFixture) as Record<string, unknown>;
+  owned.tenant_facilities = structuredClone(tenant);
+  expect(renderStructuredResult('facility_owned', owned, options, context).stdout.join('\n')).not.toContain(
+    '=== Tenant Facilities ===',
+  );
+
+  const faction = structuredClone(factionFacilityListFixture) as Record<string, unknown>;
+  faction.tenant_facilities = structuredClone(tenant);
+  expect(renderStructuredResult('faction_facility_list', faction, options, context).stdout.join('\n')).not.toContain(
+    '=== Tenant Facilities ===',
+  );
+
+  const base = {
+    base: { id: 'earth_station', name: 'Earth Station' },
+    tenant_facilities: tenant,
+  };
+  expect(renderStructuredResult('get_base', base, options, context).stdout.join('\n')).not.toContain(
+    '=== Tenant Facilities ===',
+  );
+  expect(renderStructuredResult('inspect', base, options, context).stdout.join('\n')).not.toContain(
+    '=== Tenant Facilities ===',
+  );
+});
+
 test('facility_list text format prints the same Ally Facilities table', () => {
   const fixture = structuredClone(facilityListFixture) as Record<string, unknown>;
   fixture.ally_facilities = [

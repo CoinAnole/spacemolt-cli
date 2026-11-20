@@ -4070,6 +4070,14 @@ describe('command metadata', () => {
       expect(text).toContain('including 0');
       expect(text).toContain('An omitted key is not 0');
       expect(text).toContain('Gameserver 0.703.0');
+      expect(text).toContain('tenant_facilities');
+      expect(text).toContain('ManageBases');
+      expect(text).toContain("outsiders' facilities with owner and rent");
+      expect(text).toContain('cover name');
+      expect(text).toContain('empty type');
+      expect(text).toContain('omits faction fields');
+      expect(text).toContain('does not check ManageBases');
+      expect(text).toContain('does not reveal a cover');
       expect(text).not.toContain('maintenance_fuel');
       expect(text).not.toContain('building (');
     }

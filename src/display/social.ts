@@ -15,6 +15,7 @@ import {
   firstArray,
   formatExactGroupedInteger,
   formatFacilityMaintenanceUpkeep,
+  formatFiniteNumberAsSent,
   formatIntegerText,
   formatMaintenanceAverageBurn,
   formatter,
@@ -950,6 +951,59 @@ function facilityColumns(
   }
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
+}
+
+function nonBlankSent(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  return value;
+}
+
+function tenantFactionText(row: Record<string, unknown>): string | undefined {
+  const name = nonBlankSent(row.faction_name);
+  const tag = nonBlankSent(row.faction_tag);
+  if (name !== undefined && tag !== undefined) return `${name} (${tag})`;
+  if (name !== undefined) return name;
+  if (tag !== undefined) return ` (${tag})`;
+  return undefined;
+}
+
+// Kept objects only. An empty type stays blank and is not replaced with the name.
+function emitTenantFacilities(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  const rows: Array<Record<string, unknown>> = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const typeText = typeof entry.type === 'string' ? entry.type : undefined;
+    rows.push({
+      name_display: nonBlankSent(entry.name),
+      type_display: typeText === '' ? undefined : typeText,
+      facility_id: nonBlankSent(entry.facility_id),
+      running_display: formatYesNo(entry.operational),
+      rent_display: formatFiniteNumberAsSent(entry.rent_per_cycle),
+      custom_name: nonBlankSent(entry.custom_name),
+      owner_name: nonBlankSent(entry.owner_name),
+      owner_id: nonBlankSent(entry.owner_id),
+      faction_display: tenantFactionText(entry),
+      faction_id: nonBlankSent(entry.faction_id),
+      missed_display: formatFiniteNumberAsSent(entry.missed_rent_cycles),
+    });
+  }
+  if (rows.length === 0) return;
+
+  const columns: Array<[string, string[]]> = [
+    ['Name', ['name_display']],
+    ['Type', ['type_display']],
+    ['ID', ['facility_id']],
+  ];
+  if (hasAnyField(rows, ['running_display'])) columns.push(['Running', ['running_display']]);
+  if (hasAnyField(rows, ['rent_display'])) columns.push(['Rent', ['rent_display']]);
+  if (hasAnyField(rows, ['custom_name'])) columns.push(['Custom', ['custom_name']]);
+  if (hasAnyField(rows, ['owner_name'])) columns.push(['Owner', ['owner_name']]);
+  if (hasAnyField(rows, ['owner_id'])) columns.push(['Owner ID', ['owner_id']]);
+  if (hasAnyField(rows, ['faction_display'])) columns.push(['Faction', ['faction_display']]);
+  if (hasAnyField(rows, ['faction_id'])) columns.push(['Faction ID', ['faction_id']]);
+  if (hasAnyField(rows, ['missed_display'])) columns.push(['Missed', ['missed_display']]);
+  printCompactTable('Tenant Facilities', rows, columns);
 }
 
 const LATCH_STATUS_LINES = {
@@ -2235,7 +2289,7 @@ export const socialFormatters = [
   namedFormatter(
     'facility_list',
     ['station_facilities', 'player_facilities', 'faction_facilities', 'public_facilities'],
-    (r) => {
+    (r, command) => {
       const stationFacilities = firstArray(r, ['station_facilities']);
       const playerFacilities = firstArray(r, ['player_facilities']);
       const factionFacilities = firstArray(r, ['faction_facilities']);
@@ -2265,6 +2319,7 @@ export const socialFormatters = [
           facilityColumns(displayRows, { grouped: true, missedRent, averageBurn: true }),
         );
       }
+      if (commandNameEquals(command, 'facility_list')) emitTenantFacilities(r.tenant_facilities);
       emitFacilityRentSummaries(r);
       return true;
     },
