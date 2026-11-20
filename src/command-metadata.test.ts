@@ -2296,6 +2296,34 @@ describe('command metadata', () => {
     }
   });
 
+  test('list_station_passengers help documents a remote charted station', () => {
+    const description =
+      'List citizens waiting for transport at a station. id is a station base ID or station POI ID for another charted station while docked anywhere. A remote view needs docking access at that station. Omitting it keeps the current station. The call still requires being docked, not in flight. Uncharted frontier stations stay hidden. Faction stations still apply their docking access rules. The client does not check docking, charted stations, frontier stations, or whether the caller is in flight.';
+    const config = BUNDLED_COMMAND_REGISTRY.commands.list_station_passengers;
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.list_station_passengers?.usage).toBe('[id]');
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.list_station_passengers?.positionals).toEqual(['id']);
+    expect(QUERY_REFERENCE_COMMAND_OVERRIDES.list_station_passengers?.aliases).toEqual({ base_id: 'id' });
+    expect(config?.usage).toBe('[id]');
+    expect(config?.args).toEqual(['id']);
+    expect(config?.aliases).toEqual({ base_id: 'id' });
+    expect(config?.description).toBe(description);
+    expect(config?.description).not.toContain('current docked station');
+    expect(config?.example).toBe(
+      'spacemolt list_station_passengers nova_central; spacemolt list_station_passengers base_id=nova_central',
+    );
+    expect(config?.schema?.id?.description).toContain('Base ID or station POI ID');
+    expect(config?.schema).not.toHaveProperty('base_id');
+
+    const help = captureHelp('list_station_passengers');
+    expect(help).toContain(description);
+    expect(help).toContain('spacemolt list_station_passengers [id]');
+    expect(help).toContain('spacemolt list_station_passengers nova_central');
+    expect(help).toContain('spacemolt list_station_passengers base_id=nova_central');
+    expect(help).toContain('base_id -> id');
+    expect(help).not.toContain('<args...>');
+    expect(help).not.toContain('current docked station');
+  });
+
   test('unload_passenger help documents all-passenger bulk unload', () => {
     const config = BUNDLED_COMMAND_REGISTRY.commands.unload_passenger;
     expect(config?.usage).toContain('all');

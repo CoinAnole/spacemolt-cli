@@ -126,9 +126,16 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
     apiRoute: 'POST /api/v2/spacemolt/list_passengers',
   },
   list_station_passengers: {
-    description: 'List citizens waiting for transport at your current docked station.',
+    usage: '[id]',
+    description:
+      'List citizens waiting for transport at a station. id is a station base ID or station POI ID for another charted station while docked anywhere. A remote view needs docking access at that station. Omitting it keeps the current station. The call still requires being docked, not in flight. Uncharted frontier stations stay hidden. Faction stations still apply their docking access rules. The client does not check docking, charted stations, frontier stations, or whether the caller is in flight.',
+    example: 'spacemolt list_station_passengers nova_central; spacemolt list_station_passengers base_id=nova_central',
     category: 'Passenger Transport',
     apiRoute: 'POST /api/v2/spacemolt/list_station_passengers',
+    positionals: ['id'],
+    aliases: {
+      base_id: 'id',
+    },
   },
   load_passenger: {
     usage: '<destination_station_id_or_name>  (station base ID, station POI ID, or name)',
