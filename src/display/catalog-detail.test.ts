@@ -99,6 +99,61 @@ const classifyCases: Array<{
     recipe: { hand_craftable: 'yes' },
     expected: 'craftable',
   },
+  {
+    name: 'hand_craftable true stays craftable when facility_only is true and facility ids are empty',
+    recipe: { hand_craftable: true, facility_only: true, produced_by_facility_ids: [] },
+    expected: 'craftable',
+  },
+  {
+    name: 'facility_only true with empty facility ids and no hand_craftable is no venue',
+    recipe: { facility_only: true, produced_by_facility_ids: [] },
+    expected: 'no venue',
+  },
+  {
+    name: 'facility_only true with only an empty-string facility id and no hand_craftable is no venue',
+    recipe: { facility_only: true, produced_by_facility_ids: [''] },
+    expected: 'no venue',
+  },
+  {
+    name: 'facility_only true with a non-empty facility id and no hand_craftable is facility only',
+    recipe: { facility_only: true, produced_by_facility_ids: ['nano_fab'] },
+    expected: 'facility only',
+  },
+  {
+    name: 'facility_only false with a non-empty facility id list and no hand_craftable is craftable',
+    recipe: { category: 'Smelting', facility_only: false, produced_by_facility_ids: ['ore_refinery'] },
+    expected: 'craftable',
+  },
+  {
+    name: 'facility_only false with an empty facility id list is craftable',
+    recipe: { facility_only: false, produced_by_facility_ids: [] },
+    expected: 'craftable',
+  },
+  {
+    name: 'omitted facility_only with an empty facility id list is craftable',
+    recipe: { category: 'Smelting', produced_by_facility_ids: [] },
+    expected: 'craftable',
+  },
+  {
+    name: 'Facility Only category with facility_only false is craftable',
+    recipe: { category: 'Facility Only', facility_only: false, produced_by_facility_ids: [] },
+    expected: 'craftable',
+  },
+  {
+    name: 'Facility Only category with facility_only omitted and empty ids is facility only',
+    recipe: { category: 'Facility Only', produced_by_facility_ids: [] },
+    expected: 'facility only',
+  },
+  {
+    name: 'Ship Passive with facility_only omitted and empty ids is ship passive',
+    recipe: { category: 'Ship Passive', produced_by_facility_ids: [] },
+    expected: 'ship passive',
+  },
+  {
+    name: 'numeric facility_only 1 with a non-empty id list is craftable',
+    recipe: { facility_only: 1, produced_by_facility_ids: ['nano_fab'] },
+    expected: 'craftable',
+  },
 ];
 
 for (const { name, recipe, options, expected } of classifyCases) {

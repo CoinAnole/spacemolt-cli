@@ -4138,6 +4138,91 @@ test('renders catalog recipe items with recipe availability', () => {
   expect(stdout).toContain('craftable');
 });
 
+test('renders type=recipes items with produced_by_facility_ids and does not merge recipes', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Smelting',
+          crafting_time: 4,
+          facility_only: true,
+          id: 'lost_smelt',
+          inputs: [{ item_id: 'ore_iron', quantity: 2 }],
+          name: 'Lost Smelt',
+          outputs: [{ item_id: 'iron_ingot', quantity: 1 }],
+          produced_by_facility_ids: [],
+        },
+        {
+          category: 'Smelting',
+          crafting_time: 3,
+          facility_only: false,
+          id: 'smelt_iron',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Smelt Iron',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      message: 'Recipes: showing 2 of 2',
+      page: 1,
+      page_size: 20,
+      recipes: [{ category: 'Cooking', id: 'decoy_recipe', name: 'Decoy Recipe' }],
+      total: 2,
+      total_pages: 1,
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recipes ===');
+  expect(stdout).toContain('Use');
+  expect(stdout).toContain('Lost Smelt');
+  expect(stdout).toContain('Smelt Iron');
+  expect(stdout).toContain('no venue');
+  expect(stdout).toContain('craftable');
+  expect(stdout).not.toContain('Decoy Recipe');
+  expect(stdout).not.toContain('ore_refinery');
+  expect(stdout).not.toContain('Hand-craftable');
+  expect(stdout).not.toContain('Produced by');
+  expect(stdout).not.toContain('facility only');
+});
+
+test('renders type=recipes items when recipes is an empty array', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Smelting',
+          crafting_time: 3,
+          facility_only: false,
+          id: 'smelt_iron',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Smelt Iron',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      recipes: [],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('Smelt Iron');
+  expect(stdout).toContain('craftable');
+  expect(stdout).toContain('Produced by: ore_refinery');
+  expect(stdout).not.toContain('Hand-craftable');
+  expect(stdout).not.toContain('(None)');
+});
+
 test('renders paginated Ship Passive category as ship passive without facility_only', () => {
   const rendered = renderStructuredResult(
     'catalog',
@@ -4256,6 +4341,154 @@ test('omits Produced by for a single ship-passive catalog recipe', () => {
   const stdout = rendered.stdout.join('\n');
   expect(rendered.success).toBe(true);
   expect(stdout).toContain('ship passive');
+  expect(stdout).not.toContain('Produced by:');
+});
+
+test('prints Produced by from produced_by_facility_ids when facilities do not format', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Smelting',
+          crafting_time: 3,
+          facility_only: false,
+          id: 'smelt_iron',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Smelt Iron',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: ['ore_refinery', ''],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: '', name: 'Blank Id' }],
+      recipes: [],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('craftable');
+  expect(stdout).toContain('Produced by: ore_refinery');
+  expect(stdout).not.toContain('Blank Id');
+  expect(stdout).not.toContain('Hand-craftable');
+});
+
+test('prefers produced_by_facilities over produced_by_facility_ids for one catalog recipe', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Smelting',
+          crafting_time: 3,
+          facility_only: true,
+          id: 'smelt_iron',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Smelt Iron',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('facility only');
+  expect(stdout).toContain('Produced by: Packager (packager, L1)');
+  expect(stdout).not.toContain('ore_refinery');
+});
+
+test('omits Produced by for facility_only true with an empty id list', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Smelting',
+          crafting_time: 4,
+          facility_only: true,
+          id: 'lost_smelt',
+          inputs: [{ item_id: 'ore_iron', quantity: 2 }],
+          name: 'Lost Smelt',
+          outputs: [{ item_id: 'iron_ingot', quantity: 1 }],
+          produced_by_facility_ids: [],
+        },
+      ],
+      produced_by_facilities: [{ definition_id: 'packager', name: 'Packager', level: 1 }],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('no venue');
+  expect(stdout).not.toContain('Produced by:');
+  expect(stdout).not.toContain('Hand-craftable');
+});
+
+test('omits Produced by for a ship passive recipe that lists facility ids', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      items: [
+        {
+          category: 'Ship Passive',
+          crafting_time: 0,
+          id: 'passive_refine_iron_ore',
+          inputs: [{ item_id: 'iron_ore', quantity: 10 }],
+          name: 'Passive Iron Refining',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: ['ore_refinery'],
+        },
+      ],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('ship passive');
+  expect(stdout).not.toContain('Produced by:');
+  expect(stdout).not.toContain('ore_refinery');
+});
+
+test('omits Produced by when produced_by_facility_ids has no non-empty id', () => {
+  const rendered = renderStructuredResult(
+    'catalog',
+    {
+      recipes: [
+        {
+          category: 'Smelting',
+          crafting_time: 3,
+          facility_only: false,
+          id: 'smelt_iron',
+          inputs: [{ item_id: 'ore_iron', quantity: 4 }],
+          name: 'Smelt Iron',
+          outputs: [{ item_id: 'iron_ingot', quantity: 2 }],
+          produced_by_facility_ids: [''],
+        },
+      ],
+      type: 'recipes',
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('craftable');
   expect(stdout).not.toContain('Produced by:');
 });
 
@@ -6170,6 +6403,50 @@ test('catalog_dump prints Recipe venues census for dump recipes with hand_crafta
   expect(stdout).not.toContain('Pack Package');
   expect(stdout).not.toContain('Passive Iron Refining');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('catalog_dump prints Recipe venues for facility_only and produced_by_facility_ids without hand_craftable', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [
+    {
+      id: 'lost_smelt',
+      name: 'Lost Smelt',
+      category: 'Smelting',
+      facility_only: true,
+      produced_by_facility_ids: [],
+    },
+    {
+      id: 'smelt_iron',
+      name: 'Smelt Iron',
+      category: 'Smelting',
+      facility_only: false,
+      produced_by_facility_ids: ['ore_refinery'],
+    },
+  ];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('recipes: 2');
+  expect(stdout).toContain('\n\nRecipe venues\n  craftable: 1\n  no venue: 1');
+  expect(stdout).not.toContain('facility only');
+  expect(stdout).not.toContain('Lost Smelt');
+  expect(stdout).not.toContain('Smelt Iron');
+  expect(stdout).not.toContain('ore_refinery');
+});
+
+test('catalog_dump omits Recipe venues when recipes lack hand_craftable, facility_only, and produced_by_facility_ids', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [{ id: 'passive_refine_iron_ore', category: 'Ship Passive', name: 'Passive Iron Refining' }];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('recipes: 1');
+  expect(stdout).not.toContain('Recipe venues');
+  expect(stdout).not.toContain('Passive Iron Refining');
+});
+
+test('catalog_dump omits Recipe venues when facility_only is numeric', () => {
+  const fixture = structuredClone(catalogDumpFixture) as Record<string, unknown>;
+  fixture.recipes = [{ id: 'smelt_iron', category: 'Smelting', facility_only: 1, name: 'Smelt Iron' }];
+  const stdout = renderStructuredResult('catalog_dump', fixture, options, context).stdout.join('\n');
+  expect(stdout).toContain('recipes: 1');
+  expect(stdout).not.toContain('Recipe venues');
 });
 
 test('catalog_dump omits Recipe venues when recipes lack hand_craftable', () => {

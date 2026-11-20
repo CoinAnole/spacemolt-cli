@@ -8,6 +8,7 @@ import {
   emitCatalogShipDetail,
   emitCatalogSkillDetail,
   formatProducedByFacilities,
+  formatProducedByFacilityIds,
   formatShipAvailability,
   joinStringIds,
   summarizeNamedItemQuantities as summarizeShipRequiredItems,
@@ -565,6 +566,14 @@ function summarizeNamedItemQuantities(value: unknown): string | undefined {
 function summarizePassiveRecipes(value: unknown): string {
   if (!Array.isArray(value)) return '';
   return value.filter((recipe) => typeof recipe === 'string').join(', ');
+}
+
+function catalogListedRecipes(result: Record<string, unknown>): Array<Record<string, unknown>> | undefined {
+  // type=recipes rows are CatalogRecipe objects on items, not a merged recipes array.
+  if (result.type === 'recipes' && Array.isArray(result.items) && result.items.some(isRecord)) {
+    return result.items.filter(isRecord);
+  }
+  return firstArray(result, ['recipes']);
 }
 
 function printRecipeRows(
@@ -1295,11 +1304,17 @@ export const genericFormatters = [
       emitCatalogDumpHiddenCount('hidden faction achievements', r.hidden_faction_achievement_count);
 
       const venueCounts = countRecipeVenues(r.recipes);
-      // Pre-0.600.0 caches omit hand_craftable; keep those dumps counts-only.
-      const hasHandCraftable =
+      // Older caches omit venue fields; leave those dumps counts-only.
+      const hasVenueSignal =
         Array.isArray(r.recipes) &&
-        r.recipes.some((recipe) => isRecord(recipe) && typeof recipe.hand_craftable === 'boolean');
-      if (venueCounts && hasHandCraftable) {
+        r.recipes.some(
+          (recipe) =>
+            isRecord(recipe) &&
+            (typeof recipe.hand_craftable === 'boolean' ||
+              typeof recipe.facility_only === 'boolean' ||
+              Array.isArray(recipe.produced_by_facility_ids)),
+        );
+      if (venueCounts && hasVenueSignal) {
         emitLine('');
         emitLine('Recipe venues');
         for (const token of ['craftable', 'facility only', 'ship passive', 'no venue'] as const) {
@@ -1802,7 +1817,7 @@ export const genericFormatters = [
 
   formatter(
     (r) => {
-      const recipes = firstArray(r, r.type === 'recipes' ? ['recipes', 'items'] : ['recipes']);
+      const recipes = catalogListedRecipes(r);
       if (!recipes) return false;
       printRecipeRows('Recipes', recipes);
       const recipe = recipes[0];
@@ -1810,7 +1825,9 @@ export const genericFormatters = [
       if (recipes.length === 1 && recipe && isRecord(recipe)) {
         const venue = classifyRecipeVenue(recipe);
         if (venue !== 'ship passive' && venue !== 'no venue') {
-          const producedBy = formatProducedByFacilities(r.produced_by_facilities);
+          const producedBy =
+            formatProducedByFacilities(r.produced_by_facilities) ??
+            formatProducedByFacilityIds(recipe.produced_by_facility_ids);
           if (producedBy) emitLine(`Produced by: ${producedBy}`);
         }
       }

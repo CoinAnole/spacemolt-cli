@@ -95,8 +95,9 @@ export function classifyRecipeVenue(recipe: Record<string, unknown>, options: { 
   const hand = recipe.hand_craftable;
   const facilityIds = stringIdList(recipe.produced_by_facility_ids);
 
-  if (hand === true) return 'craftable';
-  if (hand === false) {
+  // Boolean hand_craftable stays decisive so cached dumps keep their venue.
+  if (typeof hand === 'boolean') {
+    if (hand) return 'craftable';
     if (facilityIds && facilityIds.length > 0) return 'facility only';
     if (facilityIds && facilityIds.length === 0) return 'no venue';
     if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
@@ -105,9 +106,11 @@ export function classifyRecipeVenue(recipe: Record<string, unknown>, options: { 
     return 'no venue';
   }
 
-  if (recipe.category === FACILITY_ONLY_CATEGORY || recipe.facility_only === true) {
+  if (recipe.facility_only === true) {
+    if (facilityIds && !facilityIds.some((id) => id.length > 0)) return 'no venue';
     return 'facility only';
   }
+  if (recipe.facility_only === undefined && recipe.category === FACILITY_ONLY_CATEGORY) return 'facility only';
   return 'craftable';
 }
 
