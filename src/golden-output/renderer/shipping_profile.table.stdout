@@ -33,6 +33,6 @@ Block reason: Outstanding freight debt must be paid before accepting another con
 
 === Outstanding Debts ===
 
-  ID             | Shipment            | Original | Outstanding | Creditor              | Created              | Paid
-  ---------------+---------------------+----------+-------------+-----------------------+----------------------+-----
-  freight-debt-1 | shipment-breached-1 | 1,000 cr | 500 cr      | station:earth_station | 2026-07-17T09:00:00Z |     
+  ID             | Shipment            | Original | Outstanding | Creditor              | Debtor              | Created              | Paid
+  ---------------+---------------------+----------+-------------+-----------------------+---------------------+----------------------+-----
+  freight-debt-1 | shipment-breached-1 | 1,000 cr | 500 cr      | station:earth_station | player:carrier-vale | 2026-07-17T09:00:00Z |     

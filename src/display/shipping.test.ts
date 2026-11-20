@@ -203,6 +203,59 @@ test('freight quote shipper with an id and no kind omits Shipper and still print
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('freight quote shipper name prints Marlowe with kind and id', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      shipper: { kind: 'player', id: 'marlowe', name: 'Marlowe' },
+    },
+  });
+
+  expect(stdout).toContain('Shipper: Marlowe (player:marlowe)');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('freight quote keeps surrounding spaces in a shipper name', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      shipper: { kind: 'player', id: 'marlowe', name: ' Marlowe ' },
+    },
+  });
+
+  expect(stdout).toContain('Shipper:  Marlowe  (player:marlowe)');
+});
+
+test('freight quote blank or non-string shipper name stays kind and id', () => {
+  for (const name of ['', '   ', 1, true]) {
+    const stdout = output('shipping_quote', {
+      action: 'quote',
+      quote: {
+        package_id: 'package-1',
+        shipper: { kind: 'player', id: 'marlowe', name },
+      },
+    });
+    expect(stdout).toContain('Shipper: player:marlowe');
+    expect(stdout).not.toContain('(player:marlowe)');
+  }
+});
+
+test('freight quote shipper name without a kind still omits Shipper', () => {
+  const stdout = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      shipper: { id: 'marlowe', name: 'Marlowe' },
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Quote ===');
+  expect(stdout).not.toContain('Shipper:');
+  expect(stdout).not.toContain('Marlowe');
+});
+
 test('one-sided freight quote omits Route when destination_base_id is omitted', () => {
   const stdout = output('shipping_quote', {
     action: 'quote',
@@ -1183,6 +1236,23 @@ test('renders an explicit empty tracking message', () => {
   expect(output('shipping_track', { action: 'track', contract, events: [] })).toContain('No tracking events.');
 });
 
+test('freight tracking prints a named custodian in the Custodian cell', () => {
+  const stdout = output('shipping_track', {
+    action: 'track',
+    contract,
+    events: [
+      {
+        class: 'ship',
+        custodian: { kind: 'player', id: 'carrier-vale', name: 'SwiftHauler' },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('Custodian');
+  expect(stdout).toContain('SwiftHauler (player:carrier-vale)');
+  expect(stdout).not.toContain('held by');
+});
+
 const carrierProfile = {
   actor: { kind: 'player', id: 'carrier-1' },
   tier: 'licensed',
@@ -1251,6 +1321,55 @@ test('renders carrier profile capacity, progression, debt blocking, and debts', 
   expect(stdout).toContain('=== Outstanding Debts ===');
   expect(stdout).toContain('debt-1');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('freight debt prints a named debtor after Creditor', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, actor: { kind: 'player', id: 'carrier-vale', name: 'Vale' } },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [
+      {
+        ...freightDebt,
+        creditor: { kind: 'station', id: 'earth_station', name: 'Earth Station' },
+        debtor: { kind: 'player', id: 'carrier-vale', name: 'Vale' },
+      },
+      { ...freightDebt, id: 'debt-blank', debtor: { name: 'Missing' } },
+    ],
+  });
+
+  expect(stdout).toContain('Actor: Vale (player:carrier-vale)');
+  expect(stdout).toContain('Earth Station (station:earth_station)');
+  expect(stdout).toContain('Vale (player:carrier-vale)');
+  const lines = stdout.split('\n');
+  const header = lines.find((line) => line.includes('Creditor') && line.includes('Debtor'));
+  expect(header).toBeDefined();
+  expect(header?.indexOf('Creditor')).toBeLessThan(header?.indexOf('Debtor') ?? -1);
+  expect(header?.indexOf('Debtor')).toBeLessThan(header?.indexOf('Created') ?? -1);
+  const blank = lines.find((line) => line.includes('debt-blank'));
+  expect(blank).toBeDefined();
+  expect(blank).not.toContain('Missing');
+  expect(blank).not.toContain('player:');
+});
+
+test('freight debt does not open Debtor when no row renders a debtor', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [
+      { ...freightDebt, debtor: undefined },
+      { ...freightDebt, id: 'debt-2', debtor: 'carrier-1' },
+      { ...freightDebt, id: 'debt-3', debtor: { kind: 'player', name: 'Vale' } },
+    ],
+  });
+
+  expect(stdout).toContain('=== Outstanding Debts ===');
+  expect(stdout).toContain('station:earth_station');
+  expect(stdout).not.toContain('Debtor');
+  expect(stdout).not.toContain('Vale');
 });
 
 test('renders the shipping_profile last-consequence branch', () => {

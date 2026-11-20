@@ -46,7 +46,10 @@ function formatActor(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   const kind = presentString(value.kind);
   const id = presentString(value.id);
-  return kind && id ? `${kind}:${id}` : undefined;
+  if (!kind || !id) return undefined;
+  // Keep a non-blank name as sent, including surrounding spaces. Do not look it up.
+  const name = presentString(value.name);
+  return name === undefined ? `${kind}:${id}` : `${name} (${kind}:${id})`;
 }
 
 function formatRoute(origin: unknown, destination: unknown): string | undefined {
@@ -442,23 +445,21 @@ function renderDebts(title: string, debts: Array<Record<string, unknown>>, empty
     original: formatCredits(debt.original),
     outstanding: formatCredits(debt.outstanding),
     creditor: formatActor(debt.creditor),
+    debtor: formatActor(debt.debtor),
     created: text(debt.created_at),
     paid: text(debt.paid_at),
   }));
-  printCompactTable(
-    title,
-    rows,
-    [
-      ['ID', ['id']],
-      ['Shipment', ['shipment']],
-      ['Original', ['original']],
-      ['Outstanding', ['outstanding']],
-      ['Creditor', ['creditor']],
-      ['Created', ['created']],
-      ['Paid', ['paid']],
-    ],
-    { maxCellWidth: 48 },
-  );
+  const columns: Array<[string, string[]]> = [
+    ['ID', ['id']],
+    ['Shipment', ['shipment']],
+    ['Original', ['original']],
+    ['Outstanding', ['outstanding']],
+    ['Creditor', ['creditor']],
+  ];
+  // An omitted or unprintable debtor stays blank and does not open the column.
+  if (rows.some((row) => row.debtor !== undefined)) columns.push(['Debtor', ['debtor']]);
+  columns.push(['Created', ['created']], ['Paid', ['paid']]);
+  printCompactTable(title, rows, columns, { maxCellWidth: 48 });
 }
 
 function renderShippingProfile(result: Record<string, unknown>): boolean {
