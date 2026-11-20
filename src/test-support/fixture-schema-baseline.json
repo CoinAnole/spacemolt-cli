@@ -1,5 +1,5 @@
 {
-  "generatedAtGameserver": "v0.728.0",
+  "generatedAtGameserver": "v0.729.3",
   "blockingDivergenceSignatures": [
     "abandon_mission|abandon_mission|required-missing|missions.active[0].accepted_at",
     "abandon_mission|abandon_mission|required-missing|missions.active[0].difficulty",
@@ -26,6 +26,9 @@
     "accept_mission|accept_mission|required-missing|player.username",
     "browse_ships|browse_ships|required-missing|listings[0].base_id",
     "browse_ships|browse_ships|required-missing|listings[0].base_name",
+    "catalog_dump_recipe_venues|catalog_dump|extra-in-fixture|recipes[0].hand_craftable",
+    "catalog_dump_recipe_venues|catalog_dump|extra-in-fixture|recipes[1].hand_craftable",
+    "catalog_dump_recipe_venues|catalog_dump|extra-in-fixture|recipes[2].hand_craftable",
     "citizenship_list_stateless|citizenship_list|required-missing|empires[0].has_pending",
     "citizenship_list_stateless|citizenship_list|required-missing|empires[1].has_pending",
     "citizenship_list|citizenship_list|required-missing|empires[0].has_pending",
