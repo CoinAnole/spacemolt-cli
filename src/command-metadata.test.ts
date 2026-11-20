@@ -3532,7 +3532,7 @@ describe('command metadata', () => {
 
   test('view_market help teaches Company Store narrowing', () => {
     const description =
-      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. since=<tick> asks for an incremental diff. Fuel is excluded from incremental diffs, and so is contraband except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.";
+      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. since=<tick> asks for an incremental diff. Fuel is excluded from incremental diffs, and so is contraband except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter. base_id is a station base ID or station POI ID for another charted station while docked anywhere. Omitting it keeps the current station. The call still requires being docked, not in flight. Uncharted frontier stations stay hidden. Faction stations still apply their market access rules. The client does not check that the caller is docked, does not decide which stations are charted, does not hide a frontier station, and does not apply faction access.";
     const viewMarket = BUNDLED_COMMAND_REGISTRY.commands.view_market;
     expect(viewMarket?.description).toBe(description);
     expect(viewMarket?.description).toContain('public plus your faction');
@@ -3548,10 +3548,41 @@ describe('command metadata', () => {
     expect(viewMarket?.description).not.toContain('Private Company Store orders are excluded');
     expect(viewMarket?.description).not.toContain('Fuel is excluded from the feed.');
     expect(viewMarket?.usage).toContain('narrows to only your faction');
+    expect(viewMarket?.usage).toContain('[base_id=...]');
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.view_market?.positionals).toEqual([
+      'item_id',
+      'category',
+      'company_store',
+      'since',
+    ]);
+    expect(viewMarket?.args).toEqual(['item_id', 'category', 'company_store', 'since']);
+    expect(viewMarket?.example).toBe(
+      'spacemolt view_market --item ore_iron; spacemolt view_market base_id=sirius_observatory_station',
+    );
+    expect(viewMarket?.description).toContain('station base ID or station POI ID');
+    expect(viewMarket?.description).toContain('Omitting it keeps the current station.');
+    expect(viewMarket?.description).toContain('does not check that the caller is docked');
+    expect(viewMarket?.description).toContain('does not decide which stations are charted');
+    expect(viewMarket?.description).toContain('does not hide a frontier station');
+    expect(viewMarket?.description).toContain('does not apply faction access');
+    expect(parseArgs(['view_market', 'sirius_observatory_station'])).toEqual({
+      ok: true,
+      command: 'view_market',
+      payload: { item_id: 'sirius_observatory_station' },
+    });
+    expect(parseArgs(['view_market', 'base_id=sirius_observatory_station'])).toEqual({
+      ok: true,
+      command: 'view_market',
+      payload: { base_id: 'sirius_observatory_station' },
+    });
 
     const viewMarketHelp = captureHelp('view_market');
     expect(viewMarketHelp).toContain(description);
     expect(viewMarketHelp).toContain('[company_store=true]');
+    expect(viewMarketHelp).toContain('[base_id=...]');
+    expect(viewMarketHelp).toContain('spacemolt view_market --item ore_iron');
+    expect(viewMarketHelp).toContain('spacemolt view_market base_id=sirius_observatory_station');
+    expect(viewMarketHelp).not.toContain('station book');
     expect(viewMarketHelp).toContain('public plus your faction');
     expect(viewMarketHelp).toContain('narrows to only those private listings');
     expect(viewMarketHelp).toContain(

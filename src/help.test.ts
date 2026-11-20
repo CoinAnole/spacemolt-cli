@@ -591,7 +591,7 @@ describe('help output branches', () => {
     const output = capture.stdout.join('\n');
     expect(output).toContain('faction build company_store');
     expect(output).toContain('Company Store -> Company Outlet -> Company Exchange');
-    expect(output).toContain('view_market [item_id] [category] [company_store=true]');
+    expect(output).toContain('view_market [item_id] [category] [company_store=true] [base_id=...]');
     expect(output).toContain("company_store=true narrows to only your faction's Company Store");
     expect(output).not.toContain('company_store shows private faction listings');
     expect(output).toContain('faction create_sell_order <item> <qty> <price> [private=true]');

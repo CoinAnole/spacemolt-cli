@@ -427,10 +427,10 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   view_market: {
     usage:
-      "[item_id] [category] [company_store=true] [since=...] [--item item_id] [--search text]  (company_store=true narrows to only your faction's Company Store; since=<tick> polls changes)",
+      "[item_id] [category] [company_store=true] [since=...] [base_id=...] [--item item_id] [--search text]  (company_store=true narrows to only your faction's Company Store; since=<tick> polls changes)",
     description:
-      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. since=<tick> asks for an incremental diff. Fuel is excluded from incremental diffs, and so is contraband except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter.",
-    example: 'spacemolt view_market --item ore_iron',
+      "Inspect the order book (public plus your faction's Company Store; either can set the best price). company_store=true narrows to only those private listings. since=<tick> asks for an incremental diff. Fuel is excluded from incremental diffs, and so is contraband except at contraband-friendly stations where anyone can trade it (pirate strongholds, Outer Rim stations, Treasure Cache). Summary rows and the one-item book print each item's category. The category argument remains a server-side summary filter. base_id is a station base ID or station POI ID for another charted station while docked anywhere. Omitting it keeps the current station. The call still requires being docked, not in flight. Uncharted frontier stations stay hidden. Faction stations still apply their market access rules. The client does not check that the caller is docked, does not decide which stations are charted, does not hide a frontier station, and does not apply faction access.",
+    example: 'spacemolt view_market --item ore_iron; spacemolt view_market base_id=sirius_observatory_station',
     discoverWith: ['get_status'],
     seeAlso: ['buy', 'sell', 'create_buy_order', 'create_sell_order'],
     category: 'Exchange',
