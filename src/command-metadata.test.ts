@@ -47,6 +47,12 @@ import { createCommandConfigDryRunResponse } from './preview';
 
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
+const RECIPE_VENUE_HELP =
+  'type=recipes rows are CatalogRecipe, the same rows as GET /api/catalog.json. hand_craftable is gone. produced_by_facility_ids is always present and may be empty. A recipe can be hand-crafted at the Station Workshop when facility_only is false and its category is not Ship Passive. Ship Passive omits facility_only and cannot be hand-crafted. facility_only true cannot be hand-crafted. An empty produced_by_facility_ids with facility_only true has no player-reachable venue. A filter on Refining, Components, Modules, or Facility Only returns no recipes. The client does not rewrite the category and does not keep a category list. Examples include Smelting, Chemical Synthesis, Rendering, Cooking, Brewing & Distilling, Machining, Electronics Assembly, Gunsmithing, Beam Weapon Tuning, and Armor & Shield Manufacturing. catalog type=recipes shows the live set.';
+
+const WORKSHOP_SECOND_SKILL_HELP =
+  'Hand-crafting also trains a second skill by category. Material work (Smelting, Chemical Synthesis, Gas Separation, and similar) trains Refining. Parts, modules, weapons, and ship systems train Engineering. Rendering trains Xenobiology. Scrap Reclamation trains Salvaging. Drone Building trains Drone Control. Cooking, Brewing & Distilling, Ammunition Loading, Field Kit Assembly, Hydroponic Farming, and Packing & Crating train Crafting only.';
+
 const POSITIONAL_SCHEMA_GAP_EXEMPTIONS = new Set(['trade_offer.credits']);
 
 const DEFAULT_SCHEMA_GAP_EXEMPTIONS = new Set(['faction_withdraw_credits.source']);
@@ -2491,7 +2497,8 @@ describe('command metadata', () => {
     expect(catalog?.description).toContain(
       'Mining lock/selection constants are on catalog_dump (GET /api/catalog.json), not on this paginated command.',
     );
-    expect(catalog?.description).toContain(
+    expect(catalog?.description).toContain(RECIPE_VENUE_HELP);
+    expect(catalog?.description).not.toContain(
       'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
     );
     expect(catalog?.description).toContain(
@@ -2554,6 +2561,7 @@ describe('command metadata', () => {
     expect(BUNDLED_COMMAND_REGISTRY.commands.get_skills?.seeAlso).toEqual(['catalog']);
 
     const help = captureHelp('catalog');
+    expect(help).toContain(RECIPE_VENUE_HELP);
     expect(help).toContain('A hull which omits piloting_required needs no Piloting skill.');
     expect(help).toContain('Piloting still applies when the catalog sends a level.');
     expect(help).toContain('The client does not check Piloting, the achievement, or the five hull ids.');
@@ -2596,10 +2604,12 @@ describe('command metadata', () => {
     expect(config?.description).toContain('get_guide miner');
     expect(config?.description).toContain('rare_ore_access');
     expect(config?.description).toContain('deep_core_access');
-    expect(config?.description).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(config?.description).toContain(RECIPE_VENUE_HELP);
+    expect(config?.description).not.toContain('is dump-only');
     expect(config?.description).toContain('no longer include required_skills');
     expect(config?.description).toContain('0.630.7');
-    expect(config?.example).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(config?.example).toContain("--jq '.recipes[] | {id,facility_only,category,produced_by_facility_ids}'");
+    expect(config?.example).not.toContain('hand_craftable');
     expect(config?.example).toContain("--jq '.skills[] | {id,name,description}'");
 
     const help = captureHelp('catalog_dump');
@@ -2611,8 +2621,10 @@ describe('command metadata', () => {
     expect(help).toContain('A full download that is refused is still 429, Rate limited — 1 request per minute per IP.');
     expect(help).toContain('refresh');
     expect(help).toContain('Public endpoint');
-    expect(help).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
-    expect(help).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(help).toContain(RECIPE_VENUE_HELP);
+    expect(help).not.toContain('is dump-only');
+    expect(help).toContain("--jq '.recipes[] | {id,facility_only,category,produced_by_facility_ids}'");
+    expect(help).not.toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
     expect(help).toContain("--jq '.skills[] | {id,name,description}'");
     expect(help).not.toContain('type=mining');
   });
@@ -2810,7 +2822,14 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('cannot be redirected');
     expect(config?.args).not.toContain('facility_id');
     expect(config?.description).toContain('Docked ordinary production');
-    expect(config?.description).toContain('a field-workshop hull can craft hand-craftable recipes');
+    expect(config?.description).toContain(
+      'a field-workshop hull can craft recipes whose facility_only is false and whose category is not Ship Passive',
+    );
+    expect(config?.description).not.toContain('hand-craftable recipes');
+    expect(config?.description).toContain('A Ship Passive recipe cannot be hand-crafted.');
+    expect(config?.description).toContain(
+      'The client does not check facility_only or the category and does not refuse the call.',
+    );
     expect(config?.description).toContain(
       'A recipe with requires_unlock true fails with recipe_locked until a mission grants the recipe.',
     );
@@ -2820,6 +2839,9 @@ describe('command metadata', () => {
     );
     expect(config?.description).toContain('Escrowed inputs keep their cargo space until a run uses them');
     expect(config?.description).toContain('Station Workshop speed and gives the same XP');
+    expect(config?.description).toContain(WORKSHOP_SECOND_SKILL_HELP);
+    expect(config?.description).not.toContain('1.0 at level 0');
+    expect(config?.description).not.toContain('5.0 at level 100');
     expect(config?.description).toContain('It keeps running while you are offline');
     expect(config?.description).toContain('A finished run that does not fit in cargo waits');
     expect(config?.description).toContain("Cancel refunds unused inputs to that ship's cargo");
@@ -2839,6 +2861,14 @@ describe('command metadata', () => {
     expect(config?.schema?.source?.description).toContain('Docked ordinary craft');
     expect(config?.schema?.source?.description).toContain('Package recipes also accept cargo');
     expect(config?.schema?.source?.description).toContain('Undocked on a field-workshop hull');
+    expect(help).toContain(
+      'a field-workshop hull can craft recipes whose facility_only is false and whose category is not Ship Passive',
+    );
+    expect(help).toContain('A Ship Passive recipe cannot be hand-crafted.');
+    expect(help).toContain('The client does not check facility_only or the category and does not refuse the call.');
+    expect(help).toContain('Station Workshop speed and gives the same XP');
+    expect(help).toContain(WORKSHOP_SECOND_SKILL_HELP);
+    expect(help).not.toContain('hand-craftable recipes');
     expect(help).toContain('field-workshop hull');
     expect(help).toContain(
       'A recipe with requires_unlock true fails with recipe_locked until a mission grants the recipe.',

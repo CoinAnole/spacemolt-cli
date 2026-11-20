@@ -27,6 +27,12 @@ import { runInvocation } from './main';
 import { colorsForPlain } from './output-style';
 import { setDefaultProfile } from './session';
 
+const RECIPE_VENUE_HELP =
+  'type=recipes rows are CatalogRecipe, the same rows as GET /api/catalog.json. hand_craftable is gone. produced_by_facility_ids is always present and may be empty. A recipe can be hand-crafted at the Station Workshop when facility_only is false and its category is not Ship Passive. Ship Passive omits facility_only and cannot be hand-crafted. facility_only true cannot be hand-crafted. An empty produced_by_facility_ids with facility_only true has no player-reachable venue. A filter on Refining, Components, Modules, or Facility Only returns no recipes. The client does not rewrite the category and does not keep a category list. Examples include Smelting, Chemical Synthesis, Rendering, Cooking, Brewing & Distilling, Machining, Electronics Assembly, Gunsmithing, Beam Weapon Tuning, and Armor & Shield Manufacturing. catalog type=recipes shows the live set.';
+
+const WORKSHOP_SECOND_SKILL_HELP =
+  'Hand-crafting also trains a second skill by category. Material work (Smelting, Chemical Synthesis, Gas Separation, and similar) trains Refining. Parts, modules, weapons, and ship systems train Engineering. Rendering trains Xenobiology. Scrap Reclamation trains Salvaging. Drone Building trains Drone Control. Cooking, Brewing & Distilling, Ammunition Loading, Field Kit Assembly, Hydroponic Farming, and Packing & Crating train Crafting only.';
+
 function exampleBlock(output: string): string {
   const lines = output.split('\n');
   const start = lines.findIndex((line) => line.includes('Example:'));
@@ -2523,7 +2529,8 @@ describe('help output branches', () => {
     expect(showCommandHelp('catalog', capture.writer)).toBe(true);
     const output = capture.stdout.join('\n');
     expect(output).toContain('Mining lock/selection constants are on catalog_dump (GET /api/catalog.json)');
-    expect(output).toContain(
+    expect(output).toContain(RECIPE_VENUE_HELP);
+    expect(output).not.toContain(
       'Recipe venue fields hand_craftable and produced_by_facility_ids are on catalog_dump, not this paginated command.',
     );
     expect(output).toContain(
@@ -2590,10 +2597,31 @@ describe('help output branches', () => {
     expect(output).toContain('get_guide miner');
     expect(output).toContain('rare_ore_access');
     expect(output).toContain('deep_core_access');
-    expect(output).toContain('Recipe venue (hand_craftable, produced_by_facility_ids) is dump-only.');
+    expect(output).toContain(RECIPE_VENUE_HELP);
+    expect(output).not.toContain('is dump-only');
     expect(output).toContain('no longer include required_skills');
-    expect(output).toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
+    expect(output).toContain("--jq '.recipes[] | {id,facility_only,category,produced_by_facility_ids}'");
+    expect(output).not.toContain("--jq '.recipes[] | {id,hand_craftable,produced_by_facility_ids}'");
     expect(output).toContain("--jq '.skills[] | {id,name,description}'");
+  });
+
+  test('help craft documents field-workshop venues and the second skill', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('craft', capture.writer)).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'a field-workshop hull can craft recipes whose facility_only is false and whose category is not Ship Passive',
+    );
+    expect(output).not.toContain('hand-craftable recipes');
+    expect(output).toContain(
+      'Facility-only recipes, package recipes, package_ids, output_package_label, and facility_id are refused there.',
+    );
+    expect(output).toContain('A Ship Passive recipe cannot be hand-crafted.');
+    expect(output).toContain('The client does not check facility_only or the category and does not refuse the call.');
+    expect(output).toContain('Station Workshop speed and gives the same XP.');
+    expect(output).toContain(WORKSHOP_SECOND_SKILL_HELP);
+    expect(output).not.toContain('1.0 at level 0');
+    expect(output).not.toContain('5.0 at level 100');
   });
 
   test('help list_battles documents public history without a login', () => {
