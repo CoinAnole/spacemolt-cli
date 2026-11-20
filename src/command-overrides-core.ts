@@ -433,7 +433,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '[fuel_cell_id [cell_count] | target=player|fleet quantity=units]  (station credit refuel fills to full; quantity applies only to fuel cells and transfers)',
     description:
-      'Refuel from a station, fuel cell, or tanker ship. A station credit refuel fills to full and ignores quantity. piloting_xp on a ship-to-ship refuel is 25 × the piloting XP per action of your active ship tier (tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12). Each target pays once per UTC day. A station refuel and a same-day repeat target omit piloting_xp. An omitted key is not a sent 0.',
+      'Refuel from a station, fuel cell, or tanker ship. A station credit refuel fills to full and ignores quantity. piloting_xp on a ship-to-ship refuel is 25 × the piloting XP per action of your active ship tier (tier 1: 1 / tier 2: 2 / tier 3: 4 / tier 4: 7 / tier 5: 12). Each target pays once per UTC day. A station refuel and a same-day repeat target omit piloting_xp. An omitted key is not a sent 0. With no target and no fuel cell, a station with no refuel service, or a player-station Refueling Dock whose upkeep is unpaid, fails with the server message. That dock is offline. It is not a hidden service that still works. The client does not read the service list, does not check upkeep, and does not refuse the call. The server message prints as sent.',
     example: 'spacemolt refuel',
     discoverWith: ['get_status', 'get_cargo'],
     seeAlso: ['dock', 'get_status'],

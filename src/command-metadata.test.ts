@@ -714,6 +714,31 @@ describe('command metadata', () => {
     expect(help).toContain('Each target pays once per UTC day');
     expect(help).toContain('A station refuel and a same-day repeat target omit piloting_xp');
     expect(help).toContain('An omitted key is not a sent 0');
+    expect(config?.description).toContain(
+      'With no target and no fuel cell, a station with no refuel service, or a player-station Refueling Dock whose upkeep is unpaid, fails with the server message.',
+    );
+    expect(config?.description).toContain('That dock is offline.');
+    expect(config?.description).toContain('It is not a hidden service that still works.');
+    expect(config?.description).toContain(
+      'The client does not read the service list, does not check upkeep, and does not refuse the call.',
+    );
+    expect(config?.description).toContain('The server message prints as sent.');
+    expect(help).toContain('That dock is offline.');
+    expect(help).toContain('It is not a hidden service that still works.');
+    expect(help).toContain('The server message prints as sent.');
+    for (const absent of [
+      'Flex Polymer',
+      'Steel Plate',
+      'Copper Wiring',
+      'Fuel Cell',
+      'Liquid Hydrogen',
+      'no_station_fuel',
+      'station_fuel_depleted',
+      'insufficient_credits',
+    ]) {
+      expect(config?.description).not.toContain(absent);
+      expect(help).not.toContain(absent);
+    }
   });
 
   test('scan help documents optional area sweeps', () => {

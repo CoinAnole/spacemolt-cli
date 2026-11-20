@@ -835,6 +835,34 @@ describe('help output branches', () => {
     expect(output).not.toContain('fails with');
   });
 
+  test('help refuel documents an offline Refueling Dock', () => {
+    const capture = captureWriter();
+    expect(showCommandHelp('refuel', capture.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const output = capture.stdout.join('\n');
+    expect(output).toContain(
+      'With no target and no fuel cell, a station with no refuel service, or a player-station Refueling Dock whose upkeep is unpaid, fails with the server message.',
+    );
+    expect(output).toContain('That dock is offline.');
+    expect(output).toContain('It is not a hidden service that still works.');
+    expect(output).toContain(
+      'The client does not read the service list, does not check upkeep, and does not refuse the call.',
+    );
+    expect(output).toContain('The server message prints as sent.');
+    expect(output).toContain('A station refuel and a same-day repeat target omit piloting_xp');
+    for (const absent of [
+      'Flex Polymer',
+      'Steel Plate',
+      'Copper Wiring',
+      'Fuel Cell',
+      'Liquid Hydrogen',
+      'no_station_fuel',
+      'station_fuel_depleted',
+      'insufficient_credits',
+    ]) {
+      expect(output).not.toContain(absent);
+    }
+  });
+
   test('full help storage section includes standalone storage workflows', () => {
     const capture = captureWriter();
 
