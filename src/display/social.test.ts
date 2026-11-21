@@ -2316,6 +2316,10 @@ test('does not lift order_id off other events', () => {
       if (event.event_type === 'ship.buy_order_filled') {
         expect(actionLogCell(stdout, event.event_type, 'Base'), label).toBe('nova-terra-central');
       }
+      if (event.event_type === 'trading.order_filled') {
+        expect(actionLogCell(stdout, event.event_type, 'Base'), label).toBe('haven_exchange');
+        expect(actionLogCell(stdout, event.event_type, 'Summary'), label).toBe(event.summary);
+      }
     }
   }
 
