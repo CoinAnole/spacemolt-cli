@@ -2,7 +2,7 @@ import { normalizeCaptorKind } from './display/captor-kind.ts';
 import { formatCreatureBrandSuffix } from './display/creatures.ts';
 import { formatDockStateLine, formatNameId } from './display/dock-state.ts';
 import { activeMissionProgressEntries, isV2MissionsEnvelope } from './display/generic.ts';
-import { formatIntegerText, hazardLabelParts } from './display/helpers.ts';
+import { formatFiniteNumberAsSent, formatIntegerText, hazardLabelParts } from './display/helpers.ts';
 import { formatPrizeCaptureSite, prizeFieldText } from './display/prize-location.ts';
 import {
   formatMissingMaterialsPreview,
@@ -3092,6 +3092,17 @@ function previewOk(
           details.push(`arrival tick ${arrival}`);
         }
       }
+      if (action === 'fleet_jump') {
+        const bearing = formatFiniteNumberAsSent(data.bearing);
+        if (bearing !== undefined) details.push(`bearing ${bearing}`);
+      }
+      break;
+    }
+    case 'fleet_pathfinder_redirect': {
+      tag = 'FLEET';
+      if (!headline) headline = 'Fleet pathfinder redirect';
+      const bearing = formatFiniteNumberAsSent(data.bearing);
+      if (bearing !== undefined) details.push(`bearing ${bearing}`);
       break;
     }
     case 'arrived':

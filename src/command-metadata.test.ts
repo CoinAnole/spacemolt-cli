@@ -925,6 +925,32 @@ describe('command metadata', () => {
     expect(config?.description).toContain('before you jump');
     expect(config?.description).toContain('In a wide system the arrival can be far from the station.');
     expect(config?.description).toContain('Plan fuel for that in-system leg.');
+    expect(config?.description).toContain(
+      "A fleet leader's numeric bearing moves the whole fleet, ride-along passengers included.",
+    );
+    expect(config?.description).toContain(
+      'Each member flying its own ship uses its own Pathfinder Drive and its own fuel.',
+    );
+    expect(config?.description).toContain('Passengers ride free.');
+    expect(config?.description).toContain(
+      'fails before launch with fleet_no_pathfinder_drive or fleet_no_fuel, and the server message names that member.',
+    );
+    expect(config?.description).toContain('During a fleet Pathfinder drift, only the leader can re-plot.');
+    expect(config?.description).toContain('action fleet_pathfinder_redirect and bearing');
+    expect(config?.description).toContain(
+      'A storm that pushes the fleet leader off course pushes the whole fleet, and a follower sees that notice when the server sends pathfinder_storm.',
+    );
+    expect(config?.description).toContain('does not check drives or fuel');
+    expect(config?.description).toContain('does not refuse the call');
+    expect(config?.description).toContain('does not add an error-registry entry');
+    expect(config?.description).toContain('does not move other ships');
+    expect(config?.description).toContain('The server message prints as sent.');
+    expect(config?.description).toContain(
+      "The leader's jump response prints bearing on the Pathfinder receipt and does not print another member's fuel.",
+    );
+    expect(config?.description).toContain('Gameserver 0.730.0.');
+    expect(config?.schema?.id?.description).toContain('fleet_no_pathfinder_drive');
+    expect(config?.schema?.id?.description).toContain('fleet_no_fuel');
     expect(config?.description).not.toContain('invalid_poi');
     expect(config?.description).not.toContain('`');
     expect(config?.description).not.toMatch(/\btravel\b/);
@@ -950,6 +976,12 @@ describe('command metadata', () => {
     expect(help).toContain('poll get_location');
     expect(help).toContain('In a wide system the arrival can be far from the station.');
     expect(help).toContain('Plan fuel for that in-system leg.');
+    expect(help).toContain('fleet_no_pathfinder_drive');
+    expect(help).toContain('fleet_no_fuel');
+    expect(help).toContain('fleet_pathfinder_redirect');
+    expect(help).toContain('pathfinder_storm');
+    expect(help).toContain("does not print another member's fuel");
+    expect(help).toContain('Gameserver 0.730.0.');
     expect(help).not.toContain('invalid_poi');
     expect(help).not.toContain('`');
     expect(help).not.toContain('arrival distance');
@@ -6888,6 +6920,26 @@ describe('command metadata', () => {
     expect(COMMANDS.get_notifications?.description).toContain(
       'An ok frame with action arrived, jumped, or pathfinder_arrival prints system, POI, from_system, and XP in the table message instead of a generic OK line.',
     );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'An ok frame with action fleet_pathfinder_redirect is a fleet frame. The tag is FLEET.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'A non-blank message stays the headline, first line only.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'bearing is a detail when it is a finite number, including 0, as sent.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain('An omitted or non-finite bearing adds nothing.');
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'It does not print a destination, an arrival tick, or fuel.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain('This is not a new notification type.');
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'An ok frame with action fleet_jump keeps the destination and arrival_tick lines.',
+    );
+    expect(COMMANDS.get_notifications?.description).toContain(
+      'does not invent arrival_tick and does not drop destination_name.',
+    );
     expect(COMMANDS.get_notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.notifications?.description).toContain(
       'An exchange_fill frame is type trade and is omitted until the exchange_fills channel is unmuted.',
@@ -6902,6 +6954,19 @@ describe('command metadata', () => {
       'An ok frame with action arrived, jumped, or pathfinder_arrival is formatted the same way as on get_notifications.',
     );
     expect(COMMANDS.notifications?.description).toContain('This CLI does not open a WebSocket.');
+    expect(COMMANDS.notifications?.description).toContain(
+      'An ok frame with action fleet_pathfinder_redirect is a fleet frame. The tag is FLEET.',
+    );
+    expect(COMMANDS.notifications?.description).toContain(
+      'bearing is a detail when it is a finite number, including 0, as sent.',
+    );
+    expect(COMMANDS.notifications?.description).toContain(
+      'An ok frame with action fleet_jump keeps the destination and arrival_tick lines.',
+    );
+    expect(captureHelp('get_notifications')).toContain('fleet_pathfinder_redirect');
+    expect(captureHelp('notifications')).toContain('fleet_pathfinder_redirect');
+    expect(captureHelp('get_notifications')).toContain('The tag is FLEET.');
+    expect(captureHelp('notifications')).toContain('including 0, as sent.');
     expect(COMMANDS.notifications?.description).not.toContain('next get_notifications poll');
     expect(COMMANDS.get_notifications?.seeAlso).toEqual([
       'get_status',

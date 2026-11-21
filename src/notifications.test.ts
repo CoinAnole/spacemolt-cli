@@ -3459,6 +3459,147 @@ describe('notification formatting', () => {
       });
     });
 
+    describe('fleet pathfinder redirect and fleet_jump bearing', () => {
+      test('fleet_pathfinder_redirect is a fleet frame and not a new notification type', () => {
+        expect(hasPreviewHandler('ok')).toBe(true);
+        expect(hasPreviewHandler('fleet_pathfinder_redirect')).toBe(false);
+        expect(NOTIFICATION_TYPES).toContain('ok');
+        expect(NOTIFICATION_TYPES).not.toContain('fleet_pathfinder_redirect');
+
+        const notification = note('ok', {
+          action: 'fleet_pathfinder_redirect',
+          message: 'Heading locked.\nFuel stays on the server.',
+          bearing: 90,
+          destination: 'alfirk_belt',
+          destination_name: 'Alfirk Belt',
+          arrival_tick: 900,
+          fuel: 12,
+          fuel_cost: 40,
+        });
+        const preview = formatNotificationPreview(notification);
+        const output = stripAnsi(formatNotification(notification, { noTimestamp: true }).join('\n'));
+        expect(preview.tag).toBe('FLEET');
+        expect(preview.headline).toBe('Heading locked.');
+        expect(preview.details).toEqual(['bearing 90']);
+        expect(formatNotificationMessage(notification)).toBe('Heading locked.; bearing 90');
+        expect(output).toContain('[FLEET]');
+        expect(output).toContain('Heading locked.');
+        expect(output).toContain('bearing 90');
+        expect(output).not.toContain('[OK]');
+        const text = `${preview.headline}\n${preview.details.join('\n')}\n${output}`;
+        for (const token of ['alfirk_belt', 'Alfirk Belt', 'arrival', '900', 'fuel', '12', '40', 'Fuel stays']) {
+          expect(text).not.toContain(token);
+        }
+        expectNoDiagnosticTokens(text);
+      });
+
+      test('a blank redirect message uses the fleet fallback and prints bearing 0', () => {
+        const zero = formatNotificationPreview(
+          note('ok', { action: 'Fleet_Pathfinder_Redirect', message: '   ', bearing: 0 }),
+        );
+        expect(zero.tag).toBe('FLEET');
+        expect(zero.headline).toBe('Fleet pathfinder redirect');
+        expect(zero.details).toEqual(['bearing 0']);
+
+        const negativeZero = formatNotificationPreview(
+          note('ok', { action: 'fleet_pathfinder_redirect', bearing: -0 }),
+        );
+        expect(negativeZero.headline).toBe('Fleet pathfinder redirect');
+        expect(negativeZero.details).toEqual(['bearing 0']);
+
+        const fraction = formatNotificationPreview(
+          note('ok', { action: 'fleet_pathfinder_redirect', message: '  Heading locked.  ', bearing: 11.25 }),
+        );
+        expect(fraction.headline).toBe('Heading locked.');
+        expect(fraction.details).toEqual(['bearing 11.25']);
+      });
+
+      test('an omitted or non-finite redirect bearing adds nothing', () => {
+        const omitted = formatNotificationPreview(note('ok', { action: 'fleet_pathfinder_redirect' }));
+        expect(omitted.tag).toBe('FLEET');
+        expect(omitted.headline).toBe('Fleet pathfinder redirect');
+        expect(omitted.details).toEqual([]);
+
+        for (const bearing of [Number.NaN, Number.POSITIVE_INFINITY, '90', null, {}, true] as const) {
+          const preview = formatNotificationPreview(
+            note('ok', { action: 'fleet_pathfinder_redirect', message: 'Heading locked.', bearing }),
+          );
+          expect(preview.headline).toBe('Heading locked.');
+          expect(preview.details).toEqual([]);
+        }
+      });
+
+      test('fleet_jump keeps destination and arrival and adds a finite bearing, including 0', () => {
+        const withMessage = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            message: 'Your fleet is jumping.',
+            destination: 'lacaille_9352',
+            destination_name: 'Lacaille 9352',
+            arrival_tick: 900,
+            bearing: 0,
+          }),
+        );
+        expect(withMessage.tag).toBe('FLEET');
+        expect(withMessage.headline).toBe('Your fleet is jumping.');
+        expect(withMessage.details).toEqual(['→ Lacaille 9352 (lacaille_9352)', 'arrival tick 900', 'bearing 0']);
+
+        const noMessage = formatNotificationPreview(
+          note('ok', { action: 'fleet_jump', destination: 'Alfirk', arrival_tick: 900, bearing: -0 }),
+        );
+        expect(noMessage.headline).toBe('Fleet jumping → Alfirk (arrival tick 900)');
+        expect(noMessage.details).toEqual(['bearing 0']);
+      });
+
+      test('a pathfinder fleet_jump prints bearing instead of inventing arrival_tick and keeps destination_name', () => {
+        const named = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            destination: '',
+            destination_name: 'Lacaille 9352',
+            bearing: 45,
+          }),
+        );
+        expect(named.headline).toBe('Fleet jumping → Lacaille 9352');
+        expect(named.details).toEqual(['bearing 45']);
+        expect(named.headline).not.toContain('arrival');
+
+        const message = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_jump',
+            message: 'Your fleet is drifting.',
+            destination: '',
+            destination_name: 'Lacaille 9352',
+            bearing: 180.5,
+          }),
+        );
+        expect(message.headline).toBe('Your fleet is drifting.');
+        expect(message.details).toEqual(['→ Lacaille 9352', 'bearing 180.5']);
+        expect(message.details.join('\n')).not.toContain('arrival');
+
+        const empty = formatNotificationPreview(
+          note('ok', { action: 'fleet_jump', destination: '', destination_name: '   ', bearing: Number.NaN }),
+        );
+        expect(empty.headline).toBe('Fleet jumping');
+        expect(empty.details).toEqual([]);
+      });
+
+      test('fleet_travel does not print bearing', () => {
+        const preview = formatNotificationPreview(
+          note('ok', {
+            action: 'fleet_travel',
+            message: 'Your fleet has departed.',
+            destination: 'Alfirk',
+            arrival_tick: 900,
+            bearing: 10,
+          }),
+        );
+        expect(preview.headline).toBe('Your fleet has departed.');
+        expect(preview.details).toEqual(['→ Alfirk', 'arrival tick 900']);
+        expect(preview.details.join('\n')).not.toContain('bearing');
+      });
+    });
+
     describe('arrival ok frames (0.645.3)', () => {
       const jumped = {
         action: 'jumped',
@@ -12675,6 +12816,23 @@ describe('notification formatting', () => {
     test('registers a never-null handler', () => {
       expect(hasPreviewHandler('pathfinder_storm')).toBe(true);
       expect(NOTIFICATION_TYPES).toContain('pathfinder_storm');
+    });
+
+    test('does not gain a bearing or a fleet field', () => {
+      const notification = note({
+        deflected: true,
+        message: 'Pushed off the plotted bearing.',
+        bearing: 90,
+        fleet: true,
+      });
+      const preview = formatNotificationPreview(notification);
+      const text = previewText(preview);
+      expect(preview.tag).toBe('STORM');
+      expect(preview.headline).toBe('Pushed off the plotted bearing.');
+      expect(preview.details).toEqual([deflectedTrue]);
+      expect(text).not.toContain('90');
+      expect(text).not.toContain('fleet');
+      expect(text).not.toContain('[FLEET]');
     });
 
     test.each(rows)('$name', ({ data, severity, headline, details, absent }) => {
