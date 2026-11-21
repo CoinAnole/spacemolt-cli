@@ -4456,6 +4456,369 @@ test('facility upgrades prints average burn from upgrade_to when that object is 
   expect(omitted).not.toContain('example_key');
 });
 
+function listedFacility(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    facility_id: id,
+    name: id,
+    type: 'crew_bunk',
+    category: 'personal',
+    level: 1,
+    ...extra,
+  };
+}
+
+function bonusTableHeader(section: string): string {
+  const header = section.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+  expect(header).toBeDefined();
+  return header ?? '';
+}
+
+test('facility list prints sent bonus type and value on FacilityEntry tables only', () => {
+  const fixture = {
+    action: 'list',
+    base_id: 'earth_station',
+    station_facilities: [
+      listedFacility('station-plain'),
+      listedFacility('station-desk', {
+        name: 'Ledger Desk',
+        bonus_type: 'market_fee_discount',
+        bonus_value: 25,
+      }),
+      listedFacility('station-speed', {
+        name: 'Workshop',
+        bonus_type: 'workshop_speed',
+        bonus_value: 12.5,
+      }),
+    ],
+    public_facilities: [
+      listedFacility('public-bandwidth', { bonus_type: 'drone_bandwidth' }),
+      listedFacility('public-zero', { bonus_value: 0 }),
+    ],
+    ally_facilities: [listedFacility('ally-desk', { bonus_type: ' market_fee_discount ', bonus_value: 0 })],
+    player_facilities: [
+      listedFacility('player-a', { bonus_type: 'market_fee_discount', bonus_value: 25 }),
+      listedFacility('player-b', { bonus_type: 'market_fee_discount', bonus_value: 25 }),
+      listedFacility('player-blank', { bonus_type: 12, bonus_value: Number.NaN }),
+    ],
+    faction_facilities: [listedFacility('faction-speed', { bonus_type: 'workshop_speed' })],
+    tenant_facilities: [
+      {
+        facility_id: 'ten-desk',
+        name: 'Tenant Desk',
+        type: 'ledger_desk',
+        operational: true,
+        bonus_type: 'market_fee_discount',
+        bonus_value: 25,
+      },
+    ],
+  };
+  const stdout = renderFacilityList(fixture);
+  const station = sectionAfter(stdout, 'Station Facilities', 'Public Facilities');
+  const publicSection = sectionAfter(stdout, 'Public Facilities', 'Ally Facilities');
+  const ally = sectionAfter(stdout, 'Ally Facilities', 'Player Facilities');
+  const player = sectionAfter(stdout, 'Player Facilities', 'Faction Facilities');
+  const faction = sectionAfter(stdout, 'Faction Facilities', 'Tenant Facilities');
+  const tenant = sectionAfter(stdout, 'Tenant Facilities');
+
+  expect(bonusTableHeader(station)).toContain('Bonus');
+  expect(bonusTableHeader(station)).toContain('Value');
+  expect(tableCell(station, 'station-plain', 'Bonus')).toBe('');
+  expect(tableCell(station, 'station-plain', 'Value')).toBe('');
+  expect(tableCell(station, 'Ledger Desk', 'Name')).toBe('Ledger Desk');
+  expect(tableCell(station, 'Ledger Desk', 'Bonus')).toBe('market_fee_discount');
+  expect(tableCell(station, 'Ledger Desk', 'Value')).toBe('25');
+  expect(tableCell(station, 'Workshop', 'Bonus')).toBe('workshop_speed');
+  expect(tableCell(station, 'Workshop', 'Value')).toBe('12.5');
+  expect(station).not.toContain('12.5%');
+  expect(station).not.toContain('25%');
+
+  expect(tableCell(publicSection, 'public-bandwidth', 'Bonus')).toBe('drone_bandwidth');
+  expect(tableCell(publicSection, 'public-bandwidth', 'Value')).toBe('');
+  expect(tableCell(publicSection, 'public-zero', 'Bonus')).toBe('');
+  expect(tableCell(publicSection, 'public-zero', 'Value')).toBe('0');
+
+  expect(ally).toContain(' market_fee_discount ');
+  expect(tableCell(ally, 'ally-desk', 'Bonus')).toBe('market_fee_discount');
+  expect(tableCell(ally, 'ally-desk', 'Value')).toBe('0');
+
+  expect(player.split('market_fee_discount').length - 1).toBe(2);
+  expect(tableCell(player, 'player-blank', 'Bonus')).toBe('');
+  expect(tableCell(player, 'player-blank', 'Value')).toBe('');
+  expect(player).not.toContain('NaN');
+
+  expect(bonusTableHeader(faction)).toContain('Bonus');
+  expect(bonusTableHeader(faction)).not.toMatch(/\bValue\b/);
+  expect(tableCell(faction, 'faction-speed', 'Bonus')).toBe('workshop_speed');
+
+  expect(bonusTableHeader(tenant)).not.toContain('Bonus');
+  expect(bonusTableHeader(tenant)).not.toMatch(/\bValue\b/);
+  expect(tenant).not.toContain('market_fee_discount');
+
+  const invalid = {
+    action: 'list',
+    base_id: 'earth_station',
+    station_facilities: [
+      listedFacility('bad-type', { bonus_type: '   ', bonus_value: '25' }),
+      listedFacility('bad-value', { bonus_type: false, bonus_value: Number.POSITIVE_INFINITY }),
+    ],
+    player_facilities: [],
+    faction_facilities: [],
+  };
+  const invalidStdout = renderFacilityList(invalid);
+  const invalidHeader = bonusTableHeader(sectionAfter(invalidStdout, 'Station Facilities'));
+  expect(invalidHeader).not.toContain('Bonus');
+  expect(invalidHeader).not.toMatch(/\bValue\b/);
+  expect(invalidStdout).not.toContain('not-a-number');
+  expect(invalidStdout).not.toContain('Infinity');
+
+  const json = renderStructuredResult(
+    'facility_list',
+    structuredClone(fixture),
+    { ...options, format: 'json' },
+    context,
+  ).stdout.join('\n');
+  expect(json).not.toContain('bonus_type_display');
+  expect(json).not.toContain('Bonus');
+  const parsed = JSON.parse(json) as { station_facilities: Array<Record<string, unknown>> };
+  expect(parsed.station_facilities[1]?.bonus_type).toBe('market_fee_discount');
+  expect(parsed.station_facilities[1]?.bonus_value).toBe(25);
+
+  const owned = structuredClone(facilityOwnedFixture) as Record<string, unknown>;
+  const ownedRows = owned.facilities as Array<Record<string, unknown>>;
+  const ownedRow = ownedRows[0];
+  if (!ownedRow) throw new Error('Owned facility fixture is incomplete.');
+  ownedRow.bonus_type = 'workshop_speed';
+  ownedRow.bonus_value = 17.5;
+  const ownedStdout = renderStructuredResult('facility_owned', owned, options, context).stdout.join('\n');
+  const ownedHeader = bonusTableHeader(sectionAfter(ownedStdout, 'Facilities'));
+  expect(ownedHeader).not.toContain('Bonus');
+  expect(ownedHeader).not.toMatch(/\bValue\b/);
+  expect(ownedStdout).not.toContain('workshop_speed');
+  expect(ownedStdout).not.toContain('17.5');
+
+  const factionOwned = structuredClone(factionFacilityOwnedFixture) as Record<string, unknown>;
+  const factionRows = factionOwned.facilities as Array<Record<string, unknown>>;
+  const factionRow = factionRows[0];
+  if (!factionRow) throw new Error('Faction owned facility fixture is incomplete.');
+  factionRow.bonus_type = 'drone_bandwidth';
+  factionRow.bonus_value = 9;
+  const factionStdout = renderStructuredResult('faction_facility_owned', factionOwned, options, context).stdout.join(
+    '\n',
+  );
+  const factionHeader = bonusTableHeader(sectionAfter(factionStdout, 'Faction Facilities'));
+  expect(factionHeader).not.toContain('Bonus');
+  expect(factionHeader).not.toMatch(/\bValue\b/);
+  expect(factionStdout).not.toContain('drone_bandwidth');
+});
+
+test('facility types prints bonus type and value on detail and the types list only', () => {
+  const detail = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  detail.bonus_type = ' drone_bandwidth ';
+  detail.bonus_value = 0;
+  const detailStdout = facilityTypeDetailLines(detail).join('\n');
+  expect(detailStdout).toContain('Bonus:  drone_bandwidth ');
+  expect(detailStdout).toContain('Value: 0');
+  expect(detailStdout.split('\n').filter((line) => line.startsWith('Bonus:'))).toEqual(['Bonus:  drone_bandwidth ']);
+  expect(detailStdout.split('\n').filter((line) => line.startsWith('Value:'))).toEqual(['Value: 0']);
+  expect(detailStdout).not.toContain('0%');
+
+  const valueOnly = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  valueOnly.bonus_value = 12.5;
+  const valueStdout = facilityTypeDetailLines(valueOnly).join('\n');
+  expect(valueStdout).toContain('Value: 12.5');
+  expect(valueStdout).not.toMatch(/^Bonus:/m);
+  expect(valueStdout).not.toContain('12.5%');
+
+  const stock = facilityTypeDetailLines(structuredClone(facilityTypesDetailFixture) as Record<string, unknown>).join(
+    '\n',
+  );
+  expect(stock).not.toMatch(/^Bonus:/m);
+  expect(stock).not.toMatch(/^Value:/m);
+
+  for (const bonus_type of ['', '   ', 1, null, true]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.bonus_type = bonus_type;
+    fixture.bonus_value = Number.POSITIVE_INFINITY;
+    const stdout = facilityTypeDetailLines(fixture).join('\n');
+    expect(stdout).toContain('=== Facility type: Crew Office ===');
+    expect(stdout).not.toMatch(/^Bonus:/m);
+    expect(stdout).not.toMatch(/^Value:/m);
+    expect(stdout).not.toContain('Infinity');
+  }
+
+  const stringValue = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  stringValue.bonus_value = '0';
+  const stringStdout = facilityTypeDetailLines(stringValue).join('\n');
+  expect(stringStdout).not.toMatch(/^Value:/m);
+
+  const listed = renderFacilityTypes(
+    facilityTypeListFixture([
+      {
+        id: 'ledger_desk',
+        name: 'Ledger Desk',
+        category: 'personal',
+        level: 1,
+        build_cost: 1,
+        buildable: true,
+        bonus_type: ' market_fee_discount ',
+      },
+      {
+        id: 'workshop',
+        name: 'Workshop',
+        category: 'personal',
+        level: 1,
+        build_cost: 2,
+        bonus_value: 0,
+      },
+      {
+        id: 'plain',
+        name: 'Plain',
+        category: 'personal',
+        level: 1,
+        build_cost: 3,
+        bonus_type: 4,
+        bonus_value: Number.NaN,
+      },
+    ]),
+  );
+  const listSection = sectionAfter(listed, 'Facility types');
+  expect(listSection).toContain(' market_fee_discount ');
+  expect(tableCell(listSection, 'Ledger Desk', 'Bonus')).toBe('market_fee_discount');
+  expect(tableCell(listSection, 'Ledger Desk', 'Value')).toBe('');
+  expect(tableCell(listSection, 'Workshop', 'Bonus')).toBe('');
+  expect(tableCell(listSection, 'Workshop', 'Value')).toBe('0');
+  expect(tableCell(listSection, 'Plain', 'Bonus')).toBe('');
+  expect(tableCell(listSection, 'Plain', 'Value')).toBe('');
+  expect(listSection).not.toContain('NaN');
+
+  const bare = renderFacilityTypes(
+    facilityTypeListFixture([
+      { id: 'ore_refinery', name: 'Ore Refinery', category: 'production', level: 1, build_cost: 10 },
+    ]),
+  );
+  const bareHeader = bonusTableHeader(sectionAfter(bare, 'Facility types'));
+  expect(bareHeader).not.toContain('Bonus');
+  expect(bareHeader).not.toMatch(/\bValue\b/);
+
+  const discovery = structuredClone(facilityTypesFixture) as Record<string, unknown>;
+  const categories = discovery.categories as Record<string, Record<string, unknown>>;
+  categories.personal = {
+    ...categories.personal,
+    bonus_type: 'market_fee_discount',
+    bonus_value: 25,
+  };
+  const discovered = renderFacilityTypes(discovery);
+  const categoryHeader = sectionAfter(discovered, 'Categories')
+    .split('\n')
+    .find((line) => line.includes('|') && line.includes('Category'));
+  expect(discovered).toContain('=== Categories ===');
+  expect(discovered).not.toContain('=== Facility types ===');
+  expect(discovered).not.toContain('market_fee_discount');
+  expect(categoryHeader).not.toContain('Bonus');
+  expect(categoryHeader).not.toMatch(/\bValue\b/);
+
+  const detailJson = renderStructuredResult(
+    'facility_types',
+    structuredClone(detail),
+    { ...options, format: 'json' },
+    context,
+  ).stdout.join('\n');
+  expect(detailJson).not.toContain('Bonus:');
+  expect(JSON.parse(detailJson).bonus_type).toBe(' drone_bandwidth ');
+  expect(JSON.parse(detailJson).bonus_value).toBe(0);
+});
+
+test('facility upgrades keeps the upgrade list and the upgrade receipt stays one scalar dump', () => {
+  const listed = renderStructuredResult(
+    'facility_upgrades',
+    {
+      bonus_type: 'workshop_speed',
+      bonus_value: 17.25,
+      upgrades: [
+        {
+          current_level: 1,
+          bonus_type: 'workshop_speed',
+          bonus_value: 17.25,
+          upgrade_to: { name: 'Ore Refinery II', bonus_type: 'workshop_speed', bonus_value: 17.25 },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const section = sectionAfter(listed, 'Available Upgrades');
+  const header = section.split('\n').find((line) => line.includes('Current') && line.includes('To'));
+  expect(header).not.toContain('Bonus');
+  expect(header).not.toMatch(/\bValue\b/);
+  expect(listed).not.toContain('workshop_speed');
+  expect(listed).not.toContain('17.25');
+  expect(listed).not.toContain('Bonus Type:');
+  expect(listed).not.toContain('=== Response ===');
+
+  const upgraded = renderStructuredResult(
+    'facility_upgrade',
+    {
+      action: 'upgrade',
+      facility_id: 'fac-1',
+      facility_name: 'Ledger Desk',
+      facility_type: 'ledger_desk',
+      level: 2,
+      bonus_type: 'market_fee_discount',
+      bonus_value: 0,
+      message: 'Upgraded.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(upgraded.split('\n').filter((line) => line.startsWith('Bonus Type:'))).toEqual([
+    'Bonus Type: market_fee_discount',
+  ]);
+  expect(upgraded.split('\n').filter((line) => line.startsWith('Bonus Value:'))).toEqual(['Bonus Value: 0']);
+  expect(upgraded.split('\n').filter((line) => line.startsWith('Bonus:'))).toEqual([]);
+  expect(upgraded).not.toContain('=== Response ===');
+
+  const omittedBonus = renderStructuredResult(
+    'facility_upgrade',
+    {
+      action: 'upgrade',
+      facility_id: 'fac-2',
+      message: 'Upgraded.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omittedBonus).toContain('Facility Id: fac-2');
+  expect(omittedBonus).not.toContain('Bonus Type:');
+  expect(omittedBonus).not.toContain('Bonus Value:');
+});
+
+test('ship and facility listing receipts print fee once', () => {
+  for (const [command, fee] of [
+    ['list_ship_for_sale', 200],
+    ['facility_list_for_sale', 0],
+  ] as const) {
+    const stdout = renderStructuredResult(
+      command,
+      {
+        action: command,
+        message: 'Listed.',
+        listing_id: 'listing-1',
+        facility_id: 'fac-1',
+        ship_id: 'ship-1',
+        definition_id: 'ledger_desk',
+        price: 10000,
+        fee,
+        credits_left: 500,
+      },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(stdout.split('\n').filter((line) => line.startsWith('Fee:'))).toEqual([`Fee: ${fee}`]);
+    expect(stdout).not.toContain('=== Response ===');
+    expect(stdout).not.toContain('%');
+  }
+});
+
 test('omits facility table Req. stock column when no maintenance fields are present', () => {
   const facilityList = structuredClone(facilityListFixture) as Record<string, unknown>;
   facilityList.station_facilities = [

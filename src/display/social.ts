@@ -340,6 +340,10 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
     );
   }
   emitDefinedLine('Description', r.description);
+  const bonusType = nonBlankSent(r.bonus_type);
+  if (bonusType !== undefined) emitLine(`Bonus: ${bonusType}`);
+  const bonusValue = formatFiniteNumberAsSent(r.bonus_value);
+  if (bonusValue !== undefined) emitLine(`Value: ${bonusValue}`);
   emitFacilityTypeMaintenance(r.maintenance_per_cycle);
   emitMaintenanceAverageBurn(r.maintenance_average_burn_per_cycle);
   const pool = formatFacilityTypeServicePool(r);
@@ -357,6 +361,8 @@ function emitFacilityTypeList(r: Record<string, unknown>): boolean {
   const rows = r.types.map((row) => ({
     ...row,
     buildable_display: formatYesNo(row.buildable),
+    bonus_type_display: nonBlankSent(row.bonus_type),
+    bonus_value_display: formatFiniteNumberAsSent(row.bonus_value),
   }));
   const columns: Array<[string, string[]]> = [
     ['Name', ['name']],
@@ -366,6 +372,8 @@ function emitFacilityTypeList(r: Record<string, unknown>): boolean {
     ['Build cost', ['build_cost']],
   ];
   if (hasAnyField(rows, ['buildable_display'])) columns.push(['Buildable', ['buildable_display']]);
+  if (hasAnyField(rows, ['bonus_type_display'])) columns.push(['Bonus', ['bonus_type_display']]);
+  if (hasAnyField(rows, ['bonus_value_display'])) columns.push(['Value', ['bonus_value_display']]);
   printCompactTable('Facility types', rows, columns);
   const parts: string[] = [];
   if (r.page !== undefined && r.total_pages !== undefined) parts.push(`page ${r.page}/${r.total_pages}`);
@@ -839,6 +847,9 @@ function facilityRows(rows: Array<Record<string, unknown>>): Array<Record<string
       dismantling_display: formatYesNo(row.dismantling),
       // Finite number or bigint, including 0. An omitted key stays blank and is not 0.
       ticks_left_display: noteIntegerText(row.ticks_until_complete),
+      // Sent token and finite number, including 0. Do not apply the percent or look up a name.
+      bonus_type_display: nonBlankSent(row.bonus_type),
+      bonus_value_display: formatFiniteNumberAsSent(row.bonus_value),
       rent_cycle_display: !hasAnyField([row], ['rent_per_cycle'])
         ? undefined
         : withPausedRentSuffix(String(row.rent_per_cycle), row),
@@ -870,7 +881,13 @@ function withOmittedMissedRentAsZero(row: Record<string, unknown>): Record<strin
 
 function facilityColumns(
   rows: Array<Record<string, unknown>>,
-  options: { grouped?: boolean; includeType?: boolean; missedRent?: 'zero' | 'present'; averageBurn?: boolean } = {},
+  options: {
+    grouped?: boolean;
+    includeType?: boolean;
+    missedRent?: 'zero' | 'present';
+    averageBurn?: boolean;
+    bonus?: boolean;
+  } = {},
 ) {
   const columns: Array<[string, string[]]> = [['Name', ['name_display']]];
   if (options.includeType) columns.push(['Type', ['type_display']]);
@@ -948,6 +965,13 @@ function facilityColumns(
     (options.missedRent === 'present' && rows.some((row) => rowSendsMissedRent(row)))
   ) {
     columns.push(['Missed', ['missed_rent_display', 'missed_rent_cycles']]);
+  }
+  // FacilityEntry tables only. An omitted or invalid value stays blank and does not open the column.
+  if (options.bonus && hasAnyField(rows, ['bonus_type_display'])) {
+    columns.push(['Bonus', ['bonus_type_display']]);
+  }
+  if (options.bonus && hasAnyField(rows, ['bonus_value_display'])) {
+    columns.push(['Value', ['bonus_value_display']]);
   }
   columns.push(['Owner', ['owner_name', 'owner_id', 'faction_tag', 'faction_id']]);
   return columns;
@@ -2316,7 +2340,7 @@ export const socialFormatters = [
         printCompactTable(
           title,
           displayRows,
-          facilityColumns(displayRows, { grouped: true, missedRent, averageBurn: true }),
+          facilityColumns(displayRows, { grouped: true, missedRent, averageBurn: true, bonus: true }),
         );
       }
       if (commandNameEquals(command, 'facility_list')) emitTenantFacilities(r.tenant_facilities);

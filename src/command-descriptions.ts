@@ -153,7 +153,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     "Join a faction via invitation. You must have a pending invite. While you fight in a battle against one of that faction's stations, join_faction returns own_faction_station. Leave the battle first, then retry.",
   leave_faction: 'Leave your faction',
   list_ship_for_sale:
-    'List a stored ship for sale on the exchange. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first. The server refuses a prestige hull. The client does not refuse it and does not keep a list of hull ids.',
+    'List a stored ship for sale on the exchange. Charges a 1% listing fee (non-refundable). A docked market_fee_discount reduces it. The response field is fee. The client does not compute the discount. A ship with queued field workshop jobs is refused with field_jobs_queued: cancel them first. The server refuses a prestige hull. The client does not refuse it and does not keep a list of hull ids.',
   list_ships:
     'List every ship you own and where each is parked, including fitted module type ids. Works from anywhere. Use get_ship <id> for the full fit of a parked, garaged, or carried hull.',
   load_drone: 'Load a drone from cargo into your drone bay',

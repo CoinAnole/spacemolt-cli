@@ -2983,7 +2983,18 @@ describe('command metadata', () => {
       expect(help).toContain('The server refuses a prestige hull.');
       expect(help).toContain('does not keep a list of hull ids');
     }
+    const listed = BUNDLED_COMMAND_REGISTRY.commands.list_ship_for_sale;
+    expect(listed?.description).toContain('Charges a 1% listing fee (non-refundable).');
+    expect(listed?.description).toContain('A docked market_fee_discount reduces it.');
+    expect(listed?.description).toContain('The response field is fee.');
+    expect(listed?.description).toContain('does not compute the discount');
+    const listedHelp = captureHelp('list_ship_for_sale');
+    expect(listedHelp).toContain('Charges a 1% listing fee (non-refundable).');
+    expect(listedHelp).toContain('A docked market_fee_discount reduces it.');
+    expect(listedHelp).toContain('The response field is fee.');
+    expect(listedHelp).toContain('does not compute the discount');
     expect(BUNDLED_COMMAND_REGISTRY.commands.scrap_ship?.description).not.toContain('prestige hull');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.sell_ship_to_order?.description).not.toContain('market_fee_discount');
     const craft = BUNDLED_COMMAND_REGISTRY.commands.craft;
     expect(craft?.description).toContain(
       'You cannot sell, list, gift, donate, scrap, or garage a ship with queued field jobs: cancel them first.',
@@ -4061,6 +4072,16 @@ describe('command metadata', () => {
       expect(text).toContain('including 0 and a fraction');
       expect(text).toContain('Gameserver 0.658.0');
       expect(text).toContain('Gameserver 0.713.0');
+      expect(text).toContain('prints Bonus from bonus_type');
+      expect(text).toContain('Value from bonus_value when that value is finite, including 0');
+      expect(text).toContain('An omitted key prints nothing');
+      expect(text).toContain('The types list adds those columns when any row sends them');
+      expect(text).toContain('The discovery table does not');
+      expect(text).toContain(
+        'market_fee_discount is a percent off ship and facility listing fees, not off exchange orders',
+      );
+      expect(text).toContain('does not keep a list of Ledger Desk, Trading Office, or Brokerage ids');
+      expect(text).toContain('Gameserver 0.732.0');
       expect(text).not.toContain('goes offline');
       expect(text).not.toContain('faction storage cannot cover');
       expect(text).not.toContain('exempt');
@@ -4139,6 +4160,19 @@ describe('command metadata', () => {
       expect(text).toContain('omits faction fields');
       expect(text).toContain('does not check ManageBases');
       expect(text).toContain('does not reveal a cover');
+      expect(text).toContain('add a Bonus column');
+      expect(text).toContain('a Value column');
+      expect(text).toContain('non-blank bonus_type string, printed as sent');
+      expect(text).toContain('finite bonus_value, including 0, as sent');
+      expect(text).toContain('does not open its column');
+      expect(text).toContain('A non-string type stays blank');
+      expect(text).toContain('A non-finite value stays blank');
+      expect(text).toContain('faction facility_owned do not add the columns');
+      expect(text).toContain(
+        'market_fee_discount is a percent off ship and facility listing fees, not off exchange orders',
+      );
+      expect(text).toContain('does not keep a list of Ledger Desk, Trading Office, or Brokerage ids');
+      expect(text).toContain('Gameserver 0.732.0');
       expect(text).not.toContain('maintenance_fuel');
       expect(text).not.toContain('building (');
     }
@@ -4202,7 +4236,18 @@ describe('command metadata', () => {
         expect(text).not.toContain('error code');
         expect(text).not.toContain('facility_reclaimed');
       }
-      expect(description).not.toContain('_');
+      if (name === 'facility_transfer') {
+        expect(description).not.toContain('_');
+      } else {
+        for (const text of [description, help]) {
+          expect(text).toContain('1% of price by default');
+          expect(text).toContain('paid from the wallet to the local station');
+          expect(text).toContain('free for a member of the owning faction');
+          expect(text).toContain('A docked market_fee_discount reduces the fee an outsider pays');
+          expect(text).toContain('The response field is fee');
+          expect(text).toContain('The client does not compute it');
+        }
+      }
     }
   });
 

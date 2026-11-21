@@ -44,6 +44,9 @@ const FACILITY_LIST_TRADE_AUTHENTICATOR_HELP =
   FACILITY_CYCLE_DRAW_HELP +
   " A market's trade_authenticator quantity is its declared stock plus a charge that grows with this station's recent market trade volume. A market that uses trade_authenticator, such as trade_concourse, still draws that authenticator quantity in full each cycle, including the charge that grows with recent market trade volume. The market burns that charge in full each cycle. The column does not split that quantity into stock and a charge. Gameserver 0.658.0. Gameserver 0.713.0.";
 
+const FACILITY_MARKET_FEE_DISCOUNT_HELP =
+  'market_fee_discount is a percent off ship and facility listing fees, not off exchange orders. The client does not keep a list of Ledger Desk, Trading Office, or Brokerage ids. Gameserver 0.732.0.';
+
 const OUTPOST_FOUNDING_FEE_HELP =
   'outpost_founding_fee is the outpost fee. It is not founding_fee. founding_fee remains the station fee. The outpost fee is charged by build_outpost on top of the Outpost Kit, taken from the faction treasury first, then the wallet, and dismantle does not refund it.';
 
@@ -674,7 +677,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     description:
       "List facilities at the docked station. Ally Facilities are facilities here owned by an allied faction that turned on ally_facility_access for your faction. An ally grant queues free, still behind the owner's own jobs, including when the facility is also public. Those facilities are listed under Ally Facilities and are not under Public Facilities. Table output prints the Ally Facilities heading only when ally_facilities has at least one row. An omitted key or an empty array prints no heading. Rent/run prints an explicit 0. An omitted rental_fee_per_run prints no Rent/run column. An omitted output price does not print a price. Gameserver 0.630.3. Player Facilities and Faction Facilities print Missed, and a missing missed_rent_cycles prints 0. Station, Public, and Ally tables print Missed only when a row sends missed_rent_cycles; an omitted key on those rows stays blank and does not add the column. " +
       FACILITY_LIST_TRADE_AUTHENTICATOR_HELP +
-      " Table output prints Ticks left when any row sends ticks_until_complete as a finite number or bigint, including 0. The integer is on player and faction rows while that facility is under construction. Station, public, and ally rows omit it. An omitted key on a row stays blank. When no row sends the key, the Ticks left column is omitted. An omitted key is not 0. Gameserver 0.703.0. At your faction's station or outpost, members with ManageBases also get tenant_facilities, outsiders' facilities with owner and rent. A disguised facility keeps its cover name, sends an empty type, and omits faction fields. The client does not check ManageBases and does not reveal a cover.",
+      " Table output prints Ticks left when any row sends ticks_until_complete as a finite number or bigint, including 0. The integer is on player and faction rows while that facility is under construction. Station, public, and ally rows omit it. An omitted key on a row stays blank. When no row sends the key, the Ticks left column is omitted. An omitted key is not 0. Gameserver 0.703.0. At your faction's station or outpost, members with ManageBases also get tenant_facilities, outsiders' facilities with owner and rent. A disguised facility keeps its cover name, sends an empty type, and omits faction fields. The client does not check ManageBases and does not reveal a cover. Station, Public, Ally, Player, and Faction tables add a Bonus column when any kept row has a non-blank bonus_type string, printed as sent, and a Value column when any kept row has a finite bonus_value, including 0, as sent. An omitted key stays blank and does not open its column. A non-string type stays blank. A non-finite value stays blank. Tenant facilities, facility owned, and faction facility_owned do not add the columns. " +
+      FACILITY_MARKET_FEE_DISCOUNT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/list',
   },
   facility_owned: {
@@ -697,7 +701,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       ' ' +
       FACILITY_TYPE_UPKEEP_PRINT_HELP +
       ' ' +
-      OUTSIDER_STATION_RENT_HELP,
+      OUTSIDER_STATION_RENT_HELP +
+      ' Detail output prints Bonus from bonus_type when that value is a non-blank string, and Value from bonus_value when that value is finite, including 0. An omitted key prints nothing. The types list adds those columns when any row sends them. The discovery table does not. ' +
+      FACILITY_MARKET_FEE_DISCOUNT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/types',
     positionals: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'],
   },
@@ -1016,7 +1022,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   facility_list_for_sale: {
     usage: '<facility_id> <price>  (list a facility for sale)',
     description:
-      'List a facility for sale. A facility that owes rent cannot be listed. The server message prints as sent. The client does not refuse the call.',
+      'List a facility for sale. A facility that owes rent cannot be listed. The server message prints as sent. The client does not refuse the call. A listing fee (1% of price by default) is paid from the wallet to the local station and is free for a member of the owning faction. A docked market_fee_discount reduces the fee an outsider pays. The response field is fee. The client does not compute it.',
     category: 'Facilities',
     apiRoute: 'POST /api/v2/spacemolt_facility/list_for_sale',
     positionals: ['facility_id', 'price'],
