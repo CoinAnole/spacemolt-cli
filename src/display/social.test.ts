@@ -922,6 +922,68 @@ test('does not lift credits_earned off a non-pirate event', () => {
   expect(stdout).not.toContain('1,500cr');
 });
 
+test('prints freight action-log receipts without a credits or party column', () => {
+  const freight = [
+    ['shipping.posted', 'Posted shipment for 400 credits.'],
+    ['shipping.payout', 'Carrier paid 250 credits.'],
+    ['shipping.refund', 'Escrow refunded 400 credits to the shipper.'],
+    ['shipping.debt_paid', 'Paid freight debt of 80 credits.'],
+  ] as const;
+  const entries: Array<Record<string, unknown>> = freight.map(([eventType, summary], index) => ({
+    id: 730 + index,
+    created_at: '2026-11-21T12:00:00.000Z',
+    summary,
+    category: 'trading',
+    event_type: eventType,
+    data: {
+      credits: 400,
+      credits_earned: 1500,
+      contract_id: 'contract-freight-9',
+      package_id: 'package-freight-9',
+      shipper: 'shipper-ada',
+      carrier: 'carrier-bob',
+    },
+  }));
+  entries.push({
+    id: 734,
+    created_at: '2026-11-21T12:05:00.000Z',
+    summary: 'Destroyed pirate Corsair.',
+    category: 'combat',
+    event_type: 'combat.pirate_destroyed',
+    data: {
+      credits: 400,
+      credits_earned: 1500,
+      contract_id: 'contract-freight-9',
+      package_id: 'package-freight-9',
+      shipper: 'shipper-ada',
+      carrier: 'carrier-bob',
+    },
+  });
+  const stdout = renderActionLog(actionLogPage(entries, 'trading'));
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Credits');
+  expect(columns).not.toContain('Contract');
+  expect(columns).not.toContain('Package');
+  expect(columns).not.toContain('Party');
+  expect(columns).not.toContain('Shipper');
+  expect(columns).not.toContain('Carrier');
+  for (const [eventType, summary] of freight) {
+    expect(actionLogCell(stdout, summary, 'Event')).toBe(eventType);
+    expect(actionLogCell(stdout, summary, 'Summary')).toBe(summary);
+    expect(actionLogCell(stdout, summary, 'Credits')).toBe('');
+  }
+  expect(actionLogCell(stdout, 'Destroyed pirate Corsair.', 'Credits')).toBe('1,500cr');
+  expect(stdout).toContain('Posted shipment for 400 credits.');
+  expect(stdout).toContain('Carrier paid 250 credits.');
+  expect(stdout).toContain('Escrow refunded 400 credits to the shipper.');
+  expect(stdout).toContain('Paid freight debt of 80 credits.');
+  expect(stdout).not.toContain('400cr');
+  expect(stdout).not.toContain('contract-freight-9');
+  expect(stdout).not.toContain('package-freight-9');
+  expect(stdout).not.toContain('shipper-ada');
+  expect(stdout).not.toContain('carrier-bob');
+});
+
 test('does not treat a prefix, different case, data event_type, or losing type as pirate_destroyed', () => {
   const rejected = [
     { event_type: 'combat.pirate_destroyed.extra' },
