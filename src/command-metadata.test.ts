@@ -4058,10 +4058,20 @@ describe('command metadata', () => {
       expect(text).toContain('no separate fuel field');
       expect(text).toContain('do not add an upkeep column');
       expect(text).toContain('trade_authenticator');
+      expect(text).toContain('trade_concourse');
+      expect(text).toContain('listed trade_authenticator quantity can include the volume charge');
       expect(text).toContain('recent market trade volume');
-      expect(text).toContain('burns in full each cycle');
-      expect(text).toContain('still draws that authenticator quantity in full each cycle');
+      expect(text).toContain(
+        'cycle draw is the printed maintenance_average_burn_per_cycle as sent, including 0 and a fraction',
+      );
+      expect(text).toContain('does not divide by 30');
+      expect(text).toContain('does not recompute the charge');
+      expect(text).toContain('does not split the column into stock and a charge');
+      expect(text).not.toContain('burns in full');
+      expect(text).not.toContain('in full each cycle');
+      expect(text).not.toContain('draws that authenticator quantity in full');
       expect(text).toContain('maintenance_average_burn_per_cycle');
+      expect(text).toContain('Gameserver 0.729.5');
       expect(text).toContain('only what it draws each cycle');
       expect(text).toContain('dining or leisure venue');
       expect(text).toContain('share of its menu');
@@ -4120,10 +4130,18 @@ describe('command metadata', () => {
       expect(text).toContain('does not add the column');
       expect(text).toContain('trade_authenticator');
       expect(text).toContain('trade_concourse');
-      expect(text).toContain('declared stock plus a charge');
-      expect(text).toContain("this station's recent market trade volume");
-      expect(text).toContain('burns that charge in full each cycle');
-      expect(text).toContain('still draws that authenticator quantity in full each cycle');
+      expect(text).toContain('listed trade_authenticator quantity can include the volume charge');
+      expect(text).toContain('recent market trade volume');
+      expect(text).toContain(
+        'cycle draw is the printed maintenance_average_burn_per_cycle as sent, including 0 and a fraction',
+      );
+      expect(text).toContain('does not divide by 30');
+      expect(text).toContain('does not recompute the charge');
+      expect(text).toContain('does not split the column into stock and a charge');
+      expect(text).not.toContain('declared stock plus a charge');
+      expect(text).not.toContain('burns in full');
+      expect(text).not.toContain('in full each cycle');
+      expect(text).not.toContain('draws that authenticator quantity in full');
       expect(text).not.toContain('burns that whole quantity');
       expect(text).not.toContain('burns the whole');
       expect(text).not.toContain('player station');
@@ -4131,7 +4149,7 @@ describe('command metadata', () => {
       expect(text).not.toContain('faction storage cannot cover');
       expect(text).not.toContain('exempt');
       expect(text).not.toContain('upkeep budget');
-      expect(text).toContain('does not split that quantity into stock and a charge');
+      expect(text).toContain('Gameserver 0.729.5');
       expect(text).toContain('An omitted key still adds no column');
       expect(text).toContain('maintenance_average_burn_per_cycle');
       expect(text).toContain('only what it draws each cycle');
