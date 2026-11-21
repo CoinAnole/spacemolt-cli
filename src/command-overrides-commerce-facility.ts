@@ -1124,7 +1124,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   station_set_market_fee: {
     usage: '<fee_percent>',
-    description: 'Set the market listing fee percentage for outside traders at your faction station.',
+    description:
+      'Set the market fee outside buyers pay on top of the price at the faction station. fee_percent is 0-10 and flows to the treasury. 0 restores the default 1%. It requires manage bases and docking there. Outposts do not support it. The client does not check permission, docking, or outpost. The server message prints as sent. Pirate strongholds are not this command.',
     example: 'spacemolt station_set_market_fee 5',
     discoverWith: ['station_info'],
     seeAlso: ['station_info', 'view_market'],

@@ -14,11 +14,11 @@ import type { APIResponse } from './types.ts';
 const RISK_NOTES: Record<string, string[]> = {
   sell: [
     'Sells cargo from your active ship.',
-    'auto_list=true may create a player sell order and pay a listing fee for unsold quantity.',
+    'auto_list=true may create a player sell order for unsold quantity at the average fill price and pays no listing fee.',
   ],
   buy: [
     'Buys from the current market.',
-    'auto_list=true may create a buy order and pay a listing fee for unfilled quantity.',
+    'auto_list=true may create a buy order for unfilled quantity. It pays no listing fee and escrows sales tax or the station market fee.',
     'Use a quantity to allow server-side estimate_purchase preview.',
   ],
   jump: ['Moves your ship to a connected system and may consume fuel or time.'],

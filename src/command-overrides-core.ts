@@ -214,7 +214,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<item_id_or_cached_name> <quantity> [auto_list=true]  (cargo first, then docked-station storage; use get_cargo or storage view to cache items)',
     description:
-      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities.',
+      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities. Instant fills pay no fee. auto_list lists unsold items at the average fill price and pays no listing fee. A pilot can hold at most 1000 open personal orders at one station, buy and sell together. At the limit a new order fails with order_limit, and existing orders stay. SellResponse has no tax field, and no tax line is printed.',
     example: 'spacemolt sell iron 50',
     discoverWith: ['get_cargo', 'storage_view', 'view_market'],
     seeAlso: ['get_cargo', 'storage_view', 'view_market'],
@@ -226,7 +226,7 @@ export const CORE_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
     usage:
       '<item_id_or_cached_name> [quantity] [auto_list=true] [delivery=cargo|storage]  (defaults to station storage; use view_market to cache items)',
     description:
-      "Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo. An instant fill pays the empire's sales tax on each unit. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.",
+      "Buy an item from the current market. Purchases deliver to station storage by default; pass delivery=cargo to use ship cargo. An instant fill pays the empire's sales tax on each unit, except at a pirate stronghold or a player station, where the buyer pays the station market fee instead. Pirate strongholds charge 5%. A player station charges the owner's set_market_fee rate, and 1% is the default. Members of the station's owning faction pay none. auto_list escrows that same charge. A pilot can hold at most 1000 open personal orders at one station, buy and sell together. At the limit a new order fails with order_limit, and existing orders stay. The client does not compute 5% or 1%, does not add a market_fee field, does not count open orders, and does not refuse the call. The server message prints as sent. The spent amount prints from total_cost. BuyResponse has no sales_tax. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.",
     example: 'spacemolt buy fuel 10 delivery=cargo',
     discoverWith: ['view_market', 'get_status'],
     seeAlso: ['view_market', 'storage', 'get_cargo'],

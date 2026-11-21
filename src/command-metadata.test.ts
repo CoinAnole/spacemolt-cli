@@ -3858,6 +3858,9 @@ describe('command metadata', () => {
     const buyHelp = captureHelp('faction create_buy_order');
     expect(buyHelp).toContain('[private=true]');
     expect(buyHelp).toContain('Company Store');
+    expect(buyHelp).toContain('There is no listing fee.');
+    expect(buyHelp).not.toContain('order_limit');
+    expect(buyHelp).not.toContain('station market fee');
     expect(buyHelp).not.toContain('deliver_to');
 
     const sell = BUNDLED_COMMAND_REGISTRY.commandGroups.faction?.actions.create_sell_order?.config;
@@ -3869,6 +3872,9 @@ describe('command metadata', () => {
     const sellHelp = captureHelp('faction create_sell_order');
     expect(sellHelp).toContain('[private=true]');
     expect(sellHelp).toContain('Company Store');
+    expect(sellHelp).toContain('There is no listing fee.');
+    expect(sellHelp).not.toContain('order_limit');
+    expect(sellHelp).not.toContain('station market fee');
   });
 
   test('faction_build help documents bucket material sourcing', () => {
@@ -4258,6 +4264,38 @@ describe('command metadata', () => {
     expect(COMMANDS.station_info?.description).not.toContain('allow_ally_facilities');
     expect(COMMANDS.get_base?.description).not.toContain('allow_ally_facilities');
     expect(COMMANDS.get_base?.description).not.toContain('build_access');
+  });
+
+  test('station set_market_fee help sets the buyer market fee, not a listing fee', () => {
+    const config = COMMANDS.station_set_market_fee;
+    const generated =
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_facility/set_market_fee']?.schema?.fee_percent?.description ?? '';
+    expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.station_set_market_fee?.schemaExtensions).toBeUndefined();
+    expect(config?.schema?.fee_percent?.description).toBe(generated);
+    expect(generated).toContain('0 = default 1%');
+    const description = config?.description ?? '';
+    expect(description).toContain('outside buyers pay on top of the price');
+    expect(description).toContain('fee_percent is 0-10');
+    expect(description).toContain('0 restores the default 1%');
+    expect(description).toContain('manage bases');
+    expect(description).toContain('Outposts do not support it');
+    expect(description).toContain('Pirate strongholds are not this command');
+    expect(description).toContain('does not check permission, docking, or outpost');
+    expect(description).not.toContain('listing fee');
+    const help = captureHelp('station set_market_fee');
+    expect(help).toContain('outside buyers pay on top of the price');
+    expect(help).toContain(generated);
+  });
+
+  test('estimate_purchase help keeps sales_tax as the station market fee at player stations', () => {
+    const description = COMMANDS.estimate_purchase?.description ?? '';
+    expect(description).toContain('sales_tax and sales_tax_rate_bps');
+    expect(description).toContain('those values are the station market fee');
+    expect(description).toContain('does not rename the label');
+    expect(description).toContain('does not add a market-fee line');
+    const help = captureHelp('estimate_purchase');
+    expect(help).toContain('sales_tax_rate_bps');
+    expect(help).toContain('station market fee');
   });
 
   test('station set_contraband and reset_contraband replace generated facility names', () => {
@@ -5584,7 +5622,11 @@ describe('command metadata', () => {
     expect(config?.usage).toContain('[delivery=cargo|storage]');
     expect(config?.aliases).toMatchObject({ delivery: 'deliver_to' });
     expect(COMMANDS.buy?.description).toContain(hazmatInstantFill);
-    expect(COMMANDS.buy?.description).toContain("An instant fill pays the empire's sales tax on each unit.");
+    expect(COMMANDS.buy?.description).toContain(
+      "An instant fill pays the empire's sales tax on each unit, except at a pirate stronghold or a player station",
+    );
+    expect(COMMANDS.buy?.description).toContain('order_limit');
+    expect(COMMANDS.buy?.description).toContain('auto_list escrows that same charge');
     expect(COMMANDS.buy?.description).toContain('delivery=cargo');
     expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('CLI default is storage');
     expect(COMMANDS.buy?.schema?.deliver_to?.description).toContain('delivery=cargo');
@@ -5598,7 +5640,10 @@ describe('command metadata', () => {
     expect(help).toContain('delivery=cargo');
     expect(help).toContain('deliver_to=storage');
     expect(help).toContain(hazmatInstantFill);
-    expect(help).toContain("An instant fill pays the empire's sales tax on each unit.");
+    expect(help).toContain(
+      "An instant fill pays the empire's sales tax on each unit, except at a pirate stronghold or a player station",
+    );
+    expect(help).toContain('order_limit');
     expect(help).toContain('storage');
     expect(help).not.toContain('view_storage');
     for (const text of [COMMANDS.buy?.description ?? '', COMMANDS.buy?.schema?.deliver_to?.description ?? '']) {
@@ -5649,13 +5694,18 @@ describe('command metadata', () => {
     expect(COMMANDS.create_sell_order?.description).not.toContain('hazmat');
     expect(COMMANDS.sell?.description).not.toContain('hazmat');
     expect(COMMANDS.create_buy_order?.description).not.toContain("empire's sales tax on each unit");
+    expect(COMMANDS.create_buy_order?.description).toContain('There is no listing fee.');
+    expect(COMMANDS.create_buy_order?.description).toContain('order_limit');
+    expect(COMMANDS.create_sell_order?.description).toContain('There is no listing fee.');
+    expect(COMMANDS.create_sell_order?.description).toContain('order_limit');
+    expect(COMMANDS.create_sell_order?.description).toContain('including 0');
   });
 
   test('sell help states cargo first, then docked-station storage', () => {
     const usage =
       '<item_id_or_cached_name> <quantity> [auto_list=true]  (cargo first, then docked-station storage; use get_cargo or storage view to cache items)';
     const description =
-      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities.';
+      'Sell items from cargo first, then from your station storage at the docked station. A short cargo hold is not a stop when that storage has the rest. Gameserver 0.640.0 no longer returns insufficient_items for that cargo-short case, so a script that used the error as a cargo-short stop will sell storage stock too. Use get_cargo or storage view for item IDs, cached names, and quantities. Instant fills pay no fee. auto_list lists unsold items at the average fill price and pays no listing fee. A pilot can hold at most 1000 open personal orders at one station, buy and sell together. At the limit a new order fails with order_limit, and existing orders stay. SellResponse has no tax field, and no tax line is printed.';
     const related = ['get_cargo', 'storage_view', 'view_market'];
     const config = COMMANDS.sell;
 
@@ -5670,6 +5720,8 @@ describe('command metadata', () => {
 
     const help = captureHelp('sell');
     expect(help).toContain('Sell items from cargo first, then from your station storage at the docked station.');
+    expect(help).toContain('pays no listing fee');
+    expect(help).toContain('order_limit');
     expect(help).toContain('insufficient_items');
     expect(help).toContain('spacemolt storage view');
     expect(help).not.toContain('Sell cargo items');
@@ -8106,9 +8158,9 @@ describe('command metadata', () => {
 
   test('modify_order and cancel_order help document escrow refunds', () => {
     const modifyOrder =
-      'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.';
+      'Change the price on an existing order. Repricing pays no listing fee. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, the reprice still escrows sales tax or the station market fee, and a later cancel refunds it. listing_fee prints when sent, including 0.';
     const cancelOrder =
-      'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.';
+      'Cancel an active order and return escrow. A buy cancel refunds the escrowed sales tax or station market fee. On a buy order, after modify_order changes the price, that refund includes the sales tax or station market fee the reprice escrowed. Sell cancels still return remaining items to station storage.';
     const generatedSummary = GENERATED_API_ROUTES['POST /api/v2/spacemolt_market/modify_order']?.summary ?? '';
 
     expect(COMMERCE_FACILITY_COMMAND_OVERRIDES.modify_order?.description).toBeUndefined();

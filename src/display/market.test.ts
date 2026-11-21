@@ -334,6 +334,64 @@ test('create_sell_order listing_fee 0 prints Listing fee: 0 cr', () => {
   expect(stdout).toContain('Listing fee: 0 cr');
 });
 
+test('modify_order prints listing_fee 0 and omits an absent listing_fee', () => {
+  const zero = renderStructuredResult(
+    'modify_order',
+    {
+      action: 'modify_order',
+      kind: 'single',
+      order_id: 'order-1',
+      old_price: 4,
+      new_price: 6,
+      listing_fee: 0,
+      message: 'Repriced.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(zero).toContain('Listing Fee: 0');
+  expect(zero).not.toContain('Market fee');
+
+  const omitted = renderStructuredResult(
+    'modify_order',
+    {
+      action: 'modify_order',
+      kind: 'single',
+      order_id: 'order-1',
+      old_price: 4,
+      new_price: 6,
+      message: 'Repriced.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(omitted).not.toContain('Listing Fee');
+});
+
+test('estimate_purchase keeps the Sales tax label for a station market fee', () => {
+  const stdout = renderStructuredResult(
+    'estimate_purchase',
+    {
+      action: 'estimate_purchase',
+      item: 'Iron Ore',
+      quantity_requested: 2,
+      available: 2,
+      subtotal: 10,
+      sales_tax: 0,
+      sales_tax_rate_bps: 0,
+      total_cost: 10,
+      fills: [],
+      unfilled: 0,
+      message: 'Estimate.',
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(stdout).toContain('Sales Tax: 0');
+  expect(stdout).toContain('Sales Tax Rate Bps: 0');
+  expect(stdout).not.toContain('Market fee');
+});
+
 const singleSellBody = {
   action: 'create_sell_order',
   kind: 'single',

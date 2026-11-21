@@ -711,6 +711,22 @@ describe('dry-run previews', () => {
     expect(response.structuredContent?.payload).toEqual({ id: 'ship_1' });
   });
 
+  test('buy and sell dry-run notes do not charge an auto_list listing fee', () => {
+    const sell = createDryRunResponse('sell', { item_id: 'ore_iron', quantity: 1, auto_list: true });
+    const buy = createDryRunResponse('buy', { item_id: 'ore_iron', quantity: 1, auto_list: true });
+    const sellNotes = sell.structuredContent?.notes;
+    const buyNotes = buy.structuredContent?.notes;
+    expect(sellNotes).toEqual([
+      'Sells cargo from your active ship.',
+      'auto_list=true may create a player sell order for unsold quantity at the average fill price and pays no listing fee.',
+    ]);
+    expect(buyNotes).toEqual([
+      'Buys from the current market.',
+      'auto_list=true may create a buy order for unfilled quantity. It pays no listing fee and escrows sales tax or the station market fee.',
+      'Use a quantity to allow server-side estimate_purchase preview.',
+    ]);
+  });
+
   test('dry-run payload line keeps integers above 2^53', () => {
     const reward = 9007199254740993n;
     const response = createDryRunResponse('scrap_ship', { id: 'ship_1', base_reward: reward });

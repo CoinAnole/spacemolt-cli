@@ -1069,7 +1069,7 @@ describe('help output branches', () => {
     expect(output).toContain('See also: get_action_log, cancel_order');
     expect(output).toContain('trading.escrow_refunded');
     expect(output).toContain('not a field on this response');
-    expect(output).toContain('On a buy, modify_order escrows sales tax');
+    expect(output).toContain('On a buy, the reprice still escrows sales tax or the station market fee');
     expect(COMMANDS.modify_order?.description).not.toContain('`');
   });
 
@@ -1082,11 +1082,13 @@ describe('help output branches', () => {
     expect(description).toContain('On a buy order');
     expect(description).toContain('after modify_order changes the price');
     expect(description).toContain('Sell cancels still return remaining items');
-    expect(description).toContain('create_buy_order is unchanged');
+    expect(description).toContain('escrowed sales tax or station market fee');
+    expect(description).not.toContain('create_buy_order is unchanged');
     expect(output).toContain('On a buy order');
     expect(output).toContain('after modify_order changes the price');
     expect(output).toContain('Sell cancels still return remaining items');
-    expect(output).toContain('create_buy_order is unchanged');
+    expect(output).toContain('escrowed sales tax or station market fee');
+    expect(output).not.toContain('create_buy_order is unchanged');
     expect(output).toContain('order_ids');
     expect(description).not.toContain('`');
   });

@@ -13,7 +13,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   cancel_commission:
     "Cancel a pending or in-progress ship commission. A ManageBases member of the bound faction can cancel a capital mobile-base order. The refund still goes to the player who placed it. refunded_to names that player, or, for a faction-funded commission, the faction name whose treasury received the refund. credits_total is the caller's own wallet after the cancel. It includes the refund only when refunded_to is the caller. A finished mobile base returns not_cancellable. Other players get not_yours.",
   cancel_order:
-    'Cancel an active order and return escrow. On a buy order, after modify_order changes the price, that refund includes the sales tax the reprice escrowed. Sell cancels still return remaining items to station storage. Sales tax on create_buy_order is unchanged.',
+    'Cancel an active order and return escrow. A buy cancel refunds the escrowed sales tax or station market fee. On a buy order, after modify_order changes the price, that refund includes the sales tax or station market fee the reprice escrowed. Sell cancels still return remaining items to station storage.',
   cancel_ship_listing: 'Remove your ship listing from the exchange',
   captains_log_add: 'Add an entry to your captain log.',
   captains_log_delete: 'Delete a specific entry from your captain log.',
@@ -35,24 +35,26 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
   craft:
     'List queued jobs (no recipe), or queue craft/package pack/unpack jobs (docked storage or faction; cargo for package recipes; undocked field workshop uses cargo).',
   create_buy_order:
-    'Place a buy offer on the station exchange. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
+    'Place a buy offer on the station exchange. There is no listing fee. The buyer pays sales tax, or the station market fee at a pirate stronghold or a player station, on top of the price. It is escrowed and refunded on cancel. A pilot can hold at most 1000 open personal orders at one station, buy and sell together. At the limit a new order fails with order_limit, and existing orders stay. Listing fee prints when listing_fee is sent, including 0. An omitted listing_fee prints nothing, and 0 is not treated as omitted. A hazardous instant fill goes to station storage when the ship has no hazmat cargo module.',
   create_faction: 'Create a new faction',
   create_note:
     'Create a new note document. Notes take no cargo space (gameserver 0.632.5). A full hold still accepts a new note, and create_note does not return cargo_full.',
-  create_sell_order: 'List items for sale on the station exchange',
+  create_sell_order:
+    'List items for sale on the station exchange. There is no listing fee. The buyer pays sales tax, or the station market fee at a pirate stronghold or a player station, on top of the price. A pilot can hold at most 1000 open personal orders at one station, buy and sell together. At the limit a new order fails with order_limit, and existing orders stay. Listing fee prints when listing_fee is sent, including 0. An omitted listing_fee prints nothing, and 0 is not treated as omitted.',
   decline_mission: 'Decline a mission and hear the NPC response.',
   delete_note:
     'Permanently delete a note document you own. Deleting a note leaves cargo unchanged and does not free a cargo unit (gameserver 0.632.5).',
   deploy_drone: 'Deploy a drone from your bay into space',
   distress_signal:
     'Broadcast a fuel, repair, or combat emergency and post one claimable rescue (gameserver 0.608.0). Nobody is assigned it. The response carries mission_id; the first pilot to call accept_mission with that id takes the rescue, docked or not. mission_id is empty when responders_reached is 0 (nobody in range heard you). responders_reached is how many online pilots within 5 jumps heard the call, not how many are coming. Cannot be used while docked. One active distress at a time; 1-hour cooldown. Unclaimed player-call rescues expire in 3 hours (expires_seconds 10800), or earlier if you travel away under your own power. Omit type to default to fuel. tow (gameserver 0.696.0) calls a Galactic Salvage Authority tug: no broadcast and no cooldown, and a tow does not block your other distress calls. The tug arrives in 5 minutes and docks you at the nearest public station, for the same fee as an idle-ship recovery: 500 credits, waived when you run low, higher from a hazard, plus a Pathfinder fee from the frontier. One tug can be on the way at a time. You cannot call a tow while held or in a battle. On arrival the tug turns back if you are docked, away from that POI, traveling, in a battle, or held by a warp scrambler. It is not available while held. Human output prints Tow arrives in from tow_arrives_seconds when that value is a finite number or bigint, including 0. An omitted key prints nothing. The response has no fee, hazard, or Pathfinder field, so no fee is printed.',
-  estimate_purchase: 'Preview what buying would cost without executing',
+  estimate_purchase:
+    'Preview what buying would cost without executing. The response returns sales_tax and sales_tax_rate_bps. At a pirate stronghold or a player station those values are the station market fee. The client does not rename the label and does not add a market-fee line.',
   faction_accept_invite: 'Accept a faction invitation.',
   faction_accept_peace: 'Accept a peace proposal',
   faction_cancel_mission: 'Cancel a posted faction mission and refund escrowed rewards',
-  faction_create_buy_order: 'Create a buy order on behalf of your faction.',
+  faction_create_buy_order: 'Create a buy order on behalf of your faction. There is no listing fee.',
   faction_create_role: 'Create a custom faction role',
-  faction_create_sell_order: 'Create a sell order on behalf of your faction.',
+  faction_create_sell_order: 'Create a sell order on behalf of your faction. There is no listing fee.',
   faction_declare_war: 'Declare war on another faction',
   faction_decline_invite: 'Decline a faction invitation',
   faction_delete_role: 'Delete a custom faction role',
@@ -159,7 +161,7 @@ export const CURATED_COMMAND_DESCRIPTIONS: Record<string, string> = {
     'Loot wreck cargo into your hold, or loot a wreck module into cargo as unfitted with module_id= (fit later with install_mod). Omit item_id and module_id to take every cargo stack that fits and leave the rest in the wreck. A wreck at another POI returns not_found, the same as a wreck that is already gone.',
   mine: 'Mine one cycle at the current POI (asteroid, ice, or gas).',
   modify_order:
-    'Change the price on an existing order. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, modify_order escrows sales tax so a later cancel refunds what you paid.',
+    'Change the price on an existing order. Repricing pays no listing fee. Raising a buy above an older, cheaper sell fills at the sell price; the difference plus the extra sales tax you escrowed is action-log event trading.escrow_refunded (get_action_log event_type=trading.escrow_refunded), not a field on this response. On a buy, the reprice still escrows sales tax or the station market fee, and a later cancel refunds it. listing_fee prints when sent, including 0.',
   name_drone: 'Set or clear a display name for a drone.',
   name_ship: 'Set or clear a custom name for your active ship',
   petition: 'Send a petition to an empire government.',

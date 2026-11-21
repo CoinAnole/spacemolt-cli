@@ -1108,13 +1108,13 @@ describe('shell completion generation', () => {
     expect(bashSellBody).toContain('auto_list=');
     expect(bashSellBody).not.toContain('true false');
     expect(fishSellLines).toContain(
-      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a auto_list= -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies)."',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a auto_list= -d "If true, automatically create a sell order for unsold items at the average fill price (no listing fee)."',
     );
     expect(fishSellLines).not.toContain(
-      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a true -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: true"',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a true -d "If true, automatically create a sell order for unsold items at the average fill price (no listing fee).: true"',
     );
     expect(fishSellLines).not.toContain(
-      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a false -d "If true, automatically create a sell order for unsold items at the average fill price (1% listing fee applies).: false"',
+      'complete -c spacemolt -n "__spacemolt_no_dynamic_complete; and __fish_seen_subcommand_from sell" -a false -d "If true, automatically create a sell order for unsold items at the average fill price (no listing fee).: false"',
     );
   });
 
