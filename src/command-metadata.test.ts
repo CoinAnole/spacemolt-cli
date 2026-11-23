@@ -5972,7 +5972,6 @@ describe('command metadata', () => {
       'shipping_cancel',
       'shipping_pay_debt',
       'shipping_profile',
-      'shipping_reclaim',
     ]);
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_recruit_personnel).toBeUndefined();
@@ -6163,6 +6162,33 @@ describe('command metadata', () => {
       expect(cmd.schema?.package_id?.type).toBe('string');
       expect(cmd.schema?.shipment_id?.type).toBe('string');
     }
+    const shippingReclaim = BUNDLED_COMMAND_REGISTRY.commands.shipping_reclaim;
+    if (!shippingReclaim) throw new Error('shipping_reclaim command missing');
+    expect(shippingReclaim.usage).toBe('[package_id=...] [shipment_id=...]  (provide exactly one)');
+    expect(shippingReclaim.category).toBe('Missions');
+    expect(shippingReclaim.example).toContain('package_id=');
+    expect(shippingReclaim.description).toContain('package:<id>');
+    expect(shippingReclaim.description).toContain('Manage Treasury');
+    expect(shippingReclaim.description).toContain('package_in_cargo');
+    expect(shippingReclaim.description).toContain('package_not_here');
+    expect(shippingReclaim.description).toContain('shipping_track');
+    expect(shippingReclaim.description).toContain('defaulted');
+    expect(shippingReclaim.description).toContain('claim:<shipment_id>');
+    expect(shippingReclaim.description).toContain('pay_debt');
+    expect(shippingReclaim.description).toContain('does not check docking');
+    expect(shippingReclaim.description).toContain('does not add an error-registry entry');
+    expect(shippingReclaim.required ?? []).toEqual([]);
+    expect(shippingReclaim.discoverWith).toEqual(['shipping_active', 'shipping_track']);
+    expect(shippingReclaim.seeAlso).toEqual(['shipping_active', 'shipping_get', 'shipping_track', 'shipping_return']);
+    expect(shippingReclaim.route).toEqual({ tool: 'spacemolt_shipping', action: 'reclaim', method: 'POST' });
+    expect(shippingReclaim.schema?.package_id?.type).toBe('string');
+    expect(shippingReclaim.schema?.package_id?.description).toContain('package:<id>');
+    expect(shippingReclaim.schema?.shipment_id?.type).toBe('string');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_return?.description).toContain('defaulted sealed package');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_return?.description).toContain('debt_cleared');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_return?.description).toContain(
+      'does not decide who holds the package',
+    );
     expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_track?.schema?.limit?.type).toBe('integer');
     const deliverHelp = BUNDLED_COMMAND_REGISTRY.commands.shipping_deliver?.description ?? '';
     expect(deliverHelp).toContain('(20 + 20 × contract.route_hops)');

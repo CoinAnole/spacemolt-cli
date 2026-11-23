@@ -24,11 +24,15 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
-// Omitted piloting_xp is not 0. Print only a finite number or bigint.
-function formatPilotingXp(value: unknown): string | undefined {
+// Omitted is not 0. Finite numbers and bigints print as sent, with no grouping or unit.
+function formatExactNumber(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
   if (typeof value === 'number' && Number.isFinite(value)) return Object.is(value, -0) ? '0' : String(value);
   return undefined;
+}
+
+function formatPilotingXp(value: unknown): string | undefined {
+  return formatExactNumber(value);
 }
 
 function presentString(value: unknown): string | undefined {
@@ -144,6 +148,10 @@ function renderContract(contract: Record<string, unknown>, title: string, compac
   emitHeading(title);
   emitField('Contract', contract.id);
   emitField('Status', contract.status);
+  // Non-blank strings as sent. A finite claim_station_paid, including 0, uses credit style. Omitted is not 0.
+  emitField('Package recovery', contract.package_recovery, presentString);
+  emitField('Recovered', contract.package_recovered_at, presentString);
+  emitField('Claim station paid', contract.claim_station_paid, formatCredits);
   emitField('Package', contract.package_id);
   emitField('Route', formatRoute(contract.origin_base_id, contract.destination_base_id));
   if (compact) return;
@@ -444,6 +452,8 @@ function renderDebts(title: string, debts: Array<Record<string, unknown>>, empty
     shipment: text(debt.shipment_id),
     original: formatCredits(debt.original),
     outstanding: formatCredits(debt.outstanding),
+    // As sent, including 0. Not a credit-style rewrite and not a computed split.
+    creditor_due: formatExactNumber(debt.creditor_due),
     creditor: formatActor(debt.creditor),
     debtor: formatActor(debt.debtor),
     created: text(debt.created_at),
@@ -454,8 +464,10 @@ function renderDebts(title: string, debts: Array<Record<string, unknown>>, empty
     ['Shipment', ['shipment']],
     ['Original', ['original']],
     ['Outstanding', ['outstanding']],
-    ['Creditor', ['creditor']],
   ];
+  // An omitted or non-numeric creditor_due stays blank and does not open the column.
+  if (rows.some((row) => row.creditor_due !== undefined)) columns.push(['Creditor due', ['creditor_due']]);
+  columns.push(['Creditor', ['creditor']]);
   // An omitted or unprintable debtor stays blank and does not open the column.
   if (rows.some((row) => row.debtor !== undefined)) columns.push(['Debtor', ['debtor']]);
   columns.push(['Created', ['created']], ['Paid', ['paid']]);
@@ -497,6 +509,7 @@ function renderDebtPayment(result: Record<string, unknown>): boolean {
 function settlementTitle(command: string | undefined): string {
   if (command === 'shipping_deliver') return 'Freight Delivered';
   if (command === 'shipping_return') return 'Freight Returned';
+  if (command === 'shipping_reclaim') return 'Freight Reclaimed';
   return 'Freight Contract Canceled';
 }
 
@@ -506,6 +519,10 @@ function renderSettlement(result: Record<string, unknown>, command: string | und
   emitField('Carrier payout', result.carrier_payout, formatCredits);
   emitField('Shipper refund', result.shipper_refund, formatCredits);
   emitField('Debt created', result.debt_created, formatCredits);
+  // Omitted is not 0. Do not add these on deliver or cancel unless the server sent them.
+  emitField('Debt cleared', result.debt_cleared, formatCredits);
+  emitField('Claim repaid', result.claim_repaid, formatCredits);
+  emitField('Claim debt', result.claim_debt, formatCredits);
   emitField('Late delivery', result.late, formatBoolean);
   emitField('Terminal reason', result.contract.terminal_reason);
   emitField('Piloting XP', result.piloting_xp, formatPilotingXp);
@@ -549,7 +566,7 @@ export const shippingFormatters = [
     suppressShapeFallbackOnDecline: true,
   }),
   formatter(renderSettlement, {
-    commands: ['shipping_deliver', 'shipping_return', 'shipping_cancel'],
+    commands: ['shipping_deliver', 'shipping_return', 'shipping_reclaim', 'shipping_cancel'],
     suppressShapeFallbackOnDecline: true,
   }),
 ];

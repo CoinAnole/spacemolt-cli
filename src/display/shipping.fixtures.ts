@@ -481,6 +481,29 @@ export const shippingReturnFixture = mutationFixture(
   195500,
 );
 
+export const shippingReclaimFixture = mutationFixture(
+  {
+    action: 'reclaim',
+    contract: shipmentContract({
+      id: 'shipment-defaulted-1',
+      status: 'defaulted',
+      contractor: actor('player', 'carrier-vale'),
+      accepted_at: '2026-07-17T10:05:00Z',
+      settled_at: '2026-07-17T11:00:00Z',
+      terminal_reason: 'deadline_expired',
+      reputation_eligible: true,
+      package_recovery: 'reclaimed',
+      package_recovered_at: '2026-07-17T12:00:00Z',
+      claim_station_paid: 7500,
+      claim_paid: 8000,
+    }),
+    debt_cleared: 0,
+    claim_repaid: 7500,
+    claim_debt: 500,
+  },
+  183000,
+);
+
 export const shippingCancelFixture = mutationFixture(
   {
     action: 'cancel',
@@ -522,5 +545,6 @@ export const shippingHighValueFixtures: Record<string, HighValueFixtureEntry> = 
   shipping_pay_debt: shippingEntry('pay_debt', shippingPayDebtFixture, 'details'),
   shipping_deliver: shippingEntry('deliver', shippingDeliverFixture, 'details'),
   shipping_return: shippingEntry('return', shippingReturnFixture, 'details'),
+  shipping_reclaim: shippingEntry('reclaim', shippingReclaimFixture, 'details'),
   shipping_cancel: shippingEntry('cancel', shippingCancelFixture, 'details'),
 };

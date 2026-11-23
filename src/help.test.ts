@@ -1896,6 +1896,50 @@ describe('help output branches', () => {
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/deliver');
   });
 
+  test('shipping_reclaim help is curated Missions and shipping_return covers a defaulted package', () => {
+    const reclaim = captureWriter();
+    const returned = captureWriter();
+    const explanation = captureWriter();
+
+    expect(showCommandHelp('shipping_reclaim', reclaim.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandHelp('shipping_return', returned.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_reclaim', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const reclaimOutput = reclaim.stdout.join('\n');
+    expect(reclaimOutput).toContain('Manage Treasury');
+    expect(reclaimOutput).toContain('package:<id>');
+    expect(reclaimOutput).toContain('package_in_cargo');
+    expect(reclaimOutput).toContain('package_not_here');
+    expect(reclaimOutput).toContain('shipping_track');
+    expect(reclaimOutput).toContain('defaulted');
+    expect(reclaimOutput).toContain('claim:<shipment_id>');
+    expect(reclaimOutput).toContain('pay_debt');
+    expect(reclaimOutput).toContain('does not check docking');
+    expect(reclaimOutput).toContain('does not add an error-registry entry');
+    expect(reclaimOutput).toContain(
+      'spacemolt shipping_reclaim [package_id=...] [shipment_id=...]  (provide exactly one)',
+    );
+    expect(reclaimOutput).toContain('spacemolt shipping_reclaim package_id=package-relief-1');
+    expect(reclaimOutput).toContain('Server help:');
+    expect(reclaimOutput).toContain('spacemolt server-help shipping_reclaim');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/reclaim');
+
+    const returnOutput = returned.stdout.join('\n');
+    expect(returnOutput).toContain('defaulted sealed package');
+    expect(returnOutput).toContain('debt_cleared');
+    expect(returnOutput).toContain('tier loss');
+    expect(returnOutput).toContain('same way as reclaim');
+    expect(returnOutput).toContain('Opening or destroying the package ends the claim');
+    expect(returnOutput).toContain('does not decide who holds the package');
+
+    const misc = captureWriter();
+    expect(showCommandGroup('misc', misc.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(misc.stdout.join('\n')).toContain('shipping_reclaim');
+  });
+
   test('pay_bounty is curated Taxes help under misc, not Generated API or info', () => {
     const command = captureWriter();
     const explanation = captureWriter();
@@ -2456,6 +2500,7 @@ describe('help output branches', () => {
     expect(generatedSection).toContain('shipping_accept');
     expect(generatedSection).not.toContain('shipping_list_all');
     expect(generatedSection).not.toContain('shipping_list');
+    expect(generatedSection).not.toContain('shipping_reclaim');
     expect(generatedSection).toContain('battle_self_destruct');
     expect(generatedSection).not.toContain('ship_fit_preview');
     expect(generatedSection).not.toContain('ship_recruit_personnel');

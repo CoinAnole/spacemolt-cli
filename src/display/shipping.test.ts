@@ -1620,6 +1620,15 @@ test('preserves complete malformed shipping mutation envelopes in the raw fallba
       },
     ],
     [
+      'shipping_reclaim',
+      {
+        details: { action: 'reclaim', contract: 'invalid', claim_debt: 0 },
+        player: { credits: 10 },
+        ship: { id: 'ship-1' },
+        cargo: [{ item_id: 'package-1', quantity: 1 }],
+      },
+    ],
+    [
       'shipping_cancel',
       {
         details: { action: 'cancel', contract: 'invalid', shipper_refund: 0 },
@@ -1787,15 +1796,23 @@ test('shipping_get prints contract carrier_payout 0 under the Freight Contract h
 });
 
 function settlementEnvelope(
-  action: 'deliver' | 'return' | 'cancel',
+  action: 'deliver' | 'return' | 'cancel' | 'reclaim',
   settlement: Record<string, unknown> = {},
 ): Record<string, unknown> {
+  const status =
+    action === 'cancel'
+      ? 'canceled'
+      : action === 'return'
+        ? 'returned'
+        : action === 'reclaim'
+          ? 'defaulted'
+          : 'delivered';
   return {
     details: {
       action,
       contract: {
         ...contract,
-        status: action === 'cancel' ? 'canceled' : action === 'return' ? 'returned' : 'delivered',
+        status,
       },
       carrier_payout: 15000,
       ...settlement,
@@ -1896,8 +1913,8 @@ test('freight settlement prints Piloting XP for a finite number or bigint, inclu
 });
 
 test('freight settlement omits Piloting XP when the key is absent and does not derive it', () => {
-  for (const command of ['shipping_deliver', 'shipping_return', 'shipping_cancel'] as const) {
-    const action = command.slice('shipping_'.length) as 'deliver' | 'return' | 'cancel';
+  for (const command of ['shipping_deliver', 'shipping_return', 'shipping_reclaim', 'shipping_cancel'] as const) {
+    const action = command.slice('shipping_'.length) as 'deliver' | 'return' | 'cancel' | 'reclaim';
     const stdout = output(command, settlementEnvelope(action));
     expect(stdout).not.toContain('Piloting XP');
   }
@@ -1920,4 +1937,243 @@ test('freight settlement omits Piloting XP when the key is absent and does not d
     expect(stdout).not.toContain('Piloting XP');
     expect(stdout).not.toContain('NaN');
   }
+});
+
+test('shipping_reclaim titles the settlement Freight Reclaimed and prints sent claim amounts, including 0', () => {
+  const stdout = output(
+    'shipping_reclaim',
+    settlementEnvelope('reclaim', {
+      debt_cleared: 0,
+      claim_repaid: 7500,
+      claim_debt: 500n,
+      contract: {
+        ...contract,
+        status: 'defaulted',
+        package_recovery: 'reclaimed',
+        package_recovered_at: ' 2026-07-17T12:00:00Z ',
+        claim_station_paid: 0,
+      },
+    }),
+  );
+
+  expect(stdout).toContain('=== Freight Reclaimed ===');
+  expect(stdout).not.toContain('Freight Returned');
+  expect(stdout).toContain('Status: defaulted');
+  expect(stdout).toContain('Package recovery: reclaimed');
+  expect(stdout).toContain('Recovered:  2026-07-17T12:00:00Z ');
+  expect(stdout).toContain('Claim station paid: 0 cr');
+  expect(stdout).toContain('Debt cleared: 0 cr');
+  expect(stdout).toContain('Claim repaid: 7,500 cr');
+  expect(stdout).toContain('Claim debt: 500 cr');
+  expect(stdout).not.toContain('claim:shipment-1');
+  expect(stdout).not.toContain('8,000 cr');
+  expect(stdout).not.toContain('=== Response ===');
+
+  const statusAt = stdout.indexOf('Status: defaulted');
+  expect(statusAt).toBeLessThan(stdout.indexOf('Package recovery: reclaimed'));
+  expect(stdout.indexOf('Package recovery: reclaimed')).toBeLessThan(stdout.indexOf('Recovered:'));
+  expect(stdout.indexOf('Recovered:')).toBeLessThan(stdout.indexOf('Claim station paid: 0 cr'));
+  expect(stdout.indexOf('Claim station paid: 0 cr')).toBeLessThan(stdout.indexOf('Package: package-1'));
+});
+
+test('a return after default stays Freight Returned and prints the same sent claim amounts', () => {
+  const stdout = output(
+    'shipping_return',
+    settlementEnvelope('return', {
+      contract: {
+        ...contract,
+        status: 'defaulted',
+        package_recovery: 'returned',
+        package_recovered_at: '2026-07-17T13:00:00Z',
+        claim_station_paid: 1000,
+      },
+      debt_cleared: 4000,
+      claim_repaid: 20,
+      claim_debt: 30,
+    }),
+  );
+
+  expect(stdout).toContain('=== Freight Returned ===');
+  expect(stdout).not.toContain('Freight Reclaimed');
+  expect(stdout).toContain('Status: defaulted');
+  expect(stdout).toContain('Package recovery: returned');
+  expect(stdout).toContain('Recovered: 2026-07-17T13:00:00Z');
+  expect(stdout).toContain('Claim station paid: 1,000 cr');
+  expect(stdout).toContain('Debt cleared: 4,000 cr');
+  expect(stdout).toContain('Claim repaid: 20 cr');
+  expect(stdout).toContain('Claim debt: 30 cr');
+  expect(stdout).not.toContain('50 cr');
+  expect(stdout).not.toContain('claim:');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omitted claim settlement keys print nothing and are not 0', () => {
+  for (const command of ['shipping_deliver', 'shipping_return', 'shipping_reclaim', 'shipping_cancel'] as const) {
+    const action = command.slice('shipping_'.length) as 'deliver' | 'return' | 'cancel' | 'reclaim';
+    const stdout = output(command, settlementEnvelope(action));
+    expect(stdout).not.toContain('Debt cleared');
+    expect(stdout).not.toContain('Claim repaid');
+    expect(stdout).not.toContain('Claim debt');
+    expect(stdout).not.toContain('Package recovery');
+    expect(stdout).not.toContain('Recovered:');
+    expect(stdout).not.toContain('Claim station paid');
+  }
+});
+
+test('a sent 0 on deliver or cancel prints the claim lines and a non-finite value does not', () => {
+  const sent = output(
+    'shipping_cancel',
+    settlementEnvelope('cancel', { debt_cleared: 0, claim_repaid: 0, claim_debt: 0 }),
+  );
+  expect(sent).toContain('=== Freight Contract Canceled ===');
+  expect(sent).toContain('Debt cleared: 0 cr');
+  expect(sent).toContain('Claim repaid: 0 cr');
+  expect(sent).toContain('Claim debt: 0 cr');
+
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, '0', null, true] as const) {
+    const stdout = output(
+      'shipping_deliver',
+      settlementEnvelope('deliver', { debt_cleared: value, claim_repaid: value, claim_debt: value }),
+    );
+    expect(stdout).not.toContain('Debt cleared');
+    expect(stdout).not.toContain('Claim repaid');
+    expect(stdout).not.toContain('Claim debt');
+    expect(stdout).not.toContain('NaN');
+  }
+});
+
+test('shipping_get and shipping_track print package recovery and skip blank or non-string values', () => {
+  const recovered = {
+    package_recovery: 'reclaimed',
+    package_recovered_at: '2026-07-17T12:00:00Z',
+    claim_station_paid: 9007199254740993n,
+  };
+  const full = output('shipping_get', { action: 'get', contract: { ...contract, ...recovered } });
+  expect(full).toContain('=== Freight Contract ===');
+  expect(full).toContain('Package recovery: reclaimed');
+  expect(full).toContain('Recovered: 2026-07-17T12:00:00Z');
+  expect(full).toContain('Claim station paid: 9,007,199,254,740,993 cr');
+  expect(full).not.toContain('=== Response ===');
+
+  const tracked = output('shipping_track', {
+    action: 'track',
+    contract: { ...contract, ...recovered, package_recovery: ' returned ' },
+    events: [],
+  });
+  expect(tracked).toContain('=== Freight Tracking ===');
+  expect(tracked).toContain('Package recovery:  returned ');
+  expect(tracked).toContain('Recovered: 2026-07-17T12:00:00Z');
+  expect(tracked).toContain('Claim station paid: 9,007,199,254,740,993 cr');
+  expect(tracked).not.toContain('=== Response ===');
+
+  const blank = output('shipping_get', {
+    action: 'get',
+    contract: {
+      ...contract,
+      package_recovery: '   ',
+      package_recovered_at: '',
+      claim_station_paid: '0',
+    },
+  });
+  expect(blank).toContain('=== Freight Contract ===');
+  expect(blank).not.toContain('Package recovery');
+  expect(blank).not.toContain('Recovered:');
+  expect(blank).not.toContain('Claim station paid');
+
+  const wrongType = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, package_recovery: 1, package_recovered_at: 2, claim_station_paid: Number.NaN },
+  });
+  expect(wrongType).not.toContain('Package recovery');
+  expect(wrongType).not.toContain('Recovered:');
+  expect(wrongType).not.toContain('Claim station paid');
+  expect(wrongType).not.toContain('NaN');
+});
+
+test('freight listing does not print package recovery fields', () => {
+  const stdout = output('shipping_list', {
+    action: 'list',
+    shipments: [
+      {
+        contract: {
+          ...contract,
+          package_recovery: 'reclaimed',
+          package_recovered_at: '2026-07-17T12:00:00Z',
+          claim_station_paid: 0,
+        },
+      },
+    ],
+  });
+
+  expect(stdout).toContain('=== Freight Contracts ===');
+  expect(stdout).not.toContain('Package recovery');
+  expect(stdout).not.toContain('Recovered');
+  expect(stdout).not.toContain('Claim station paid');
+  expect(stdout).not.toContain('reclaimed');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('freight debt tables add Creditor due only when a row sends a finite number or bigint', () => {
+  const profile = (debts: Array<Record<string, unknown>>) =>
+    output('shipping_profile', {
+      action: 'profile',
+      profile: carrierProfile,
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      debts,
+    });
+
+  const mixed = profile([
+    { ...freightDebt, creditor_due: 0 },
+    { ...freightDebt, id: 'debt-2', creditor_due: 4242n },
+    { ...freightDebt, id: 'debt-blank' },
+  ]);
+  const header = mixed.split('\n').find((line) => line.includes('Creditor due'));
+  const cells = header?.split('|').map((cell) => cell.trim()) ?? [];
+  expect(cells.indexOf('Outstanding')).toBeGreaterThanOrEqual(0);
+  expect(cells.indexOf('Outstanding')).toBeLessThan(cells.indexOf('Creditor due'));
+  expect(cells.indexOf('Creditor due')).toBeLessThan(cells.indexOf('Creditor'));
+  expect(mixed).toContain('4242');
+  expect(mixed).not.toContain('4,242');
+  expect(mixed).not.toContain('4242 cr');
+  const zeroRow = mixed.split('\n').find((line) => line.includes('debt-1'));
+  expect(zeroRow).toContain('0');
+  const blankRow = mixed.split('\n').find((line) => line.includes('debt-blank'));
+  expect(blankRow).toBeDefined();
+  expect(blankRow).not.toContain('4242');
+  expect(mixed).not.toContain('=== Response ===');
+
+  const omitted = profile([freightDebt, { ...freightDebt, id: 'debt-2', creditor_due: '0' }]);
+  expect(omitted).not.toContain('Creditor due');
+
+  const nonFinite = profile([
+    { ...freightDebt, creditor_due: Number.NaN },
+    { ...freightDebt, id: 'debt-2', creditor_due: Number.POSITIVE_INFINITY },
+    { ...freightDebt, id: 'debt-3', creditor_due: null },
+  ]);
+  expect(nonFinite).not.toContain('Creditor due');
+  expect(nonFinite).not.toContain('NaN');
+
+  const paid = output('shipping_pay_debt', {
+    details: {
+      action: 'pay_debt',
+      amount_paid: 500,
+      profile: carrierProfile,
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      updated_debts: [{ ...freightDebt, outstanding: 250, creditor_due: 1000 }],
+      outstanding_debts: [{ ...freightDebt, outstanding: 250 }],
+    },
+  });
+  expect(paid).toContain('=== Updated Debts ===');
+  expect(paid).toContain('Creditor due');
+  expect(paid).toContain('1000');
+  expect(paid).toContain('1,000 cr');
+  const outstandingHeader = paid
+    .split('=== Outstanding Debts ===')[1]
+    ?.split('\n')
+    .find((line) => line.includes('Outstanding'));
+  expect(outstandingHeader).toBeDefined();
+  expect(outstandingHeader).not.toContain('Creditor due');
+  expect(paid).not.toContain('=== Response ===');
 });

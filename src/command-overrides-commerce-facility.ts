@@ -256,12 +256,23 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_return: {
     usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
-    description: 'Return freight to origin by shipment_id or by the sealed package_id in your hold.',
+    description:
+      "Return freight to origin by shipment_id or by the sealed package_id in your hold. A return is also how whoever holds a defaulted sealed package hands it back at the origin. That sets debt_cleared and clears the carrier's freight debt for that contract. The default and the tier loss stay. An insured shipper repays the payout the same way as reclaim. Opening or destroying the package ends the claim. The client does not decide who holds the package.",
     example: 'spacemolt shipping_return package_id=package-relief-1',
     category: 'Missions',
     discoverWith: ['shipping_active', 'get_cargo'],
     seeAlso: ['shipping_active', 'shipping_get', 'shipping_deliver'],
     apiRoute: 'POST /api/v2/spacemolt_shipping/return',
+  },
+  shipping_reclaim: {
+    usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
+    description:
+      "The shipper, or a faction member with Manage Treasury for a faction shipper, takes the package from station storage at the docked station into the shipper's storage there, by shipment_id or by package_id. package_id is the bare package ID or package:<id>. It fails with package_in_cargo while the package is in a ship's hold and package_not_here when it is in storage elsewhere. shipping_track shows where it was last seen. The carrier keeps the freight debt after a reclaim. Status stays defaulted. claim_debt is the shipper's freight debt, id claim:<shipment_id>, payable with pay_debt. Opening or destroying the package ends the claim. The client does not check docking, storage, or treasury permission, does not refuse the call, and does not add an error-registry entry. The server message prints as sent.",
+    example: 'spacemolt shipping_reclaim package_id=package-relief-1',
+    category: 'Missions',
+    discoverWith: ['shipping_active', 'shipping_track'],
+    seeAlso: ['shipping_active', 'shipping_get', 'shipping_track', 'shipping_return'],
+    apiRoute: 'POST /api/v2/spacemolt_shipping/reclaim',
   },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',

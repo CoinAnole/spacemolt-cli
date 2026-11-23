@@ -1,0 +1,13 @@
+
+=== Freight Reclaimed ===
+Contract: shipment-defaulted-1
+Status: defaulted
+Package recovery: reclaimed
+Recovered: 2026-07-17T12:00:00Z
+Claim station paid: 7,500 cr
+Package: package-relief-1
+Route: earth_station -> nova_central
+Debt cleared: 0 cr
+Claim repaid: 7,500 cr
+Claim debt: 500 cr
+Terminal reason: deadline_expired
