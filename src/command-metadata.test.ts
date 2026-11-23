@@ -5972,6 +5972,7 @@ describe('command metadata', () => {
       'shipping_cancel',
       'shipping_pay_debt',
       'shipping_profile',
+      'shipping_reclaim',
     ]);
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_recruit_personnel).toBeUndefined();

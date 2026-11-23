@@ -49,6 +49,7 @@ describe('dynamic OpenAPI commands', () => {
       'POST /api/v2/spacemolt_shipping/post',
       'POST /api/v2/spacemolt_shipping/profile',
       'POST /api/v2/spacemolt_shipping/quote',
+      'POST /api/v2/spacemolt_shipping/reclaim',
       'POST /api/v2/spacemolt_shipping/return',
       'POST /api/v2/spacemolt_shipping/track',
     ]);
@@ -64,6 +65,7 @@ describe('dynamic OpenAPI commands', () => {
       'shipping_post',
       'shipping_profile',
       'shipping_quote',
+      'shipping_reclaim',
       'shipping_return',
       'shipping_track',
     ]);
