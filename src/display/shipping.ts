@@ -296,35 +296,37 @@ function renderShippingActive(result: Record<string, unknown>): boolean {
     const contract = row.contract as Record<string, unknown>;
     return {
       role: text(row.role),
+      // Required on ShipmentContract. A non-blank string prints as sent, including surrounding spaces.
+      status: presentString(contract.status),
       destination: formatDestination(row, contract),
       deadline: formatActiveDeadline(row),
       recovery: formatTicks(row.ticks_to_recovery_deadline),
       payout: formatCredits(row.payout_if_delivered_now),
       late_fee: formatCredits(row.late_fee_if_delivered_now),
       in_cargo: formatBoolean(row.package_in_your_cargo),
+      // Do not parse ship or player_storage out of this string.
+      last_seen: presentString(row.last_known_location),
       next_step: text(row.next_step),
       shipment: text(contract.id),
       package: text(contract.package_id),
     };
   });
 
-  printCompactTable(
-    'Contracts',
-    rows,
-    [
-      ['Role', ['role']],
-      ['Destination', ['destination']],
-      ['Deadline', ['deadline']],
-      ['Recovery', ['recovery']],
-      ['Payout', ['payout']],
-      ['Late fee', ['late_fee']],
-      ['In cargo', ['in_cargo']],
-      ['Next step', ['next_step']],
-      ['Shipment', ['shipment']],
-      ['Package', ['package']],
-    ],
-    { maxCellWidth: 48 },
-  );
+  const columns: Array<[string, string[]]> = [
+    ['Role', ['role']],
+    ['Status', ['status']],
+    ['Destination', ['destination']],
+    ['Deadline', ['deadline']],
+    ['Recovery', ['recovery']],
+    ['Payout', ['payout']],
+    ['Late fee', ['late_fee']],
+    ['In cargo', ['in_cargo']],
+  ];
+  // An omitted key, a blank string, or a non-string stays blank and does not open the column.
+  if (rows.some((row) => row.last_seen !== undefined)) columns.push(['Last seen', ['last_seen']]);
+  columns.push(['Next step', ['next_step']], ['Shipment', ['shipment']], ['Package', ['package']]);
+
+  printCompactTable('Contracts', rows, columns, { maxCellWidth: 48 });
   return true;
 }
 

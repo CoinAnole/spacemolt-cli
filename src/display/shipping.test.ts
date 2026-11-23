@@ -947,13 +947,73 @@ test('renders active freight with role, destination, deadline/late, recovery, pa
   expect(stdout).toMatch(/In cargo/);
   expect(stdout).toMatch(/Late fee/);
   expect(stdout).toMatch(/Next step/);
-  // Non-v1 table columns must not appear as headers
-  expect(stdout).not.toMatch(/\bStatus\b/);
+  expect(stdout).toMatch(/\bStatus\b/);
+  expect(stdout).toContain('in_transit');
+  expect(stdout).toContain('posted');
+  expect(stdout).toContain('Last seen');
+  expect(stdout).toContain('sol / earth_orbit');
+  expect(stdout).not.toContain('last_known_location');
+  expect(stdout).not.toMatch(/\bParty\b/);
   expect(stdout).not.toMatch(/\bTarget\b/);
   expect(stdout).not.toMatch(/\bLiability\b/);
-  expect(stdout).not.toContain('last_known_location');
-  expect(stdout).not.toContain('sol / earth_orbit');
   expect(stdout).not.toContain('=== Response ===');
+});
+
+test('shipping_active always prints status as sent and opens last seen only for a non-blank string', () => {
+  const spaced = output('shipping_active', {
+    action: 'active',
+    tick: 10,
+    shipments: [
+      {
+        contract: { id: 'shipment-spaced-1', package_id: 'package-spaced-1', status: ' defaulted ' },
+        role: 'shipper',
+        next_step: '  Reclaim the sealed package.  ',
+        last_known_location: '  player_storage at Earth Station  ',
+      },
+      {
+        contract: { id: 'shipment-blank-loc-1', package_id: 'package-blank-loc-1', status: 'in_transit' },
+        role: 'carrier',
+        next_step: 'Deliver while docked.',
+        last_known_location: '   ',
+      },
+    ],
+  });
+  expect(spaced).toContain(' defaulted ');
+  expect(spaced).toContain('in_transit');
+  expect(spaced).toContain('  player_storage at Earth Station  ');
+  expect(spaced).toContain('  Reclaim the sealed package.  ');
+  expect(spaced).toContain('Last seen');
+  expect(spaced).not.toMatch(/\bParty\b/);
+  expect(spaced).not.toContain('Class');
+
+  const closed = output('shipping_active', {
+    action: 'active',
+    tick: 11,
+    shipments: [
+      {
+        contract: { id: 'shipment-no-loc-1', package_id: 'package-no-loc-1', status: 'posted' },
+        role: 'shipper',
+        last_known_location: '',
+      },
+      {
+        contract: { id: 'shipment-bad-loc-1', package_id: 'package-bad-loc-1', status: 424242 },
+        role: 'carrier',
+        last_known_location: { class: 'ship' },
+      },
+      {
+        contract: { id: 'shipment-num-loc-1', package_id: 'package-num-loc-1' },
+        role: 'recipient',
+        last_known_location: 515151,
+      },
+    ],
+  });
+  expect(closed).toMatch(/\bStatus\b/);
+  expect(closed).toContain('posted');
+  expect(closed).not.toContain('Last seen');
+  expect(closed).not.toContain('424242');
+  expect(closed).not.toContain('515151');
+  expect(closed).not.toContain('[object Object]');
+  expect(closed).not.toContain('player_storage');
 });
 
 test('renders an explicit empty active freight message', () => {
@@ -1048,6 +1108,8 @@ test('omits malformed optional active freight fields without diagnostic tokens',
   expect(stdout).toContain('shipper');
   expect(stdout).toContain('shipment-sparse-1');
   expect(stdout).toContain('package-sparse-1');
+  expect(stdout).toMatch(/\bStatus\b/);
+  expect(stdout).not.toContain('Last seen');
   expect(stdout).not.toContain('NaN');
   expect(stdout).not.toContain('undefined');
   expect(stdout).not.toContain('[object Object]');

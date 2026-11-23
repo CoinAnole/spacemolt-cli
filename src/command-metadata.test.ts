@@ -6123,7 +6123,10 @@ describe('command metadata', () => {
     if (!shippingActive) throw new Error('shipping_active command missing');
     // Avoid expect.arrayContaining / stringContaining inside toMatchObject on registry
     // objects — bun:test can replace matched properties with matcher instances.
-    expect(shippingActive.description).toContain('live freight');
+    expect(shippingActive.description).toContain('posted or in-transit');
+    expect(shippingActive.description).toContain('defaulted contract you shipped');
+    expect(shippingActive.description).toContain('last_known_location');
+    expect(shippingActive.description).not.toContain('live freight');
     expect(shippingActive.example).toBe('spacemolt shipping_active');
     expect(shippingActive.category).toBe('Missions');
     expect(shippingActive.discoverWith).toEqual(['get_status', 'get_cargo', 'shipping_list']);
@@ -6227,6 +6230,21 @@ describe('command metadata', () => {
     });
     expect(shippingPost.description).toContain('package:<id>');
     expect(shippingPost.description).toContain('POI');
+    expect(shippingPost.description).toContain('open claim');
+    expect(shippingPost.description).toContain('does not refuse the call');
+    expect(shippingPost.description).toContain('does not add an error-registry entry');
+    expect(shippingPost.description).toContain('prints as sent');
+    const shippingGet = BUNDLED_COMMAND_REGISTRY.commands.shipping_get;
+    const shippingTrack = BUNDLED_COMMAND_REGISTRY.commands.shipping_track;
+    for (const description of [shippingGet?.description, shippingTrack?.description]) {
+      expect(description).toContain('including a closed one');
+      expect(description).toContain('package:<id>');
+      expect(description).toContain('does not store contracts');
+      expect(description).toContain('does not apply a 500-row cap');
+      expect(description).not.toContain('in your hold');
+      expect(description).not.toContain('restart');
+    }
+    expect(shippingTrack?.description).toContain('opened, destroyed, reclaimed, or returned');
     expect(shippingPost.seeAlso).toEqual(['shipping_quote', 'shipping_list', 'shipping_active', 'get_cargo']);
     for (const cmd of [shippingQuote, shippingPost]) {
       expect(cmd.schema?.package_id?.description).toContain('package:<id>');

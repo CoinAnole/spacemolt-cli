@@ -1821,7 +1821,11 @@ describe('help output branches', () => {
     ).toBe(true);
 
     const output = capture.stdout.join('\n');
-    expect(output).toContain('live freight contract');
+    expect(output).toContain('posted or in-transit');
+    expect(output).toContain('defaulted contract you shipped');
+    expect(output).toContain('sealed package you can still reclaim');
+    expect(output).toContain('last_known_location');
+    expect(output).not.toContain('live freight contract');
     expect(output).toContain('spacemolt shipping_active');
     expect(output).toContain('Server help:');
     expect(output).toContain('spacemolt server-help shipping_active');
@@ -1833,6 +1837,27 @@ describe('help output branches', () => {
     expect(output).toContain('shipping_return');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/active');
+  });
+
+  test('shipping_get and shipping_track find a visible contract including a closed one', () => {
+    const got = captureWriter();
+    const tracked = captureWriter();
+    expect(showCommandHelp('shipping_get', got.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(showCommandHelp('shipping_track', tracked.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+
+    for (const output of [got.stdout.join('\n'), tracked.stdout.join('\n')]) {
+      expect(output).toContain('including a closed one');
+      expect(output).toContain('package:<id>');
+      expect(output).toContain('does not store contracts');
+      expect(output).toContain('does not apply a 500-row cap');
+      expect(output).not.toContain('in your hold');
+      expect(output).not.toContain('restart');
+    }
+    const trackOutput = tracked.stdout.join('\n');
+    expect(trackOutput).toContain('beacon history');
+    expect(trackOutput).toContain('opened, destroyed, reclaimed, or returned');
+    expect(trackOutput).not.toContain('stop reason');
+    expect(trackOutput).not.toContain('Stop reason');
   });
 
   test('shipping_post help documents package and station identifier forms', () => {
@@ -1848,6 +1873,10 @@ describe('help output branches', () => {
     expect(output).toContain('package:<id>');
     expect(output).toContain('POI');
     expect(output).toContain('spacemolt shipping_post package:package-1');
+    expect(output).toContain('open claim');
+    expect(output).toContain('does not refuse the call');
+    expect(output).toContain('does not add an error-registry entry');
+    expect(output).toContain('prints as sent');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/post');
   });

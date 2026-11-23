@@ -181,7 +181,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   // Empty body / no args: omit usage entirely (do not set usage: '' — help treats empty string as a blank usage line).
   shipping_active: {
     description:
-      'List every live freight contract you are party to (carrier, shipper, recipient, or invited carrier): destination, role, deadline/recovery countdown, late fee, payout if delivered now, whether the package is in your cargo, and the next step. Start here if you accepted a run and lost track of it.',
+      'List every posted or in-transit contract you or your faction is party to, plus each defaulted contract you shipped whose sealed package you can still reclaim. The table shows role, status, destination, deadline, recovery, payout, late fee, whether the package is in your cargo, and the next step. Last seen prints last_known_location when any row has a non-blank string, as sent, including surrounding spaces. Start here if you accepted a run and lost track of it.',
     example: 'spacemolt shipping_active',
     discoverWith: ['get_status', 'get_cargo', 'shipping_list'],
     seeAlso: [
@@ -200,7 +200,7 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     usage:
       '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
     description:
-      'Post a sealed-package freight contract with a carrier reward you set. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first with shipping_quote.',
+      'Post a sealed-package freight contract with a carrier reward you set. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first with shipping_quote. A package under an open claim cannot be posted again. The client does not refuse the call and does not add an error-registry entry. The server message prints as sent.',
     example: 'spacemolt shipping_post package:package-1 nova-station 5000 speed_bonus=500',
     discoverWith: ['get_cargo', 'shipping_quote', 'inspect'],
     seeAlso: ['shipping_quote', 'shipping_list', 'shipping_active', 'get_cargo'],
@@ -228,7 +228,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   // even though package_id / shipment_id are optional schema fields (see commands.ts).
   shipping_get: {
     usage: '[package_id=...] [shipment_id=...]  (provide exactly one)',
-    description: 'Show one freight contract by shipment_id or by the sealed package_id in your hold.',
+    description:
+      'Find one visible freight contract you can ask for, including a closed one, by shipment_id or by package_id (bare id or package:<id>). The client does not store contracts and does not apply a 500-row cap.',
     example: 'spacemolt shipping_get package_id=package-relief-1',
     category: 'Missions',
     discoverWith: ['shipping_active', 'get_cargo'],
@@ -237,7 +238,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_track: {
     usage: '[package_id=...] [shipment_id=...] [limit=...]  (provide package_id or shipment_id)',
-    description: 'Track beacon events for a freight contract by shipment_id or by the sealed package_id in your hold.',
+    description:
+      'Find one visible freight contract you can ask for, including a closed one, by shipment_id or by package_id (bare id or package:<id>), and show its beacon history. A defaulted sealed package stays on the beacon history until it is opened, destroyed, reclaimed, or returned. The client does not store contracts and does not apply a 500-row cap.',
     example: 'spacemolt shipping_track package_id=package-relief-1',
     category: 'Missions',
     discoverWith: ['shipping_active', 'get_cargo'],
