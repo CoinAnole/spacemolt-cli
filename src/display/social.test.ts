@@ -3242,6 +3242,23 @@ test('omits a whitespace ranch status message', () => {
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('omits an empty ranch status message', () => {
+  const fixture = structuredClone(ranchStatusFixture);
+  fixture.message = '';
+
+  const stdout = renderStructuredResult('facility_ranch_status', fixture, options, context).stdout.join('\n');
+
+  expect(stdout).toContain('=== Wildlife Ranch ===');
+  expect(stdout).toContain('Herd: 18 / 24');
+  expect(stdout).toContain('Range health: 75% | Fed: 50% | Supplies: no');
+  expect(stdout).toContain('Wild population: 12');
+  expect(stdout).toContain('Domestication: inactive | Reserve: 0');
+  expect(stdout).not.toContain('The herd is healthy');
+  expect(stdout).not.toContain('Reason');
+  expect(stdout).not.toContain('unsupplied');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders ranch supplies_ok true as Supplies: yes', () => {
   const fixture = structuredClone(ranchStatusFixture);
   fixture.supplies_ok = true;

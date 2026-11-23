@@ -3966,6 +3966,100 @@ describe('command metadata', () => {
     expect(help).toContain('one copy per station');
     expect(help).toContain('fuel tank expansions still stack');
     expect(config?.description).toContain('Gameserver 0.648.3');
+    expect(config?.usage).toContain('[species=...]');
+    expect(config?.args).not.toContain('species');
+    expect(config?.schema?.species?.type).toBe('string');
+    expect(config?.schema?.species?.description).toContain('grazer species to ranch');
+    expect(config?.schema?.species?.description).toContain('survey_system');
+    expect(config?.description).toContain('wildlife_corral');
+    expect(config?.description).toContain('each species at an anchor POI supports one ranch');
+    expect(config?.description).toContain('cannot be ranched there again');
+    expect(config?.description).toContain('not hunted out');
+    expect(config?.description).toContain('still has ore');
+    expect(config?.description).toContain('does not have to be in the ground');
+    expect(config?.description).toContain('shrinks the wild pool');
+    expect(config?.description).toContain('species stays a named field, not a positional');
+    expect(config?.description).toContain('does not check species, population, ore, or the diet resource');
+    expect(config?.description).toContain('does not refuse the call');
+    expect(config?.description).not.toContain('ambiguous_ranch');
+    expect(config?.description).not.toContain('`');
+    expect(help).toContain('[species=...]');
+    expect(help).toContain('wildlife_corral');
+    expect(help).toContain('cannot be ranched there again');
+    expect(help).toMatch(/Arguments:\n {2}facility_type, bucket\n/);
+    expect(help).not.toContain('`');
+  });
+
+  test('facility ranch help names one ranch per species and optional facility_id', () => {
+    const statusAction = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.ranch_status;
+    const cullAction = BUNDLED_COMMAND_REGISTRY.commandGroups.facility?.actions.ranch_set_cull;
+    const status = statusAction?.config;
+    const cull = cullAction?.config;
+    expect(statusAction?.displayName).toBe('facility ranch_status');
+    expect(cullAction?.displayName).toBe('facility ranch_set_cull');
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_ranch_status).toBeUndefined();
+    expect(BUNDLED_COMMAND_REGISTRY.commands.facility_ranch_set_cull).toBeUndefined();
+    expect(status?.usage).toBe('[facility_id=...]');
+    expect(status?.args).toEqual(['facility_id']);
+    expect(status?.required ?? []).toEqual([]);
+    expect(status?.schema?.facility_id?.type).toBe('string');
+    expect(status?.schema?.facility_id?.positionalIndex).toBe(1);
+    expect(cull?.usage).toBe('<cull_target> [facility_id=...]');
+    expect(cull?.args).toEqual(['cull_target', 'facility_id']);
+    expect(cull?.required).toEqual(['cull_target']);
+    expect(cull?.schema?.facility_id?.type).toBe('string');
+    expect(cull?.schema?.cull_target?.description).toContain('0 disables culling');
+
+    const generic = "Use action 'list' to see facility IDs";
+    expect(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_facility/ranch_status']?.schema?.facility_id?.description,
+    ).toContain(generic);
+    expect(
+      GENERATED_API_ROUTES['POST /api/v2/spacemolt_facility/ranch_set_cull']?.schema?.facility_id?.description,
+    ).toContain(generic);
+    for (const config of [status, cull]) {
+      expect(config?.schema?.facility_id?.description).toContain('outpost with one ranch');
+      expect(config?.schema?.facility_id?.description).toContain('more than one ranch');
+      expect(config?.schema?.facility_id?.description).toContain('ambiguous_ranch');
+      expect(config?.schema?.facility_id?.description).toContain('does not count ranches');
+      expect(config?.schema?.facility_id?.description).toContain('does not refuse the call');
+      expect(config?.schema?.facility_id?.description).toContain('facility_id stays optional');
+      expect(config?.schema?.facility_id?.description).toContain('The server message prints as sent');
+      expect(config?.schema?.facility_id?.description).not.toContain(generic);
+      expect(config?.schema?.facility_id?.description).not.toContain('`');
+      expect(config?.description).toContain('ambiguous_ranch');
+      expect(config?.description).not.toContain('`');
+    }
+
+    expect(status?.description).toContain('share of the diet resource left at the anchor');
+    expect(status?.description).toContain('capacity ignores it');
+    expect(status?.description).toContain("corral's tier capacity");
+    expect(status?.description).toContain('not a share of remaining ore');
+    expect(status?.description).toContain('The herd eats stocked feed');
+    expect(status?.description).toContain('why taming stopped, printed as sent');
+    expect(status?.description).toContain(
+      'does not parse that message into unsupplied, unfed, reserve, pens full, or offline',
+    );
+    expect(status?.description).toContain('does not add a reason field');
+    expect(status?.description).toContain('An empty message prints nothing');
+    expect(cull?.description).not.toContain('unsupplied');
+
+    const statusHelp = captureHelp(statusAction?.displayName || 'facility ranch_status');
+    expect(statusHelp).toContain('[facility_id=...]');
+    expect(statusHelp).toContain('ambiguous_ranch');
+    expect(statusHelp).toContain('share of the diet resource left at the anchor');
+    expect(statusHelp).toContain('An empty message prints nothing');
+    expect(statusHelp).toContain('See also: facility ranch_set_cull, faction build');
+    expect(statusHelp).not.toContain(generic);
+    expect(statusHelp).not.toContain('`');
+
+    const cullHelp = captureHelp(cullAction?.displayName || 'facility ranch_set_cull');
+    expect(cullHelp).toContain('<cull_target> [facility_id=...]');
+    expect(cullHelp).toContain('ambiguous_ranch');
+    expect(cullHelp).toContain('0 disables culling');
+    expect(cullHelp).not.toContain(generic);
+    expect(cullHelp).not.toContain('`');
+    expect(cullHelp).not.toContain('unsupplied');
   });
 
   test('facility_build help documents that build accepts faction facility types', () => {

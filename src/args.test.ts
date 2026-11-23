@@ -1260,6 +1260,40 @@ describe('parseArgs - new and fixed commands (v0.8.0)', () => {
     expect(payload).toEqual({ facility_type: 'deep_core_mine', bucket: 'BuildMat' });
   });
 
+  test('faction_build keeps ranch species as a named field', () => {
+    const named = parseInternalOk(['faction_build', 'wildlife_corral', 'species=ember_grazer']);
+    expect(named.payload).toEqual({ facility_type: 'wildlife_corral', species: 'ember_grazer' });
+
+    const positional = parseInternalOk(['faction_build', 'wildlife_corral', 'ember_grazer']);
+    expect(positional.payload).toEqual({ facility_type: 'wildlife_corral', bucket: 'ember_grazer' });
+    expect(positional.payload.species).toBeUndefined();
+  });
+
+  test('facility ranch calls leave facility_id optional', () => {
+    const status = parseInternalOk(['facility_ranch_status']);
+    expect(status.payload).toEqual({});
+    const statusWithId = parseInternalOk(['facility_ranch_status', 'ranch-1']);
+    expect(statusWithId.payload).toEqual({ facility_id: 'ranch-1' });
+
+    const cull = parseInternalOk(['facility_ranch_set_cull', '0']);
+    expect(
+      convertPayloadTypes(
+        normalizeParsedPayload('facility_ranch_set_cull', cull.payload, internalCommandRegistry),
+        'facility_ranch_set_cull',
+        internalCommandRegistry,
+      ),
+    ).toEqual({ cull_target: 0 });
+
+    const cullWithId = parseInternalOk(['facility_ranch_set_cull', '4', 'facility_id=ranch-1']);
+    expect(
+      convertPayloadTypes(
+        normalizeParsedPayload('facility_ranch_set_cull', cullWithId.payload, internalCommandRegistry),
+        'facility_ranch_set_cull',
+        internalCommandRegistry,
+      ),
+    ).toEqual({ cull_target: 4, facility_id: 'ranch-1' });
+  });
+
   test('faction_create_sell_order accepts bucket param (changelog feature)', () => {
     const { payload } = parseInternalOk(['faction_create_sell_order', 'steel_plate', '20', '12', 'bucket=Sales']);
     expect(payload.bucket).toBe('Sales');

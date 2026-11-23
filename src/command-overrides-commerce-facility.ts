@@ -14,6 +14,12 @@ const STORAGE_DEST_BUCKET_DESCRIPTION =
 const FACTION_BUILD_BUCKET_DESCRIPTION =
   "For 'faction_build'/'faction_upgrade': a Storage Extension bucket (name or id) to source build/upgrade MATERIALS from, instead of the faction main store. Ship cargo backfills either way.";
 
+const FACTION_BUILD_RANCH_HELP =
+  'A ranch (wildlife_corral) needs species, and each species at an anchor POI supports one ranch, so an outpost can run one ranch per species living there. A species already ranched at that POI, by anyone, cannot be ranched there again. The build needs a live wild population that is not hunted out, and an anchor that still has ore. The diet resource does not have to be in the ground. Mining it still shrinks the wild pool the ranch tames from. species stays a named field, not a positional. The client does not check species, population, ore, or the diet resource, and does not refuse the call. Gameserver 0.732.1. Gameserver 0.732.3.';
+
+const RANCH_FACILITY_ID_HELP =
+  'Optional when you are docked at an outpost with one ranch. When that outpost has more than one ranch, pass facility_id. Omitting it returns ambiguous_ranch. The server message prints as sent. The client does not count ranches and does not refuse the call. facility_id stays optional.';
+
 const FACTION_MEMBERSHIP_FACILITY_RENT_HELP =
   "Joining that faction makes your facilities at its stations rent-free at once, and any unpaid rent on them is cleared (faction join). Leaving makes your facilities at the faction's stations tenancies that pay it rent each cycle (faction leave). A kicked player's facilities at the faction's stations become tenancies and pay it rent each cycle (faction kick).";
 
@@ -998,11 +1004,46 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     apiRoute: 'POST /api/v2/spacemolt_facility/faction_owned',
     positionals: [],
   },
+  facility_ranch_status: {
+    usage: '[facility_id=...]',
+    description:
+      "Read a wildlife ranch. Range health is the share of the diet resource left at the anchor, and capacity ignores it. Pen capacity is the corral's tier capacity, not a share of remaining ore. The herd eats stocked feed. The message line is why taming stopped, printed as sent. The client does not parse that message into unsupplied, unfed, reserve, pens full, or offline, and does not add a reason field. An empty message prints nothing. " +
+      RANCH_FACILITY_ID_HELP +
+      ' Gameserver 0.732.1. Gameserver 0.732.3.',
+    example: 'spacemolt facility_ranch_status facility_id=ranch-1',
+    discoverWith: ['faction_facility_list'],
+    seeAlso: ['facility_ranch_set_cull', 'faction_build'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/ranch_status',
+    positionals: ['facility_id'],
+    schemaExtensions: {
+      facility_id: {
+        description: RANCH_FACILITY_ID_HELP,
+      },
+    },
+  },
+  facility_ranch_set_cull: {
+    usage: '<cull_target> [facility_id=...]',
+    description: `Set the cull target for a wildlife ranch. ${RANCH_FACILITY_ID_HELP} Gameserver 0.732.1.`,
+    example: 'spacemolt facility_ranch_set_cull 0 facility_id=ranch-1',
+    discoverWith: ['facility_ranch_status'],
+    seeAlso: ['facility_ranch_status', 'faction_build'],
+    category: 'Facilities',
+    apiRoute: 'POST /api/v2/spacemolt_facility/ranch_set_cull',
+    positionals: ['cull_target', 'facility_id'],
+    schemaExtensions: {
+      facility_id: {
+        description: RANCH_FACILITY_ID_HELP,
+      },
+    },
+  },
   faction_build: {
-    usage: '<facility_type> [bucket=name-or-id] [package_ids=id[,id...]]',
+    usage: '<facility_type> [bucket=name-or-id] [package_ids=id[,id...]] [species=...]',
     description:
       'Build a faction facility at the current station. Pass bucket to source build materials from a Storage Extension bucket instead of the faction main store. Optionally source materials from sealed packages with package_ids (each package must contain exactly what is still needed of an item; storage/cargo still backfill any shortfall). ' +
-      FACILITY_COPY_LIMIT_HELP,
+      FACILITY_COPY_LIMIT_HELP +
+      ' ' +
+      FACTION_BUILD_RANCH_HELP,
     example: 'spacemolt faction_build ore_refinery bucket=BuildMat package_ids=pkg-tier1',
     discoverWith: ['facility_types', 'faction_facility_list'],
     seeAlso: ['facility_types', 'faction_facility_list', 'faction_dismantle'],

@@ -190,6 +190,19 @@ describe('gate_in_progress', () => {
   });
 });
 
+describe('ambiguous_ranch', () => {
+  test('is not a client suggestion and is not a known error code', () => {
+    expect(ERROR_REGISTRY.ambiguous_ranch).toBeUndefined();
+    expect(isKnownErrorCode('ambiguous_ranch')).toBe(false);
+    expect(ERROR_CODES).not.toContain('ambiguous_ranch');
+    expect(getErrorSuggestion('ambiguous_ranch')).toBeUndefined();
+    expect(getErrorSuggestion('ambiguous_ranch', 'facility_ranch_status')).toBeUndefined();
+    expect(getErrorSuggestion('ambiguous_ranch', 'facility ranch_status')).toBeUndefined();
+    expect(getErrorSuggestion('ambiguous_ranch', 'facility_ranch_set_cull')).toBeUndefined();
+    expect(getRelatedCommands('ambiguous_ranch')).toEqual([]);
+  });
+});
+
 describe('fit capacity errors', () => {
   test('cpu_exceeded is not retryable and is not an authentication error', () => {
     expect(ERROR_REGISTRY.cpu_exceeded?.retryable).toBe(false);
