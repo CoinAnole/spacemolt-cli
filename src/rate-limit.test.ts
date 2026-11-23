@@ -143,6 +143,16 @@ describe('isRateLimitAutoRetryWait', () => {
       isRateLimitAutoRetryWait({ code: 'transaction_uncertain', message: 'uncertain', retry_after: 1 }),
     ).toBeUndefined();
     expect(isRateLimitAutoRetryWait({ code: 'accounting_pending', message: 'paused', retry_after: 1 })).toBeUndefined();
+    expect(
+      isRateLimitAutoRetryWait({ code: 'read_repeat_limited', message: 'read once', retry_after: 1 }),
+    ).toBeUndefined();
+    expect(
+      isRateLimitAutoRetryWait({
+        code: 'read_repeat_limited',
+        message: 'try again in 10 seconds',
+        details: { retry_after: 1 },
+      }),
+    ).toBeUndefined();
   });
 });
 
@@ -299,6 +309,22 @@ describe('normalizeRateLimitError', () => {
     });
     expect(normalized.error).not.toHaveProperty('limit');
     expect(normalized.error).not.toHaveProperty('scope');
+  });
+
+  test('does not copy a Retry-After header onto read_repeat_limited', () => {
+    const body = { error: { code: 'read_repeat_limited', message: 'Read once per tick' } };
+    const result = normalizeRateLimitError(body, { status: 400, retryAfterHeader: '10' });
+    expect(result).toBe(body);
+    expect(result.error).toEqual({ code: 'read_repeat_limited', message: 'Read once per tick' });
+    expect(
+      extractErrorWaitSeconds({ code: 'read_repeat_limited', message: 'try again in 10 seconds' }),
+    ).toBeUndefined();
+    expect(
+      normalizeRateLimitError(
+        { error: { code: 'read_repeat_limited', message: 'Read once per tick', retry_after: 4 } },
+        { status: 400, retryAfterHeader: '10' },
+      ).error,
+    ).toEqual({ code: 'read_repeat_limited', message: 'Read once per tick', retry_after: 4 });
   });
 
   test('no-ops when the body has no error field', () => {

@@ -148,8 +148,10 @@ export function normalizeRateLimitError(
 
   if (!isRecord(rawError) || rawError.retry_after !== undefined) return data;
 
-  const resolvedWait =
-    extractErrorWaitSeconds(rawError) ?? parseRetryAfterHeaderSeconds(options.retryAfterHeader, nowMs);
+  // A Retry-After header on read_repeat_limited is not a rate-limit wait.
+  const fromHeader =
+    rawError.code === 'read_repeat_limited' ? undefined : parseRetryAfterHeaderSeconds(options.retryAfterHeader, nowMs);
+  const resolvedWait = extractErrorWaitSeconds(rawError) ?? fromHeader;
   if (resolvedWait === undefined) return data;
 
   return {

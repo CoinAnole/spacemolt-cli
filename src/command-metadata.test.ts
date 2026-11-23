@@ -7,7 +7,7 @@ import {
   parseArgs,
   validatePayloadAgainstSchema,
 } from './args';
-import { CURATED_COMMAND_DESCRIPTIONS } from './command-descriptions.ts';
+import { CURATED_COMMAND_DESCRIPTIONS, READ_REPEAT_LIMITED_HELP } from './command-descriptions.ts';
 import type { GroupedCommandName } from './command-groups';
 import { BATTLE_SHIPYARD_COMMAND_OVERRIDES } from './command-overrides-battle-shipyard';
 import { COMMERCE_FACILITY_COMMAND_OVERRIDES } from './command-overrides-commerce-facility';
@@ -868,7 +868,8 @@ describe('command metadata', () => {
     if (!config) throw new Error('storage_view command is missing from COMMANDS');
 
     expect(config.description).toBe(
-      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0). When faction storage at this station refuses deposits, view and withdraw still work. deposits_blocked_reason is dismantling when the faction storage facility here is being dismantled, or no_storage_facility when the faction has no storage facility here and listed items are left from an earlier one (gameserver 0.686.0).',
+      'View personal or faction station storage. Optional station_id is a station base ID or station POI ID and views personal storage at a remote station without docking (view only). Personal (target=self, default) views include a locations summary of every station where you hold items or parked ships; undocked with no station_id returns that summary instead of not_docked. This view no longer includes messages. Station notices are private DMs; read them with get_chat_history private (gameserver 0.626.0). When faction storage at this station refuses deposits, view and withdraw still work. deposits_blocked_reason is dismantling when the faction storage facility here is being dismantled, or no_storage_facility when the faction has no storage facility here and listed items are left from an earlier one (gameserver 0.686.0). ' +
+        READ_REPEAT_LIMITED_HELP,
     );
     expect(config.usage).toBe(
       '[station_id] [target=self|faction] [--search text] [--item id] [--items id,id]  (station_id: station base ID or station POI ID)',
@@ -895,6 +896,35 @@ describe('command metadata', () => {
     expect(help).toContain('spacemolt storage view target=faction');
     expect(help).toContain('See also: storage deposit, storage withdraw, get_cargo, get_chat_history');
     expect(help).not.toContain('`');
+    expect(help).toContain(READ_REPEAT_LIMITED_HELP);
+  });
+
+  test('read-once help is only on get_state, get_ship, get_cargo, and storage view', () => {
+    for (const command of ['get_state', 'get_ship', 'get_cargo', 'storage view'] as const) {
+      const description = COMMANDS[command === 'storage view' ? 'storage_view' : command]?.description ?? '';
+      expect(description, command).toContain(READ_REPEAT_LIMITED_HELP);
+      const help = captureHelp(command);
+      expect(help, command).toContain(READ_REPEAT_LIMITED_HELP);
+      expect(help, command).not.toContain('`');
+    }
+
+    for (const command of [
+      'get_status',
+      'get_player',
+      'get_nearby',
+      'inspect',
+      'storage deposit',
+      'storage withdraw',
+      'storage loot',
+      'storage jettison',
+      'jettison',
+    ] as const) {
+      const key = command.replace(' ', '_');
+      const description = COMMANDS[key]?.description ?? '';
+      expect(description, command).not.toContain('Do not retry in the same tick');
+      expect(description, command).not.toContain('unchanged repeats on 5 of the last 10 ticks');
+      expect(captureHelp(command), command).not.toContain('Do not retry in the same tick');
+    }
   });
 
   test('jump help documents post-action missions, any-order survey stops, and parked-system jump-out', () => {
@@ -8635,7 +8665,9 @@ describe('command metadata', () => {
       ' A fitted telescope adds star_sightings with bearing, temperature, and brightness. The list is omitted when no working telescope has a star in view. The client does not choose which module is fitted. An ion_storm hazard lowers scan and survey power here, the same as charged_seam and scar_dust. The client does not reduce a scan number, a survey number, or the printed severity.';
     const state =
       'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
-      locationRule;
+      locationRule +
+      ' ' +
+      READ_REPEAT_LIMITED_HELP;
     const factionSensed =
       'When signature_detected is true, table output prints "Cloaked signature sensed, not identified (10 power below detection)." That is a cloaked ship or creature the scan sensed and did not identify. false and an omitted field print nothing.';
     const scan =

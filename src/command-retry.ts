@@ -565,6 +565,21 @@ function boundaryProbes(): Probe[] {
     });
   }
   probes.push({
+    name: 'read_repeat_limited with Retry-After is not a rate-limit wait',
+    frames: [
+      {
+        status: 400,
+        label: 'HTTP 400 read_repeat_limited Retry-After=1',
+        retryAfterHeader: '1',
+        data: { error: { code: 'read_repeat_limited', message: 'Read once per tick' } },
+      },
+    ],
+    commands: 1,
+    stopped: true,
+    sleeps: [],
+    harm: 'A Retry-After header on read_repeat_limited is not a rate-limit wait. Do not send the read again.',
+  });
+  probes.push({
     name: 'HTTP 429 action_pending is not sent again',
     frames: [objectError(429, 'action_pending', { retry_after: 1 }, 'HTTP 429 action_pending retry_after=1')],
     commands: 1,

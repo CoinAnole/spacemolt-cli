@@ -1,3 +1,4 @@
+import { READ_REPEAT_LIMITED_HELP } from './command-descriptions';
 import { PIRATE_SALVAGER_WRECK_APPROACH_HELP } from './command-overrides-core';
 import type { CommandOverride } from './commands';
 
@@ -71,7 +72,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_ship: {
     usage: '[ship_id]  (omit for the hull you are flying; ID from list_ships or faction garages)',
     description:
-      "Show stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo for the ship you are flying, or for any other ship you own (parked, faction-garaged, or in a carrier bay) or any hull in your faction garage pool. Remote reads work from anywhere — no docking or travel. A remote hull names its location and omits drone_bay (drones stay with you). Current-ship output includes drone bay counters and racked drones when present. CPU and Power lines are the draw after the Engineering discount. Module CPU and Module power are the fitted-module draw before it. Compare those with capacity. Passive Engineering XP is 1 per tick while you are online and your fitted modules draw 90% or more of the ship's power capacity or CPU capacity. The test uses the module draw before the Engineering discount. A higher Engineering level does not move a full fit below that line, and a fit that is full on CPU counts. A logged-out pilot does not earn the XP. The client does not decide whether the ship earns the XP (gameserver 0.707.0). cargo_used may be greater than cargo_capacity until you unload, and no cargo is lost. An omitted default_stance key means auto: fire with a weapon or remote repairer, else flee. battle_default_stance sets it.",
+      "Show stats, modules, weapons, CPU, power, hull, shield, fuel, and cargo for the ship you are flying, or for any other ship you own (parked, faction-garaged, or in a carrier bay) or any hull in your faction garage pool. Remote reads work from anywhere — no docking or travel. A remote hull names its location and omits drone_bay (drones stay with you). Current-ship output includes drone bay counters and racked drones when present. CPU and Power lines are the draw after the Engineering discount. Module CPU and Module power are the fitted-module draw before it. Compare those with capacity. Passive Engineering XP is 1 per tick while you are online and your fitted modules draw 90% or more of the ship's power capacity or CPU capacity. The test uses the module draw before the Engineering discount. A higher Engineering level does not move a full fit below that line, and a fit that is full on CPU counts. A logged-out pilot does not earn the XP. The client does not decide whether the ship earns the XP (gameserver 0.707.0). cargo_used may be greater than cargo_capacity until you unload, and no cargo is lost. An omitted default_stance key means auto: fire with a weapon or remote repairer, else flee. battle_default_stance sets it. " +
+      READ_REPEAT_LIMITED_HELP,
     example: 'spacemolt get_ship; spacemolt get_ship ship-abc; spacemolt get_ship ship_id=ship-abc',
     discoverWith: ['list_ships', 'faction_garages'],
     seeAlso: [
@@ -94,7 +96,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   get_cargo: {
     usage: '[--items item_id,item_id] [--top N|--limit N] [--show-empty]',
     description:
-      'List cargo item IDs, quantities, and cargo capacity. Table output hides empty stacks and sorts by quantity.',
+      'List cargo item IDs, quantities, and cargo capacity. Table output hides empty stacks and sorts by quantity. ' +
+      READ_REPEAT_LIMITED_HELP,
     example: 'spacemolt get_cargo --items aluminum_ore,steel_plate --top 10',
     seeAlso: ['sell', 'jettison', 'storage'],
     category: 'Query commands',
@@ -393,7 +396,8 @@ export const QUERY_REFERENCE_COMMAND_OVERRIDES: Record<string, CommandOverride> 
   },
   get_state: {
     description:
-      'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact.',
+      'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. When location.unknown_signature is true, table output prints "Unknown cloaked signature (not identified)." The server calls that presence only, near your sensor threshold. An area scan with no target_id is how a ship is resolved. A creature resolves only when your sensor rating is a full level above its cloak. The line does not name the contact. ' +
+      READ_REPEAT_LIMITED_HELP,
     category: 'V2 state commands',
     apiRoute: 'POST /api/v2/spacemolt/get_state',
   },

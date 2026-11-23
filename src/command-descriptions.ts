@@ -1,3 +1,10 @@
+export const READ_REPEAT_LIMITED_RULE =
+  'Read get_state, get_ship, get_cargo, and storage view once per tick. Game state changes once per tick, and your actions already return the new state. A second read of the same command in that tick is refused after unchanged repeats on 5 of the last 10 ticks. The limit lifts once fewer than 5 of the last 10 ticks had such repeats. It applies per pilot and command, and it never counts toward an IP block. Do not retry in the same tick.';
+
+export const READ_REPEAT_LIMITED_HELP =
+  READ_REPEAT_LIMITED_RULE +
+  ' The client does not count the last 10 ticks and does not refuse the call. A different ship_id, station_id, target, or client-side filter is not a separate command. get_cargo filters (--items, --top, --show-empty) and storage view search and item filters are client-side and still send that read. Do not skip the request locally.';
+
 export const JOB_QUEUE_PAUSE_HELP =
   'A job that did not advance on the last tick names pause_reason. The field is omitted when the job advanced or only waited its turn. Tokens are not_docked, damaged, under_construction, rent_unpaid, no_faction_storage, storage_full, fuel_full, no_fuel_bunker, mint_cap, no_workers, owner_unavailable, not_active, docked, moving, in_battle, no_crew, pilot_action, and cargo_full. storage_full is the storage-cap wait: nothing is lost, output stays unproduced, and the job resumes when there is room. Items already over the cap stay. The client does not read the cap, does not refuse the craft, and does not resume it locally. The queue table prints Pause from that string when any job has a non-blank pause_reason, as sent, including surrounding spaces. An omitted key, a blank or whitespace-only string, or a non-string stays blank and does not open the column. The token is not rewritten as a sentence, and a job that only waited its turn does not get an invented reason.';
 

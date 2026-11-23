@@ -1,3 +1,4 @@
+import { READ_REPEAT_LIMITED_RULE } from './command-descriptions.ts';
 import type { APIResponse } from './types.ts';
 
 export interface ErrorCodeEntry {
@@ -59,6 +60,14 @@ export const ERROR_REGISTRY: Record<string, ErrorCodeEntry> = {
     retryable: true,
     auth: false,
     relatedCommands: [],
+  },
+  read_repeat_limited: {
+    code: 'read_repeat_limited',
+    message: 'A second read of this command in the same tick was refused.',
+    suggestion: READ_REPEAT_LIMITED_RULE,
+    retryable: false,
+    auth: false,
+    relatedCommands: ['get_state', 'get_ship', 'get_cargo', 'storage_view'],
   },
   action_pending: {
     code: 'action_pending',

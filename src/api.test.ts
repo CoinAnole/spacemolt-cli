@@ -1512,6 +1512,44 @@ describe('SpaceMoltClient', () => {
     expect(missingWait.sleeps).toEqual([]);
   });
 
+  test('does not resend read_repeat_limited and does not treat Retry-After as a wait', async () => {
+    const serverMessage = 'Second get_state read refused for this tick.';
+    const withBodyWait = createClient([
+      response({ error: { code: 'read_repeat_limited', message: serverMessage, retry_after: 1 } }),
+    ]);
+    const bodyResult = await withBodyWait.client.execute('get_state');
+    expect(bodyResult.error).toEqual({
+      code: 'read_repeat_limited',
+      message: serverMessage,
+      retry_after: 1,
+    });
+    expect(withBodyWait.calls).toHaveLength(1);
+    expect(withBodyWait.sleeps).toEqual([]);
+
+    const headerOnly = createClient([
+      queuedHttp(response({ error: { code: 'read_repeat_limited', message: serverMessage } }), {
+        status: 400,
+        retryAfterHeader: '10',
+      }),
+    ]);
+    const headerResult = await headerOnly.client.execute('get_state');
+    expect(headerResult.error).toEqual({ code: 'read_repeat_limited', message: serverMessage });
+    expect(headerResult.error).not.toHaveProperty('retry_after');
+    expect(headerOnly.calls).toHaveLength(1);
+    expect(headerOnly.sleeps).toEqual([]);
+
+    const fromMessage = createClient([
+      response({ error: { code: 'read_repeat_limited', message: 'try again in 10 seconds' } }),
+    ]);
+    const messageResult = await fromMessage.client.execute('get_cargo');
+    expect(messageResult.error).toEqual({
+      code: 'read_repeat_limited',
+      message: 'try again in 10 seconds',
+    });
+    expect(fromMessage.calls).toHaveLength(1);
+    expect(fromMessage.sleeps).toEqual([]);
+  });
+
   test('does not auto-retry action_pending or ip_timed_out even with retry_after', async () => {
     const pending = createClient([
       response({

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { READ_REPEAT_LIMITED_RULE } from './command-descriptions.ts';
 import {
   ERROR_CODES,
   ERROR_REGISTRY,
@@ -108,6 +109,33 @@ describe('rate_limited', () => {
     expect(getErrorSuggestion('rate_limited')).toContain('30');
     expect(getErrorSuggestion('rate_limited')).toContain('300');
     expect(getErrorSuggestion('rate_limited')).not.toContain('Query rate limited');
+  });
+});
+
+describe('read_repeat_limited', () => {
+  test('is not retryable, is not an authentication error, and is not a rate-limit suggestion', () => {
+    expect(ERROR_REGISTRY.read_repeat_limited?.retryable).toBe(false);
+    expect(ERROR_REGISTRY.read_repeat_limited?.auth).toBe(false);
+    expect(ERROR_REGISTRY.read_repeat_limited?.commandSuggestions).toBeUndefined();
+    expect(isRetryableError('read_repeat_limited')).toBe(false);
+    expect(isAuthError('read_repeat_limited')).toBe(false);
+    expect(isKnownErrorCode('read_repeat_limited')).toBe(true);
+    expect(ERROR_CODES).toContain('read_repeat_limited');
+    expect(getRelatedCommands('read_repeat_limited')).toEqual(['get_state', 'get_ship', 'get_cargo', 'storage_view']);
+    expect(getErrorSuggestion('read_repeat_limited')).toBe(READ_REPEAT_LIMITED_RULE);
+    expect(getErrorSuggestion('read_repeat_limited', 'get_state')).toBe(READ_REPEAT_LIMITED_RULE);
+    expect(getErrorSuggestion('read_repeat_limited')).toContain('storage view');
+    expect(getErrorSuggestion('read_repeat_limited')).toContain('Do not retry in the same tick');
+    expect(getErrorSuggestion('read_repeat_limited')).toContain('fewer than 5 of the last 10 ticks');
+    expect(getErrorSuggestion('read_repeat_limited')).toContain('never counts toward an IP block');
+    expect(getErrorSuggestion('read_repeat_limited')).not.toContain('30 mutations');
+    expect(getErrorSuggestion('read_repeat_limited')).not.toContain('300 queries');
+    expect(getErrorSuggestion('read_repeat_limited')).not.toContain('retry_after');
+    expect(getErrorSuggestion('read_repeat_limited')).not.toContain('This error may be retryable');
+    expect(getErrorSuggestion('rate_limited')).not.toContain('read_repeat_limited');
+    expect(getErrorSuggestion('rate_limited')).not.toContain('once per tick');
+    expect(getErrorSuggestion('rate_limited')).toContain('30 mutations');
+    expect(getErrorSuggestion('rate_limited')).toContain('300 queries');
   });
 });
 

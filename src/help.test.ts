@@ -4606,6 +4606,48 @@ describe('help output branches', () => {
     expect(pendingOutput).not.toContain('This is an authentication error.');
   });
 
+  test('displayError prints read_repeat_limited as sent and does not call it retryable', () => {
+    const serverMessage = 'Second get_state read refused for this tick.';
+    const capture = captureWriter();
+    displayError(
+      'get_state',
+      { code: 'read_repeat_limited', message: serverMessage },
+      { context: displayErrorContext(capture.writer) },
+    );
+    const output = capture.stderr.join('\n');
+    expect(output).toContain(`Error [read_repeat_limited]: ${serverMessage}`);
+    expect(output).toContain('Do not retry in the same tick.');
+    expect(output).toContain('storage view once per tick');
+    expect(output).not.toContain('This error may be retryable.');
+    expect(output).not.toContain('This is an authentication error.');
+    expect(output).not.toContain('seconds before retrying.');
+    expect(output).not.toContain('A second read of this command in the same tick was refused.');
+    expect(output).not.toContain('30 mutations');
+
+    const numbered = captureWriter();
+    displayError(
+      'get_cargo',
+      { code: 'read_repeat_limited', message: 'try again in 10 seconds' },
+      { context: displayErrorContext(numbered.writer) },
+    );
+    const numberedOutput = numbered.stderr.join('\n');
+    expect(numberedOutput).toContain('Error [read_repeat_limited]: try again in 10 seconds');
+    expect(numberedOutput).not.toContain('seconds before retrying.');
+    expect(numberedOutput).not.toContain('This error may be retryable.');
+
+    const waited = captureWriter();
+    displayError(
+      'storage_view',
+      { code: 'read_repeat_limited', message: serverMessage, retry_after: 4 },
+      { context: displayErrorContext(waited.writer) },
+    );
+    const waitedOutput = waited.stderr.join('\n');
+    expect(waitedOutput).toContain(`Error [read_repeat_limited]: ${serverMessage}`);
+    expect(waitedOutput).toContain('Wait 4.0 seconds before retrying.');
+    expect(waitedOutput).toContain('Do not retry in the same tick.');
+    expect(waitedOutput).not.toContain('This error may be retryable.');
+  });
+
   test('displayError prints Wait from details.retry_after when top-level retry_after is absent', () => {
     const capture = captureWriter();
     displayError(
