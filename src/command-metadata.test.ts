@@ -4785,7 +4785,19 @@ describe('command metadata', () => {
     expect(help).toContain('The server refuses while the outpost has a ranch');
     expect(help).not.toContain('faction_dismantle');
     expect(config?.description).toContain('Founding fee is not refunded');
-    expect(config?.description).toContain('You are undocked afterward');
+    expect(config?.description).toContain('You are undocked afterward.');
+    expect(config?.description).toContain('The ship stays at the point of interest the base was deployed beside.');
+    expect(config?.description).toContain('The same is true when an outpost or station is torn down.');
+    expect(config?.description).toContain(
+      'The client does not write the location and does not send a follow-up travel.',
+    );
+    expect(config?.description).toContain('The server message prints as sent.');
+    expect(config?.description).not.toContain('invalid_location');
+    expect(help).toContain('The ship stays at the point of interest the base was deployed beside.');
+    expect(help).toContain('The same is true when an outpost or station is torn down.');
+    expect(help).toContain('does not write the location');
+    expect(help).toContain('does not send a follow-up travel');
+    expect(help).not.toContain('invalid_location');
     const gatePath = (config?.description ?? '').split('At a jump gate end')[1] ?? '';
     expect(gatePath).toContain('both ends come down and the lane closes');
     expect(gatePath).toContain('no Outpost Kit comes back');
