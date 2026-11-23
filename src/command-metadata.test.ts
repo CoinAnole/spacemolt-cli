@@ -2997,6 +2997,35 @@ describe('command metadata', () => {
     expect(help).not.toContain('Mining Laser');
     expect(help).not.toContain('Afterburner III');
     expect(help).not.toContain('Plasma Cannon');
+    expect(help).toContain('pause_reason');
+    expect(help).toContain('storage_full is the storage-cap wait');
+    expect(help).toContain('nothing is lost, output stays unproduced, and the job resumes when there is room');
+    expect(help).toContain('Items already over the cap stay.');
+    expect(help).toContain('does not read the cap');
+    expect(help).toContain('does not refuse the craft');
+    expect(help).toContain('does not resume it locally');
+    for (const token of [
+      'not_docked',
+      'damaged',
+      'under_construction',
+      'rent_unpaid',
+      'no_faction_storage',
+      'storage_full',
+      'fuel_full',
+      'no_fuel_bunker',
+      'mint_cap',
+      'no_workers',
+      'owner_unavailable',
+      'not_active',
+      'docked',
+      'moving',
+      'in_battle',
+      'no_crew',
+      'pilot_action',
+      'cargo_full',
+    ]) {
+      expect(help).toContain(token);
+    }
   });
 
   test('list, scrap, and sell-to-order help name the field_jobs_queued refusal', () => {
@@ -5641,6 +5670,16 @@ describe('command metadata', () => {
     expect(jobListHelp).toContain('workshop:<player_id>:<base_id>');
     expect(jobListHelp).toContain('lists only your jobs there');
     expect(jobListHelp).toContain('does not reject other ids');
+    expect(jobListHelp).toContain('pause_reason');
+    expect(jobListHelp).toContain('storage_full is the storage-cap wait');
+    expect(jobListHelp).toContain('nothing is lost, output stays unproduced, and the job resumes when there is room');
+    expect(jobListHelp).toContain('Items already over the cap stay.');
+    expect(jobListHelp).toContain('does not read the cap');
+    expect(jobListHelp).toContain('does not refuse the craft');
+    expect(jobListHelp).toContain('does not resume it locally');
+    expect(jobListHelp).toContain('not_active');
+    expect(jobListHelp).toContain('pilot_action');
+    expect(jobListHelp).toContain('cargo_full');
     expect(facilityActions?.job_add?.config.usage).toContain('faction:<bucket>');
     expect(facilityActions?.job_add?.config.usage).toContain('items=JSON');
     expect(facilityActions?.job_add?.config.usage).toContain('package_id');

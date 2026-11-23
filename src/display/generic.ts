@@ -757,8 +757,12 @@ function stationFromWorkshopFacilityId(value: unknown): string | undefined {
   return parts[parts.length - 1] || undefined;
 }
 
-function craftTitle(command: string, result: Record<string, unknown>): string {
-  const base = command === 'recycle' || result.mode === 'recycle' ? 'Recycle' : 'Craft';
+function craftTitle(command: string | undefined, result: Record<string, unknown>): string {
+  const base = commandNameEquals(command, 'facility_job_list')
+    ? 'Job'
+    : commandNameEquals(command, 'recycle') || result.mode === 'recycle'
+      ? 'Recycle'
+      : 'Craft';
   if (result.dry_run === true) return `${base} Quote`;
   if (result.job_id) return `${base} Queued`;
   if (Array.isArray(result.jobs)) return `${base} Queue`;
@@ -770,7 +774,7 @@ function isCraftRetarget(result: Record<string, unknown>): boolean {
   return result.action === 'job_retarget' || result.kind === 'retarget';
 }
 
-function craftTitleWithStation(command: string, result: Record<string, unknown>): string {
+function craftTitleWithStation(command: string | undefined, result: Record<string, unknown>): string {
   const station = formatCraftStation(result);
   const title = craftTitle(command, result);
   return station ? `${title} @ ${station}` : title;
@@ -816,6 +820,12 @@ function craftEscrowCredits(record: Record<string, unknown>): unknown {
 
 function craftRentalDisplay(record: Record<string, unknown>): string | undefined {
   return record.external === true ? 'yes' : undefined;
+}
+
+// Whitespace-only is blank. A non-blank string is kept as sent, including surrounding spaces.
+function queuePauseReason(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  return value;
 }
 
 function emitCraftCost(label: string, value: unknown): void {
@@ -1329,7 +1339,13 @@ export const genericFormatters = [
 
   formatter(
     (r, command) => {
-      if (command !== 'craft' && command !== 'recycle') return false;
+      if (
+        !commandNameEquals(command, 'craft') &&
+        !commandNameEquals(command, 'recycle') &&
+        !commandNameEquals(command, 'facility_job_list')
+      ) {
+        return false;
+      }
       if (isDryRunRoutePreview(r)) return false;
       if (
         r.recipe === undefined &&
@@ -1354,6 +1370,7 @@ export const genericFormatters = [
           output_display: summarizeNamedItemQuantities(job.produces),
           rental_display: craftRentalDisplay(job),
           escrow_display: formatCreditsAmount(craftEscrowCredits(job)),
+          pause_reason: queuePauseReason(isRecord(job) ? job.pause_reason : undefined),
         }));
         const columns: Array<[string, string[]]> = [
           ['Job', ['job_id']],
@@ -1380,6 +1397,7 @@ export const genericFormatters = [
         insertOptionalColumn(columns, rows, 'Rented', ['rental_display'], afterVenueContext);
         const afterRentalContext = rows.some((row) => row.rental_display !== undefined) ? 'Rented' : afterVenueContext;
         insertOptionalColumn(columns, rows, 'Escrow', ['escrow_display'], afterRentalContext);
+        insertOptionalColumn(columns, rows, 'Pause', ['pause_reason'], 'Status');
         printCompactTable(craftTitleWithStation(command, r), rows, columns, { maxCellWidth: 64 });
         if (presentCount(r.total_jobs)) {
           const shown = jobs.length;
@@ -1501,7 +1519,7 @@ export const genericFormatters = [
       if (r.message) emitLine(String(r.message));
       return true;
     },
-    { commands: ['craft', 'recycle'] },
+    { commands: ['craft', 'recycle', 'facility_job_list'] },
   ),
 
   formatter(

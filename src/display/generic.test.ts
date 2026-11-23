@@ -5144,6 +5144,223 @@ test('renders craft queue total_jobs 0 without a showing suffix', () => {
   expect(stdout).not.toContain('(showing');
 });
 
+function queueHeader(stdout: string): string {
+  const header = stdout.split('\n').find((line) => line.includes('Status') && line.includes('Job'));
+  if (header === undefined) throw new Error('expected a job queue header');
+  return header;
+}
+
+test('prints pause_reason on the craft queue when a job sends one', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      field_workshop: { pause_reason: 'cargo_full' },
+      total_jobs: 2,
+      jobs: [
+        {
+          job_id: 'paused-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 0,
+          runs_remaining: 1,
+          runs_total: 1,
+          venue: 'Station Workshop',
+          eta_ticks: 2,
+          status: 'queued',
+          position: 0,
+          pause_reason: ' storage_full ',
+        },
+        {
+          job_id: 'running-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 1,
+          runs_remaining: 1,
+          runs_total: 2,
+          venue: 'Station Workshop',
+          eta_ticks: 1,
+          status: 'active',
+          position: 1,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  const header = queueHeader(stdout);
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Craft Queue ===');
+  expect(header.indexOf('Status')).toBeLessThan(header.indexOf('Pause'));
+  expect(header.indexOf('Pause')).toBeLessThan(header.indexOf('Pos'));
+  expect(stdout).toContain(' storage_full ');
+  expect(stdout).toContain('paused-job');
+  expect(stdout).toContain('running-job');
+  expect(stdout).not.toContain('cargo_full');
+  expect(stdout).not.toContain('Pause reason:');
+  expect(stdout).not.toContain('destination storage full');
+  expect(stdout).not.toContain('nothing is lost');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('does not open Pause when every craft job omits a usable pause_reason', () => {
+  const rendered = renderStructuredResult(
+    'craft',
+    {
+      action: 'queue',
+      jobs: [
+        {
+          job_id: 'blank-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          status: 'queued',
+          runs_total: 1,
+          runs_done: 0,
+          runs_remaining: 1,
+          pause_reason: '   ',
+        },
+        {
+          job_id: 'empty-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          status: 'queued',
+          runs_total: 1,
+          runs_done: 0,
+          runs_remaining: 1,
+          pause_reason: '',
+        },
+        {
+          job_id: 'number-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          status: 'active',
+          runs_total: 1,
+          runs_done: 0,
+          runs_remaining: 1,
+          pause_reason: 0,
+        },
+        {
+          job_id: 'waiting-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          status: 'queued',
+          runs_total: 1,
+          runs_done: 0,
+          runs_remaining: 1,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  const header = queueHeader(stdout);
+  expect(rendered.success).toBe(true);
+  expect(header).not.toContain('Pause');
+  expect(stdout).toContain('waiting-job');
+  expect(stdout).not.toContain('waited its turn');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('prints pause_reason on the recycle queue', () => {
+  const rendered = renderStructuredResult(
+    'recycle',
+    {
+      action: 'queue',
+      jobs: [
+        {
+          job_id: 'recycle-paused',
+          recipe: 'Recycle Power Cell',
+          mode: 'recycle',
+          status: 'queued',
+          runs_total: 1,
+          runs_done: 0,
+          runs_remaining: 1,
+          pause_reason: 'fuel_full',
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Recycle Queue ===');
+  expect(queueHeader(stdout)).toContain('Pause');
+  expect(stdout).toContain('fuel_full');
+  expect(stdout).not.toContain('fuel tank full');
+});
+
+test('renders facility job_list with the queue table and keeps jobs that omit craft-only fields', () => {
+  const rendered = renderStructuredResult(
+    'facility job_list',
+    {
+      action: 'job_list',
+      facility_id: 'fac-1',
+      venue: 'Iron Refinery',
+      total_jobs: 3,
+      message: 'Showing the soonest jobs.',
+      jobs: [
+        {
+          job_id: 'craft-job',
+          recipe: 'Refine Steel',
+          mode: 'craft',
+          runs_done: 1,
+          runs_remaining: 1,
+          runs_total: 2,
+          produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 2 }],
+          venue: 'Iron Refinery',
+          facility_id: 'fac-1',
+          eta_ticks: 4,
+          status: 'active',
+          position: 0,
+          pause_reason: 'storage_full',
+        },
+        {
+          job_id: 'recycle-job',
+          recipe: 'Recycle Power Cell',
+          mode: 'recycle',
+          runs_done: 0,
+          runs_remaining: 2,
+          runs_total: 2,
+          venue: 'Iron Refinery',
+          facility_id: 'fac-1',
+          eta_ticks: 6,
+          status: 'queued',
+          position: 1,
+        },
+        {
+          job_id: 'bare-job',
+          status: 'queued',
+          position: 2,
+          pause_reason: false,
+        },
+      ],
+    },
+    options,
+    context,
+  );
+
+  const stdout = rendered.stdout.join('\n');
+  const header = queueHeader(stdout);
+  expect(rendered.success).toBe(true);
+  expect(stdout).toContain('=== Job Queue ===');
+  expect(header).toContain('Pause');
+  expect(stdout).toContain('craft-job');
+  expect(stdout).toContain('recycle-job');
+  expect(stdout).toContain('bare-job');
+  expect(stdout).toContain('storage_full');
+  expect(stdout).toContain('Recycle Power Cell');
+  expect(stdout).toContain('Total jobs: 3');
+  expect(stdout).toContain('Showing the soonest jobs.');
+  expect(stdout).not.toContain('destination storage full');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders queued craft destinations when present', () => {
   const rendered = renderStructuredResult(
     'craft',
