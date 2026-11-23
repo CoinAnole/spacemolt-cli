@@ -940,6 +940,15 @@ describe('command metadata', () => {
     expect(config?.description).toContain(
       'A storm that pushes the fleet leader off course pushes the whole fleet, and a follower sees that notice when the server sends pathfinder_storm.',
     );
+    expect(config?.description).toContain('A storm can also push you off your own heading.');
+    expect(config?.description).toContain('get_location shows the new position and bearing.');
+    expect(config?.description).toContain('Re-plot with another numeric bearing.');
+    expect(config?.description).toContain(
+      'The client does not detect the storm, does not change the bearing, and does not move the ship.',
+    );
+    expect(config?.description).toContain('The pathfinder_storm preview stays the server message and deflected.');
+    expect(config?.description).not.toContain('storm region');
+    expect(config?.description).not.toContain('storm-region');
     expect(config?.description).toContain('does not check drives or fuel');
     expect(config?.description).toContain('does not refuse the call');
     expect(config?.description).toContain('does not add an error-registry entry');
@@ -980,6 +989,14 @@ describe('command metadata', () => {
     expect(help).toContain('fleet_no_fuel');
     expect(help).toContain('fleet_pathfinder_redirect');
     expect(help).toContain('pathfinder_storm');
+    expect(help).toContain('A storm can also push you off your own heading.');
+    expect(help).toContain('get_location shows the new position and bearing.');
+    expect(help).toContain('Re-plot with another numeric bearing.');
+    expect(help).toContain('does not detect the storm');
+    expect(help).toContain('does not change the bearing');
+    expect(help).toContain('does not move the ship');
+    expect(help).toContain('The pathfinder_storm preview stays the server message and deflected.');
+    expect(help).not.toContain('storm region');
     expect(help).toContain("does not print another member's fuel");
     expect(help).toContain('Gameserver 0.730.0.');
     expect(help).not.toContain('invalid_poi');
@@ -8603,7 +8620,7 @@ describe('command metadata', () => {
     const location =
       'Show current system, current POI, docking state, nearby players, nearby NPCs, and leviathans at this POI (name, id, species, stage, hull). aggressive means that stage attacks ships here and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule +
-      ' A fitted telescope adds star_sightings with bearing, temperature, and brightness. The list is omitted when no working telescope has a star in view. The client does not choose which module is fitted.';
+      ' A fitted telescope adds star_sightings with bearing, temperature, and brightness. The list is omitted when no working telescope has a star in view. The client does not choose which module is fitted. An ion_storm hazard lowers scan and survey power here, the same as charged_seam and scar_dust. The client does not reduce a scan number, a survey number, or the printed severity.';
     const state =
       'Show the full player snapshot: player, standings, ship, modules, drone bay, cargo, skills, queue, missions, and prize recoveries. Location lines for system, POI, dock, transit, nearby players, pirates, empire NPCs, prizes, and leviathans come from location. aggressive means that stage attacks ships there and does not join a fight already in progress. The id is the creature_id for hunt while you are at its POI. ' +
       locationRule;
@@ -8623,6 +8640,14 @@ describe('command metadata', () => {
     expect(COMMANDS.get_location?.description).toContain('star_sightings');
     expect(COMMANDS.get_location?.description).toContain('no working telescope has a star in view');
     expect(COMMANDS.get_location?.description).toContain('does not choose which module is fitted');
+    expect(COMMANDS.get_location?.description).toContain(
+      'An ion_storm hazard lowers scan and survey power here, the same as charged_seam and scar_dust.',
+    );
+    expect(COMMANDS.get_location?.description).toContain(
+      'The client does not reduce a scan number, a survey number, or the printed severity.',
+    );
+    expect(COMMANDS.get_location?.description).not.toContain('power column');
+    expect(COMMANDS.get_state?.description).not.toContain('ion_storm');
     expect(COMMANDS.get_state?.description).toBe(state);
     expect(COMMANDS.get_state?.description).not.toContain('star_sightings');
     expect(COMMANDS.travel?.description).not.toContain('star_sightings');
