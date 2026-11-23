@@ -318,6 +318,20 @@ function emitMaintenanceAverageBurn(value: unknown): void {
   ]);
 }
 
+// Cadence is the sent category string only. Do not look up type_id.
+function facilityTypeLaborCadence(category: unknown): string {
+  if (category === 'production') return ' per run';
+  if (category === 'infrastructure' || category === 'service' || category === 'defense' || category === 'ranch') {
+    return ' per cycle (100 ticks)';
+  }
+  return '';
+}
+
+function emitFacilityTypeLabor(r: Record<string, unknown>): void {
+  if (!isDefinedLineValue(r.labor_cost)) return;
+  emitLine(`Labor: ${r.labor_cost}${facilityTypeLaborCadence(r.category)}`);
+}
+
 function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   const typeId = typeof r.type_id === 'string' ? r.type_id.trim() : '';
   if (!typeId) return false;
@@ -330,7 +344,7 @@ function emitFacilityTypeDetail(r: Record<string, unknown>): boolean {
   if (buildable) emitLine(`Buildable: ${buildable}`);
   emitDefinedLine('Build cost', r.build_cost);
   emitDefinedLine('Build time', r.build_time);
-  emitDefinedLine('Labor', r.labor_cost);
+  emitFacilityTypeLabor(r);
   if (isDefinedLineValue(r.rent_per_cycle)) {
     emitLine(`Rent/cycle: ${r.rent_per_cycle}`);
     emitLine(

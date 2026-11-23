@@ -3631,7 +3631,7 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).toContain('Buildable: yes');
   expect(stdout).toContain('Build cost: 12000');
   expect(stdout).toContain('Build time: 40');
-  expect(stdout).toContain('Labor: 80');
+  expect(lines.filter((line) => line.startsWith('Labor:'))).toEqual(['Labor: 80 per cycle (100 ticks)']);
   expect(stdout).toContain('Rent/cycle: 200');
   expect(rentIndex).toBeGreaterThanOrEqual(0);
   expect(lines[rentIndex + 1]).toBe(facilityTypeRentQuote);
@@ -3641,6 +3641,131 @@ test('facility_types detail prints identity and service pool without generic dum
   expect(stdout).toContain('Service pool: 20 cap, +4/cycle, 1x crew_rations');
   expect(stdout).not.toContain('=== Response ===');
   expect(stdout).not.toContain('=== Categories ===');
+});
+
+test('facility_types detail adds labor cadence from the sent category only', () => {
+  const laborLine = (extra: Record<string, unknown>, labor: unknown = 80): string[] => {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    Object.assign(fixture, extra);
+    fixture.labor_cost = labor;
+    return facilityTypeDetailLines(fixture).filter((line) => line.startsWith('Labor:'));
+  };
+
+  expect(laborLine({ category: 'production' })).toEqual(['Labor: 80 per run']);
+  expect(laborLine({ category: 'production', type_id: 'crew_office' }, 0)).toEqual(['Labor: 0 per run']);
+  expect(laborLine({ category: 'production' }, 12.5)).toEqual(['Labor: 12.5 per run']);
+  expect(laborLine({ category: 'production' }, 0n)).toEqual(['Labor: 0 per run']);
+  for (const category of ['infrastructure', 'service', 'defense', 'ranch']) {
+    expect(laborLine({ category })).toEqual(['Labor: 80 per cycle (100 ticks)']);
+  }
+  expect(laborLine({ category: 'infrastructure' }, 0)).toEqual(['Labor: 0 per cycle (100 ticks)']);
+  for (const category of ['personal', 'faction', 'Production', ' production', 'production ', ' ', '']) {
+    expect(laborLine({ category })).toEqual(['Labor: 80']);
+  }
+  for (const category of [null, 1, true, { id: 'ore_refinery' }, ['production']]) {
+    expect(laborLine({ category, type_id: 'ore_refinery' })).toEqual(['Labor: 80']);
+  }
+
+  const omitted = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+  delete omitted.labor_cost;
+  omitted.category = 'production';
+  omitted.type_id = 'ore_refinery';
+  const omittedOut = facilityTypeDetailLines(omitted).join('\n');
+  expect(omittedOut).toContain('=== Facility type: Crew Office ===');
+  expect(omittedOut).not.toContain('Labor:');
+  expect(omittedOut).not.toContain('per run');
+
+  for (const labor_cost of ['', null, { amount: 1 }, [80]]) {
+    const fixture = structuredClone(facilityTypesDetailFixture) as Record<string, unknown>;
+    fixture.labor_cost = labor_cost;
+    fixture.category = 'production';
+    const stdout = facilityTypeDetailLines(fixture).join('\n');
+    expect(stdout).toContain('=== Facility type: Crew Office ===');
+    expect(stdout).not.toContain('Labor:');
+    expect(stdout).not.toContain('per run');
+  }
+
+  const listed = renderFacilityTypes(
+    facilityTypeListFixture([
+      {
+        id: 'ore_refinery',
+        name: 'Ore Refinery',
+        category: 'production',
+        level: 1,
+        build_cost: 10,
+        labor_cost: 80,
+      },
+      {
+        id: 'crew_office',
+        name: 'Crew Office',
+        category: 'service',
+        level: 1,
+        build_cost: 11,
+        labor_cost: 0,
+      },
+    ]),
+  );
+  const listSection = sectionAfter(listed, 'Facility types');
+  const listHeader = listSection.split('\n').find((line) => line.includes('|') && line.includes('Name'));
+  expect(listHeader).toBeDefined();
+  expect(listHeader).not.toContain('Labor');
+  expect(listSection).not.toContain('per run');
+  expect(listSection).not.toContain('per cycle');
+  expect(listSection).not.toContain('80');
+  expect(listSection).not.toMatch(/\b0\b/);
+
+  const json = renderStructuredResult(
+    'facility_types',
+    structuredClone(facilityTypesDetailFixture),
+    { ...options, format: 'json' },
+    context,
+  ).stdout.join('\n');
+  expect(json).not.toContain('per cycle');
+  expect(json).not.toContain('per run');
+  expect(JSON.parse(json).labor_cost).toBe(80);
+  expect(JSON.parse(json).category).toBe('service');
+});
+
+test('facility upgrades keeps labor as a number and does not add a cadence', () => {
+  const stdout = renderStructuredResult(
+    'facility_upgrades',
+    {
+      upgrades: [
+        {
+          current_level: 1,
+          upgrade_to: { name: 'Ore Refinery II', category: 'production', labor_cost: 0, type_id: 'ore_refinery' },
+        },
+        {
+          current_level: 2,
+          upgrade_to: { name: 'Crew Office II', category: 'service', labor_cost: 80 },
+        },
+        {
+          current_level: 3,
+          upgrade_to: { name: 'Quarters', category: 'personal' },
+        },
+      ],
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  const section = sectionAfter(stdout, 'Available Upgrades');
+  const lines = section.split('\n');
+  const header = lines.find((line) => line.includes('|') && line.includes('Labor'));
+  expect(header).toBeDefined();
+  const laborIndex = header
+    ?.split('|')
+    .map((part) => part.trim())
+    .indexOf('Labor');
+  const cell = (needle: string): string | undefined => {
+    const row = lines.find((line) => line.includes('|') && line.includes(needle) && !line.includes('---'));
+    return row?.split('|').map((part) => part.trim())[laborIndex ?? -1];
+  };
+  expect(cell('Ore Refinery II')).toBe('0');
+  expect(cell('Crew Office II')).toBe('80');
+  expect(cell('Quarters')).toBe('');
+  expect(section).not.toContain('per run');
+  expect(section).not.toContain('per cycle');
+  expect(section).not.toContain('100 ticks');
 });
 
 test('facility_types detail prints Service pool capacity 0 beside the other pool fields', () => {

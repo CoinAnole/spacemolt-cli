@@ -55,6 +55,9 @@ const FACILITY_LIST_TRADE_AUTHENTICATOR_HELP =
 const FACILITY_MARKET_FEE_DISCOUNT_HELP =
   'market_fee_discount is a percent off ship and facility listing fees, not off exchange orders. The client does not keep a list of Ledger Desk, Trading Office, or Brokerage ids. Gameserver 0.732.0.';
 
+const FACILITY_TYPE_LABOR_PRINT_HELP =
+  'Detail output prints Labor from labor_cost when that value is defined, including an explicit 0, as sent. An omitted key prints nothing and is not 0. When category is the string production, the line adds per run. When category is infrastructure, service, defense, or ranch, the line adds per cycle (100 ticks). Any other category, a blank category, or a non-string prints the number alone. The types list has no labor column. The client does not look up a facility id to choose the cadence, does not charge labor, and does not decide who pays. Gameserver 0.732.5.';
+
 const OUTPOST_FOUNDING_FEE_HELP =
   'outpost_founding_fee is the outpost fee. It is not founding_fee. founding_fee remains the station fee. The outpost fee is charged by build_outpost on top of the Outpost Kit, taken from the faction treasury first, then the wallet, and dismantle does not refund it.';
 
@@ -724,6 +727,8 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
       ' ' +
       OUTSIDER_STATION_RENT_HELP +
       ' Detail output prints Bonus from bonus_type when that value is a non-blank string, and Value from bonus_value when that value is finite, including 0. An omitted key prints nothing. The types list adds those columns when any row sends them. The discovery table does not. ' +
+      FACILITY_TYPE_LABOR_PRINT_HELP +
+      ' ' +
       FACILITY_MARKET_FEE_DISCOUNT_HELP,
     apiRoute: 'POST /api/v2/spacemolt_facility/types',
     positionals: ['facility_type', 'name', 'level', 'category', 'page', 'per_page'],

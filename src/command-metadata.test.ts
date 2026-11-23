@@ -4153,6 +4153,20 @@ describe('command metadata', () => {
       );
       expect(text).toContain('does not keep a list of Ledger Desk, Trading Office, or Brokerage ids');
       expect(text).toContain('Gameserver 0.732.0');
+      expect(text).toContain(
+        'prints Labor from labor_cost when that value is defined, including an explicit 0, as sent',
+      );
+      expect(text).toContain('An omitted key prints nothing and is not 0');
+      expect(text).toContain('When category is the string production, the line adds per run');
+      expect(text).toContain(
+        'When category is infrastructure, service, defense, or ranch, the line adds per cycle (100 ticks)',
+      );
+      expect(text).toContain('Any other category, a blank category, or a non-string prints the number alone');
+      expect(text).toContain('The types list has no labor column');
+      expect(text).toContain('does not look up a facility id');
+      expect(text).toContain('does not charge labor');
+      expect(text).toContain('does not decide who pays');
+      expect(text).toContain('Gameserver 0.732.5');
       expect(text).not.toContain('goes offline');
       expect(text).not.toContain('faction storage cannot cover');
       expect(text).not.toContain('exempt');
