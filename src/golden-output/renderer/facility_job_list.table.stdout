@@ -1,0 +1,9 @@
+
+=== Job Queue ===
+
+  Job         | Recipe             | Mode    | Runs         | Output         | Venue         | ETA | Status | Pause        | Pos
+  ------------+--------------------+---------+--------------+----------------+---------------+-----+--------+--------------+----
+  craft-job   | Refine Steel       | craft   | 1/2 (1 left) | 2x Steel Plate | Iron Refinery | 4   | active | storage_full | 0  
+  recycle-job | Recycle Power Cell | recycle | 0/2 (2 left) |                | Iron Refinery | 6   | queued |              | 1  
+Total jobs: 2
+Showing the soonest jobs.

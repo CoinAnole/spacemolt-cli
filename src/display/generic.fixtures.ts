@@ -800,6 +800,49 @@ export const craftQueueFixture = {
   },
 };
 
+/** Facility job_list queue: one paused craft job, and a recycle job that omits produces. */
+export const facilityJobListFixture = {
+  action: 'job_list',
+  facility_id: 'fac-1',
+  venue: 'Iron Refinery',
+  total_jobs: 2,
+  message: 'Showing the soonest jobs.',
+  jobs: [
+    {
+      job_id: 'craft-job',
+      recipe: 'Refine Steel',
+      mode: 'craft',
+      runs_total: 2,
+      runs_done: 1,
+      runs_remaining: 1,
+      progress: 0.25,
+      eta_ticks: 4,
+      position: 0,
+      orderer: 'self',
+      status: 'active',
+      facility_id: 'fac-1',
+      venue: 'Iron Refinery',
+      produces: [{ item_id: 'steel_plate', name: 'Steel Plate', quantity: 2 }],
+      pause_reason: 'storage_full',
+    },
+    {
+      job_id: 'recycle-job',
+      recipe: 'Recycle Power Cell',
+      mode: 'recycle',
+      runs_total: 2,
+      runs_done: 0,
+      runs_remaining: 2,
+      progress: 0,
+      eta_ticks: 6,
+      position: 1,
+      orderer: 'self',
+      status: 'queued',
+      facility_id: 'fac-1',
+      venue: 'Iron Refinery',
+    },
+  ],
+};
+
 /** Packaged craft dry-run (kind=packaged_quote): gates/ready + output package preview. */
 export const craftPackagedQuoteFixture = {
   details: {
@@ -1658,6 +1701,7 @@ export const genericHighValueFixtures: Record<string, HighValueFixtureEntry> = {
   craft: { command: 'craft', fixture: craftQueuedFixture },
   craft_retarget: { command: 'craft', fixture: craftRetargetFixture },
   craft_queue: { command: 'craft', fixture: craftQueueFixture },
+  facility_job_list: { command: 'facility_job_list', fixture: facilityJobListFixture },
   craft_packaged_quote: { command: 'craft', fixture: craftPackagedQuoteFixture },
   craft_packaged_job: { command: 'craft', fixture: craftPackagedJobFixture },
   recycle: { command: 'recycle', fixture: recycleQuoteFixture },
