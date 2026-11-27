@@ -6204,8 +6204,9 @@ describe('command metadata', () => {
     expect(shippingProfile.description).toContain('Unpaid freight debt and the cooldown still apply');
     expect(shippingProfile.description).toContain('does not count contracts');
     expect(shippingProfile.description).toContain('does not count failures');
-    expect(shippingProfile.description).toContain('does not refuse shipping_accept');
-    expect(shippingProfile.description).toContain('shipping_accept stays the generated command');
+    expect(shippingProfile.description).toContain('does not refuse an accept');
+    expect(shippingProfile.description).toContain('Accept stays the generated command');
+    expect(shippingProfile.description).not.toContain('shipping_accept');
     expect(shippingProfile.description).toContain('No error-registry entry is added');
     expect(shippingProfile.description).toContain('prints as sent');
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();

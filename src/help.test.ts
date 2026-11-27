@@ -1988,8 +1988,9 @@ describe('help output branches', () => {
     expect(output).toContain('Unpaid freight debt and the cooldown still apply');
     expect(output).toContain('does not count contracts');
     expect(output).toContain('does not count failures');
-    expect(output).toContain('does not refuse shipping_accept');
-    expect(output).toContain('shipping_accept stays the generated command');
+    expect(output).toContain('does not refuse an accept');
+    expect(output).toContain('Accept stays the generated command');
+    expect(output).not.toContain('does not refuse shipping_accept');
     expect(output).toContain('No error-registry entry is added');
     expect(output).toContain('The server message prints as sent');
     expect(output).toContain('spacemolt shipping_profile [carrier=player|faction]');
