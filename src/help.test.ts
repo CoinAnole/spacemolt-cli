@@ -1925,6 +1925,49 @@ describe('help output branches', () => {
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/deliver');
   });
 
+  test('shipping_profile help names tier recovery, the acceptance cooldown, and contract caps', () => {
+    const command = captureWriter();
+    const explanation = captureWriter();
+    expect(showCommandHelp('shipping_profile', command.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(
+      showCommandExplanation('shipping_profile', explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true }),
+    ).toBe(true);
+
+    const output = command.stdout.join('\n');
+    expect(output).toContain('recovery_deliveries_remaining');
+    expect(output).toContain('10 more on-time');
+    expect(output).toContain('12 hours');
+    expect(output).toContain('within 24 hours');
+    expect(output).toContain('recent_failures');
+    expect(output).toContain('acceptance_blocked_until');
+    expect(output).toContain('2 probationary, 4 licensed, and 8 trusted');
+    expect(output).toContain('Prime is unlimited');
+    expect(output).toContain('Self-shipping still bypasses the tier, liability, and contract-count gates');
+    expect(output).toContain('Unpaid freight debt and the cooldown still apply');
+    expect(output).toContain('does not count contracts');
+    expect(output).toContain('does not count failures');
+    expect(output).toContain('does not refuse shipping_accept');
+    expect(output).toContain('shipping_accept stays the generated command');
+    expect(output).toContain('No error-registry entry is added');
+    expect(output).toContain('The server message prints as sent');
+    expect(output).toContain('spacemolt shipping_profile [carrier=player|faction]');
+    expect(output).toContain('spacemolt shipping_profile');
+    expect(output).toContain('carrier (player|faction)');
+    expect(output).toContain('Server help:');
+    expect(output).toContain('spacemolt server-help shipping_profile');
+    expect(output).toContain('See also: shipping_accept, shipping_active, shipping_pay_debt');
+    expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+    expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/profile');
+
+    const misc = captureWriter();
+    expect(showCommandGroup('misc', misc.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(misc.stdout.join('\n')).toContain('shipping_profile');
+
+    const accept = captureWriter();
+    expect(showCommandHelp('shipping_accept', accept.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    expect(accept.stdout.join('\n')).not.toContain('No error-registry entry is added');
+  });
+
   test('shipping_reclaim help is curated Missions and shipping_return covers a defaulted package', () => {
     const reclaim = captureWriter();
     const returned = captureWriter();
@@ -2528,8 +2571,9 @@ describe('help output branches', () => {
     expect(generatedSection).not.toContain('arena status');
     expect(generatedSection).toContain('shipping_accept');
     expect(generatedSection).not.toContain('shipping_list_all');
-    expect(generatedSection).not.toContain('shipping_list');
+    expect(generatedSection).not.toMatch(/\n {2}shipping_list(?:\s|\[)/);
     expect(generatedSection).not.toContain('shipping_reclaim');
+    expect(generatedSection).not.toContain('shipping_profile');
     expect(generatedSection).toContain('battle_self_destruct');
     expect(generatedSection).not.toContain('ship_fit_preview');
     expect(generatedSection).not.toContain('ship_recruit_personnel');

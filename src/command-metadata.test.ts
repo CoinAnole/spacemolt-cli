@@ -6175,10 +6175,38 @@ describe('command metadata', () => {
       'battle_self_destruct',
       'ship_generator',
       'shipping_accept',
+      'shipping_block_carrier',
       'shipping_cancel',
+      'shipping_list_blocked',
       'shipping_pay_debt',
-      'shipping_profile',
+      'shipping_unblock_carrier',
     ]);
+    expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_accept?.category).toBe('Generated API');
+    const shippingProfile = BUNDLED_COMMAND_REGISTRY.commands.shipping_profile;
+    if (!shippingProfile) throw new Error('shipping_profile command missing');
+    expect(shippingProfile.category).toBe('Missions');
+    expect(shippingProfile.usage).toBe('[carrier=player|faction]');
+    expect(shippingProfile.example).toBe('spacemolt shipping_profile');
+    expect(shippingProfile.route).toEqual({ tool: 'spacemolt_shipping', action: 'profile', method: 'POST' });
+    expect(shippingProfile.schema?.carrier?.enum).toEqual(['player', 'faction']);
+    expect(shippingProfile.description).toContain('recovery_deliveries_remaining');
+    expect(shippingProfile.description).toContain('10 more on-time');
+    expect(shippingProfile.description).toContain('12 hours');
+    expect(shippingProfile.description).toContain('24 hours');
+    expect(shippingProfile.description).toContain('recent_failures');
+    expect(shippingProfile.description).toContain('acceptance_blocked_until');
+    expect(shippingProfile.description).toContain('2 probationary, 4 licensed, and 8 trusted');
+    expect(shippingProfile.description).toContain('Prime is unlimited');
+    expect(shippingProfile.description).toContain(
+      'Self-shipping still bypasses the tier, liability, and contract-count gates',
+    );
+    expect(shippingProfile.description).toContain('Unpaid freight debt and the cooldown still apply');
+    expect(shippingProfile.description).toContain('does not count contracts');
+    expect(shippingProfile.description).toContain('does not count failures');
+    expect(shippingProfile.description).toContain('does not refuse shipping_accept');
+    expect(shippingProfile.description).toContain('shipping_accept stays the generated command');
+    expect(shippingProfile.description).toContain('No error-registry entry is added');
+    expect(shippingProfile.description).toContain('prints as sent');
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_fit_preview).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_recruit_personnel).toBeUndefined();
     expect(BUNDLED_COMMAND_REGISTRY.commands.ship_treat_personnel).toBeUndefined();

@@ -39,12 +39,14 @@ describe('dynamic OpenAPI commands', () => {
       'GET /api/v2/spacemolt_shipping/help',
       'POST /api/v2/spacemolt_shipping/accept',
       'POST /api/v2/spacemolt_shipping/active',
+      'POST /api/v2/spacemolt_shipping/block_carrier',
       'POST /api/v2/spacemolt_shipping/cancel',
       'POST /api/v2/spacemolt_shipping/deliver',
       'POST /api/v2/spacemolt_shipping/get',
       'POST /api/v2/spacemolt_shipping/help',
       'POST /api/v2/spacemolt_shipping/list',
       'POST /api/v2/spacemolt_shipping/list_all',
+      'POST /api/v2/spacemolt_shipping/list_blocked',
       'POST /api/v2/spacemolt_shipping/pay_debt',
       'POST /api/v2/spacemolt_shipping/post',
       'POST /api/v2/spacemolt_shipping/profile',
@@ -52,15 +54,18 @@ describe('dynamic OpenAPI commands', () => {
       'POST /api/v2/spacemolt_shipping/reclaim',
       'POST /api/v2/spacemolt_shipping/return',
       'POST /api/v2/spacemolt_shipping/track',
+      'POST /api/v2/spacemolt_shipping/unblock_carrier',
     ]);
     expect(Object.keys(commands).sort()).toEqual([
       'shipping_accept',
       'shipping_active',
+      'shipping_block_carrier',
       'shipping_cancel',
       'shipping_deliver',
       'shipping_get',
       'shipping_list',
       'shipping_list_all',
+      'shipping_list_blocked',
       'shipping_pay_debt',
       'shipping_post',
       'shipping_profile',
@@ -68,6 +73,7 @@ describe('dynamic OpenAPI commands', () => {
       'shipping_reclaim',
       'shipping_return',
       'shipping_track',
+      'shipping_unblock_carrier',
     ]);
     expect(commands.shipping_help).toBeUndefined();
   });

@@ -372,6 +372,12 @@ function renderShippingTrack(result: Record<string, unknown>): boolean {
   return true;
 }
 
+// Finite numbers only, including 0. Same grouped style as Successful deliveries. An omitted key is not 0.
+function formatDeliveryCount(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value.toLocaleString();
+}
+
 function formatCountCapacity(current: unknown, limit: unknown, unlimited: unknown): string | undefined {
   const count = text(current);
   if (count === undefined) return undefined;
@@ -408,6 +414,11 @@ function renderCarrierSections(
   emitField('Updated', profile.updated_at);
   emitField('Last consequence', profile.last_consequence_at);
   emitField('Last recovery', profile.last_recovery_at);
+  // Not repeated under Tier Progression, and not hidden when at_maximum_tier is true.
+  emitField('Recovery deliveries', profile.recovery_deliveries_remaining, formatDeliveryCount);
+  // As sent, including a time in the past. Do not parse it or treat a past time as over.
+  emitField('Acceptance blocked until', profile.acceptance_blocked_until, presentString);
+  emitRecentFailures(profile.recent_failures);
 
   emitLine(`\n${c.bright}Capacity:${c.reset}`);
   emitField(
@@ -442,6 +453,15 @@ function renderCarrierSections(
   }
   emitField('Acceptance blocked', result.debt_blocks_acceptance, formatBoolean);
   emitField('Block reason', result.debt_block_reason);
+}
+
+// Each kept string as sent, in server order. Skip non-strings. Do not sort or count.
+function emitRecentFailures(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  for (const entry of value) {
+    const failure = presentString(entry);
+    if (failure !== undefined) emitLine(`Recent failures: ${failure}`);
+  }
 }
 
 function renderDebts(title: string, debts: Array<Record<string, unknown>>, emptyMessage: string): void {

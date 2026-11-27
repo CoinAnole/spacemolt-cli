@@ -1519,6 +1519,134 @@ test('shipping_profile capacity active_contracts 0 with unlimited true prints Ac
   expect(stdout).toContain('Active contracts: 0 (unlimited)');
 });
 
+test('carrier profile prints recovery, a past cooldown, and recent failures without counting them', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: {
+      ...carrierProfile,
+      recovery_deliveries_remaining: 10000,
+      acceptance_blocked_until: '  2020-01-01T00:00:00Z  ',
+      recent_failures: ['  2026-07-18T00:00:00Z  ', 3, '', '   ', '2026-07-17T00:00:00Z', null],
+    },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debt_blocks_acceptance: false,
+    debts: [],
+  });
+
+  expect(stdout).toContain('Recovery deliveries: 10,000');
+  expect(stdout).toContain('Acceptance blocked until:   2020-01-01T00:00:00Z  ');
+  expect(stdout).toContain('Acceptance blocked: no');
+  const failureLines = stdout.split('\n').filter((line) => line.startsWith('Recent failures:'));
+  expect(failureLines).toEqual(['Recent failures:   2026-07-18T00:00:00Z  ', 'Recent failures: 2026-07-17T00:00:00Z']);
+  expect(failureLines).not.toContain('Recent failures: 2');
+  expect(failureLines).not.toContain('Recent failures: 3');
+  expect(stdout.indexOf('Recovery deliveries:')).toBeLessThan(stdout.indexOf('Capacity:'));
+  expect(stdout.indexOf('Acceptance blocked until:')).toBeLessThan(stdout.indexOf('Capacity:'));
+  expect(stdout.indexOf('Recent failures:')).toBeLessThan(stdout.indexOf('Capacity:'));
+  const progression = stdout.split('Tier Progression:')[1] ?? '';
+  expect(progression).not.toContain('Recovery deliveries');
+  expect(progression).toContain('Acceptance blocked: no');
+  expect(progression).not.toContain('Acceptance blocked until');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('recovery deliveries 0 still prints, including at the maximum tier', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: { ...carrierProfile, tier: 'prime', recovery_deliveries_remaining: 0 },
+    capacity: carrierCapacity,
+    progression: { ...carrierProgression, current_tier: 'prime', at_maximum_tier: true },
+    debts: [],
+  });
+
+  expect(stdout).toContain('Recovery deliveries: 0');
+  expect(stdout).toContain('Maximum carrier tier reached.');
+  expect(stdout.indexOf('Recovery deliveries:')).toBeLessThan(stdout.indexOf('Tier Progression:'));
+  expect(stdout.split('Tier Progression:')[1]).not.toContain('Recovery deliveries');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
+test('omitted carrier recovery fields print nothing and are not zero', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: {
+      ...carrierProfile,
+      recovery_deliveries_remaining: '10',
+      acceptance_blocked_until: '   ',
+      recent_failures: [1, '', '   ', null],
+    },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debt_blocks_acceptance: true,
+    debts: [],
+  });
+
+  expect(stdout).not.toContain('Recovery deliveries');
+  expect(stdout).not.toContain('Acceptance blocked until');
+  expect(stdout).not.toContain('Recent failures');
+  expect(stdout).toContain('Acceptance blocked: yes');
+  expect(stdout).not.toContain('=== Response ===');
+
+  const missing = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [],
+  });
+  expect(missing).not.toContain('Recovery deliveries');
+  expect(missing).not.toContain('Acceptance blocked until');
+  expect(missing).not.toContain('Recent failures');
+  expect(missing).not.toContain('=== Response ===');
+
+  const wrong = output('shipping_profile', {
+    action: 'profile',
+    profile: {
+      ...carrierProfile,
+      recovery_deliveries_remaining: Number.NaN,
+      acceptance_blocked_until: 1,
+      recent_failures: '2026-07-17T00:00:00Z',
+    },
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [],
+  });
+  expect(wrong).not.toContain('Recovery deliveries');
+  expect(wrong).not.toContain('Acceptance blocked until');
+  expect(wrong).not.toContain('Recent failures');
+  expect(wrong).not.toContain('NaN');
+});
+
+test('shipping_pay_debt prints the same carrier recovery lines', () => {
+  const stdout = output('shipping_pay_debt', {
+    details: {
+      action: 'pay_debt',
+      amount_paid: 500,
+      profile: {
+        ...carrierProfile,
+        recovery_deliveries_remaining: 10,
+        acceptance_blocked_until: '2026-07-18T12:00:00Z',
+        recent_failures: ['2026-07-17T01:00:00Z'],
+      },
+      capacity: carrierCapacity,
+      progression: carrierProgression,
+      debt_blocks_acceptance: true,
+      updated_debts: [],
+      outstanding_debts: [],
+    },
+  });
+
+  expect(stdout).toContain('=== Freight Debt Payment ===');
+  expect(stdout).toContain('Recovery deliveries: 10');
+  expect(stdout).toContain('Acceptance blocked until: 2026-07-18T12:00:00Z');
+  expect(stdout).toContain('Recent failures: 2026-07-17T01:00:00Z');
+  expect(stdout).toContain('Acceptance blocked: yes');
+  expect(stdout.indexOf('Recovery deliveries:')).toBeLessThan(stdout.indexOf('Capacity:'));
+  expect(stdout.split('Tier Progression:')[1]).not.toContain('Recovery deliveries');
+  expect(stdout).not.toContain('=== Response ===');
+});
+
 test('renders carrier capacity without a contract limit when profile active contracts differ', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',
