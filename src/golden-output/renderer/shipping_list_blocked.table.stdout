@@ -1,0 +1,9 @@
+
+=== Blocked Carriers ===
+Action: list_blocked
+Shipper: Marlowe (player:marlowe)
+
+  Carrier                              
+  -------------------------------------
+  Vale (player:carrier-vale)           
+  Swift Haulage (faction:haulers-guild)

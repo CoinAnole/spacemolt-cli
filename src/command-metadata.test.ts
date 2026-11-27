@@ -40,6 +40,7 @@ import {
 } from './commands';
 import { generateCompletion } from './completion';
 import { completionArgsForCommand } from './completion-metadata';
+import { buildGeneratedCommandConfig } from './dynamic-commands';
 import { GENERATED_API_ROUTES, type GeneratedApiRoute } from './generated/api-commands';
 import { showCommandExplanation, showCommandGroup, showCommandHelp, showFullHelp } from './help';
 import { schemaRequiredScalarType } from './openapi-metadata';
@@ -6175,11 +6176,8 @@ describe('command metadata', () => {
       'battle_self_destruct',
       'ship_generator',
       'shipping_accept',
-      'shipping_block_carrier',
       'shipping_cancel',
-      'shipping_list_blocked',
       'shipping_pay_debt',
-      'shipping_unblock_carrier',
     ]);
     expect(BUNDLED_COMMAND_REGISTRY.commands.shipping_accept?.category).toBe('Generated API');
     const shippingProfile = BUNDLED_COMMAND_REGISTRY.commands.shipping_profile;
@@ -6549,6 +6547,70 @@ describe('command metadata', () => {
     expect(COMMANDS.jump?.usage).toContain('bearing');
     expect(COMMANDS.jump?.usage).not.toContain(phrase);
     expect(COMMANDS.jump?.description).not.toContain(phrase);
+  });
+
+  test('shipping carrier block commands stay curated with generated usage', () => {
+    const cases = [
+      ['shipping_block_carrier', 'POST /api/v2/spacemolt_shipping/block_carrier', 'block_carrier'],
+      ['shipping_unblock_carrier', 'POST /api/v2/spacemolt_shipping/unblock_carrier', 'unblock_carrier'],
+      ['shipping_list_blocked', 'POST /api/v2/spacemolt_shipping/list_blocked', 'list_blocked'],
+    ] as const;
+    for (const [name, route, action] of cases) {
+      const command = BUNDLED_COMMAND_REGISTRY.commands[name];
+      const generatedRoute = GENERATED_API_ROUTES[route];
+      if (!command) throw new Error(`${name} command missing`);
+      if (!generatedRoute) throw new Error(`${route} missing`);
+      const generated = buildGeneratedCommandConfig(generatedRoute);
+      expect(command.category).toBe('Missions');
+      expect(command.usage).toBe(generated.usage);
+      expect(command.args).toEqual(generated.args);
+      expect(command.required).toEqual(generated.required);
+      expect(command.schema).toEqual(generated.schema);
+      expect(command.stateSections).toEqual(generated.stateSections);
+      expect(command.route).toEqual({ tool: 'spacemolt_shipping', action, method: 'POST' });
+      expect(command.description).toContain("cannot see or accept that shipper's listings");
+      expect(command.description).toContain('invited ones included');
+      expect(command.description).toContain('hauling as themselves');
+      expect(command.description).toContain("accepting the shipper's listings for their faction");
+      expect(command.description).toContain('leader or Manage Diplomacy');
+      expect(command.description).toContain('does not use Manage Treasury');
+      expect(command.description).toContain('stays on faction posting');
+      expect(command.description).toContain('does not resolve a username');
+      expect(command.description).toContain('does not check diplomacy or treasury permission');
+      expect(command.description).toContain('does not refuse the call');
+      expect(command.description).toContain('does not add an error-registry entry');
+      expect(command.description).toContain('prints as sent');
+      expect(command.description).toContain('does not expand a faction into member rows');
+      expect(command.discoverWith).toEqual(['shipping_active']);
+    }
+
+    const block = BUNDLED_COMMAND_REGISTRY.commands.shipping_block_carrier;
+    const unblock = BUNDLED_COMMAND_REGISTRY.commands.shipping_unblock_carrier;
+    const listed = BUNDLED_COMMAND_REGISTRY.commands.shipping_list_blocked;
+    expect(block?.usage).toBe('<blocked_carrier_type> <blocked_carrier_id> [shipper=player|faction]');
+    expect(unblock?.usage).toBe(block?.usage);
+    expect(listed?.usage).toBe('[shipper=player|faction]');
+    expect(block?.args).toEqual(['blocked_carrier_type', 'blocked_carrier_id', 'shipper']);
+    expect(block?.required).toEqual(['blocked_carrier_type', 'blocked_carrier_id']);
+    expect(block?.schema?.blocked_carrier_type?.enum).toEqual(['player', 'faction']);
+    expect(block?.schema?.shipper?.enum).toEqual(['player', 'faction']);
+    expect(listed?.args).toEqual(['shipper']);
+    expect(listed?.required).toBeUndefined();
+    expect(block?.example).toBe('spacemolt shipping_block_carrier player carrier-vale');
+    expect(unblock?.example).toBe('spacemolt shipping_unblock_carrier faction haulers-guild');
+    expect(listed?.example).toBe('spacemolt shipping_list_blocked');
+    expect(block?.seeAlso).toEqual(['shipping_unblock_carrier', 'shipping_list_blocked', 'shipping_post']);
+    expect(unblock?.seeAlso).toEqual(['shipping_block_carrier', 'shipping_list_blocked', 'shipping_post']);
+    expect(listed?.seeAlso).toEqual(['shipping_block_carrier', 'shipping_unblock_carrier', 'shipping_post']);
+
+    const parsed = parseArgs(['shipping_block_carrier', 'faction', 'haulers-guild', 'shipper=player']);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.payload).toEqual({
+      blocked_carrier_type: 'faction',
+      blocked_carrier_id: 'haulers-guild',
+      shipper: 'player',
+    });
   });
 
   test('browse_ships help documents charted-station search', () => {

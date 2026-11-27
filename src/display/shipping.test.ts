@@ -1,7 +1,12 @@
 import { expect, test } from 'bun:test';
 import type { GlobalOptions } from '../types.ts';
 import { renderStructuredResult } from './index.ts';
-import { shippingActiveEmptyFixture } from './shipping.fixtures.ts';
+import {
+  shippingActiveEmptyFixture,
+  shippingBlockCarrierFixture,
+  shippingListBlockedFixture,
+  shippingUnblockCarrierFixture,
+} from './shipping.fixtures.ts';
 
 const options: GlobalOptions = {
   args: [],
@@ -2501,4 +2506,100 @@ test('full freight contracts print max_recent_defaults and compact, list, and ac
   expect(active).toContain('=== Active Freight ===');
   expect(active).not.toContain('Max recent defaults');
   expect(active).not.toContain('=== Response ===');
+});
+
+test('carrier block commands print the block list from details or the body', () => {
+  const blocked = output('shipping_block_carrier', {
+    details: {
+      action: '  block_carrier  ',
+      shipper: { kind: 'player', id: 'marlowe', name: '  Marlowe  ' },
+      blocked: [
+        { kind: 'player', id: 'zulu', name: 'Zulu' },
+        'skip',
+        null,
+        {
+          kind: 'faction',
+          id: 'haulers',
+          name: 'Haulers',
+          members: [{ kind: 'player', id: 'm1', name: 'Member' }],
+        },
+        { kind: 'player', id: '   ' },
+        { id: 'no-kind' },
+        { kind: '   ', id: 'blank-kind' },
+        { kind: 'player', id: 'noname', username: 'NotAName' },
+      ],
+    },
+    blocked: [{ kind: 'player', id: 'body-should-not-win', name: 'Body' }],
+    player: { username: 'Marlowe' },
+  });
+  expect(blocked).toContain('=== Blocked Carriers ===');
+  expect(blocked).toContain('Action:   block_carrier  ');
+  expect(blocked).toContain('Shipper:   Marlowe   (player:marlowe)');
+  expect(blocked.indexOf('Zulu (player:zulu)')).toBeLessThan(blocked.indexOf('Haulers (faction:haulers)'));
+  expect(blocked).toContain('player:noname');
+  expect(blocked).not.toContain('Member');
+  expect(blocked).not.toContain('NotAName');
+  expect(blocked).not.toContain('body-should-not-win');
+  expect(blocked).not.toContain('blank-kind');
+  expect(blocked).not.toContain('No blocked carriers.');
+  expect(blocked).not.toContain('=== Response ===');
+
+  const fromBody = output('shipping_unblock_carrier', {
+    details: { message: 'not a list' },
+    action: 'unblock_carrier',
+    shipper: { kind: 'player', id: 'marlowe' },
+    blocked: [{ kind: 'faction', id: 'haulers', name: 'Haulers' }],
+  });
+  expect(fromBody).toContain('Action: unblock_carrier');
+  expect(fromBody).toContain('Shipper: player:marlowe');
+  expect(fromBody).toContain('Haulers (faction:haulers)');
+  expect(fromBody).not.toContain('not a list');
+  expect(fromBody).not.toContain('=== Response ===');
+
+  const listed = output('shipping_list_blocked', {
+    action: 'list_blocked',
+    shipper: { kind: 'faction', id: 'relief' },
+    blocked: [],
+  });
+  expect(listed).toContain('=== Blocked Carriers ===');
+  expect(listed).toContain('Action: list_blocked');
+  expect(listed).toContain('Shipper: faction:relief');
+  expect(listed).toContain('No blocked carriers.');
+  expect(listed).not.toContain('=== Response ===');
+
+  const noneRendered = output('shipping_list_blocked', {
+    action: '',
+    shipper: { kind: 'player' },
+    blocked: [1, 'x', { kind: 'player' }, { id: 'a' }],
+  });
+  expect(noneRendered).toContain('=== Blocked Carriers ===');
+  expect(noneRendered).toContain('No blocked carriers.');
+  expect(noneRendered).not.toContain('Action:');
+  expect(noneRendered).not.toContain('Shipper:');
+  expect(noneRendered).not.toContain('=== Response ===');
+
+  const dumped = output('shipping_list_blocked', {
+    action: 'list_blocked',
+    shipper: { kind: 'player', id: 'marlowe' },
+    blocked: null,
+  });
+  expect(dumped).toContain('=== Response ===');
+  expect(dumped).not.toContain('=== Blocked Carriers ===');
+});
+
+test('carrier block fixtures print server order and do not dump JSON', () => {
+  for (const [command, fixture, action] of [
+    ['shipping_block_carrier', shippingBlockCarrierFixture, 'block_carrier'],
+    ['shipping_unblock_carrier', shippingUnblockCarrierFixture, 'unblock_carrier'],
+    ['shipping_list_blocked', shippingListBlockedFixture, 'list_blocked'],
+  ] as const) {
+    const stdout = output(command, fixture);
+    expect(stdout).toContain('=== Blocked Carriers ===');
+    expect(stdout).toContain(`Action: ${action}`);
+    expect(stdout).toContain('Shipper: Marlowe (player:marlowe)');
+    expect(stdout.indexOf('Vale (player:carrier-vale)')).toBeLessThan(
+      stdout.indexOf('Swift Haulage (faction:haulers-guild)'),
+    );
+    expect(stdout).not.toContain('=== Response ===');
+  }
 });

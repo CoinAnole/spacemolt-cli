@@ -1,4 +1,5 @@
-import { c, emitLine, formatIntegerText, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { c, emitLine, emitLines, formatIntegerText, formatter, isRecord, printCompactTable } from './helpers.ts';
+import { formatCompactTable } from './tables.ts';
 
 type ValueFormatter = (value: unknown) => string | undefined;
 
@@ -556,6 +557,31 @@ function renderSettlement(result: Record<string, unknown>, command: string | und
   return true;
 }
 
+// Whichever input has blocked as an array: mutation details, or the list_blocked body.
+// Server order. A faction stays one actor. Name is only the actor's name.
+function renderBlockedCarriers(result: Record<string, unknown>): boolean {
+  if (!Array.isArray(result.blocked)) return false;
+  emitHeading('Blocked Carriers');
+  emitField('Action', result.action, presentString);
+  emitField('Shipper', result.shipper, formatActor);
+  const rows: Array<Record<string, unknown>> = [];
+  for (const entry of result.blocked) {
+    if (!isRecord(entry)) continue;
+    const carrier = formatActor(entry);
+    if (carrier === undefined) continue;
+    rows.push({ carrier });
+  }
+  if (rows.length === 0) {
+    emitLine('No blocked carriers.');
+    return true;
+  }
+  const carrierWidth = rows.reduce((width, row) => Math.max(width, String(row.carrier).length), 1);
+  emitLines(
+    formatCompactTable('Blocked Carriers', rows, [['Carrier', ['carrier']]], { maxCellWidth: carrierWidth }).slice(1),
+  );
+  return true;
+}
+
 export const shippingFormatters = [
   formatter(renderQuote, {
     commands: ['shipping_quote'],
@@ -586,6 +612,10 @@ export const shippingFormatters = [
   }),
   formatter(renderShippingProfile, {
     commands: ['shipping_profile'],
+    suppressShapeFallbackOnDecline: true,
+  }),
+  formatter(renderBlockedCarriers, {
+    commands: ['shipping_block_carrier', 'shipping_unblock_carrier', 'shipping_list_blocked'],
     suppressShapeFallbackOnDecline: true,
   }),
   formatter(renderDebtPayment, {

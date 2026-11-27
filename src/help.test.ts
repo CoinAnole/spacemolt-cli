@@ -1984,6 +1984,56 @@ describe('help output branches', () => {
     expect(accept.stdout.join('\n')).not.toContain('No error-registry entry is added');
   });
 
+  test('shipping carrier block help states the block rules and keeps generated usage', () => {
+    for (const [name, usage, example] of [
+      [
+        'shipping_block_carrier',
+        'spacemolt shipping_block_carrier <blocked_carrier_type> <blocked_carrier_id> [shipper=player|faction]',
+        'spacemolt shipping_block_carrier player carrier-vale',
+      ],
+      [
+        'shipping_unblock_carrier',
+        'spacemolt shipping_unblock_carrier <blocked_carrier_type> <blocked_carrier_id> [shipper=player|faction]',
+        'spacemolt shipping_unblock_carrier faction haulers-guild',
+      ],
+      [
+        'shipping_list_blocked',
+        'spacemolt shipping_list_blocked [shipper=player|faction]',
+        'spacemolt shipping_list_blocked',
+      ],
+    ] as const) {
+      const command = captureWriter();
+      const explanation = captureWriter();
+      expect(showCommandHelp(name, command.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+      expect(showCommandExplanation(name, explanation.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+      const output = command.stdout.join('\n');
+      expect(output).toContain(usage);
+      expect(output).toContain(example);
+      expect(output).toContain('invited ones included');
+      expect(output).toContain('hauling as themselves');
+      expect(output).toContain('Manage Diplomacy');
+      expect(output).toContain('does not use Manage Treasury');
+      expect(output).toContain('does not resolve a username');
+      expect(output).toContain('does not refuse the call');
+      expect(output).toContain('does not add an error-registry entry');
+      expect(output).toContain('The server message prints as sent');
+      expect(output).toContain('does not expand a faction into member rows');
+      expect(output).toContain('Server help:');
+      expect(output).toContain(`spacemolt server-help ${name}`);
+      expect(explanation.stdout.join('\n')).toContain('Category: Missions');
+      expect(explanation.stdout.join('\n')).toContain(
+        `API route: POST /api/v2/spacemolt_shipping/${name.slice('shipping_'.length)}`,
+      );
+    }
+
+    const misc = captureWriter();
+    expect(showCommandGroup('misc', misc.writer, BUNDLED_COMMAND_REGISTRY, { plain: true })).toBe(true);
+    const miscOutput = misc.stdout.join('\n');
+    expect(miscOutput).toContain('shipping_block_carrier');
+    expect(miscOutput).toContain('shipping_unblock_carrier');
+    expect(miscOutput).toContain('shipping_list_blocked');
+  });
+
   test('shipping_reclaim help is curated Missions and shipping_return covers a defaulted package', () => {
     const reclaim = captureWriter();
     const returned = captureWriter();
@@ -2590,6 +2640,9 @@ describe('help output branches', () => {
     expect(generatedSection).not.toMatch(/\n {2}shipping_list(?:\s|\[)/);
     expect(generatedSection).not.toContain('shipping_reclaim');
     expect(generatedSection).not.toContain('shipping_profile');
+    expect(generatedSection).not.toContain('shipping_block_carrier');
+    expect(generatedSection).not.toContain('shipping_unblock_carrier');
+    expect(generatedSection).not.toContain('shipping_list_blocked');
     expect(generatedSection).toContain('battle_self_destruct');
     expect(generatedSection).not.toContain('ship_fit_preview');
     expect(generatedSection).not.toContain('ship_recruit_personnel');

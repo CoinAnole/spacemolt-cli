@@ -1,0 +1,13 @@
+
+action: list_blocked
+shipper:
+  kind: player
+  id: marlowe
+  name: Marlowe
+blocked:
+  - kind: player
+    id: "carrier-vale"
+    name: Vale
+  - kind: faction
+    id: "haulers-guild"
+    name: "Swift Haulage"

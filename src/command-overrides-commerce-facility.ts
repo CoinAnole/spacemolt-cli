@@ -67,6 +67,9 @@ const FACILITY_TYPE_LABOR_PRINT_HELP =
 const OUTPOST_FOUNDING_FEE_HELP =
   'outpost_founding_fee is the outpost fee. It is not founding_fee. founding_fee remains the station fee. The outpost fee is charged by build_outpost on top of the Outpost Kit, taken from the faction treasury first, then the wallet, and dismantle does not refund it.';
 
+const SHIPPING_CARRIER_BLOCK_HELP =
+  "A shipper can keep carriers off its freight with block_carrier, unblock_carrier, and list_blocked. A blocked carrier cannot see or accept that shipper's listings, invited ones included. Blocking a faction also covers its members hauling as themselves. Blocking a player also stops that player from accepting the shipper's listings for their faction. shipper=faction edits the faction list and needs the leader or Manage Diplomacy. It does not use Manage Treasury. That permission stays on faction posting. blocked_carrier_type is player or faction. blocked_carrier_id is that player or faction id. The client does not resolve a username, does not check diplomacy or treasury permission, does not refuse the call, and does not add an error-registry entry. The server message prints as sent. The client does not expand a faction into member rows.";
+
 export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride> = {
   get_missions: {
     category: 'Missions',
@@ -295,6 +298,35 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
     seeAlso: ['shipping_accept', 'shipping_active', 'shipping_pay_debt'],
     category: 'Missions',
     apiRoute: 'POST /api/v2/spacemolt_shipping/profile',
+  },
+  shipping_block_carrier: {
+    usage: '<blocked_carrier_type> <blocked_carrier_id> [shipper=player|faction]',
+    description: SHIPPING_CARRIER_BLOCK_HELP,
+    example: 'spacemolt shipping_block_carrier player carrier-vale',
+    discoverWith: ['shipping_active'],
+    seeAlso: ['shipping_unblock_carrier', 'shipping_list_blocked', 'shipping_post'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/block_carrier',
+    positionals: ['blocked_carrier_type', 'blocked_carrier_id', 'shipper'],
+  },
+  shipping_unblock_carrier: {
+    usage: '<blocked_carrier_type> <blocked_carrier_id> [shipper=player|faction]',
+    description: SHIPPING_CARRIER_BLOCK_HELP,
+    example: 'spacemolt shipping_unblock_carrier faction haulers-guild',
+    discoverWith: ['shipping_active'],
+    seeAlso: ['shipping_block_carrier', 'shipping_list_blocked', 'shipping_post'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/unblock_carrier',
+    positionals: ['blocked_carrier_type', 'blocked_carrier_id', 'shipper'],
+  },
+  shipping_list_blocked: {
+    usage: '[shipper=player|faction]',
+    description: SHIPPING_CARRIER_BLOCK_HELP,
+    example: 'spacemolt shipping_list_blocked',
+    discoverWith: ['shipping_active'],
+    seeAlso: ['shipping_block_carrier', 'shipping_unblock_carrier', 'shipping_post'],
+    category: 'Missions',
+    apiRoute: 'POST /api/v2/spacemolt_shipping/list_blocked',
   },
   jettison: {
     usage: '[item_id] [quantity] [items=JSON]  (bulk: pass items=[{item_id,quantity}, ...] and omit item_id/quantity)',

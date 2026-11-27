@@ -1,0 +1,27 @@
+
+details:
+  action: block_carrier
+  shipper:
+    kind: player
+    id: marlowe
+    name: Marlowe
+  blocked:
+    - kind: player
+      id: "carrier-vale"
+      name: Vale
+    - kind: faction
+      id: "haulers-guild"
+      name: "Swift Haulage"
+player:
+  username: Marlowe
+  credits: 183750
+ship:
+  id: "ship-wayfarer"
+  name: Wayfarer
+  cargo_used: 100
+  cargo_capacity: 500
+cargo:
+  - item_id: sealed_package
+    package_id: "package-relief-1"
+    quantity: 1
+    size: 100

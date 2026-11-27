@@ -1257,6 +1257,10 @@ describe('id cache', () => {
     expect(idKindForCommandField('service_prize', 'target')).toBe('poi');
     expect(idKindForCommandField('claim_prize', 'id')).toBeUndefined();
     expect(idKindForCommandField('claim_prize', 'prize_id')).toBeUndefined();
+    expect(idKindForCommandField('shipping_block_carrier', 'blocked_carrier_id')).toBeUndefined();
+    expect(idKindForCommandField('shipping_unblock_carrier', 'blocked_carrier_id')).toBeUndefined();
+    expect(idKindForCommandField('shipping_block_carrier', 'shipper')).toBeUndefined();
+    expect(idKindForCommandField('shipping_list_blocked', 'shipper')).toBeUndefined();
   });
 
   test('resolver rules cover alias-normalized target fields for commands with friendly ID fields', () => {

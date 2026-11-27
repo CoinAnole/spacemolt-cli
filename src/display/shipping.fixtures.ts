@@ -519,6 +519,23 @@ export const shippingCancelFixture = mutationFixture(
   195750,
 );
 
+function shippingBlockList(action: 'block_carrier' | 'unblock_carrier' | 'list_blocked'): Record<string, unknown> {
+  return {
+    action,
+    shipper: { kind: 'player', id: 'marlowe', name: 'Marlowe' },
+    blocked: [
+      { kind: 'player', id: 'carrier-vale', name: 'Vale' },
+      { kind: 'faction', id: 'haulers-guild', name: 'Swift Haulage' },
+    ],
+  };
+}
+
+export const shippingBlockCarrierFixture = mutationFixture(shippingBlockList('block_carrier'), 183750);
+
+export const shippingUnblockCarrierFixture = mutationFixture(shippingBlockList('unblock_carrier'), 183750);
+
+export const shippingListBlockedFixture = shippingBlockList('list_blocked');
+
 function shippingEntry(
   action: string,
   fixture: Record<string, unknown>,
@@ -547,4 +564,7 @@ export const shippingHighValueFixtures: Record<string, HighValueFixtureEntry> = 
   shipping_return: shippingEntry('return', shippingReturnFixture, 'details'),
   shipping_reclaim: shippingEntry('reclaim', shippingReclaimFixture, 'details'),
   shipping_cancel: shippingEntry('cancel', shippingCancelFixture, 'details'),
+  shipping_block_carrier: shippingEntry('block_carrier', shippingBlockCarrierFixture, 'details'),
+  shipping_unblock_carrier: shippingEntry('unblock_carrier', shippingUnblockCarrierFixture, 'details'),
+  shipping_list_blocked: shippingEntry('list_blocked', shippingListBlockedFixture),
 };
