@@ -637,7 +637,7 @@ function gateMaterialLines(value: unknown): string[] | undefined {
   return lines.length ? lines : undefined;
 }
 
-/** Station info. An omitted or empty gate prints nothing. No upkeep list beyond phase_materials_left. allies_only prints yes or no only when it is a boolean, including false. Omission is not no. */
+/** Station info. An omitted or empty gate prints nothing. Upkeep short prints only when built is true. allies_only prints yes or no only when it is a boolean, including false. Omission is not no. */
 export function emitStationJumpGate(gate: unknown): boolean {
   if (!isRecord(gate)) return false;
   const lines: string[] = [];
@@ -686,6 +686,11 @@ export function emitStationJumpGate(gate: unknown): boolean {
     if (entangler !== undefined) lines.push(`  Entangler due: ${entangler}`);
     const covered = formatGateInteger(gate.upkeep_cycles_covered);
     if (covered !== undefined) lines.push(`  Upkeep cycles covered: ${covered}`);
+    const short = gateMaterialLines(gate.upkeep_short);
+    if (short) {
+      lines.push('  Upkeep short:');
+      for (const line of short) lines.push(`    ${line}`);
+    }
   }
 
   if (lines.length === 0) return false;

@@ -4972,6 +4972,9 @@ describe('command metadata', () => {
     expect(COMMANDS.station_info?.description).toContain('faction only, allies only');
     expect(COMMANDS.station_info?.description).toContain('including false');
     expect(COMMANDS.station_info?.description).toContain('not treated as no');
+    expect(COMMANDS.station_info?.description).toContain('Upkeep short');
+    expect(COMMANDS.station_info?.description).toContain('in key order');
+    expect(COMMANDS.get_base?.description).not.toContain('Upkeep short');
     expect(COMMANDS.get_base?.description).toContain('one Jump gate line');
     expect(COMMANDS.get_base?.description).toContain('An outpost without gate is not a gate');
     expect(COMMANDS.get_base?.description).not.toContain('allies only');

@@ -3257,6 +3257,7 @@ test('station info prints a jump gate block and omits an absent gate', () => {
   expect(building).toContain('serviced_quantum_entangler 1');
   expect(building).not.toContain('Entangler due');
   expect(building).not.toContain('Upkeep cycles covered');
+  expect(building).not.toContain('Upkeep short');
 
   const built = renderStructuredResult(
     'station_info',
@@ -3272,6 +3273,7 @@ test('station info prints a jump gate block and omits an absent gate', () => {
   expect(built).toContain(`Toll: ${(1000000).toLocaleString()}`);
   expect(built).toContain('Entangler due: 0');
   expect(built).toContain('Upkeep cycles covered: 0');
+  expect(built).not.toContain('Upkeep short');
   expect(built).not.toContain('Partner base id');
   expect(built).not.toContain('Phase:');
   expect(built).not.toContain('Phases total');
@@ -3346,11 +3348,14 @@ test('get_base prints one jump gate line and does not treat every outpost as a g
         ...baseFixture.base,
         gate: {
           allies_only: true,
+          built: true,
           faction_only: true,
           far_system_id: 'far_system_zz',
           far_system_name: 'Far Haven',
           online: false,
           toll: 0,
+          upkeep_cycles_covered: 0,
+          upkeep_short: { fuel_cell: 5 },
         },
       },
     },
@@ -3362,6 +3367,9 @@ test('get_base prints one jump gate line and does not treat every outpost as a g
   expect(gated).not.toContain('far_system_zz');
   expect(gated).not.toContain('Phase:');
   expect(gated).not.toContain('Entangler due');
+  expect(gated).not.toContain('Upkeep short');
+  expect(gated).not.toContain('fuel_cell');
+  expect(gated).not.toContain('Upkeep cycles covered');
 
   const idOnly = renderStructuredResult(
     'get_base',
@@ -3381,4 +3389,75 @@ test('get_base prints one jump gate line and does not treat every outpost as a g
     context,
   ).stdout.join('\n');
   expect(unnamed).not.toContain('Jump gate');
+});
+
+test('station info lists upkeep short only on a built jump gate', () => {
+  const short = renderStructuredResult(
+    'station_info',
+    {
+      ...stationInfoJumpGateBuiltFixture,
+      gate: {
+        ...stationInfoJumpGateBuiltFixture.gate,
+        upkeep_short: {
+          ore_iron: 0,
+          fuel_cell: 5,
+          ammo_rail: 1200,
+          '': 1,
+          'bad\nid': 2,
+          skipped: 1.5,
+          also_skipped: '5',
+          not_integer: Number.POSITIVE_INFINITY,
+        },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(short).toContain('Upkeep cycles covered: 0');
+  expect(short).toContain('Upkeep short:');
+  expect(short.indexOf('Upkeep short:')).toBeGreaterThan(short.indexOf('Upkeep cycles covered: 0'));
+  const ore = short.indexOf('ore_iron 0');
+  const fuel = short.indexOf('fuel_cell 5');
+  const ammo = short.indexOf(`ammo_rail ${(1200).toLocaleString()}`);
+  expect(ore).toBeGreaterThan(short.indexOf('Upkeep short:'));
+  expect(fuel).toBeGreaterThan(ore);
+  expect(ammo).toBeGreaterThan(fuel);
+  expect(short).not.toContain('fuel_cell x5');
+  expect(short).not.toContain('bad');
+  expect(short).not.toContain('skipped');
+  expect(short).not.toContain('also_skipped');
+  expect(short).not.toContain('not_integer');
+
+  const notBuilt = renderStructuredResult(
+    'station_info',
+    {
+      ...stationInfoJumpGateFixture,
+      gate: {
+        ...buildingJumpGate,
+        upkeep_cycles_covered: 3,
+        upkeep_short: { fuel_cell: 5, ore_iron: 0 },
+      },
+    },
+    options,
+    context,
+  ).stdout.join('\n');
+  expect(notBuilt).toContain('Built: no');
+  expect(notBuilt).toContain('Materials left:');
+  expect(notBuilt).not.toContain('Upkeep short');
+  expect(notBuilt).not.toContain('fuel_cell');
+  expect(notBuilt).not.toContain('Upkeep cycles covered');
+
+  for (const upkeepShort of [undefined, null, 'fuel_cell', 5, [], {}, { 'bad\nid': 1, fuel_cell: 1.5 }]) {
+    const quiet = renderStructuredResult(
+      'station_info',
+      {
+        ...stationInfoJumpGateBuiltFixture,
+        gate: { ...stationInfoJumpGateBuiltFixture.gate, upkeep_short: upkeepShort },
+      },
+      options,
+      context,
+    ).stdout.join('\n');
+    expect(quiet).toContain('Upkeep cycles covered: 0');
+    expect(quiet).not.toContain('Upkeep short');
+  }
 });
