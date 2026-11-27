@@ -6410,6 +6410,16 @@ describe('command metadata', () => {
     expect(shippingReclaim.description).toContain('defaulted');
     expect(shippingReclaim.description).toContain('claim:<shipment_id>');
     expect(shippingReclaim.description).toContain('pay_debt');
+    expect(shippingReclaim.description).toContain('appraised value');
+    expect(shippingReclaim.description).toContain('base value of its contents');
+    expect(shippingReclaim.description).toContain('opened:<shipment_id>');
+    expect(shippingReclaim.description).toContain('loses a tier');
+    expect(shippingReclaim.description).toContain('max_recent_defaults');
+    expect(shippingReclaim.description).toContain('owes nothing');
+    expect(shippingReclaim.description).toContain('Opening or destroying the package ends the claim');
+    expect(shippingReclaim.description).toContain('does not appraise the package');
+    expect(shippingReclaim.description).toContain('does not open it');
+    expect(shippingReclaim.description).toContain('does not build the debt id');
     expect(shippingReclaim.description).toContain('does not check docking');
     expect(shippingReclaim.description).toContain('does not add an error-registry entry');
     expect(shippingReclaim.required ?? []).toEqual([]);

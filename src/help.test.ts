@@ -2054,6 +2054,16 @@ describe('help output branches', () => {
     expect(reclaimOutput).toContain('defaulted');
     expect(reclaimOutput).toContain('claim:<shipment_id>');
     expect(reclaimOutput).toContain('pay_debt');
+    expect(reclaimOutput).toContain('appraised value');
+    expect(reclaimOutput).toContain('base value of its contents');
+    expect(reclaimOutput).toContain('opened:<shipment_id>');
+    expect(reclaimOutput).toContain('loses a tier');
+    expect(reclaimOutput).toContain('max_recent_defaults');
+    expect(reclaimOutput).toContain('owes nothing');
+    expect(reclaimOutput).toContain('Opening or destroying the package ends the claim');
+    expect(reclaimOutput).toContain('does not appraise the package');
+    expect(reclaimOutput).toContain('does not open it');
+    expect(reclaimOutput).toContain('does not build the debt id');
     expect(reclaimOutput).toContain('does not check docking');
     expect(reclaimOutput).toContain('does not add an error-registry entry');
     expect(reclaimOutput).toContain(

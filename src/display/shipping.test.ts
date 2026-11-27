@@ -1390,6 +1390,27 @@ test('renders carrier profile capacity, progression, debt blocking, and debts', 
   expect(stdout).not.toContain('=== Response ===');
 });
 
+test('shipping_profile prints opened, claim, and freight debt ids as sent', () => {
+  const stdout = output('shipping_profile', {
+    action: 'profile',
+    profile: carrierProfile,
+    capacity: carrierCapacity,
+    progression: carrierProgression,
+    debts: [
+      { ...freightDebt, id: 'opened:shipment-1' },
+      { ...freightDebt, id: 'claim:shipment-1', shipment_id: 'shipment-claim' },
+      { ...freightDebt, id: 'freight:shipment-1', shipment_id: 'shipment-freight' },
+    ],
+  });
+
+  expect(stdout).toContain('opened:shipment-1');
+  expect(stdout).toContain('claim:shipment-1');
+  expect(stdout).toContain('freight:shipment-1');
+  const header = stdout.split('\n').find((line) => line.includes('ID') && line.includes('Shipment'));
+  expect(header).toBeDefined();
+  expect(header).not.toContain('Kind');
+});
+
 test('freight debt prints a named debtor after Creditor', () => {
   const stdout = output('shipping_profile', {
     action: 'profile',
