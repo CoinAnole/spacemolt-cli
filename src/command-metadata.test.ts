@@ -6444,18 +6444,27 @@ describe('command metadata', () => {
       route: { tool: 'spacemolt_shipping', action: 'quote', method: 'POST' },
     });
     expect(shippingQuote.seeAlso).toEqual(['shipping_post', 'shipping_list', 'shipping_active', 'get_cargo']);
+    expect(shippingQuote.args).toEqual(['package_id', 'destination_base_id']);
     expect(shippingQuote.usage).toBe(
-      '<package_id> <destination_base_id>  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+      '<package_id> <destination_base_id> [max_recent_defaults=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
     );
     expect(shippingQuote.description).toContain('package:<id>');
     expect(shippingQuote.description).toContain('POI');
+    expect(shippingQuote.description).toContain('0 accepts only a carrier with a clean week');
+    expect(shippingQuote.description).toContain('Omit it for no limit');
+    expect(shippingQuote.description).toContain('There is no minimum and no maximum');
+    expect(shippingQuote.description).toContain('does not read recent_failures');
+    expect(shippingQuote.description).toContain('does not refuse the call');
+    expect(shippingQuote.schema?.max_recent_defaults).toMatchObject({ type: 'integer' });
+    expect(shippingQuote.schema?.max_recent_defaults).not.toHaveProperty('minimum');
+    expect(shippingQuote.schema?.max_recent_defaults).not.toHaveProperty('maximum');
     const shippingPost = BUNDLED_COMMAND_REGISTRY.commands.shipping_post;
     if (!shippingPost) throw new Error('shipping_post command missing');
     expect(shippingPost).toMatchObject({
       args: ['package_id', 'destination_base_id', 'base_reward'],
       required: ['package_id', 'destination_base_id', 'base_reward'],
       usage:
-        '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+        '<package_id> <destination_base_id> <base_reward> [speed_bonus=...] [max_recent_defaults=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
       category: 'Missions',
       route: { tool: 'spacemolt_shipping', action: 'post', method: 'POST' },
       schema: {
@@ -6468,6 +6477,14 @@ describe('command metadata', () => {
     expect(shippingPost.description).toContain('does not refuse the call');
     expect(shippingPost.description).toContain('does not add an error-registry entry');
     expect(shippingPost.description).toContain('prints as sent');
+    expect(shippingPost.description).toContain('0 accepts only a carrier with a clean week');
+    expect(shippingPost.description).toContain('Omit it for no limit');
+    expect(shippingPost.description).toContain('There is no minimum and no maximum');
+    expect(shippingPost.description).toContain('does not read recent_failures');
+    expect(shippingPost.args).not.toContain('max_recent_defaults');
+    expect(shippingPost.schema?.max_recent_defaults).toMatchObject({ type: 'integer' });
+    expect(shippingPost.schema?.max_recent_defaults).not.toHaveProperty('minimum');
+    expect(shippingPost.schema?.max_recent_defaults).not.toHaveProperty('maximum');
     const shippingGet = BUNDLED_COMMAND_REGISTRY.commands.shipping_get;
     const shippingTrack = BUNDLED_COMMAND_REGISTRY.commands.shipping_track;
     for (const description of [shippingGet?.description, shippingTrack?.description]) {
@@ -6497,6 +6514,12 @@ describe('command metadata', () => {
     expect(quoteHelp).toContain('package:<id>');
     expect(quoteHelp).toContain('POI');
     expect(quoteHelp).toContain('spacemolt shipping_quote package:package-1');
+    expect(postHelp).toContain('[max_recent_defaults=...]');
+    expect(quoteHelp).toContain('[max_recent_defaults=...]');
+    expect(postHelp).toContain('0 accepts only a carrier with a clean week');
+    expect(quoteHelp).toContain('Omit it for no limit');
+    expect(postHelp).not.toContain('<max_recent_defaults>');
+    expect(quoteHelp).not.toContain('<max_recent_defaults>');
   });
 
   test('station-aware commands document station base ID or station POI ID', () => {

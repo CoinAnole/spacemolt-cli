@@ -1877,6 +1877,13 @@ describe('help output branches', () => {
     expect(output).toContain('does not refuse the call');
     expect(output).toContain('does not add an error-registry entry');
     expect(output).toContain('prints as sent');
+    expect(output).toContain('[max_recent_defaults=...]');
+    expect(output).toContain('0 accepts only a carrier with a clean week');
+    expect(output).toContain('Omit it for no limit');
+    expect(output).toContain('does not read recent_failures');
+    expect(output).toContain('package_id, destination_base_id, base_reward');
+    expect(output).not.toContain('base_reward, max_recent_defaults');
+    expect(output).not.toContain('<max_recent_defaults>');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/post');
   });
@@ -1894,6 +1901,15 @@ describe('help output branches', () => {
     expect(output).toContain('package:<id>');
     expect(output).toContain('POI');
     expect(output).toContain('spacemolt shipping_quote package:package-1');
+    expect(output).toContain('[max_recent_defaults=...]');
+    expect(output).toContain('0 accepts only a carrier with a clean week');
+    expect(output).toContain('Omit it for no limit');
+    expect(output).toContain('There is no minimum and no maximum');
+    expect(output).toContain('does not read recent_failures');
+    expect(output).toContain('does not refuse the call');
+    expect(output).toContain('package_id, destination_base_id');
+    expect(output).not.toContain('destination_base_id, max_recent_defaults');
+    expect(output).not.toContain('<max_recent_defaults>');
     expect(explanation.stdout.join('\n')).toContain('Category: Missions');
     expect(explanation.stdout.join('\n')).toContain('API route: POST /api/v2/spacemolt_shipping/quote');
 

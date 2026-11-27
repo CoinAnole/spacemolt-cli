@@ -208,9 +208,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_post: {
     usage:
-      '<package_id> <destination_base_id> <base_reward> [speed_bonus=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+      '<package_id> <destination_base_id> <base_reward> [speed_bonus=...] [max_recent_defaults=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
     description:
-      'Post a sealed-package freight contract with a carrier reward you set. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first with shipping_quote. A package under an open claim cannot be posted again. The client does not refuse the call and does not add an error-registry entry. The server message prints as sent.',
+      'Post a sealed-package freight contract with a carrier reward you set. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first with shipping_quote. A package under an open claim cannot be posted again. The client does not refuse the call and does not add an error-registry entry. The server message prints as sent. max_recent_defaults refuses a carrier with more breaches, defaults, and claimed packages opened than that in the last 7 days. Those events are recent_failures. 0 accepts only a carrier with a clean week. Omit it for no limit. There is no minimum and no maximum. The client does not read recent_failures and does not refuse the call.',
     example: 'spacemolt shipping_post package:package-1 nova-station 5000 speed_bonus=500',
     discoverWith: ['get_cargo', 'shipping_quote', 'inspect'],
     seeAlso: ['shipping_quote', 'shipping_list', 'shipping_active', 'get_cargo'],
@@ -224,9 +224,9 @@ export const COMMERCE_FACILITY_COMMAND_OVERRIDES: Record<string, CommandOverride
   },
   shipping_quote: {
     usage:
-      '<package_id> <destination_base_id>  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
+      '<package_id> <destination_base_id> [max_recent_defaults=...]  (package_id: bare id or package:<id>; destination_base_id: station base ID or station POI ID)',
     description:
-      'Estimate freight fees and a suggested carrier reward for a sealed package. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first, then shipping_post.',
+      'Estimate freight fees and a suggested carrier reward for a sealed package. package_id accepts the bare package ID or the package:<id> cargo item form. destination_base_id accepts a station base ID or the station POI ID the map shows. recipient_id for a station recipient likewise accepts base ID or station POI ID. Quote first, then shipping_post. max_recent_defaults refuses a carrier with more breaches, defaults, and claimed packages opened than that in the last 7 days. Those events are recent_failures. 0 accepts only a carrier with a clean week. Omit it for no limit. There is no minimum and no maximum. The client does not read recent_failures and does not refuse the call.',
     example: 'spacemolt shipping_quote package:package-1 nova-station',
     discoverWith: ['get_cargo', 'inspect', 'shipping_post'],
     seeAlso: ['shipping_post', 'shipping_list', 'shipping_active', 'get_cargo'],

@@ -24,6 +24,12 @@ function formatBoolean(value: unknown): string | undefined {
   return undefined;
 }
 
+// Finite numbers only, including 0, with grouping. Same integer style as Route hops.
+function formatGroupedInteger(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  return value.toLocaleString();
+}
+
 // Omitted is not 0. Finite numbers and bigints print as sent, with no grouping or unit.
 function formatExactNumber(value: unknown): string | undefined {
   if (typeof value === 'bigint') return value.toString();
@@ -90,6 +96,8 @@ function renderQuote(result: Record<string, unknown>): boolean {
   emitField('Service', quote.service_level);
   emitField('Visibility', quote.visibility);
   emitField('Route hops', quote.route_hops);
+  // Finite number, including 0. Omitted prints nothing and is not "no limit".
+  emitField('Max recent defaults', quote.max_recent_defaults, formatGroupedInteger);
   emitField('Target', quote.target_ticks, formatTicks);
   emitField('Deadline', quote.deadline_ticks, formatTicks);
   emitField('Base reward', quote.base_reward, formatCredits);
@@ -162,6 +170,9 @@ function renderContract(contract: Record<string, unknown>, title: string, compac
   emitField('Invited carrier', contract.invited_carrier, formatActor);
   emitField('Visibility', contract.visibility);
   emitField('Service', contract.service_level);
+  // Full contract only. Compact tracking and settlement return above this line.
+  // Finite number, including 0. Omitted prints nothing and is not "no limit".
+  emitField('Max recent defaults', contract.max_recent_defaults, formatGroupedInteger);
   emitField('Base reward', contract.base_reward, formatCredits);
   emitField('Maximum speed bonus', contract.max_speed_bonus, formatCredits);
   emitField('Service fee', contract.service_fee, formatCredits);
@@ -372,12 +383,6 @@ function renderShippingTrack(result: Record<string, unknown>): boolean {
   return true;
 }
 
-// Finite numbers only, including 0. Same grouped style as Successful deliveries. An omitted key is not 0.
-function formatDeliveryCount(value: unknown): string | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
-  return value.toLocaleString();
-}
-
 function formatCountCapacity(current: unknown, limit: unknown, unlimited: unknown): string | undefined {
   const count = text(current);
   if (count === undefined) return undefined;
@@ -415,7 +420,7 @@ function renderCarrierSections(
   emitField('Last consequence', profile.last_consequence_at);
   emitField('Last recovery', profile.last_recovery_at);
   // Not repeated under Tier Progression, and not hidden when at_maximum_tier is true.
-  emitField('Recovery deliveries', profile.recovery_deliveries_remaining, formatDeliveryCount);
+  emitField('Recovery deliveries', profile.recovery_deliveries_remaining, formatGroupedInteger);
   // As sent, including a time in the past. Do not parse it or treat a past time as over.
   emitField('Acceptance blocked until', profile.acceptance_blocked_until, presentString);
   emitRecentFailures(profile.recent_failures);

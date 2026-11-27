@@ -2367,3 +2367,138 @@ test('freight debt tables add Creditor due only when a row sends a finite number
   expect(outstandingHeader).not.toContain('Creditor due');
   expect(paid).not.toContain('=== Response ===');
 });
+
+test('freight quote prints max_recent_defaults including 0 and skips a missing or non-finite value', () => {
+  const limited = output('shipping_quote', {
+    action: 'quote',
+    quote: {
+      package_id: 'package-1',
+      route_hops: 3,
+      max_recent_defaults: 10000,
+    },
+  });
+  expect(limited).toContain('Route hops: 3');
+  expect(limited).toContain('Max recent defaults: 10,000');
+  expect(limited.indexOf('Route hops:')).toBeLessThan(limited.indexOf('Max recent defaults:'));
+  expect(limited).not.toContain('no limit');
+  expect(limited).not.toContain('=== Response ===');
+
+  const zero = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', max_recent_defaults: 0 },
+  });
+  expect(zero).toContain('Max recent defaults: 0');
+  expect(zero).not.toContain('no limit');
+
+  const negative = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', max_recent_defaults: -1 },
+  });
+  expect(negative).toContain('Max recent defaults: -1');
+
+  const negativeZero = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', route_hops: -0, max_recent_defaults: -0 },
+  });
+  expect(negativeZero).toContain(`Route hops: ${(-0).toLocaleString()}`);
+  expect(negativeZero).toContain(`Max recent defaults: ${(-0).toLocaleString()}`);
+
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, '0', 'no limit', null, true, 1n] as const) {
+    const stdout = output('shipping_quote', {
+      action: 'quote',
+      quote: { package_id: 'package-1', max_recent_defaults: value },
+    });
+    expect(stdout).toContain('=== Freight Quote ===');
+    expect(stdout).not.toContain('Max recent defaults');
+    expect(stdout).not.toContain('no limit');
+    expect(stdout).not.toContain('NaN');
+    expect(stdout).not.toContain('=== Response ===');
+  }
+
+  const omitted = output('shipping_quote', {
+    action: 'quote',
+    quote: { package_id: 'package-1', route_hops: 2 },
+  });
+  expect(omitted).toContain('Route hops: 2');
+  expect(omitted).not.toContain('Max recent defaults');
+  expect(omitted).not.toContain('no limit');
+});
+
+test('full freight contracts print max_recent_defaults and compact, list, and active views do not', () => {
+  const posted = output('shipping_post', {
+    details: { action: 'post', contract: { ...contract, max_recent_defaults: 0 } },
+  });
+  expect(posted).toContain('=== Posted Freight Contract ===');
+  expect(posted).toContain('Max recent defaults: 0');
+  expect(posted.indexOf('Service:')).toBeLessThan(posted.indexOf('Max recent defaults:'));
+  expect(posted.indexOf('Max recent defaults:')).toBeLessThan(posted.indexOf('Base reward:'));
+  expect(posted).not.toContain('no limit');
+  expect(posted).not.toContain('=== Response ===');
+
+  const got = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, max_recent_defaults: 4 },
+  });
+  expect(got).toContain('=== Freight Contract ===');
+  expect(got).toContain('Max recent defaults: 4');
+
+  const accepted = output('shipping_accept', {
+    details: { action: 'accept', contract: { ...contract, max_recent_defaults: 10000 } },
+  });
+  expect(accepted).toContain('=== Accepted Freight Contract ===');
+  expect(accepted).toContain('Max recent defaults: 10,000');
+
+  const omitted = output('shipping_get', { action: 'get', contract });
+  expect(omitted).toContain('=== Freight Contract ===');
+  expect(omitted).not.toContain('Max recent defaults');
+  expect(omitted).not.toContain('no limit');
+
+  const nonFinite = output('shipping_get', {
+    action: 'get',
+    contract: { ...contract, max_recent_defaults: '0' },
+  });
+  expect(nonFinite).not.toContain('Max recent defaults');
+
+  const tracked = output('shipping_track', {
+    action: 'track',
+    contract: { ...contract, max_recent_defaults: 0 },
+    events: [],
+  });
+  expect(tracked).toContain('=== Freight Tracking ===');
+  expect(tracked).not.toContain('Max recent defaults');
+  expect(tracked).not.toContain('=== Response ===');
+
+  const settled = output('shipping_deliver', {
+    details: {
+      action: 'deliver',
+      contract: { ...contract, status: 'delivered', max_recent_defaults: 0 },
+      carrier_payout: 1,
+    },
+  });
+  expect(settled).toContain('=== Freight Delivered ===');
+  expect(settled).not.toContain('Max recent defaults');
+
+  const listed = output('shipping_list', {
+    action: 'list',
+    shipments: [
+      {
+        contract: { ...contract, max_recent_defaults: 0 },
+        eligible: false,
+        ineligible_reason: '  too many recent failures  ',
+      },
+    ],
+  });
+  expect(listed).toContain('=== Freight Contracts ===');
+  expect(listed).toContain('too many recent failures');
+  expect(listed).not.toContain('Max recent defaults');
+  expect(listed).not.toContain('=== Response ===');
+
+  const active = output('shipping_active', {
+    action: 'active',
+    tick: 1,
+    shipments: [{ contract: { ...contract, max_recent_defaults: 2 }, role: 'shipper', next_step: 'Wait.' }],
+  });
+  expect(active).toContain('=== Active Freight ===');
+  expect(active).not.toContain('Max recent defaults');
+  expect(active).not.toContain('=== Response ===');
+});

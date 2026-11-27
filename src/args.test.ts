@@ -2683,6 +2683,35 @@ describe('validateRequiredArgs', () => {
     expect(parseArgs([shippingQuote, 'package-1', 'nova-station', 'base_reward=0']).ok).toBe(true);
   });
 
+  test('shipping quote and post keep max_recent_defaults named with no minimum or maximum', () => {
+    expect(parseOk(['shipping_quote', 'package-1', 'nova-station', 'max_recent_defaults=0']).payload).toEqual({
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      max_recent_defaults: '0',
+    });
+    expect(parseOk(['shipping_post', 'package-1', 'nova-station', '5000', 'max_recent_defaults=0']).payload).toEqual({
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      base_reward: '5000',
+      max_recent_defaults: '0',
+    });
+    expect(parseOk(['shipping_quote', 'package-1', 'nova-station', 'max_recent_defaults=-3']).payload).toMatchObject({
+      max_recent_defaults: '-3',
+    });
+    expect(
+      parseOk(['shipping_post', 'package-1', 'nova-station', '5000', 'max_recent_defaults=9007199254740993']).payload,
+    ).toMatchObject({ max_recent_defaults: '9007199254740993' });
+    expect(parseOk(['shipping_quote', 'package-1', 'nova-station', '0']).payload).toEqual({
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+    });
+    expect(parseOk(['shipping_post', 'package-1', 'nova-station', '5000', '0']).payload).toEqual({
+      package_id: 'package-1',
+      destination_base_id: 'nova-station',
+      base_reward: '5000',
+    });
+  });
+
   test('shipping_post keeps an unsafe integer base_reward through validation', () => {
     const reward = 9007199254740993n;
     const payload = {
