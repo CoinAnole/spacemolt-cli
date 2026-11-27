@@ -1767,6 +1767,12 @@ export const socialFormatters = [
         const pirateDestroyed = eventType === 'combat.pirate_destroyed';
         const creditsEarned = pirateDestroyed ? scalarFrom('credits_earned') : undefined;
         const creditsDisplay = formatActionLogCredits(creditsEarned);
+        // escrow_credits and refunded_credits are generic keys. Only these two events lift them.
+        // crafting.cancelled adds no credit column. Do not read labor, fee, or the summary.
+        const craftingQueued = eventType === 'crafting.queued';
+        const craftingCompleted = eventType === 'crafting.completed';
+        const escrowDisplay = craftingQueued ? formatActionLogCredits(scalarFrom('escrow_credits')) : undefined;
+        const refundedDisplay = craftingCompleted ? formatActionLogCredits(scalarFrom('refunded_credits')) : undefined;
         // credits_owed, missed_cycles, grace_cycles, and facilities_behind are generic
         // keys; only the two rent-warning event types lift them.
         const rentWarning = eventType === 'other.rent_warning' || eventType === 'faction.rent_warning';
@@ -1830,6 +1836,8 @@ export const socialFormatters = [
         if (stationPaidDisplay !== undefined) row.station_paid_display = stationPaidDisplay;
         if (shortfallDisplay !== undefined) row.shortfall_display = shortfallDisplay;
         if (creditsDisplay !== undefined) row.credits_display = creditsDisplay;
+        if (escrowDisplay !== undefined) row.escrow_display = escrowDisplay;
+        if (refundedDisplay !== undefined) row.refunded_display = refundedDisplay;
         if (owedDisplay !== undefined) row.owed_display = owedDisplay;
         if (missedDisplay !== undefined) row.missed_display = missedDisplay;
         if (graceDisplay !== undefined) row.grace_display = graceDisplay;
@@ -1884,6 +1892,8 @@ export const socialFormatters = [
       if (hasAnyField(rows, ['station_paid_display'])) columns.push(['Station paid', ['station_paid_display']]);
       if (hasAnyField(rows, ['shortfall_display'])) columns.push(['Shortfall', ['shortfall_display']]);
       if (hasAnyField(rows, ['credits_display'])) columns.push(['Credits', ['credits_display']]);
+      if (hasAnyField(rows, ['escrow_display'])) columns.push(['Escrow', ['escrow_display']]);
+      if (hasAnyField(rows, ['refunded_display'])) columns.push(['Refunded', ['refunded_display']]);
       if (hasAnyField(rows, ['owed_display'])) columns.push(['Owed', ['owed_display']]);
       if (hasAnyField(rows, ['missed_display'])) columns.push(['Missed', ['missed_display']]);
       if (hasAnyField(rows, ['grace_display'])) columns.push(['Grace', ['grace_display']]);

@@ -235,6 +235,22 @@ function pirateEntry(
   };
 }
 
+function craftingLogEntry(
+  eventType: string,
+  data: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: 941,
+    created_at: '2026-11-24T12:00:00.000Z',
+    event_type: eventType,
+    category: 'crafting',
+    summary: 'Faction craft receipt.',
+    ...(data === undefined ? {} : { data }),
+    ...extra,
+  };
+}
+
 function rentEntry(
   eventType: string,
   data: Record<string, unknown> | undefined,
@@ -736,6 +752,8 @@ test('omits Pilot, Fuel, Station paid, and Shortfall when existing action-log fi
     expect(columns).not.toContain('Station paid');
     expect(columns).not.toContain('Shortfall');
     expect(columns).not.toContain('Credits');
+    expect(columns).not.toContain('Escrow');
+    expect(columns).not.toContain('Refunded');
     expect(columns).not.toContain('Owed');
     expect(columns).not.toContain('Missed');
     expect(columns).not.toContain('Grace');
@@ -746,6 +764,8 @@ test('omits Pilot, Fuel, Station paid, and Shortfall when existing action-log fi
     const stdout = renderActionLog(structuredClone(fixture));
     const columns = actionLogHeaderColumns(stdout);
     expect(columns).not.toContain('Credits');
+    expect(columns).not.toContain('Escrow');
+    expect(columns).not.toContain('Refunded');
     expect(columns).not.toContain('Owed');
     expect(columns).not.toContain('Missed');
     expect(columns).not.toContain('Grace');
@@ -1144,6 +1164,292 @@ test('inserts Credits after Shortfall and before Base', () => {
   const columns = actionLogHeaderColumns(stdout);
   const cost = columns.indexOf('Cost');
   expect(columns.slice(cost, cost + 5)).toEqual(['Cost', 'Station paid', 'Shortfall', 'Credits', 'Base']);
+});
+
+test('renders crafting.queued escrow and crafting.completed refund from action-log data', () => {
+  const stdout = renderActionLog(
+    actionLogPage(
+      [
+        craftingLogEntry(
+          'crafting.queued',
+          { escrow_credits: 1500, job_id: 'job-1', mode: 'craft', runs: 2 },
+          { id: 941 },
+        ),
+        craftingLogEntry(
+          'crafting.completed',
+          { refunded_credits: 0, job_id: 'job-1' },
+          { id: 942, summary: 'Craft finished.' },
+        ),
+        craftingLogEntry(
+          'crafting.cancelled',
+          { escrow_credits: 1500, refunded_credits: 40, labor: 123456, fee: 654321 },
+          {
+            id: 943,
+            summary: 'Craft cancelled.',
+          },
+        ),
+      ],
+      'crafting',
+    ),
+  );
+  const columns = actionLogHeaderColumns(stdout);
+  expect(columns).toContain('Escrow');
+  expect(columns).toContain('Refunded');
+  expect(columns).not.toContain('Credits');
+  expect(columns).not.toContain('Labor');
+  expect(columns).not.toContain('Fee');
+  expect(actionLogCell(stdout, 'Faction craft receipt.', 'Event')).toBe('crafting.queued');
+  expect(actionLogCell(stdout, 'Faction craft receipt.', 'Escrow')).toBe('1,500cr');
+  expect(actionLogCell(stdout, 'Faction craft receipt.', 'Refunded')).toBe('');
+  expect(actionLogCell(stdout, 'Craft finished.', 'Event')).toBe('crafting.completed');
+  expect(actionLogCell(stdout, 'Craft finished.', 'Escrow')).toBe('');
+  expect(actionLogCell(stdout, 'Craft finished.', 'Refunded')).toBe('0cr');
+  expect(actionLogCell(stdout, 'Craft cancelled.', 'Event')).toBe('crafting.cancelled');
+  expect(actionLogCell(stdout, 'Craft cancelled.', 'Escrow')).toBe('');
+  expect(actionLogCell(stdout, 'Craft cancelled.', 'Refunded')).toBe('');
+  expect(stdout).not.toContain('123456');
+  expect(stdout).not.toContain('123,456');
+  expect(stdout).not.toContain('654321');
+  expect(stdout).not.toContain('654,321');
+  expect(stdout).not.toContain('40cr');
+});
+
+test('omits Escrow and Refunded when the crafting receipt omits those keys', () => {
+  const queued = renderActionLog(actionLogPage([craftingLogEntry('crafting.queued', {})], 'crafting'));
+  expect(actionLogHeaderColumns(queued)).not.toContain('Escrow');
+  expect(actionLogHeaderColumns(queued)).not.toContain('Refunded');
+  expect(actionLogCell(queued, 'Faction craft receipt.', 'Event')).toBe('crafting.queued');
+
+  const noData = renderActionLog(actionLogPage([craftingLogEntry('crafting.queued', undefined)], 'crafting'));
+  expect(actionLogHeaderColumns(noData)).not.toContain('Escrow');
+
+  const completed = renderActionLog(actionLogPage([craftingLogEntry('crafting.completed', undefined)], 'crafting'));
+  expect(actionLogHeaderColumns(completed)).not.toContain('Refunded');
+  expect(actionLogHeaderColumns(completed)).not.toContain('Escrow');
+  expect(actionLogCell(completed, 'Faction craft receipt.', 'Event')).toBe('crafting.completed');
+
+  const cancelled = renderActionLog(actionLogPage([craftingLogEntry('crafting.cancelled', undefined)], 'crafting'));
+  expect(actionLogHeaderColumns(cancelled)).not.toContain('Escrow');
+  expect(actionLogHeaderColumns(cancelled)).not.toContain('Refunded');
+  expect(actionLogHeaderColumns(cancelled)).not.toContain('Credits');
+});
+
+test('renders Escrow and Refunded 0 for bigint and digit strings', () => {
+  const cases: Array<{ eventType: string; key: string; column: string; raw: unknown; expected: string }> = [
+    { eventType: 'crafting.queued', key: 'escrow_credits', column: 'Escrow', raw: 0, expected: '0cr' },
+    { eventType: 'crafting.queued', key: 'escrow_credits', column: 'Escrow', raw: 0n, expected: '0cr' },
+    { eventType: 'crafting.queued', key: 'escrow_credits', column: 'Escrow', raw: '0', expected: '0cr' },
+    { eventType: 'crafting.queued', key: 'escrow_credits', column: 'Escrow', raw: '  1500  ', expected: '1,500cr' },
+    {
+      eventType: 'crafting.queued',
+      key: 'escrow_credits',
+      column: 'Escrow',
+      raw: 9007199254740993n,
+      expected: `${(9007199254740993n).toLocaleString()}cr`,
+    },
+    { eventType: 'crafting.completed', key: 'refunded_credits', column: 'Refunded', raw: 0, expected: '0cr' },
+    { eventType: 'crafting.completed', key: 'refunded_credits', column: 'Refunded', raw: 0n, expected: '0cr' },
+    { eventType: 'crafting.completed', key: 'refunded_credits', column: 'Refunded', raw: '+1500', expected: '1,500cr' },
+  ];
+  for (const { eventType, key, column, raw, expected } of cases) {
+    const stdout = renderActionLog(actionLogPage([craftingLogEntry(eventType, { [key]: raw })], 'crafting'));
+    expect(actionLogCell(stdout, 'Faction craft receipt.', column), `${eventType} ${String(raw)}`).toBe(expected);
+    expect(stdout).not.toContain('9007199254740992');
+  }
+});
+
+test('leaves a blank Escrow or Refunded cell for a boolean, a non-digit string, or a non-integer', () => {
+  const badValues: unknown[] = [true, false, 'nope', '1e3', 1.5, Number.NaN, Number.POSITIVE_INFINITY];
+  for (const value of badValues) {
+    const queued = renderActionLog(
+      actionLogPage([craftingLogEntry('crafting.queued', { escrow_credits: value })], 'crafting'),
+    );
+    expect(actionLogHeaderColumns(queued), `queued ${String(value)}`).not.toContain('Escrow');
+    expect(queued).not.toContain('1.5');
+    expect(queued).not.toContain('1,000cr');
+    expect(queued).not.toContain('NaN');
+
+    const completed = renderActionLog(
+      actionLogPage([craftingLogEntry('crafting.completed', { refunded_credits: value })], 'crafting'),
+    );
+    expect(actionLogHeaderColumns(completed), `completed ${String(value)}`).not.toContain('Refunded');
+    expect(completed).not.toContain('1.5');
+    expect(completed).not.toContain('NaN');
+  }
+
+  const mixed = renderActionLog(
+    actionLogPage(
+      [
+        craftingLogEntry('crafting.queued', { escrow_credits: 1500 }, { id: 941 }),
+        craftingLogEntry('crafting.queued', { escrow_credits: true }, { id: 944, summary: 'Bad escrow.' }),
+        craftingLogEntry('crafting.completed', { refunded_credits: 20 }, { id: 942, summary: 'Craft finished.' }),
+        craftingLogEntry('crafting.completed', { refunded_credits: 'nope' }, { id: 945, summary: 'Bad refund.' }),
+      ],
+      'crafting',
+    ),
+  );
+  expect(actionLogCell(mixed, 'Faction craft receipt.', 'Escrow')).toBe('1,500cr');
+  expect(actionLogCell(mixed, 'Bad escrow.', 'Escrow')).toBe('');
+  expect(actionLogCell(mixed, 'Craft finished.', 'Refunded')).toBe('20cr');
+  expect(actionLogCell(mixed, 'Bad refund.', 'Refunded')).toBe('');
+  expect(mixed).not.toContain('true');
+  expect(mixed).not.toContain('nope');
+});
+
+test('does not lift crafting treasury amounts off the wrong event or out of the summary', () => {
+  const other = renderActionLog(
+    actionLogPage(
+      [
+        craftingLogEntry(
+          'crafting.completed',
+          { escrow_credits: 1500, credits_earned: 80, labor: 123456, fee: 654321 },
+          { id: 942 },
+        ),
+        craftingLogEntry(
+          'crafting.queued',
+          { refunded_credits: 40, credits_earned: 80 },
+          { id: 946, summary: 'Queued only.' },
+        ),
+        {
+          id: 947,
+          created_at: '2026-11-24T12:10:00.000Z',
+          summary: 'Escrow refunded 9999 credits.',
+          category: 'trading',
+          event_type: 'trading.escrow_refunded',
+          data: { refunded_credits: 9999, escrow_credits: 9999 },
+        },
+        pirateEntry({ credits_earned: 1500, escrow_credits: 30, refunded_credits: 30 }, { id: 948 }),
+      ],
+      'crafting',
+    ),
+  );
+  const columns = actionLogHeaderColumns(other);
+  expect(columns).toContain('Credits');
+  expect(columns).not.toContain('Escrow');
+  expect(columns).not.toContain('Refunded');
+  expect(columns).not.toContain('Labor');
+  expect(columns).not.toContain('Fee');
+  expect(actionLogCell(other, 'Destroyed pirate Corsair.', 'Credits')).toBe('1,500cr');
+  expect(other).toContain('Escrow refunded 9999 credits.');
+  expect(other).not.toContain('9,999');
+  expect(other).not.toContain('30cr');
+  expect(other).not.toContain('40cr');
+  expect(other).not.toContain('80');
+  expect(other).not.toContain('123456');
+  expect(other).not.toContain('123,456');
+  expect(other).not.toContain('654321');
+  expect(other).not.toContain('654,321');
+
+  const summaryOnly = renderActionLog(
+    actionLogPage(
+      [
+        craftingLogEntry('crafting.queued', undefined, { summary: 'Took 9999 escrow credits from the treasury.' }),
+        craftingLogEntry('crafting.completed', undefined, { id: 949, summary: 'Refunded 8888 credits.' }),
+      ],
+      'crafting',
+    ),
+  );
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Escrow');
+  expect(actionLogHeaderColumns(summaryOnly)).not.toContain('Refunded');
+  expect(summaryOnly).toContain('Took 9999 escrow credits from the treasury.');
+  expect(summaryOnly).toContain('Refunded 8888 credits.');
+  expect(summaryOnly).not.toContain('9,999');
+  expect(summaryOnly).not.toContain('8,888');
+});
+
+test('prefers entry-level crafting treasury amounts and does not treat a near event type as a match', () => {
+  const entryWins = renderActionLog(
+    actionLogPage([craftingLogEntry('crafting.queued', { escrow_credits: 99 }, { escrow_credits: 10 })], 'crafting'),
+  );
+  expect(actionLogCell(entryWins, 'Faction craft receipt.', 'Escrow')).toBe('10cr');
+  expect(entryWins).not.toContain('99');
+
+  const refundWins = renderActionLog(
+    actionLogPage(
+      [craftingLogEntry('crafting.completed', { refunded_credits: 99 }, { refunded_credits: 0 })],
+      'crafting',
+    ),
+  );
+  expect(actionLogCell(refundWins, 'Faction craft receipt.', 'Refunded')).toBe('0cr');
+  expect(refundWins).not.toContain('99');
+
+  const whitespace = renderActionLog(
+    actionLogPage(
+      [craftingLogEntry('crafting.queued', { escrow_credits: 1500 }, { escrow_credits: '   ' })],
+      'crafting',
+    ),
+  );
+  expect(actionLogHeaderColumns(whitespace)).not.toContain('Escrow');
+  expect(whitespace).not.toContain('1,500cr');
+
+  const nullFallsThrough = renderActionLog(
+    actionLogPage(
+      [craftingLogEntry('crafting.completed', { refunded_credits: 20 }, { refunded_credits: null })],
+      'crafting',
+    ),
+  );
+  expect(actionLogCell(nullFallsThrough, 'Faction craft receipt.', 'Refunded')).toBe('20cr');
+
+  const rejected = [
+    { event_type: 'crafting.queued.extra' },
+    { event_type: 'CRAFTING.QUEUED' },
+    {
+      event_type: 'crafting.completed',
+      data: { event_type: 'crafting.queued', escrow_credits: 1500 },
+    },
+    {
+      event_type: 'crafting.completed',
+      type: 'crafting.queued',
+      data: { escrow_credits: 1500 },
+    },
+  ];
+  for (const extra of rejected) {
+    const stdout = renderActionLog(
+      actionLogPage([craftingLogEntry('crafting.queued', { escrow_credits: 1500 }, extra)], 'crafting'),
+    );
+    expect(actionLogHeaderColumns(stdout), JSON.stringify(extra)).not.toContain('Escrow');
+    expect(stdout, JSON.stringify(extra)).not.toContain('1,500cr');
+  }
+
+  const typed = renderActionLog(
+    actionLogPage(
+      [
+        {
+          id: 950,
+          created_at: '2026-11-24T12:20:00.000Z',
+          summary: 'Typed queue.',
+          category: 'crafting',
+          type: 'crafting.queued',
+          data: { escrow_credits: 1500 },
+        },
+        {
+          id: 951,
+          created_at: '2026-11-24T12:21:00.000Z',
+          summary: 'Typed finish.',
+          category: 'crafting',
+          type: 'crafting.completed',
+          data: { refunded_credits: 4 },
+        },
+      ],
+      'crafting',
+    ),
+  );
+  expect(actionLogCell(typed, 'Typed queue.', 'Event')).toBe('crafting.queued');
+  expect(actionLogCell(typed, 'Typed queue.', 'Escrow')).toBe('1,500cr');
+  expect(actionLogCell(typed, 'Typed finish.', 'Event')).toBe('crafting.completed');
+  expect(actionLogCell(typed, 'Typed finish.', 'Refunded')).toBe('4cr');
+});
+
+test('inserts Escrow and Refunded after Credits', () => {
+  const stdout = renderActionLog(
+    actionLogPage([
+      pirateEntry({ credits_earned: 1500 }, { id: 503 }),
+      craftingLogEntry('crafting.queued', { escrow_credits: 10 }, { id: 941 }),
+      craftingLogEntry('crafting.completed', { refunded_credits: 2 }, { id: 942, summary: 'Craft finished.' }),
+      rentEntry('other.rent_warning', { credits_owed: 5 }, { id: 601 }),
+    ]),
+  );
+  expectHeaderColumnsInOrder(actionLogHeader(stdout), ['Credits', 'Escrow', 'Refunded', 'Owed']);
 });
 
 const rentCounters = {
